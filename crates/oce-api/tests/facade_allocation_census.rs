@@ -19,14 +19,23 @@ mod blob_models;
 mod dual_entry;
 #[path = "../../oce-graph/tests/support/frame_schedule.rs"]
 mod frame_schedule;
+// The parameter fuzz's hostile tables, shared with `oce-blocks` and `oce-validate`.
+#[allow(
+    dead_code,
+    reason = "this binary uses part of the support the parameter fuzz shares"
+)]
+#[path = "../../oce-blocks/tests/support/hostile_tables.rs"]
+mod hostile_tables;
 #[path = "replay_oracle/mod.rs"]
 mod replay_oracle;
 
 mod array_extent_cost;
 mod blob_allocations;
+mod blob_hostile_parameter_models;
 mod blob_peak_allocation;
 mod blob_summary_allocations;
 mod cxf_admission;
+mod cxf_constructed_budget;
 mod cxf_diagnostic_list_cost;
 mod cxf_pass_through_key_cost;
 mod hostile_load_bounds;

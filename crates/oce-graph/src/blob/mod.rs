@@ -28,7 +28,9 @@
 //! For **semantics** a blob is trusted: a well-formed but wrong parameter executes as written,
 //! because `oce-validate` and its parameter rules are not linked on a target. For **memory safety**
 //! a blob is hostile: [`decode()`] never panics, refuses malformed bytes with a typed
-//! [`BlobError`], and checks every count against the bytes that remain before allocating for it.
+//! [`BlobError`], checks every count against the bytes that remain before allocating for it, and
+//! holds what block constructors allocate from the blob's parameters to a model-wide budget
+//! ([peak memory](#peak-memory-against-blob-length)).
 //!
 //! # Allocation
 //!
@@ -39,7 +41,9 @@
 //!   by its instances); per block its input, output and parameter vectors (each only when
 //!   non-empty), one `Arc<str>` per parameter name and one per String parameter value; the block
 //!   vector and one `Box<dyn Block>` per non-zero-sized block plus whatever its constructor
-//!   allocates (as on the host); `Schedule::order` and `driver_of`; the [`RunState`] arrays that
+//!   allocates (as on the host, and at most
+//!   [`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS) words across the model);
+//!   `Schedule::order` and `driver_of`; the [`RunState`] arrays that
 //!   [`allocate_state`](crate::allocate_state) builds; the input and output tables and one target
 //!   vector per input (a bound is never a String: those are refused);
 //! * scratch, freed before return: one default-parameter block per class, built and dropped by
@@ -55,27 +59,65 @@
 //!
 //! ## Peak memory against blob length
 //!
-//! The framing and structural passes size every allocation from bytes already in hand, so they
-//! are linear in the blob length. The building pass is not: block constructors allocate from
-//! parameter names and values, capped per block (up to about 8 MiB) but not across the model, so
-//! a blob of a few kilobytes can allocate hundreds of megabytes until GitHub #700 adds a
-//! model-wide budget. The table below is a measurement of the shapes listed, not a bound. The
-//! structural pass refuses a port list longer than
-//! [`oce_blocks::MAX_RESOLVED_ARITY`] before anything is sized by it, and connector ownership is
-//! tracked in 8 bytes per id; the 144-byte `Connector` arena is built only after every port list
-//! has matched its constructed block. Measured peaks, as multiples of the blob length (pinned by
-//! `oce-api`'s `blob_peak_allocation` test, with the bound it asserts):
+//! [`decode()`] holds at most this many bytes at one time, counted as bytes requested of the
+//! allocator:
 //!
-//! | Shape | Outcome | Peak | Bound |
+//! ```text
+//!   64 x the blob length                               the linear term
+//! + 8 x MAX_CONSTRUCTED_WORDS                 32 MiB   the constructed budget
+//! + oce_blocks::MAX_CONSTRUCTION_PEAK_BYTES   32 MiB   one block under construction
+//! + 8 x MAX_STATE_WORDS                       32 MiB   the state budget
+//! ```
+//!
+//! So a blob of `n` bytes peaks within `64 n` bytes and 96 MiB, and nothing else in the blob
+//! can raise it.
+//!
+//! **The linear term** is everything sized from the bytes themselves. The framing and
+//! structural passes size every allocation from bytes already in hand, and the building pass
+//! sizes its arenas from counts the structural pass checked against the input. The structural
+//! pass refuses a port list longer than [`oce_blocks::MAX_RESOLVED_ARITY`] before anything is
+//! sized by it, and connector ownership is tracked in 8 bytes per id; the 144-byte `Connector`
+//! arena is built only after every port list has matched its constructed block. The costliest
+//! record is a connector id in an output list: four encoded bytes for a `Connector`, its value,
+//! its driver entry, its ownership entry and its port slot, about 184 bytes, which is 46 bytes
+//! per encoded byte. An input connector costs more decoded (its share of the gather scratch)
+//! but at least eight encoded bytes, because something must drive it. Every other record costs
+//! less per byte. The tests hold every shape below and every seeded hostile model to 64.
+//!
+//! **The constructed budget** bounds what block constructors allocate. A constructor sizes its
+//! buffers from parameter names and values (a `CDL.Reals.Sources.TimeTable` from its largest
+//! `table_<row>_<col>` name, a `CDL.Reals.MatrixGain` from `nin x nout`), each block is capped
+//! by [`oce_blocks::MAX_RESOLVED_PORT_WIDTH`], and one such block can hold megabytes behind a
+//! sixty-byte record. So every constructed block reports the words it holds
+//! ([`Block::constructed_words`]) and the building pass charges it against
+//! [`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS) the moment it is constructed: the
+//! first block that takes the total past the budget is dropped and the blob refused with
+//! [`BlobError::ConstructedTooLarge`]. The blocks kept therefore never hold more than the
+//! budget, and the one under construction at most
+//! [`oce_blocks::MAX_CONSTRUCTION_PEAK_BYTES`] (the largest measured is 18 MiB).
+//!
+//! **The state budget** bounds the state words the blocks declare
+//! ([`MAX_STATE_WORDS`](crate::MAX_STATE_WORDS)), checked before they are reserved.
+//!
+//! Measured peaks (pinned by `oce-api`'s `blob_peak_allocation` test, with the bound it
+//! asserts; a ratio is a multiple of the blob length):
+//!
+//! | Shape | Outcome | Peak | Bound asserted |
 //! | --- | --- | --- | --- |
 //! | One block listing 10⁶ input ids it does not have | refused at its arity check | 2.0× | 8× |
 //! | A port list longer than `MAX_RESOLVED_ARITY` | refused by the structural pass | ≈0× | 0.01× |
 //! | 10⁵ minimal instances, schedule missing | refused at the schedule | 8.4× | 12× |
 //! | One 200,000-input block fed by one boundary input | accepted | 26.6× | 32× |
+//! | One 200,000-output block, outputs unread | accepted | 44.2× | 64× |
+//! | One `TimeTable` whose one parameter is `table_524288_2`, 223 bytes | accepted | 8,389,181 bytes | its 1,048,578 words and 64× |
+//! | 16 and 64 of that block, 1,123 and 4,003 bytes | refused at the fourth block | 33,557,488 and 33,564,016 bytes | the 4,194,312 words requested and 64× |
+//! | One dense 1024 × 1024 `MatrixGain`, no cell bound, 12,528 bytes | accepted | 16,796,008 bytes | its 1,048,832 words, as many of scratch, and 64× |
+//! | Four `TimeTable` blocks holding exactly the budget, 403 bytes | accepted | 33,556,452 bytes | the budget and 64× |
+//! | Those four and a moving mean owning the whole state budget | accepted | both budgets | both budgets and 64× |
 //!
-//! The last row is the densest accepted shape: a connector costs eight encoded bytes there and
-//! about 210 bytes decoded (its `Connector`, its value, its driver and its share of the port and
-//! target vectors), which is what the decoded executable needs to run, as it does on the host.
+//! The 200,000-output row is the densest accepted shape per encoded byte, as the arithmetic
+//! above says: a connector there costs four encoded bytes and about 184 decoded, which is what
+//! the decoded executable needs to run, as it does on the host.
 
 use alloc::{boxed::Box, vec::Vec};
 

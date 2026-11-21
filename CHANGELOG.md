@@ -73,7 +73,8 @@ so far, and no tag is cut by the bump.
     constructors allocate from parameters, which is capped per block (up to about 8 MiB) but not
     across the model, so a 4,003-byte blob of 64 `TimeTable` blocks peaks at 536,903,536 bytes
     (GitHub #700 adds a model-wide budget). Until then, do not run `inspect` or `inspect_blob` on
-    untrusted bytes without your own memory limit. Measured, as multiples of the blob length:
+    untrusted bytes without your own memory limit. (That budget has since landed, and the
+    building pass is bounded: see the constructed budget under Execution core.) Measured, as multiples of the blob length:
     1.55 to 21.59 for the 46 goldens (their lists are 0.17 to 0.41), 26.62 for the densest
     accepted shape measured, 3.33 for 500,000 empty-path outputs (lists 1.33), 5.12 for 100,000
     minimal instances (lists 0.80). The 2 and 4 bounds still hold for the result. A refusal
@@ -189,6 +190,65 @@ so far, and no tag is cut by the bump.
     [inspecting a blob](docs/compiled-schedule-blob.md#inspecting-a-blob).
 
 ### Execution core
+
+- **A model-wide budget on what block constructors allocate from parameters** (GitHub #721,
+  issue #700). **Breaking, in place:** a blob or a CXF document whose blocks together hold more
+  than 4,194,304 words (32 MiB) outside their state decoded or loaded before and is refused
+  now. No format byte changes and no golden moves.
+  - **What was wrong.** A constructor sizes its buffers from parameter names and values: a
+    `CDL.Reals.Sources.TimeTable` from its largest `table_<row>_<col>` name, a
+    `CDL.Reals.MatrixGain` from `nin x nout`. Each block was capped
+    (`MAX_RESOLVED_PORT_WIDTH`, about 8 MiB of kept buffers) and nothing summed the blocks, so
+    a 4,003-byte blob of 64 `TimeTable` blocks decoded into 536,903,536 bytes, and a larger one
+    aborted on allocation failure with no typed error. `inspect` and `inspect_blob`, which run
+    the decoder's building pass since GitHub #699, inherited it.
+  - **The budget.** By the owner's ruling, a model-wide budget with a typed refusal, not a
+    density requirement on tables. `Block::constructed_words` (default 0) reports the 64-bit
+    words a constructed block holds outside its state region; 29 of the 136 registered classes
+    own a buffer and report it. `oce_graph::ConstructedBudget` sums them as blocks are
+    constructed against `oce_graph::MAX_CONSTRUCTED_WORDS` (4,194,304 words: a budget of its
+    own, not a share of `MAX_STATE_WORDS`), and the first block past it is dropped and
+    refused. The charge follows construction, so the peak is the budget plus one block under
+    construction, which `oce_blocks::MAX_CONSTRUCTION_PEAK_BYTES` (32 MiB; 18 MiB is the
+    largest measured) bounds and the fuzz holds every class to. The largest of the 46 G36
+    fixtures holds 42 words, so the budget is about 100,000 times the largest real model
+    measured; it admits one block at the widest the per-block bound allows (2,228,223 words)
+    and three dense 1024 x 1024 gain matrices together.
+  - **The refusals.** `BlobError::ConstructedTooLarge { block, requested }` from `decode`,
+    `Executable::from_blob`, and as the `decode_refusal` of `inspect` and `inspect_blob`; it
+    is raised in the instance pass the moment the crossing block is constructed, so it wins
+    over that block's kind, state length, arity and connectors and over every later check
+    (the state budget included), and loses to everything checked before. On the CXF path,
+    `BuildError::ConstructedTooLarge { block, requested, limit }` as `OcError::Build`, at the
+    `Instantiation` stage, recorded with the stable code `resource-limit-exceeded`: after
+    validation, before the schedule and the state budget. `Engine::resume` re-instantiates
+    under the same budget.
+  - **The bound, restated.** `decode` (and so a summary's building pass) peaks within 64
+    bytes per blob byte plus 96 MiB: the constructed budget, one block under construction and
+    the state budget, 32 MiB each. The "do not run on untrusted bytes" warnings GitHub #699
+    added are removed. The linear coefficient was restated with it: the costliest record is
+    an output connector id (four encoded bytes for about 184 decoded), and a block of 200,000
+    unread outputs holds 44.2x its blob, so the 200,000-input shape at 26.6x that earlier
+    entries call the densest accepted is not the densest.
+  - **Measured** (debug, macOS arm64, peak bytes before and after): one `TimeTable` sized by
+    `table_524288_2`, 223 bytes, 8,389,181 and 8,389,181, accepted; 16 of them, 1,123 bytes,
+    134,225,920 and 33,557,488, now refused at block 3 with 4,194,312 words requested; 64 of
+    them, 4,003 bytes, 536,903,536 and 33,564,016, the same refusal; one dense 1024 x 1024
+    `MatrixGain`, 12,528 bytes, 20,988,264 and 16,796,008, accepted (`MatrixGain` and the
+    three `VectorFilter` classes now allocate their kept buffers at exact length).
+  - **Evidence.** `oce-blocks` `tests/constructed_words.rs`: every registered class under the
+    hostile parameter tables holds no more than it reports and, up to rounding, no less, the
+    reporting classes are exactly the audited 29, and no construction peaks above the cap.
+    `oce-graph`'s `constructed_budget` unit tests. `oce-api`: `blob_peak_allocation.rs` (the
+    four shapes above pinned, exactly the budget accepted and one more block refused, both
+    budgets spent in full), `blob_constructed_budget.rs` (refusal order in both directions,
+    every reader agreeing), `blob_hostile_parameter_models.rs` (100 seeded models decode or
+    refuse as predicted within the bound), `blob_summary_allocations.rs`, and
+    `cxf_constructed_budget.rs` (the same boundary, receipt record and order through
+    `Engine::load_cxf`), and a unit test that `Engine::resume` refuses the same way and stays
+    halted.
+  - Documented in the [trust model](docs/compiled-schedule-blob.md#trust-model) and the
+    [ingest resource bounds](docs/host-responsibilities.md#ingest-resource-bounds).
 
 - **The load gate refuses a vector parameter element past its resolved length** (GitHub #635,
   issue #626). **Breaking, in place:** a document with such an element loaded before and is

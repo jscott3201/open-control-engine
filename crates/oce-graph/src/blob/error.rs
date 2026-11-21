@@ -177,6 +177,18 @@ pub enum BlobError {
         /// Words requested through that block, saturated at `u64::MAX`.
         requested: u64,
     },
+    /// The constructed blocks hold more than
+    /// [`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS) words outside their state regions
+    /// (tables, gain matrices, resolved port kinds: whatever their constructors sized from the
+    /// blob's parameters). Raised in step 7, the moment the block that crosses the budget is
+    /// constructed and before any of its fields is compared, so it wins over that block's kind,
+    /// state length, arity and connector faults and over every later block and step.
+    ConstructedTooLarge {
+        /// The first block (id order) at which the budget is crossed.
+        block: u32,
+        /// Words held by the blocks through that block, saturated at `u64::MAX`.
+        requested: u64,
+    },
     /// A stateful block's freshly initialized state words differ from the CRC the encoder carried.
     InitialStateMismatch {
         /// The block id.
@@ -430,6 +442,10 @@ impl core::fmt::Display for BlobError {
             Self::StateTooLarge { block, requested } => write!(
                 f,
                 "run state of {requested} words through block {block} exceeds the supported maximum"
+            ),
+            Self::ConstructedTooLarge { block, requested } => write!(
+                f,
+                "constructed blocks hold {requested} words through block {block}, over the supported maximum"
             ),
             Self::InitialStateMismatch {
                 block,

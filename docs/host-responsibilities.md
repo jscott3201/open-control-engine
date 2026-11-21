@@ -674,6 +674,8 @@ changes.
 | Composite boundary path | 64 non-top `isConnectedTo` hops | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 | Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 | Diagnostic text of one CXF read | 8 MiB (8,388,608 bytes) of messages and subjects together, a subject counted for each diagnostic | `crates/oce-cxf/src/diagnostic_list.rs` | the list ends; one closing `resource-limit-exceeded` error counts what is not listed |
+| Constructed blocks, model-wide | 4,194,304 words (32 MiB) held by the blocks outside their state: tables, gain matrices, resolved port kinds | `crates/oce-graph/src/constructed.rs` | `OcError::Build(BuildError::ConstructedTooLarge { block, requested, limit })` at instantiation, recorded as `resource-limit-exceeded`; `BlobError::ConstructedTooLarge` from the blob decoder |
+| Run state, model-wide | 4,194,304 words (32 MiB) | `crates/oce-graph/src/lib.rs` | `OcError::Build(BuildError::StateTooLarge { block, requested, limit })`, recorded as `resource-limit-exceeded`; `BlobError::StateTooLarge` from the blob decoder |
 
 Composite nesting and boundary traversal are different walks and have separate limits. Boundary
 traversal is iterative, so an accepted path does not consume one call-stack frame per hop. Its work
@@ -749,9 +751,10 @@ The byte cap does not bound peak memory, CPU time, expansion, or total graph com
 a sandbox, cancellation/deadline guarantee, or evidence that every below-cap document is safe.
 Below the cap the pipeline refuses the known amplification shapes with typed diagnostics (issue
 #365): a `containsBlock` child reached twice (`shared-instance`), array parameters past a
-1,048,576-element per-document budget and run state past 4,194,304 words
-(`resource-limit-exceeded`), and binding evaluation past 2^24 deterministic work units per
-expression or 2^26 per document (`grounding-failed`). Those limits bound growth, not absolute footprint — a maximal admissible
+1,048,576-element per-document budget, run state past 4,194,304 words and, since issue #700,
+what the constructed blocks hold outside their state (tables, gain matrices, resolved port
+kinds) past 4,194,304 words (all three `resource-limit-exceeded`), and binding evaluation past
+2^24 deterministic work units per expression or 2^26 per document (`grounding-failed`). Those limits bound growth, not absolute footprint — a maximal admissible
 document can still need hundreds of MiB — so isolation stays your obligation.
 Receipt admission refusals use the existing `Import` stage, with byte counts only and no input
 content, source error or structured diagnostics in the `OcError`; `OperationFailure` still exposes

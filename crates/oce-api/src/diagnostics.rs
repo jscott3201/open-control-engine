@@ -364,6 +364,10 @@ impl DiagnosticCapture {
     /// member count and the **next** member's identity, never the whole member list — so total
     /// record bytes grow linearly with the cycle. See [`cycle_member_message`] for the exact form.
     ///
+    /// A resource refusal (`StateTooLarge`, or `ConstructedTooLarge` from block instantiation)
+    /// records one `resource-limit-exceeded` error whose subject is the block at which the budget
+    /// was crossed and whose message carries the words requested and the limit.
+    ///
     /// Receipts sort records by subject, not by loop position; the loop is the chain
     /// `subject → next member`, starting anywhere. Nothing is recorded or allocated when capture is
     /// disabled, and a future refusal kind without a reviewed code records nothing rather than an
@@ -394,6 +398,28 @@ impl DiagnosticCapture {
                             "run state too large: {requested} state word(s) requested through \
                              this block exceed the supported maximum ({limit} words). Remedy: \
                              reduce state-sizing parameters such as window lengths."
+                        ),
+                    });
+                    None
+                }
+                oce_graph::BuildError::ConstructedTooLarge {
+                    block,
+                    requested,
+                    limit,
+                } => {
+                    let code = oce_diag::DiagCode::ResourceLimitExceeded;
+                    records.push(DiagnosticRecord {
+                        key: DiagnosticKey {
+                            stage: self.stage,
+                            subject: DiagnosticSubject::Opaque(block.0.clone()),
+                            code: code.as_str().to_owned(),
+                            severity: DiagnosticSeverity::Error,
+                        },
+                        message: format!(
+                            "constructed blocks too large: {requested} word(s) held by the \
+                             blocks through this block exceed the supported maximum ({limit} \
+                             words). Remedy: reduce table, matrix or vector sizes, or split the \
+                             model."
                         ),
                     });
                     None

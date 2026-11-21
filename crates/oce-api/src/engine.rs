@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use oce_blocks::{Block, BlockKind, lookup};
-use oce_graph::{RunState, Schedule, allocate_state, compile};
+use oce_graph::{ConstructedBudget, RunState, Schedule, allocate_state, compile};
 use oce_model::ModelGraph;
 use oce_model::resolved_model::DomainKey;
 
@@ -129,8 +129,10 @@ impl Engine {
     ///
     /// # Errors
     /// [`OcError::Validate`] if the graph is malformed; [`OcError::Load`] if a block's `class_iri` is
-    /// not in the registry or semantic resolution fails; [`OcError::Build`] if the graph has an
-    /// algebraic loop. Never panics on host input covered by the validation seam (R-ERR-1).
+    /// not in the registry or semantic resolution fails; [`OcError::Build`] if the constructed
+    /// blocks exceed [`oce_graph::MAX_CONSTRUCTED_WORDS`], the graph has an algebraic loop or its
+    /// state exceeds [`oce_graph::MAX_STATE_WORDS`], in that order. Never panics on host input
+    /// covered by the validation seam (R-ERR-1).
     #[cfg(test)]
     pub(crate) fn build_model_in_memory(
         &mut self,
@@ -164,7 +166,10 @@ impl Engine {
             // Resolve every block instance to its native impl up front — an unknown class is a typed
             // load error, never a panic (R-IMPL-2 / R-ERR-1).
             capture.enter(DiagnosticStage::Instantiation);
-            let blocks = instantiate_blocks(&model)?;
+            let blocks = instantiate_blocks(&model).map_err(|err| match err {
+                OcError::Build(refusal) => capture.build_refusal(refusal),
+                other => other,
+            })?;
             // BUILD (off the tick): schedule + state. `?` on `compile` maps `BuildError` → `OcError`.
             capture.enter(DiagnosticStage::Schedule);
             let schedule = compile(&model, &blocks).map_err(|err| capture.build_refusal(err))?;
@@ -360,13 +365,27 @@ impl Engine {
 /// Instantiate every block instance from the `oce-blocks` registry. This lookup + `make` loop is
 /// shared by the validated load tail and `Engine::resume`, so load and tune-at-rest refolds cannot
 /// drift. An unknown `class_iri` is a typed [`OcError::Load`], never a panic.
+///
+/// Each block is charged against the model-wide constructed budget
+/// ([`oce_graph::MAX_CONSTRUCTED_WORDS`]) as soon as it is constructed, with the accumulator the
+/// blob decoder uses. The first block that takes the total past the budget is dropped with the
+/// blocks before it and the build is refused: [`OcError::Build`] carrying
+/// [`oce_graph::BuildError::ConstructedTooLarge`]. So the blocks this call returns never exceed
+/// the budget, whatever a document's parameters size. That bounds one set of blocks, not the
+/// engine: `Engine::resume` calls this while the blocks of the loaded model are still alive, and
+/// `Engine::compile_blob` decodes the bytes it encoded (a second set, under the decoder's same
+/// budget) beside them, so for the length of either call up to twice the budget is held
+/// (issue #722).
 pub(crate) fn instantiate_blocks(model: &ModelGraph) -> Result<Vec<Box<dyn Block>>, OcError> {
     let mut blocks: Vec<Box<dyn Block>> = Vec::with_capacity(model.blocks.len());
+    let mut constructed = ConstructedBudget::new();
     for blk in &model.blocks {
         let entry = lookup(&blk.class_iri).ok_or_else(|| OcError::Load {
             detail: format!("unknown block class: {}", blk.class_iri),
         })?;
-        blocks.push((entry.make)(&blk.params));
+        let block = (entry.make)(&blk.params);
+        constructed.charge_instance(model, blk.id, block.as_ref())?;
+        blocks.push(block);
     }
     Ok(blocks)
 }

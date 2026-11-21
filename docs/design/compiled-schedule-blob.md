@@ -481,12 +481,25 @@ The decoder refuses in this order:
    - duplicate parameter names within one instance (`DuplicateParameter`);
    - an Enum value whose class path is unknown (`UnknownEnumClass`), or whose ordinal is outside
      `1..=members` (`EnumOrdinalOutOfRange`);
+   - the model-wide constructed budget, charged the moment the block is constructed
+     (`ConstructedTooLarge`; amended below);
    - resolved arity, port kinds, kind and state length (`InstanceMismatch`).
 8. Connections and I/O, as listed in their sections, including a same-block connection,
    duplicate output paths and an Enum input.
 9. The schedule (`InvalidSchedule`).
 10. `MAX_STATE_WORDS` via `allocate_state` (`StateTooLarge`), then the state CRCs
     (`InitialStateMismatch`).
+
+*Amended 2026-11-21 (issue #700).* Step 7 had no budget until then. The fuzz of decision 12
+bounded each constructor by `MAX_RESOLVED_PORT_WIDTH`, about 8 MiB of kept buffers for one block,
+and nothing summed the blocks: a `CDL.Reals.Sources.TimeTable` sizes its table from the largest
+`table_<row>_<col>` parameter name, so a 4,003-byte blob of 64 of them decoded into 536,903,536
+bytes, and a larger one aborted on allocation failure with no typed error. Every constructed
+block now reports the words it holds outside its state (`Block::constructed_words`), and the
+decoder sums them against `oce_graph::MAX_CONSTRUCTED_WORDS` (4,194,304 words, 32 MiB) as it
+constructs, refusing at the first block past it. The owner ruled for a model-wide budget with a
+typed refusal over a density requirement on tables, so a legitimate dense 1024 × 1024 gain
+matrix still decodes. The contract page has the resulting memory bound.
 
 *Amended 2026-11-11 (issue #535).* Steps 2 to 5 read, until then: short input, wrong magic or a
 header length that differs from the input length; the format; the trailer; the profile, the engine

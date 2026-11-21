@@ -8,6 +8,7 @@ use alloc::{string::String, vec::Vec};
 
 use oce_model::{ParamTable, Value};
 
+use crate::constructed::buffer_words;
 use crate::math;
 use crate::{
     Block, BlockKind, BlockSignature, Ctx, PortKind, PortShape, ResolvedBlockSignature, Time,
@@ -134,6 +135,10 @@ impl Block for MultiAnd {
             outputs: Cow::Borrowed(&OUTPUTS),
         }
     }
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs)
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
@@ -178,6 +183,10 @@ impl Block for MultiOr {
             outputs: Cow::Borrowed(&OUTPUTS),
         }
     }
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs)
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }

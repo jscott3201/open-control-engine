@@ -2,6 +2,7 @@
 
 mod build_schedule;
 mod common;
+mod constructed_budget;
 mod edge_counter_feedthrough;
 mod feedthrough_stateful;
 mod frame_driver;

@@ -154,13 +154,14 @@ pub struct BlobInstance {
 /// # Cost
 /// An `Err` allocates nothing. A summary costs the decoder's building pass first, exactly what
 /// `oce_graph::blob::decode` allocates for the same bytes, all of it freed before the result is
-/// built: its peak is the decoder's. That includes the state the blocks declare (at most the
-/// engine's state budget of 4,194,304 words, 32 MiB) and what the block constructors allocate
-/// from the blob's parameters, which is capped per block (up to about 8 MiB) but not across the
-/// model, so **it is not bounded by the blob length**: a blob of a few kilobytes can make it
-/// allocate hundreds of megabytes (GitHub #700 tracks the model-wide budget). Until that lands,
-/// do not call this on untrusted bytes without your own memory limit
-/// (`docs/compiled-schedule-blob.md`, "What a summary costs"). The result is then owned, one
+/// built: its peak is the decoder's. That peak is bounded: at most 64 bytes per blob byte, plus
+/// the constructed budget (what block constructors allocate from the blob's parameters:
+/// 4,194,304 words, 32 MiB, across the model, with one block under construction, at most 32 MiB
+/// more) and the state budget (the state the blocks declare: 4,194,304 words, 32 MiB). So a
+/// summary of `n` blob bytes peaks within `64 n` bytes and 96 MiB. A blob whose blocks would
+/// hold more has a summary whose `decode_refusal` is [`BlobError::ConstructedTooLarge`] or
+/// [`BlobError::StateTooLarge`] (`docs/compiled-schedule-blob.md`, "What a summary costs"). The
+/// result is then owned, one
 /// `String` per non-empty path: at most 4 bytes are requested and held per blob byte while it is
 /// built (a count of the bytes asked of the allocator, not of its per-allocation overhead, which
 /// a blob of many short paths multiplies).

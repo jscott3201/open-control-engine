@@ -8,6 +8,7 @@ use alloc::vec::Vec;
 
 use oce_model::Value;
 
+use crate::constructed::buffer_words;
 use crate::{
     Block, BlockKind, BlockSignature, Ctx, PortKind, PortShape, ResolvedBlockSignature, read_bool,
     read_int,
@@ -264,6 +265,10 @@ impl Block for IntegerMultiSum {
             outputs: Cow::Borrowed(&OUTPUTS),
         }
     }
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs) + buffer_words(&self.gains)
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }

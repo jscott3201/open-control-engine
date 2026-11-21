@@ -34,6 +34,7 @@ mod frame_trace;
 
 mod array_extent;
 mod authored_point_identity;
+mod blob_constructed_budget;
 mod blob_fuzz;
 mod blob_hostile_bytes;
 mod blob_hostile_io_schedule;

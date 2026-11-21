@@ -349,6 +349,13 @@ impl Block for Assert {
         &SIG
     }
 
+    /// Two words: the reference counts of the empty message it allocates when none is bound. A
+    /// bound message is the parameter table's own string, shared and not allocated here, so a
+    /// loader has already bounded it by its input.
+    fn constructed_words(&self) -> usize {
+        2
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }

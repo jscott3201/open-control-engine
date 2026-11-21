@@ -114,8 +114,11 @@ Worked examples of the bar, and where each stands:
   reports for each blob, compared byte for byte by the same binary; issue #448). Its hostile-input suites follow the
   bar above: one typed refusal per defect with mutations re-checksummed to reach the check under
   test, a seeded 10,000-case byte-mutation property test, a hostile-parameter fuzz over every
-  registry constructor (`crates/oce-blocks/tests/hostile_parameters.rs`), and an exact decoder
-  allocation count (`blob_allocations.rs`).
+  registry constructor (`crates/oce-blocks/tests/hostile_parameters.rs`), the same tables
+  measured against what each block reports it holds
+  (`crates/oce-blocks/tests/constructed_words.rs`) and assembled into whole models decoded
+  within the documented peak (`blob_hostile_parameter_models.rs`, issue #700), and an exact
+  decoder allocation count (`blob_allocations.rs`).
 - **One frame driver** — the facade, the core frame driver (`oce_graph::frame`) and the blob
   entry (`oce_graph::blob::Executable`) run every G36 fixture's 160 frames and the same bad frames,
   compared bit for bit after every frame and refusal
