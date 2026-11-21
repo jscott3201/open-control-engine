@@ -297,13 +297,30 @@ no unit on both sides means no conversion. Its first content, version `units/v1`
 | `degF` → `K` | `(x - 32.0) * (5.0 / 9.0) + 273.15` |
 | `degC` → `K` | `x + 273.15` |
 | `degF` → `degC`, `K` → `degC` | `(x - 32.0) * (5.0 / 9.0)`, `x - 273.15` |
+| `degF_delta` → `K` | `x * (5.0 / 9.0)` (a temperature difference) |
+| `degC_delta` → `K` | identity (a temperature difference) |
 | `kPa` → `Pa` | `x * 1000.0` |
-| `inH2O` → `Pa` | `x * 249.08891` (conventional inch of water, NIST SP 811) |
+| `inH2O` → `Pa` | `x * 249.08891` (conventional inch of water: ISO 80000-3's conventional value, through NIST SP 811 footnote 12) |
 | `inH2O_60F` → `Pa` | `x * 248.84` (inch of water at 60 °F) |
-| `cfm` → `m3/s` | `x * 0.00047194744832` (exact: 0.3048³ / 60) |
-| `L/s` → `m3/s` | `x * 0.001` |
+| `cfm` → `m3/s` | `x * 0.0004719474432` (exact: 0.3048³ / 60) |
+| `L/s` → `m3/s` | `x / 1000.0` |
 | `percent` or `%` → `1` | `x / 100.0` |
 | identical spellings | identity, bits unchanged |
+
+*(Amended 2026-11-21, owner rulings during GitHub #716's review, and #714:)* the two difference
+rows are added; the cfm digits are the exact quotient (the table had written `0.00047194744832`,
+1.08e-8 relative too large, #714); `L/s` divides by an exact `1000.0` rather than multiplying by
+`0.001`, which is not exact in binary and rounded twice; and the inch of water cites the source
+of its 1000 kg/m³ basis. **A temperature difference is its own unit.** A setpoint adjustment, a
+deadband or an approach is a difference between two readings, and it converts without the
+offset: 2 `degF` is 256.48 K, 2 `degF_delta` is 1.11 K. Listing 12.2's `setAdj` and `heaSetAdj`
+are setpoint adjustments, so their device side needs `degF_delta`, not the `degF` the listing
+writes. Where the sequence port's declared quantity is `TemperatureDifference`, an absolute pair
+(`degF` → `K`, `degC` → `K`, `degF` → `degC`, `K` → `degC`) is refused at bind (#662) as
+`UnitError::AbsoluteForDifference`. **`cdl.unit` must be the port's unit.** A mapping's
+`cdl.unit` that disagrees with the unit the sequence port declares is refused at bind as
+`unit-refused` (#662). The identity rule and every row trust `cdl.unit` to be the engine's unit,
+so they are only safe together with that check.
 
 | Device type → CDL type | Rule |
 | --- | --- |
@@ -311,10 +328,49 @@ no unit on both sides means no conversion. Its first content, version `units/v1`
 | `float` or `int` → `bool` | exactly `0` is false, exactly `1` true; anything else refused |
 | CSV text → `bool` | `true`/`false`, `active`/`inactive` (BACnet binary present value), `0`/`1` |
 | `float` → `int` | integral and within `i32` only, else refused |
+| `int` → `float` | a whole number within `i32`, widened exactly, else refused *(amended 2026-11-21, owner ruling)* |
 
 A refused cell is a typed `SourceError` naming file, row and column, never a silent threshold: the
 upstream Modelica model turns fan enable into a Boolean with `GreaterThreshold(t = 0.5)`; the
 verifier refuses a `0.5` instead (decision 19).
+
+### As landed: the unit table and the type rules
+
+*(GitHub #716, issue #659.)* `units/v1` is `convert_unit` in `crates/leverage/oce-verify`
+(`src/commissioning/units.rs`, with `UnitError`, `UnitSide`, `UNITS_TABLE` and
+`UNIT_ERROR_CODES`), and the type rules are `src/commissioning/type_rules.rs`, crate-internal
+until the trend sources (#660) call them. Its bit goldens come from a script that shares no code
+with the crate (`tests/fixtures/units/`). These are consequences of building it:
+
+- **One pair is listed both ways.** `degC` → `K` and `K` → `degC` are both rows, so the reverse
+  of a row is refused for every row but those two.
+- **What bind is handed.** The port-quantity rule above is
+  `UnitConversion::for_port_quantity(quantity)`, crate-internal, which #662 calls with the
+  facade's `PointInfo::quantity` for each mapped point; it refuses only on the exact quantity
+  `TemperatureDifference`. Nothing here sees a port, so the `cdl.unit` check is #662's alone.
+- **What the quantity check does not see.** `for_port_quantity` matches the bare string
+  `TemperatureDifference`, byte for byte, and nothing else. A quantity carried as an IRI
+  (`q:TemperatureDifference`, or a full QUDT IRI the importer keeps as `TermAttr::Iri`) is not
+  refused, and neither is a quantity left unread: modelica-json translations write it as
+  `qudt:hasQuantityKind`, so `PointInfo::quantity` is `None` there. A `*_delta` unit mapped onto
+  a port whose quantity is `ThermodynamicTemperature` is not refused here either. All three
+  belong to the binder (#662), which sees the port; a test lists the first two spellings as
+  deliberately passing.
+- **Choices the note left open.** An empty unit spelling is refused as `empty-unit`, the device
+  side's first, before the one-sided rule. A finite reading whose conversion overflows `f64` is
+  refused as `overflow` (a factor above one, beyond about ±1e305). A NaN, replay's missing Real
+  cell, and an infinity pass through every pair with their bits unchanged, so no platform's NaN
+  propagation reaches a result. Identical spellings are the identity whatever they spell (`psi`
+  to `psi`). `-0.0` is zero for the Boolean and the Integer rules. A text cell is read by the
+  Boolean text rule only in a device `bool` column. `bool` → `float` is not in the type table and
+  is refused as `type-pair-refused`.
+- **The bound on the temperature rows.** Errors are counted in ulps of the largest magnitude in
+  the sum, M, not of the result: near the offset the result cancels, and `-459.67 degF` converts
+  to -2⁻⁴⁴ K, not zero. The two Celsius–kelvin rows are within 1 ulp(M) of the exact conversion,
+  and that is proven: half an ulp for rounding 273.15 to `f64`, half for the add. The two
+  Fahrenheit rows are held to 2 ulp(M), and that bound is **measured, not proven**: the script
+  checks it against the exact rational at every golden row and at 140,000 seeded readings per
+  pair (worst 1.62 for `degF` → `K`, 1.22 for `degF` → `degC`), and the test at every golden row.
 
 ## Sources, sampling and time
 
