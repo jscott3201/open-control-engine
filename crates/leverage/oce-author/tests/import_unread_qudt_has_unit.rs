@@ -3,10 +3,10 @@
 //! `resolve_unread_qudt_has_unit.rs`: each probe is put to the importer and, through the facade,
 //! to the engine, so the two are held to one verdict.
 //!
-//! The importer's `@context` is closed and it reads compact keys only, so it has always refused
+//! The importer's `@context` is closed and it reads compact keys only, so it refuses each of
 //! these documents as `unknown-key`: naming the key on the node, or the `@context` term on the
-//! document. The engine left the key in its pass-through map and loaded the document without the
-//! unit, or with the unit another key gave it. It refuses now:
+//! document. The engine reads any prefix map and any key that expands to a modeled property, and
+//! refuses a `hasUnit` key that would otherwise sit unread in its pass-through map:
 //!
 //! | Document | Engine | Importer |
 //! | --- | --- | --- |
@@ -16,9 +16,10 @@
 //! | any of those only once the key is trimmed | `malformed-document` | `unknown-key`, the key |
 //!
 //! The codes differ, each reader's own. What is held here is the verdict: neither reader takes a
-//! document the other refuses for this reason. Where the engine still loads (a `qudt` prefix
-//! bound to an unrelated namespace) the importer stays the stricter, pinned in
-//! `import_unit_spellings.rs`.
+//! document the other refuses for this reason. Where the engine loads, the importer is the
+//! stricter: a `qudt` prefix bound to an unrelated namespace (`import_unit_spellings.rs`), and
+//! one bound to a near miss of a QUDT namespace in a document that writes no `hasUnit` key
+//! through it, pinned here.
 
 use oce_api::{DiagCode, Engine};
 use oce_author::{ImportErrorKind, ImportOptions, import_cxf};
@@ -175,7 +176,7 @@ fn the_qudt_key_under_no_qudt_binding_is_refused_by_both_readers_on_every_node()
 #[test]
 fn a_unit_contradicted_by_the_unbound_key_is_refused_by_both_readers() {
     // The case the ruling was made on: `K` under the engine's key and degrees Celsius under the
-    // upstream one, with no `qudt` binding. The engine loaded it as `K`.
+    // upstream one, with no `qudt` binding.
     for node in [NODES[0], NODES[1]] {
         let doc = with(
             with(document(unbound_context()), node, "S231:unit", json!("K")),
@@ -217,6 +218,38 @@ fn has_unit_under_a_qudt_prefix_bound_to_a_near_miss_namespace_is_refused_by_bot
                 engine_refuses(DiagCode::VocabularyNamespaceMismatch, node),
                 "{binding} {node}"
             );
+        }
+    }
+}
+
+#[test]
+fn a_near_miss_binding_with_no_has_unit_key_through_it_loads_in_the_engine_alone() {
+    // The engine does not judge the binding, only a `hasUnit` key through it: with no key, or
+    // with `qudt:hasQuantityKind`, which is never read, the document loads to the content id it
+    // has without them. The importer refuses the `@context` term whatever the nodes write.
+    let identity = |doc: &Json| {
+        let mut engine = Engine::new();
+        engine
+            .load_cxf(&serde_json::to_vec(doc).expect("serialize"))
+            .unwrap_or_else(|error| panic!("the engine loads it: {error}"));
+        crate::support::cxf::identity(&engine)
+    };
+    let without = identity(&document(unbound_context()));
+    for binding in UNREAD_NAMESPACES {
+        let bare = document(context_binding(binding));
+        let kind = with(
+            bare.clone(),
+            BOUNDARY,
+            "qudt:hasQuantityKind",
+            json!({ "@id": "q:Pressure" }),
+        );
+        for doc in [bare, kind] {
+            assert_eq!(
+                importer_refusal(&doc),
+                unknown_key("document", "qudt"),
+                "{binding}"
+            );
+            assert_eq!(identity(&doc), without, "{binding}");
         }
     }
 }

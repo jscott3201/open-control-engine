@@ -15,13 +15,23 @@ fn split<'a>(iri: &'a str, namespace: &str) -> Option<(&'a str, &'a str)> {
 }
 
 /// Assert that `written` followed by each local name is a near miss of `namespace`, split
-/// exactly between the two.
+/// exactly between the two. A local name that holds a separator of its own is one only where
+/// `written` ends in a separator: after none, it is the rest of another namespace's path.
 fn assert_near(written: &str, namespace: &str) {
-    for local in ["hasUnit", "unit", "Real", "a/b#c", "µ", ""] {
+    for local in ["hasUnit", "unit", "Real", "µ", ""] {
         let iri = format!("{written}{local}");
         assert_eq!(
             split(&iri, namespace),
             Some((written, local)),
+            "{iri} against {namespace}"
+        );
+    }
+    let separated = written.ends_with(['#', '/']);
+    for local in ["a/b#c", "a#b", "a?b"] {
+        let iri = format!("{written}{local}");
+        assert_eq!(
+            split(&iri, namespace),
+            separated.then_some((written, local)),
             "{iri} against {namespace}"
         );
     }
@@ -146,18 +156,84 @@ fn a_missing_a_wrong_or_a_repeated_separator_is_a_near_miss() {
         );
     }
     assert_near("http://data.ashrae.org/S231/", S231);
-    // The local name is what follows every separator, whatever it is.
+}
+
+#[test]
+fn with_no_separator_what_follows_the_path_is_one_name_or_the_iri_is_in_another_namespace() {
+    // One name after the path: a near miss, whatever the name. The caller holds it to its list.
+    for (iri, namespace, written, local) in [
+        (
+            "http://qudt.org/schema/qudthasUnit",
+            QUDT_HASH,
+            "http://qudt.org/schema/qudt",
+            "hasUnit",
+        ),
+        (
+            "http://qudt.org/schema/qudtXhasUnit",
+            QUDT_HASH,
+            "http://qudt.org/schema/qudt",
+            "XhasUnit",
+        ),
+        (
+            "http://qudt.org/schema/qudt-extra",
+            QUDT_SLASH,
+            "http://qudt.org/schema/qudt",
+            "-extra",
+        ),
+        (
+            "http://data.ashrae.org/S231Punit",
+            S231,
+            "http://data.ashrae.org/S231",
+            "Punit",
+        ),
+        (
+            "HTTPS://data.ashrae.org/S231unit",
+            S231,
+            "HTTPS://data.ashrae.org/S231",
+            "unit",
+        ),
+    ] {
+        assert_eq!(split(iri, namespace), Some((written, local)), "{iri}");
+    }
+    // A separator or a query of its own after a longer path: another namespace, and no near
+    // miss, under an exact authority and under a near-miss one. The namespace the engine wrote
+    // through release 0.4.0 is one of them, and is no near miss of the S231 namespace here.
+    for (iri, namespace) in [
+        ("http://qudt.org/schema/qudt-extra#hasUnit", QUDT_HASH),
+        ("http://qudt.org/schema/qudt-extra/hasUnit", QUDT_SLASH),
+        ("http://qudt.org/schema/qudtX#hasUnit", QUDT_HASH),
+        ("http://qudt.org/schema/qudtX/hasUnit", QUDT_HASH),
+        ("http://qudt.org/schema/qudtX?hasUnit", QUDT_HASH),
+        ("http://qudt.org/schema/qudt?q#hasUnit", QUDT_HASH),
+        ("http://qudt.org/schema/qudt?hasUnit", QUDT_SLASH),
+        ("https://qudt.org/schema/qudt2#hasUnit", QUDT_HASH),
+        ("HTTP://QUDT.org:80/schema/qudts/hasUnit", QUDT_SLASH),
+        ("http://data.ashrae.org/S231P#unit", S231),
+        ("https://data.ashrae.org/S231P#unit", S231),
+        ("http://data.ashrae.org/S231P#", S231),
+        ("http://data.ashrae.org/S2310/unit", S231),
+    ] {
+        assert_eq!(split(iri, namespace), None, "{iri}");
+    }
+    // A longer path under the namespace's own separator is the namespace with a local name that
+    // holds a separator: exact for the namespace it starts with, a wrong-separator near miss of
+    // its twin, and never a namespace of its own.
     assert_eq!(
-        split("http://qudt.org/schema/qudtX#hasUnit", QUDT_HASH),
-        Some(("http://qudt.org/schema/qudt", "X#hasUnit"))
+        split("http://qudt.org/schema/qudt/2.1/hasUnit", QUDT_SLASH),
+        None
     );
     assert_eq!(
-        split("http://qudt.org/schema/qudt?q#hasUnit", QUDT_HASH),
-        Some(("http://qudt.org/schema/qudt", "?q#hasUnit"))
+        split("http://qudt.org/schema/qudt/2.1/hasUnit", QUDT_HASH),
+        Some(("http://qudt.org/schema/qudt/", "2.1/hasUnit"))
+    );
+    // A version segment before the namespace's path is another path.
+    assert_eq!(
+        split("http://qudt.org/2.1/schema/qudt#hasUnit", QUDT_HASH),
+        None
     );
     assert_eq!(
-        split("http://data.ashrae.org/S231P#unit", S231),
-        Some(("http://data.ashrae.org/S231", "P#unit"))
+        split("http://qudt.org/2.1/schema/qudt/hasUnit", QUDT_SLASH),
+        None
     );
 }
 
@@ -261,15 +337,20 @@ fn a_namespace_of_another_form_has_no_near_miss() {
         split("http://example.org", "http://example.org/"),
         Some(("http://example.org", ""))
     );
-    // The authority ends at a `#` or a `?` as it does at a `/`.
+    // The authority ends at a `#` as it does at a `/`. A query straight after it is no near
+    // miss: what follows the path is no name.
     assert_eq!(
         split("http://example.org#x", "http://example.org/"),
         Some(("http://example.org#", "x"))
     );
-    assert_eq!(
-        split("http://example.org?x", "http://example.org/"),
-        Some(("http://example.org", "?x"))
-    );
+    for iri in [
+        "http://example.org?x",
+        "http://example.org?x#y",
+        "http://example.org?",
+        "HTTP://example.org?/x",
+    ] {
+        assert_eq!(split(iri, "http://example.org/"), None, "{iri}");
+    }
 }
 
 #[test]
@@ -282,7 +363,7 @@ fn the_two_parts_are_the_iri_cut_in_two_whatever_it_holds() {
         "😀x",
         "\u{200B}hasUnit",
         " hasUnit",
-        "é/é#é",
+        "é.é",
         long.as_str(),
     ] {
         for written in [
@@ -296,6 +377,10 @@ fn the_two_parts_are_the_iri_cut_in_two_whatever_it_holds() {
             assert_eq!(format!("{}{}", miss.written, miss.local), iri);
         }
     }
+    // A megabyte of path after a missing separator, ending in a separator of its own, is read in
+    // one pass and is no near miss.
+    let longer = format!("http://qudt.org/schema/qudt{}#hasUnit", "x".repeat(1 << 20));
+    assert_eq!(split(&longer, QUDT_HASH), None);
     // A megabyte of separators is a near miss too, read in one pass.
     let separators = "/#".repeat(1 << 19);
     let iri = format!("http://qudt.org/schema/qudt{separators}hasUnit");

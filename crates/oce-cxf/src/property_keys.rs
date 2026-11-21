@@ -39,7 +39,8 @@
 //!   nowhere (`malformed-document`), and `hasUnit` in a near miss of a QUDT schema namespace or
 //!   in the QUDT unit vocabulary (`vocabulary-namespace-mismatch`). Either would leave a declared
 //!   unit unread. Under a prefix bound to an unrelated namespace the key is that vocabulary's
-//!   property and stays in the pass-through map.
+//!   property and stays in the pass-through map. A node with a `@context` of its own is refused
+//!   for that scoped context alone.
 //! - **Two spellings of one property on one node** — compact plus expanded, two expanded, or
 //!   `S231:unit` beside `qudt:hasUnit` — are refused (`malformed-document`) rather than one being
 //!   chosen, even when their values agree. A compact key the DTO cannot represent (an explicit
@@ -291,9 +292,12 @@ impl KeyScope<'_> {
 
     /// Collect the pass-through keys of `node` that name a modeled property, in the S231
     /// namespace or as the QUDT schema's `hasUnit`, refusing foreign-namespace and whitespace
-    /// near-miss spellings and a `hasUnit` key that would go unread.
+    /// near-miss spellings and a `hasUnit` key that would go unread. On a node that carries a
+    /// `@context` of its own, which is refused as a scoped context, an unread `hasUnit` key is
+    /// not refused as well: the document-level bindings are not what that node meant its keys by.
     fn aliases_of(&self, node: &Node, diags: &mut Vec<Diagnostic>) -> Vec<Alias> {
         let subject = self.subject;
+        let scoped = node.other.contains_key("@context");
         let mut aliases = Vec::new();
         for key in node.other.keys().filter(|key| !key.starts_with('@')) {
             let trimmed = key.trim();
@@ -308,10 +312,10 @@ impl KeyScope<'_> {
                             excerpt(key)
                         ),
                     )),
-                    KeyMeaning::Unread(unread) => {
+                    KeyMeaning::Unread(unread) if !scoped => {
                         diags.push(unread.whitespace_refusal(key, subject));
                     }
-                    KeyMeaning::Unrelated => {}
+                    KeyMeaning::Unread(_) | KeyMeaning::Unrelated => {}
                 }
                 continue;
             }
@@ -323,8 +327,10 @@ impl KeyScope<'_> {
                 KeyMeaning::Foreign(term, namespace) => {
                     diags.push(foreign_key(key, subject, term, namespace));
                 }
-                KeyMeaning::Unread(unread) => diags.push(unread.refusal(key, subject)),
-                KeyMeaning::Unrelated => {}
+                KeyMeaning::Unread(unread) if !scoped => {
+                    diags.push(unread.refusal(key, subject));
+                }
+                KeyMeaning::Unread(_) | KeyMeaning::Unrelated => {}
             }
         }
         aliases

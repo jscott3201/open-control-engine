@@ -466,9 +466,12 @@ is matched after the same expansion, on every node that carries one:
   The message names the key and the namespace as written, each in at most 64 bytes with format
   and control characters escaped, and the two namespaces the property is read in. Bind `qudt` to
   one of them, as every modelica-json translation does, or write `S231:unit`. Under a prefix
-  bound to a namespace that is no QUDT one and no near miss of one (`http://example.org/qudt#`),
-  `hasUnit` is that vocabulary's property and passes through unread, as any other vocabulary's
-  key does; so does a key that differs in its local name or its letter case (`qudt:HasUnit`).
+  bound to a namespace that is no QUDT one and no near miss of one, `hasUnit` is that
+  vocabulary's property and passes through unread, as any other vocabulary's key does:
+  `http://example.org/qudt#`, and also another host (`http://www.qudt.org/schema/qudt#`), a path
+  in another letter case and a versioned IRI (`http://qudt.org/2.1/schema/qudt#`), none of which
+  RFC 3986 reads as the same namespace. So does a key that differs in its prefix, its local name
+  or its letter case (`QUDT:hasUnit` with no such binding, `qudt:HasUnit`).
 - **`displayUnit`** is also `S231:hasDisplayUnit`.
 - **`quantity` has no other spelling.** `qudt:hasQuantityKind` is not read: modelica-json writes
   `PressureDifference` as the kind `Pressure`, so reading it would report the wrong quantity. The

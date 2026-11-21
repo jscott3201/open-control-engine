@@ -27,10 +27,20 @@
 //! with no `qudt` binding) is refused as `malformed-document`, as a whitespace near miss of a
 //! modeled key is.
 //!
-//! Everything else stays what it was: `hasUnit` under a prefix bound to an unrelated namespace
-//! (`http://example.org/qudt#`) is that vocabulary's property and passes through, as does a key
-//! that differs in its local name (`qudt:HasUnit`, `qudt:hasUnits`) or its prefix (`QUDT:hasUnit`
-//! unbound), and `hasQuantityKind`, which is not read under any binding.
+//! No other key is refused here. `hasUnit` under a prefix bound to a namespace that is no QUDT one
+//! and no near miss of one (`http://example.org/qudt#`, `http://www.qudt.org/schema/qudt#`, a
+//! path in another case, a versioned path such as `http://qudt.org/2.1/schema/qudt#`) is that
+//! vocabulary's property and passes through. So does a key that differs in its local name
+//! (`qudt:HasUnit`, `qudt:hasUnits`) or its prefix (`QUDT:hasUnit` unbound), and
+//! `hasQuantityKind`, which is not read under any binding.
+//!
+//! A node that carries a `@context` of its own is not judged: the scoped context is refused for
+//! that node (`non-subset-construct`), and what a key would mean under it is not this engine's
+//! to say, so no second refusal claims the document binds no `qudt`.
+//!
+//! Every key of every `@graph` node comes through [`unread_has_unit`], and only one that ends in
+//! `hasUnit` can be refused, so any other is ruled out by that one comparison: it costs no
+//! near-miss check and no allocation.
 //!
 //! Every message quotes authored text (the key, the namespace as written) as an excerpt of at
 //! most 64 bytes with each format or control character escaped ([`visible`] of [`excerpt`]), and
@@ -64,14 +74,20 @@ pub(super) enum UnreadHasUnit {
 /// not: when it is that property, in a schema namespace exactly as written, and when it is some
 /// other key.
 ///
-/// The four QUDT namespaces are asked in turn whether `iri` is a near miss of one. Each of the
-/// two namespaces of a vocabulary is a near miss of the other, since they differ in the separator
-/// alone, which is how `hasUnit` in a unit namespace exactly is caught here, and why the read
-/// spellings are set aside first.
+/// An IRI that does not end in `hasUnit` is none of the refused cases, and is ruled out first, by
+/// that comparison alone. For one that does, the four QUDT namespaces are asked in turn whether
+/// `iri` is a near miss of one. Each of the two namespaces of a vocabulary is a near miss of the
+/// other, since they differ in the separator alone, which is how `hasUnit` in a unit namespace
+/// exactly is caught here, and why the read spellings are set aside before that.
 ///
-/// Work is three comparisons and at most four near-miss checks, each linear in `iri`; the one
-/// allocation is the excerpt of the namespace, at most 64 bytes of the document's text.
+/// Work is one suffix comparison for an IRI that does not end in `hasUnit`, with no near-miss
+/// check and no allocation. For one that does it is three more comparisons and at most four
+/// near-miss checks, each linear in `iri`; the one allocation, made only for a refused key, is
+/// the excerpt of the namespace, at most 64 bytes of the document's text.
 pub(super) fn unread_has_unit(iri: &str) -> Option<UnreadHasUnit> {
+    if !iri.ends_with(QUDT_HAS_UNIT) {
+        return None;
+    }
     if iri == UNBOUND_QUDT_HAS_UNIT {
         return Some(UnreadHasUnit::UnboundPrefix);
     }
@@ -153,9 +169,97 @@ impl UnreadHasUnit {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::namespace_near_miss::checks_made_by;
 
     fn namespace(written: &str) -> Option<UnreadHasUnit> {
         Some(UnreadHasUnit::Namespace(written.to_owned()))
+    }
+
+    /// A document of one node carrying `keys`, each with the value `0`, under an `ex` prefix.
+    fn one_node(keys: impl Iterator<Item = String>) -> Vec<u8> {
+        let keys: Vec<String> = keys.map(|key| format!("\"{key}\": 0")).collect();
+        format!(
+            "{{ \"@context\": {{ \"ex\": \"http://example.org/v#\" }}, \"@graph\": [ \
+             {{ \"@id\": \"http://example.org#n\", {} }} ] }}",
+            keys.join(", ")
+        )
+        .into_bytes()
+    }
+
+    /// The near-miss checks the expansion pass makes on `bytes`, which it must accept.
+    fn checks_to_expand(bytes: &[u8]) -> u64 {
+        let document = crate::parse_document(bytes).expect("the document parses");
+        let (checks, expanded) =
+            checks_made_by(|| crate::expand::expand_document(&document, Some(bytes)));
+        expanded.expect("every key is a pass-through key");
+        checks
+    }
+
+    #[test]
+    fn an_iri_that_does_not_end_in_has_unit_costs_no_near_miss_check() {
+        let megabyte = format!("https://qudt.org/schema/qudt#{}", "k".repeat(1 << 20));
+        for iri in [
+            "http://example.org/v#k",
+            "http://data.ashrae.org/S231#translationSoftware",
+            "https://qudt.org/schema/qudt#hasQuantityKind",
+            "https://qudt.org/schema/qudt#hasUnits",
+            "https://qudt.org/schema/qudt#hasUnit ",
+            "https://qudt.org/schema/qudt#HasUnit",
+            "https://qudt.org/schema/qudt#hasunit",
+            "https://qudt.org/schema/qudt#",
+            "http://qudt.org/vocab/unit#K",
+            "qudt:hasQuantityKind",
+            "qudt:hasUni",
+            "",
+            megabyte.as_str(),
+        ] {
+            assert_eq!(
+                checks_made_by(|| unread_has_unit(iri)),
+                (0, None),
+                "{:?}",
+                iri.get(..64).unwrap_or(iri)
+            );
+        }
+        // One that does end in it: none where it is read or is the unbound key, one where the
+        // first namespace asked is the one it misses, and all four where it misses none.
+        let read = "http://qudt.org/schema/qudt#hasUnit";
+        assert_eq!(checks_made_by(|| unread_has_unit(read)), (0, None));
+        assert_eq!(
+            checks_made_by(|| unread_has_unit("qudt:hasUnit")),
+            (0, Some(UnreadHasUnit::UnboundPrefix))
+        );
+        assert_eq!(
+            checks_made_by(|| unread_has_unit("https://qudt.org/schema/qudt#hasUnit")),
+            (1, namespace("https://qudt.org/schema/qudt#"))
+        );
+        assert_eq!(
+            checks_made_by(|| unread_has_unit("http://qudt.org/vocab/unit/hasUnit")),
+            (3, namespace("http://qudt.org/vocab/unit/"))
+        );
+        assert_eq!(
+            checks_made_by(|| unread_has_unit("http://example.org/v#hasUnit")),
+            (4, None)
+        );
+    }
+
+    #[test]
+    fn fifty_thousand_pass_through_keys_on_one_node_cost_no_near_miss_check() {
+        // Every key of every node comes through the check, so a node of many keys must not pay
+        // for near-miss checks none of its keys can need. Counted, never timed.
+        let many = one_node((0..50_000).map(|i| format!("ex:k{i:05}")));
+        assert_eq!(checks_to_expand(&many), 0);
+        // By full IRI too, and one key that ends in `hasUnit` among them is the only one checked.
+        const KEYS: usize = 1_000;
+        let one = one_node(
+            (0..KEYS)
+                .map(|i| format!("http://example.org/v#k{i:05}"))
+                .chain(["ex:hasUnit".to_owned()]),
+        );
+        assert_eq!(checks_to_expand(&one), 4);
+        // The control: keys that all end in it are each checked against the four namespaces, so
+        // the zero above is the early exit's and not a counter that sees nothing.
+        let all = one_node((0..KEYS).map(|i| format!("ex:k{i:05}hasUnit")));
+        assert_eq!(checks_to_expand(&all), 4 * KEYS as u64);
     }
 
     #[test]
@@ -247,7 +351,15 @@ mod tests {
             "http://qudt.org/vocab/unit#K",
             "http://qudt.org/vocab/unit#hasunit",
             "http://qudt.org/schema/qudtXhasUnit",
-            // `hasUnit` in a namespace that is no QUDT one and no near miss of one.
+            // `hasUnit` in a namespace that is no QUDT one and no near miss of one: another
+            // host, a path that only begins like a QUDT one, a versioned path.
+            "http://www.qudt.org/schema/qudt#hasUnit",
+            "http://qudt.org/schema/qudt-extra#hasUnit",
+            "http://qudt.org/schema/qudtX/hasUnit",
+            "http://qudt.org/vocab/units#hasUnit",
+            "http://qudt.org/2.1/schema/qudt#hasUnit",
+            "http://qudt.org/schema/qudt/2.1/hasUnit",
+            "http://qudt.org/2.1/vocab/unit#hasUnit",
             "http://example.org/qudt#hasUnit",
             "http://example.org/schema/qudt#hasUnit",
             "http://qudt.org.example.org/schema/qudt#hasUnit",

@@ -2,10 +2,10 @@
 //! #675; owner ruling of 2026-11-20).
 //!
 //! `qudt:hasUnit` is read as `unit` by its expanded IRI in the two QUDT schema namespaces
-//! (`resolve_unit_spellings.rs`). One edit from that, the key fell into the pass-through map: the
-//! node loaded with no unit, or with the unit another key gave it, and the load reported nothing.
+//! (`resolve_unit_spellings.rs`). A key one edit from that names no modeled property, and a
+//! pass-through key would leave the node with no unit, or with the unit another key gives it:
 //! `"S231:unit": "K"` beside `"qudt:hasUnit": {"@id": "unit:DEG_C"}` under an unbound `qudt`
-//! loaded as `K`. Each case is now a refusal, matched on the expanded IRI:
+//! would be `K`. Each case is a refusal, matched on the expanded IRI:
 //!
 //! - no `qudt` binding: `malformed-document`;
 //! - `hasUnit` in a near miss of a QUDT schema namespace (`https:`, scheme or host case, a default
@@ -172,10 +172,10 @@ fn the_qudt_key_under_no_qudt_binding_is_refused_on_every_node() {
 }
 
 #[test]
-fn a_unit_contradicted_by_the_unbound_key_is_refused_where_it_loaded_as_the_other() {
+fn a_unit_beside_a_contradicting_unbound_key_is_refused_for_the_key() {
     // The case the ruling was made on: `K` under the engine's key, degrees Celsius under the
-    // upstream one, and no `qudt` binding. It loaded as `K` with no diagnostic, so the §7.10 gate
-    // could not refuse `K` wired to `degC`.
+    // upstream one, and no `qudt` binding. Read as `K` alone, the §7.10 gate could not refuse
+    // `K` wired to `degC`.
     for node in ROLES {
         let contradicted = |context: Json| {
             with(
@@ -190,8 +190,8 @@ fn a_unit_contradicted_by_the_unbound_key_is_refused_where_it_loaded_as_the_othe
             vec![unbound(node, "qudt:hasUnit")],
             "{node}"
         );
-        // The same node under a read binding is two spellings of `unit`: either way a refusal,
-        // and no longer a matter of the binding alone.
+        // The same node under a read binding is two spellings of `unit`: a refusal under either
+        // binding, so the binding does not decide whether the contradiction is seen.
         assert_eq!(
             refusal(&contradicted(upstream_context())),
             vec![
@@ -292,7 +292,7 @@ fn a_context_term_that_expands_to_an_unread_has_unit_is_refused_like_the_key_it_
             "{node}"
         );
     }
-    // The same term bound to a read IRI is the property, as before.
+    // The same term bound to a read IRI is the property.
     let mut read = upstream_context();
     read["hu"] = json!(format!("{QUDT_SLASH}hasUnit"));
     let graph = loaded(&with(document(read), PORT, "hu", json!("K")));
@@ -329,7 +329,8 @@ fn only_the_binding_in_force_decides_in_a_list_of_context_maps() {
 #[test]
 fn a_key_that_is_an_unread_has_unit_only_once_trimmed_is_refused() {
     // Unbound, the trimmed key names no modeled property, so the whitespace near-miss rule for a
-    // modeled key did not reach it and the padded key passed through too.
+    // modeled key does not reach it; the padded key is refused as the unread key it is once
+    // trimmed.
     let padded_keys = [
         ("qudt:hasUnit ", "qudt:hasUnit "),
         (" qudt:hasUnit", " qudt:hasUnit"),
@@ -486,6 +487,13 @@ fn what_only_resembles_an_unread_has_unit_stays_a_pass_through_key() {
         "http://qudt.org/schema#",
         "http://qudt.org/vocab/quantitykind#",
         "ftp://qudt.org/schema/qudt#",
+        // A path that only begins like the schema namespace's, with a separator of its own or
+        // with none, and a versioned path on either side of it.
+        "http://qudt.org/schema/qudt-extra#",
+        "http://qudt.org/schema/qudtX",
+        "http://qudt.org/2.1/schema/qudt#",
+        "http://qudt.org/schema/qudt/2.1/",
+        "http://qudt.org/2.1/vocab/unit#",
     ] {
         let context = context_binding(binding);
         let unset = rendered(&document(context.clone()));
@@ -530,6 +538,67 @@ fn what_only_resembles_an_unread_has_unit_stays_a_pass_through_key() {
             assert_eq!(rendered(&doc), unset, "{key} {node}");
         }
     }
+}
+
+#[test]
+fn a_node_with_a_context_of_its_own_is_refused_for_the_scoped_context_alone() {
+    // A node-level `@context` is refused as a scoped context. What the node's keys would mean
+    // under it is not judged, so no second refusal says the document binds no `qudt` where the
+    // node bound one, whatever the key and the document-level binding.
+    let scoped = |node: &str| {
+        Diagnostic::error(
+            DiagCode::NonSubsetConstruct,
+            format!(
+                "node `{node}` declares a scoped `@context`; node-scoped contexts are not \
+                 supported; declare required bindings in the document-level `@context`"
+            ),
+        )
+        .with_subject(node)
+    };
+    let near = "https://qudt.org/schema/qudt#";
+    for (context, key) in [
+        (unbound_context(), "qudt:hasUnit".to_owned()),
+        (unbound_context(), " qudt:hasUnit".to_owned()),
+        (context_binding(near), "qudt:hasUnit".to_owned()),
+        (context_binding(near), "qudt:hasUnit\t".to_owned()),
+        (upstream_context(), format!("{near}hasUnit")),
+    ] {
+        for node in nodes() {
+            let doc = with(
+                with(
+                    document(context.clone()),
+                    node,
+                    "@context",
+                    json!({ "qudt": QUDT_HASH }),
+                ),
+                node,
+                &key,
+                json!({ "@id": "unit:K" }),
+            );
+            assert_eq!(refusal(&doc), vec![scoped(node)], "{key:?} {node}");
+        }
+    }
+    // A node with no context of its own is still refused for its key, in the same document.
+    let doc = with(
+        with(
+            with(
+                document(unbound_context()),
+                PORT,
+                "@context",
+                json!({ "qudt": QUDT_HASH }),
+            ),
+            PORT,
+            "qudt:hasUnit",
+            json!("K"),
+        ),
+        MEMBER,
+        "qudt:hasUnit",
+        json!("K"),
+    );
+    assert_eq!(
+        refusal(&doc),
+        vec![scoped(PORT), unbound(MEMBER, "qudt:hasUnit")]
+    );
 }
 
 #[test]
@@ -595,8 +664,8 @@ fn an_unread_key_beside_another_refused_key_reports_both() {
 }
 
 #[test]
-fn the_read_spellings_load_as_before_under_every_read_binding() {
-    // The controls: nothing here refuses a key the engine reads.
+fn has_unit_in_a_read_namespace_is_read_under_every_read_binding() {
+    // The controls: no key the engine reads is refused here.
     for namespace in [QUDT_HASH, QUDT_SLASH] {
         for key in ["qudt:hasUnit".to_owned(), format!("{namespace}hasUnit")] {
             let doc = with(

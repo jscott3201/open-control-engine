@@ -265,7 +265,7 @@ found one that both had missed, the last row below (#679).
 | `qudt:hasQuantityKind` | an unread pass-through key | `unknown-key` |
 | `qudt:hasUnit` with no `qudt` binding | `malformed-document` (issue #675) | `unknown-key` |
 | `hasUnit` in a near miss of a QUDT schema namespace or in the QUDT unit vocabulary, through a `qudt` binding or by full IRI | `vocabulary-namespace-mismatch` (issue #675) | `unknown-key` naming the `@context` term, or the full-IRI key |
-| a `qudt` or `unit` prefix bound to an IRI that is no QUDT namespace and no near miss of one | accepted; the key or identifier is then whatever it expands to (for any namespace but the S231 one, an unread key and an unmapped identifier) | `unknown-key` naming the term |
+| a `qudt` or `unit` prefix bound to any other IRI, a near miss of a QUDT namespace included | accepted: the engine does not judge the binding, and a key or identifier through it is whatever it expands to (for any namespace but the S231 one, an unread key and an unmapped identifier; a `hasUnit` key through a near miss of a QUDT namespace is refused, the row above) | `unknown-key` naming the term, whatever the nodes write |
 | a unit IRI node through `base` or a whole-token `@context` term (`{"@id": "base:K"}` with `base` bound to a unit namespace) | read through the table | `wrong-shape`: `base` is inert, and only `S231:`, `qudt:` and `unit:` identifiers and full IRIs are looked up |
 | a unit, in any spelling, on a block port | read | `port-attribute` (decision 8) |
 | a `unit`, `quantity` or `displayUnit` on an Integer or Boolean boundary | `malformed-document` | **imported**: the one difference in which the importer is the more lenient, found by the review of GitHub #674 and filed as #679 |

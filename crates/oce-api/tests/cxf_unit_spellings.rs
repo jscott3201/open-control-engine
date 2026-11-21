@@ -13,8 +13,8 @@
 //! `unit:K` of case 3 was a unit that equals no unit string.
 //!
 //! Case 1 is also put with `qudt` unbound and bound to a near miss of a QUDT namespace (issue
-//! #675): the key then named no property, so the load went through and the gate compared nothing.
-//! Each is a refusal of the key itself.
+//! #675): the key then names no modeled property, and read as a pass-through key it would give
+//! the gate nothing to compare. Each is a refusal of the key itself.
 
 use oce_api::{Engine, OcError, PointInfo};
 use serde_json::{Value as Json, json};
@@ -214,9 +214,9 @@ fn case_1_a_string_unit_against_another_units_qudt_iri_is_a_mismatch() {
 }
 
 #[test]
-fn case_1_under_no_qudt_binding_is_refused_where_the_gate_never_saw_the_unit() {
-    // Issue #675: with `qudt` left out of the `@context`, the key of case 1 named no property.
-    // The document loaded, `gai2.u` read `K` by propagation, and the gate had nothing to compare.
+fn case_1_under_no_qudt_binding_is_refused_for_the_unbound_key() {
+    // Issue #675: with `qudt` left out of the `@context`, the key of case 1 names no property.
+    // Left unread, `gai2.u` would read `K` by propagation with nothing for the gate to compare.
     let mut doc = with(
         with(probe(), "gai1.y", "S231:unit", json!("K")),
         "gai2.u",
@@ -244,7 +244,7 @@ fn case_1_under_no_qudt_binding_is_refused_where_the_gate_never_saw_the_unit() {
 #[test]
 fn case_1_under_a_near_miss_of_a_qudt_namespace_is_refused_naming_the_namespace() {
     // The same document with `qudt` bound one edit from a schema namespace, or to the unit
-    // vocabulary: it loaded the same way, and is refused naming the namespace it wrote.
+    // vocabulary: the key is as unread there, and is refused naming the namespace it wrote.
     for binding in [
         "https://qudt.org/schema/qudt#",
         "http://QUDT.org/schema/qudt/",

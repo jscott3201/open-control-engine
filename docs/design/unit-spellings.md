@@ -407,24 +407,41 @@ rejected is under [Rulings](#rulings).
      key, a full IRI and a `@context` term that expand to one IRI are one case.
    - **No `qudt` binding:** the expanded key is `qudt:hasUnit` itself, which can only be a
      missing binding. `malformed-document`.
-   - **A near miss of a QUDT schema namespace:** `hasUnit` under the `https:` spelling, the
-     scheme or the host in another letter case, a default or empty port, or a missing, repeated
-     or wrong separator. `vocabulary-namespace-mismatch`, as a modeled S231 term keyed in a
-     foreign namespace is.
-   - **The QUDT unit vocabulary:** `hasUnit` in `http://qudt.org/vocab/unit#` or `…/unit/`, or a
-     near miss of either: `qudt` bound to the `unit:` IRI, or the key written `unit:hasUnit`.
-     `vocabulary-namespace-mismatch`.
+   - **A near miss of a QUDT schema namespace, as the owner named it:** `hasUnit` under the
+     `https:` spelling, the scheme or the host in another letter case, the default port, a
+     missing separator, or the unit vocabulary's namespace (`http://qudt.org/vocab/unit#` or
+     `…/unit/`: `qudt` bound to the `unit:` IRI, or the key written `unit:hasUnit`).
+     `vocabulary-namespace-mismatch`, as a modeled S231 term keyed in a foreign namespace is.
    - **Whitespace:** a key that is one of these only once trimmed is `malformed-document`, as
      any whitespace near miss of a key is.
-   - **Not refused:** `hasUnit` under a prefix bound to a namespace that is no QUDT one and no
-     near miss of one. That is another vocabulary's property, JSON-LD's reading. A key that
-     differs in its local name or its case (`qudt:HasUnit`) is the general near-miss question of
-     issue #691.
+   - **Classes the ruling does not name, read here as near misses** and accepted at review on
+     2026-11-21. Each is an RFC 3986 equivalence of a named class or a combination of named
+     ones, and no tracked or library document writes any:
+     - an empty port (`http://qudt.org:/…`), which RFC 3986 §3.2.3 reads as the default one;
+     - `:443` under `https`, the default port of the other scheme spelling;
+     - a repeated or reversed separator (`#/`, `##`, `//`) beside the `/#` the issue measured;
+     - a near miss of the unit vocabulary's namespace (`https://qudt.org/vocab/unit#`), by the
+       same rule as a near miss of the schema's.
+   - **Not refused, and pinned as a pass-through key:** `hasUnit` under a prefix bound to a
+     namespace that is no QUDT one and no near miss of one. That is another vocabulary's
+     property, JSON-LD's reading. Three of these look near and are not equivalent under RFC
+     3986: another host (`http://www.qudt.org/schema/qudt#`), a path in another letter case
+     (`http://qudt.org/schema/QUDT#`), and a versioned IRI (`http://qudt.org/2.1/schema/qudt#`,
+     `http://qudt.org/schema/qudt/2.1/`). So is a path that only begins like a QUDT one
+     (`http://qudt.org/schema/qudt-extra#`). A key that differs in its prefix, its local name or
+     its case (`QUDT:hasUnit` unbound, `qudt:HasUnit`) is the general near-miss question of issue
+     #691.
+   - **A node with a `@context` of its own** is refused for that scoped context alone
+     (`non-subset-construct`): what its keys would mean under it is not judged.
    - **One recogniser.** Which spellings of a namespace are that near is decided once, by
-     `oce_cxf::namespace_near_miss` (`crates/oce-cxf/src/namespace_near_miss.rs`): given an IRI
-     and a namespace, whether the IRI is a near miss and where the local name begins. It knows
-     no vocabulary; the caller holds the local name to its own closed list. The same rule for
-     every modeled key (#691), a typing token (#636) and a term (#647) attaches there.
+     `namespace_near_miss`, internal to `oce-cxf`
+     (`crates/oce-cxf/src/namespace_near_miss.rs`): given an IRI and a namespace, whether the IRI
+     is a near miss and where the local name begins. It knows no vocabulary; the caller holds the
+     local name to its own closed list. The same rule for every modeled key (#691), a typing
+     token (#636) and a term (#647) attaches there.
+   - **Cost.** Every key of every node passes the check, and one that does not end in `hasUnit`
+     is ruled out by that comparison: no near-miss check and no allocation, counted and not
+     timed.
    - **Messages** quote the key and the namespace as written in at most 64 bytes each, with
      format and control characters escaped, as the unmapped-IRI refusal does (decision 8), and
      hold no other text of the document's: the node is the subject.
@@ -445,7 +462,7 @@ rejected is under [Rulings](#rulings).
      - *Loads:* every one of those documents, and each library document with its retired
        namespace rewritten, was loaded through `oce id` built before and after the change: the
        817 outcomes, content ids, warnings and refusal codes are identical.
-   - *(Ruled 2026-11-20.)*
+   - *(The named classes ruled 2026-11-20; the others accepted at review on 2026-11-21.)*
 
 ## Rulings
 
@@ -504,6 +521,13 @@ The owner ruled on the ninth question on 2026-11-20, in a
    - **reading an unbound `qudt:hasUnit` in the QUDT schema namespace,** as an unbound `S231:`
      key is read in the S231 one: it guesses a namespace for a prefix the engine does not own.
 
+   The ruling names the classes: an unbound `qudt` prefix, and a namespace that differs by
+   `https`, scheme or host case, the default port, a missing separator, or that is the unit
+   vocabulary's. The other classes decision 9 lists (an empty port, `:443` under `https`, a
+   repeated or reversed separator, a near miss of the unit vocabulary's namespace) are the
+   implementing PR's reading of "near-miss QUDT namespace", accepted at its review on
+   2026-11-21. They are not the owner's words.
+
 ## What the implementing PRs change
 
 **[#631](https://github.com/jscott3201/open-control-engine/issues/631): the spellings (engine
@@ -550,14 +574,16 @@ lane; closes #622).**
 
 **[#675](https://github.com/jscott3201/open-control-engine/issues/675): the unread `hasUnit` key
 (engine lane).**
-- **`oce-cxf`:** `namespace_near_miss.rs`, the recogniser; `unread_qudt_has_unit.rs`, the two
-  refusals and their whitespace twin; the call in `property_keys.rs`.
+- **`oce-cxf`:** `namespace_near_miss.rs`, the recogniser, internal to the crate;
+  `unread_qudt_has_unit.rs`, the two refusals and their whitespace twin; the call in
+  `property_keys.rs`.
 - **`oce-diag`:** the description of `vocabulary-namespace-mismatch`.
 - **`oce-author`:** no source change beyond a module comment.
 - **Tests:** every near-miss class under a `qudt` binding, by full IRI and through a `@context`
   term, on every node kind, each as the complete diagnostic list; the contradicting-unit case;
-  a megabyte key and a control character in one; what stays a pass-through key; and the same
-  probes put to both readers.
+  a megabyte key and a control character in one; what stays a pass-through key; the same
+  probes put to both readers; and the cost of a pass-through key, in near-miss checks and in
+  allocations.
 - **What does not move:** every golden, every content id and the vendored-corpus delta table.
 - **Documents:** [host responsibilities](../host-responsibilities.md), where the open gap was
   recorded; [CXF round trip](../cxf-round-trip.md); the importer note's table of differences;

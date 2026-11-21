@@ -464,21 +464,38 @@ and a gate that accepted any text would restore exactly the false assurance desc
       `vocabulary-namespace-mismatch`;
     - any of those only once the key's surrounding whitespace is trimmed (`"qudt:hasUnit "` with
       no `qudt` binding, which passed through before): `malformed-document`.
+  - **Which classes the owner named.** The ruling names the unbound prefix, `https`, scheme and
+    host case, the default port, a missing separator and the unit vocabulary's namespace. An
+    empty port, `:443` under `https`, a repeated or reversed separator (`#/`, `##`, `//`) and a
+    near miss of the unit vocabulary's namespace are this change's reading of "near-miss QUDT
+    namespace", each an RFC 3986 equivalence or a combination of named classes, accepted at
+    review on 2026-11-21.
   - **Still a pass-through key:** `hasUnit` under a prefix bound to a namespace that is no QUDT
-    one and no near miss of one (`http://example.org/qudt#`), which is that vocabulary's
-    property; a key that differs in its local name or its letter case (`qudt:HasUnit`, issue
-    #691); and `qudt:hasQuantityKind`, under any binding.
+    one and no near miss of one, which is that vocabulary's property: `http://example.org/qudt#`,
+    another host (`http://www.qudt.org/…`), a path in another letter case, a versioned IRI
+    (`http://qudt.org/2.1/schema/qudt#`), a path that only begins like a QUDT one
+    (`…/schema/qudt-extra#`). Also a key that differs in its prefix, its local name or its
+    letter case (`QUDT:hasUnit` unbound, `qudt:HasUnit`, issue #691), and `qudt:hasQuantityKind`
+    under any binding. A node that carries a `@context` of its own is refused for that scoped
+    context alone.
   - **Codes and messages.** No new code. The description of `vocabulary-namespace-mismatch` in
     `oce-diag` now names this case. Each message quotes the key and the namespace as written in
     at most 64 bytes, with format and control characters written as escapes, names the two
     namespaces the property is read in, and holds no other text of the document's: the node is
     the subject and is not repeated in the message. Each refusal is pinned as the complete
     diagnostic list.
-  - **One recogniser.** `oce_cxf::namespace_near_miss(iri, namespace)` decides whether an IRI is
-    a near miss of a namespace and where its local name begins
-    (`crates/oce-cxf/src/namespace_near_miss.rs`). It knows no vocabulary and refuses nothing;
-    the caller holds the local name to its own closed list. It is the piece the same rule for
-    every modeled key (#691), a typing token (#636) and a term (#647) attaches to.
+  - **One recogniser.** `namespace_near_miss(iri, namespace)`, internal to `oce-cxf`
+    (`crates/oce-cxf/src/namespace_near_miss.rs`), decides whether an IRI is a near miss of a
+    namespace and where its local name begins. It knows no vocabulary and refuses nothing; the
+    caller holds the local name to its own closed list. With no separator, what follows the
+    namespace's path must be one name, so a path that only begins like the namespace's
+    (`…/S231P#unit` against `…/S231#`) is no near miss. It is the piece the same rule for every
+    modeled key (#691), a typing token (#636) and a term (#647) attaches to. No public surface
+    is added.
+  - **Cost.** Every key of every `@graph` node passes the check. A key that does not end in
+    `hasUnit` is ruled out by that one comparison: no near-miss check (counted in `oce-cxf`'s
+    tests on a node of 50,000 keys) and no allocation (a load of that node is held to its
+    measured allocation count in `oce-api`'s).
   - **Both readers.** `oce-author`'s importer already refused every one of these documents as
     `unknown-key`, since its `@context` is closed and it reads compact keys only; its source is
     unchanged, and each probe is now put to both readers.
