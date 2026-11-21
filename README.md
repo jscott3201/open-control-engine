@@ -515,7 +515,10 @@ funnel's own licence: a 3-clause BSD licence with one added clause on enhancemen
 2020 The Regents of the University of California through Lawrence Berkeley National Laboratory.
 Its licence and copyright notice are reproduced verbatim in
 [`LICENSE-funnel`](crates/leverage/oce-verify/LICENSE-funnel) at that crate's root, so the notice
-ships with the port wherever the crate does. funnel's own test inputs, vendored as test data under
+ships with the port wherever the crate does. `oce-verify`'s `license` field says so,
+`(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`: it is the one crate here that is not under the dual
+licence alone, and `deny.toml` allows that identifier for it and for no other crate. funnel's own
+test inputs, vendored as test data under
 `crates/leverage/oce-verify/tests/fixtures/funnel/upstream/`, carry the same two files beside them.
 
 `crates/oce-cxf/tests/fixtures/unicode/` holds a verbatim excerpt of the Unicode Character
