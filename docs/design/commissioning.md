@@ -8,7 +8,8 @@ technical recommendations the orchestrator accepted; both are stated here, not r
 replaced 17 and 21 (see [Review rulings](#review-rulings)). It answers GitHub #436 and drives
 [the replay API](replay.md) (GitHub #435, merged as GitHub #443; the crate is #445).
 *(2026-11-20, issue #657: decisions 27 to 42 fix the run's readings and the normative receipt
-body, and the owner ruled on them the same day; see [Run readings](#run-readings).)*
+body. The owner ruled on six of them, 27, 28 and 38 to 41; the other ten stand as written; see
+[Run readings](#run-readings).)*
 
 The OpenBuildingControl (OBC) specification's §12.7.1 states the product: "a report that describes
 whether the real implementation conforms to the CDL implementation within a user-specified error
@@ -83,21 +84,25 @@ the point mapping then takes device names to CDL names and units. Formats are `c
 read by replay's `CsvSource`) and `combiTimeTable` (§12.5.1's `#1` text, the Buildings library's
 trend format; `table` names the matrix when a file holds more than one). Time is a column of seconds
 since `time.origin` or an ISO-8601 column (replay decision 17). `hold.maxAge` per source is the
-replay `HoldLast` policy for that source's inputs; absent, a missing sample refuses the frame.
+replay `HoldLast` policy for that source's inputs; absent, a missing sample refuses the frame,
+which is recorded while the run continues (decision 28).
 
-A key that contains `*` or `?` is a glob matched against the whole `<sequence>.<path>` name (`*`
-any run of characters, `?` one character, nothing else special); any other key is an exact name.
+A key starts with the reference's `sequence` and a `.`, byte for byte, and that prefix is
+literal. A key whose rest contains `*` or `?` is a glob (`*` any run of characters, `?` one
+character, nothing else special): the rest is matched, whole, against the last `.`-segment of
+each output's canonical path, so the names a glob sees are `<sequence>.<last segment>`. Any other
+key is an exact name, and its rest resolves by the replay name rule against the outputs.
 Overrides apply in declaration order, later fields winning. A key that matches no output is an
 error, `SpecError::UnmatchedKey`, whose message names the key, whether it was read as an exact name
-or a glob, and the sequence's output names, so a typo cannot pass silently. There is no substring
-or regular-expression matching: `u` selects only an output named `u`. Listing 12.1's
-`"setPoiVAV1.TSup*"` is a glob and loads unchanged (decision 17).
+or a glob, and the sequence's output names as a glob sees them, so a typo cannot pass silently.
+There is no substring or regular-expression matching: `u` selects only an output named `u`.
+Listing 12.1's `"setPoiVAV1.TSup*"` is a glob and loads unchanged (decision 17; the prefix and
+the last segment are decision 27's, 2026-11-20). A `parameters` key and a mapping's `cdl.name`
+carry no prefix.
 
-*(Amended 2026-11-20, decision 27:)* a key starts with the reference's `sequence` and a `.`, and
-that prefix is literal. The rest of an exact key resolves by the replay name rule against the
-outputs; the rest of a glob is matched, whole, against the last `.`-segment of each output's
-canonical path, so the names a glob sees, and the names an `UnmatchedKey` message lists, are
-`<sequence>.<last segment>`. A `parameters` key and a mapping's `cdl.name` carry no prefix.
+**`window`** is required to run a reference, as `cxf` is: a reference without one loads, because
+an LBL file has none, and is refused at bind as `reference-incomplete`, naming the missing field
+(decision 16). When present it holds both `start` and `stop`, finite, with `start <= stop`.
 
 ### Worked spec: Building 33 cooling-coil valve (§12.6)
 
@@ -240,7 +245,10 @@ which (decision 11).
 `aligned-grid` envelope is quadratic in samples: per output at most 1,048,576 compared points for
 `funnel` and 32,768 for `aligned-grid` (one day at 5 s is 17,281), each a typed
 `CompareError::TooManyPoints`, plus a work counter on loop removal (below), never wall-clock time
-(decision 22).
+(decision 22). *(Amended 2026-11-20, decision 42:)* the verifier refuses both at bind, before the
+replay runs, as its own `too-many-points`, and holds the run to 16,777,216 points over all its
+outputs under the same code, so the comparison's `too-many-points` is never reached and
+`compare-refused` never carries it.
 
 ## Envelope
 
@@ -296,8 +304,15 @@ at bind, `enum-port-unsupported`, until #465 gives replay a durable class for an
 
 **Where the verdict is taken (decision 32).** Under either envelope an instant's exceedance is
 step 5's error at that test instant, from the envelope's two bound curves. `oce-conformance`'s
-`compare` also checks the bounds' breakpoints between test samples; that check is not carried
-into an `oce-verify` verdict.
+`compare` also checks the bounds' breakpoints between test samples, and the `aligned-grid` copy
+reports those too; an `oce-verify` verdict reads only the errors at the test's own instants.
+
+**No self-enclosure refusal here.** A vector window refuses a reference that lies outside its
+own envelope ([vectors note](vectors.md), decision 41). A commissioning run does not: it
+reports what the envelope the specification cites gives. So two identical series can fail here
+by rounding, in the one case the funnel port measured: no `y` tolerance, an `x` tolerance that
+puts a corner of a bound on a sample, and a step of about a million or more. Any `y` tolerance
+above the rounding removes it.
 
 ## Indicators
 
@@ -330,9 +345,11 @@ only fields both have; the body is the verifier's; there is no mutant score. `re
 FNV-1a-128 over the canonical receipt with `timings` removed, so two runs on the same inputs give
 the same id (decision 20).
 
-**Header.** The one table of the [vectors note](vectors.md#the-receipt), with `kind` set to
-`commissioning` and `spec_id` the commissioning spec's. `content_id` is the CXF's as loaded,
-before any parameter edit (decision 30). `comparison` always holds three keys (decision 32):
+**Header.** The header's fields are defined once, in the table of the
+[vectors note](vectors.md#the-receipt), for both kinds; this note adds no field to it. A
+commissioning receipt has `kind` `commissioning`, the CXF's `content_id` as loaded (decision
+30), the commissioning spec's `spec_id`, and a `comparison` whose mode is always `tolerance`.
+This table says only what each `envelope_version` names (decision 32):
 
 | `mode` | `envelope` | `envelope_version` | What the version names |
 | --- | --- | --- | --- |
@@ -355,9 +372,9 @@ vector file's rules, and arrays keep the order each row states.
 | `time` | object | always | `base` (always `recorded`); `origin`, when the spec gives one, as its canonical form spells it; `window` as `{ "start", "stop" }`; `sampling`, when one applies to the reference |
 | `mapping` | object | when the mapping is a file | `{ "path", "digest" }`: the path as the spec writes it and `fnv1a128:<32 hex>` of the bytes supplied. An inline mapping is inside `spec_id` |
 | `units.table` | string | always | `units/v1` |
-| `units.columns` | array | always | one `{ "device", "cdl", "from", "to" }` per point a source of the reference reads whose mapping gives a unit on both sides, identity pairs included, sorted by `device` bytes; at most 256 |
+| `units.columns` | array | always | one `{ "device", "cdl", "from", "to" }` (`cdl` is the mapping's `cdl.name` as written, never a canonical path) per point a source of the reference reads whose mapping gives a unit on both sides, identity pairs included, sorted by `device` bytes; at most 256 |
 | `units.columns_total` | integer | always | the count before the cap |
-| `sources` | array | always | one `{ "role", "path", "digest", "rows" }` per trend source of the reference: `role` is `inputs`, `expected` or `indicators`, in that order and in declaration order within each; `table` is added when the source names one; `digest` is `fnv1a128:<32 hex>` of the file's bytes; `rows` is the rows read from it. Complete, at most 256 |
+| `sources` | array | always | one `{ "role", "path", "digest", "rows" }` per trend source of the reference: `role` is `inputs`, `expected` or `indicators`, in that order and in declaration order within each; `table` is added when the source names one; `digest` is `fnv1a128:<32 hex>` of the file's bytes; `rows` is the data rows of the table read: for `csv`, the rows after the header row; for `combiTimeTable`, the rows of the matrix read. Header, comment and blank lines are not rows. Complete, at most 256 |
 | `frames` | object | always | `executed`, `substituted`, `refused`, by the trace's status byte. `refused` counts missing-sample refusals only: an engine refusal leaves no receipt (decision 28) |
 | `load_warnings`, `load_warnings_total` | array of string, integer | always | `DiagCode` spellings in load order, at most 64; the count before the cap |
 | `warnings`, `warnings_total` | array, integer | always | run-time warnings as `{ "t", "block", "message" }`, in row then emission order, at most 16; the count before the cap |
@@ -374,28 +391,44 @@ There is no mutant score and no gate (decision 7).
 | `output` | string | always | the canonical path |
 | `type` | string | always | `real`, `integer` or `boolean`: a Real goes through the envelope, the other two are compared exactly (decision 8) |
 | `status` | string | always | `no_data` when `compared == 0`; else `fail` when any compared instant has an exceedance above zero; else `pass` |
-| `compared` | integer | always | the test instants compared |
+| `compared` | integer | always | the test instants compared. With `sampling` they are the instants `start + k * s` in the window. Without it they are the test series' own sample times in the window, with `start` and `stop` (decision 14): the test series is the trend's under `funnel_reference: "engine"` and the engine's under `"trend"`, and for a Boolean or Integer output it is the trend's, the engine's value held to each |
 | `masked` | integer | always | the test instants an indicator excluded |
-| `uncovered` | integer | always | the test instants in a refused stretch that no indicator masked (decision 28) |
-| `funnel_reference` | string | when `type` is `real` | `engine` or `trend`: which series the envelope is built around (decision 11) |
+| `uncovered` | integer | always | the test instants in a refused stretch that no indicator masked (decision 28): from a frame refused for a missing sample up to the next executed frame, or to `stop` when none follows |
+| `funnel_reference` | string | when `type` is `real` | `engine` or `trend`: which series the envelope is built around (decision 11). It is per output here because only a Real output has an envelope; a vector receipt carries one `funnel_reference` for its body, always `expectation` |
 | `tolerances` | object | when `type` is `real` | the six names, every one present, after the overrides: `atolx`, `atoly`, `ltolx`, `ltoly`, `rtolx`, `rtoly` |
-| `half_width`, `half_height` | object | when an envelope was built | `{ "min", "max" }` over the reference points: the absolute half-sizes of "Envelope" step 1, fallbacks applied, in model seconds and in the output's CDL unit, before `x` is normalised |
+| `half_width`, `half_height` | object | when an envelope was built | `{ "min", "max" }` over the reference points, in model seconds and in the output's CDL unit, before `x` is normalised. Under `funnel`: the half-sizes of "Envelope" step 1 with its fallbacks, so never zero. Under `aligned-grid`: the sum of the three tolerance terms at each reference point, with no fallback, so zero when every tolerance of the axis is zero |
 | `worst` | object | when `status` is `fail` | `{ "t", "exceedance" }`: the largest exceedance over the compared instants and the earliest instant that has it |
 | `first_exceedance_t` | real | when `status` is `fail` | the earliest compared instant with an exceedance above zero |
 | `exceedance_time_s` | real | always | the sum, in ascending time order, of `t[k + 1] - t[k]` over the compared instants `k` with an exceedance above zero, `t[k + 1]` the next test instant; the last instant adds nothing; `0.0` when there is none |
 | `masked_intervals` | array | always | `{ "from", "to" }` in model seconds, the first and last instant of each run of masked instants, in time order, at most 64 |
 | `masked_intervals_total` | integer | always | the count before the cap |
-| `masked_exceedance` | array | always | `{ "t", "exceedance" }` for each masked instant with an exceedance above zero, in time order, at most 16; reported, never counted (decision 23) |
+| `masked_exceedance` | array | always | `{ "t", "exceedance" }` for each masked instant whose error is above zero, in time order, at most 16; reported, never counted (decision 23). The error is the envelope's at that instant on the series as zeroed: the test's value there is zero, and the bounds are built from the zeroed reference |
 | `masked_exceedance_total` | integer | always | the count before the cap |
 
 `compared + masked + uncovered` is the number of test instants in the window. A tolerance name
 that no tolerance object of the spec gives is written `0`. An envelope is built for a Real
 output with at least one compared instant and no non-finite engine sample. A Boolean or Integer
-mismatch is an exceedance of exactly `1` at that instant. A Real output whose engine series
-holds a NaN or an infinity at an instant that is neither masked nor uncovered is `fail`: no
-envelope is built for it, `half_width` and `half_height` are absent, and `worst` is the earliest
-such instant with the exceedance positive infinity. The trend series holds finite samples only;
-the source reader refuses any other cell (#660).
+mismatch is an exceedance of exactly `1` at that instant.
+
+**When a masked instant has an exceedance.** OBC §12.7.2 step 8 zeroes both series where the
+indicator is zero and then compares them as any two series; pyfunnel takes two series and no
+mask. So the comparison still yields an error at a masked instant, and it can be above zero in
+one place: a mask edge that falls between the two series' sample times. Without `sampling` the
+reference and the test are zeroed at their own instants, and next to an edge the band still
+runs from the reference's last unmasked value to zero while the test is already zero. With
+`sampling` both series are zeroed at the same instants and the list is empty, except in the
+rounding case of "Envelope". An uncovered instant's error is not recorded.
+
+**A non-finite engine sample.** A Real output whose engine series holds a NaN or an infinity at
+an instant that is neither masked nor uncovered is `fail`: no envelope is built for it,
+`half_width` and `half_height` are absent, and `worst` is the earliest such instant with the
+exceedance positive infinity. A sample above 2^1000 in magnitude is treated the same way, so
+the envelope's arithmetic stays finite. This differs from a vector window, on purpose: there
+the engine output is always the test, so the tick fails and the other ticks are still judged
+([vectors note](vectors.md), decision 45). Here the engine series is the envelope's reference
+by default, and no band can be built around a NaN; the output fails as a whole under either
+role, so one rule covers both. The trend series holds finite samples only; the source reader
+refuses any other cell (#660).
 
 **Values.** A number the spec wrote (`window`, `sampling`, a tolerance, a parameter value) is
 written as the spec's canonical form writes it. A computed Real (`t`, `from`, `to`, a half-size,
@@ -424,11 +457,19 @@ canonical bytes sort them):
     "time": { "base": "recorded", "origin": "2018-06-07T00:00:00-07:00",
               "window": { "start": 0, "stop": 86400 }, "sampling": 5 },
     "mapping": { "path": "b33-points.json", "digest": "fnv1a128:71c2…" },
-    "units": { "table": "units/v1", "columns_total": 2, "columns": [
+    "units": { "table": "units/v1", "columns_total": 5, "columns": [
       { "device": "Clg Coil Valve", "cdl": "yCooVal", "from": "percent", "to": "1" },
-      { "device": "Supply Air Temp", "cdl": "TSup", "from": "degF", "to": "K" } ] },
-    "sources": [ { "role": "inputs", "path": "data/Supply_Air_Temp.mos",
-                   "digest": "fnv1a128:5a0b…", "rows": 75563 } ],
+      { "device": "OA Temp", "cdl": "TOut", "from": "degF", "to": "K" },
+      { "device": "SA Clg Stpt", "cdl": "TSupSet", "from": "degF", "to": "K" },
+      { "device": "Supply Air Temp", "cdl": "TSup", "from": "degF", "to": "K" },
+      { "device": "VFD Fan Feedback", "cdl": "uFanFee", "from": "percent", "to": "1" } ] },
+    "sources": [
+      { "role": "inputs", "path": "data/Supply_Air_Temp.mos", "digest": "fnv1a128:5a0b…", "rows": 75563 },
+      { "role": "inputs", "path": "data/SA_Clg_Stpt.mos", "digest": "fnv1a128:c81e…", "rows": 75563 },
+      { "role": "inputs", "path": "data/OA_Temp.mos", "digest": "fnv1a128:27d4…", "rows": 75578 },
+      { "role": "inputs", "path": "data/VFD_Fan_Feedback.mos", "digest": "fnv1a128:9f30…", "rows": 75563 },
+      { "role": "inputs", "path": "data/VFD_Fan_Enable.mos", "digest": "fnv1a128:e6a2…", "rows": 7 },
+      { "role": "expected", "path": "data/Clg_Coil_Valve.mos", "digest": "fnv1a128:40bb…", "rows": 75563 } ],
     "frames": { "executed": 17280, "substituted": 4, "refused": 0 },
     "load_warnings": [], "load_warnings_total": 0, "warnings": [], "warnings_total": 0,
     "outputs": [ {
@@ -447,9 +488,12 @@ canonical bytes sort them):
 }
 ```
 
-The numbers show the shape; they are not a prediction. The vector receipt fills the same header
-with `kind: "vectors"`, `mode: "exact"` or `"tolerance"`, and its own body (scenarios, pass
-counts, mutant score).
+The numbers show the shape; they are not a prediction. The example lists the worked spec's six
+sources and the five points that carry a unit on both sides (the fan-enable point has none);
+its CDL names, units, digests and row counts stand for what #664 writes into `b33-points.json`
+and reads from the vendored files. The vector receipt fills the same header with
+`kind: "vectors"`, `mode: "exact"` or `"tolerance"`, and its own body (scenarios, pass counts,
+mutant score).
 
 ## Rust API sketch
 
@@ -507,14 +551,34 @@ holds and the two envelope version constants. No record cap is an option (decisi
 `CommissionRun` holds no file and no path, and the CLI writes its files from `curves`.
 
 Every error is typed and names the spec field, file, row or output; nothing panics on hostile
-input. A spec that does not load is a `SpecError` from `CommissioningSpec::from_json_str`, before
-`run_commissioning` is called. `run_commissioning` returns the `VerifyError` that `run_vectors`
-returns, extended in place: `VerifyErrorKind` gains `reference-out-of-range`,
-`unknown-indicator`, `frame-refused`, `too-many-sources`, `too-many-outputs` and
-`too-many-points`, and a refusal from a lower layer keeps that layer's word as its cause, as
-`replay-failed` does: `source-refused` with a `SourceError` code, `unit-refused` with a
-`UnitError` code, `compare-refused` with a `CompareError` code. Every code is kebab-case, listed
-in a constant a test pins, and reaches `oce vocab`.
+input. Every code is kebab-case, listed in a constant a test pins, and reaches `oce vocab`. The
+codes of a commissioning run come from three lists, by where the refusal is found:
+
+| Where | Type | Codes this note adds or names |
+| --- | --- | --- |
+| loading the spec or the mapping | `SpecError`, from `CommissioningSpec::from_json_str`, before `run_commissioning` is called | the strict-JSON spellings the vector reader prints, `too-many-parameters` (decision 29) and `UnmatchedKey` |
+| bind and run | `VerifyError`, the type `run_vectors` returns, its `VerifyErrorKind` extended in place | `reference-out-of-range`, `reference-incomplete`, `unknown-indicator`, `frame-refused`, `too-many-sources`, `too-many-outputs`, `too-many-points`, `source-refused`, `unit-refused`, `compare-refused`; and the vector kinds it reuses (`subject-load-failed`, the name and `param-…` codes, `enum-port-unsupported`, `unsupported-port-type`, `run-refused`, `replay-failed`) |
+| the verb | `oce-cli`'s own codes | `reference-required` (decision 35), and its existing `not-found`, `not-a-file`, `read-failed`, `input-too-large` and `write-failed` (decision 37) |
+
+Three points about them:
+
+- **A lower layer's word is a cause.** `source-refused` carries a `SourceError` code,
+  `unit-refused` a `UnitError` code and `compare-refused` a `CompareError` code, as
+  `replay-failed` carries its cause.
+- **`frame-refused` is one word in two lists.** In a vector receipt it is the `code` of a
+  failure record: the frame's refusal is a verdict (exit 1). Here it is an error kind: the
+  refusal ends the run (exit 2). The two never meet in one document, a receipt or a report,
+  and both name the same event, an engine frame-class refusal, as `window-uncovered` already
+  names one refusal in two lists.
+- **`too-many-points` is the verifier's, at bind.** `CompareError` has a code of the same
+  spelling for the same limit. Bind applies that limit first (decision 42), so a comparison
+  never returns it and `compare-refused` never carries it.
+
+`ComparisonMode::Tolerance`, the envelope fields of `Comparison`, `compare-refused` and
+`too-many-points` are shared with the tolerance windows of a vector set
+([vectors note](vectors.md), decisions 42 and 48). Whichever of #663 and #684 merges first
+adds each; the second finds it in place. `FUNNEL_VERSION` and `ALIGNED_GRID_VERSION` both come
+from the funnel port (#655), beside the envelopes they name.
 
 ## CLI
 
@@ -599,7 +663,9 @@ verdict results; a failure is a finding to adjudicate, never a reason to widen t
 
 Decisions 1 to 4 are the owner's; 5 to 10 are recommendations accepted by the orchestrator. Both are
 settled. Decisions 11 to 26 were ruled on by the architect pass; 17 and 21 are as it replaced them.
-Decisions 27 to 42 were ruled by the owner on 2026-11-20 ([Run readings](#run-readings)).
+Decisions 27, 28, 38, 39, 40 and 41 were ruled by the owner on 2026-11-20. Decisions 29 to 37 and
+42 follow from standing rulings or from `oce verify` as built: the owner was shown the list and
+raised nothing, so they stand as written ([Run readings](#run-readings)).
 
 **1. Envelope: a faithful port of funnel, named `funnel`,** proven by a differential test against
 pyfunnel, with the conservative grid envelope kept as a second named mode, `aligned-grid`.
@@ -653,7 +719,9 @@ itself (unrecorded); a designated clock source (drops samples replay must observ
 `<sequence>.<path>`; a key matching nothing is an error; no `regex` dependency, and the copied
 `VerifyConfig` drops its regex matching. Rejected: unanchored regular expressions (the draft; an
 agent or a person writing `u` must not silently select every output); a `glob:` prefix (Listing
-12.1 would need editing, against decision 3).
+12.1 would need editing, against decision 3). *(2026-11-20: decision 27 says what the whole
+string is: the reference's `sequence` and a `.`, literal, then the last segment of the output's
+canonical path.)*
 
 **18. Scenario 1 fields parse and are ignored with a finding;** `controllerOutput` is the
 expected source when `expected` is absent. Rejected: refusing them (LBL specs would not load);
@@ -681,7 +749,8 @@ receipt says which); 2 usage errors, refused specs, unreadable sources and I/O. 
 edges); failing on it (contradicts §12.7.2's "exclude").
 
 **24. parameters in CDL units through halt, `set_param` and resume** before the first
-frame, echoed in the receipt, never converted.
+frame, echoed in the receipt, never converted. *(2026-11-20: decision 29 gives the order of the
+edits, and decision 30 the content id the receipt carries.)*
 
 **25. the library opens no file;** it takes bytes and the CLI resolves paths relative to
 the spec, as replay does.
@@ -728,16 +797,29 @@ one name selects one signal, and a stated set of names for a glob to match.
 - **Uncovered instants.** From a refused frame's time up to the next executed frame the engine
   has no sample. A comparison instant in that stretch is **uncovered**: it is zeroed in both
   series as a masked instant is, counted in the output's `uncovered`, and excluded from
-  `compared` and from the verdict. A zero-order hold across the gap would compare the trend
-  with an output the engine never computed for those times. An output whose every instant is
-  masked or uncovered has `compared == 0` and is `no_data`.
+  `compared` and from the verdict. A frame the engine accepted with a held input (the trace's
+  `Substituted` status) is an executed frame and ends the stretch; when no executed frame
+  follows, the stretch runs to the window's `stop`, inclusive. A zero-order hold across the gap
+  would compare the trend with an output the engine never computed for those times. An output
+  whose every instant is masked or uncovered has `compared == 0` and is `no_data`.
 - **An engine refusal of a submitted frame** is an error with no receipt (exit 2). A run-class
   refusal is `run-refused`, as in a vector run. A frame-class refusal (a value outside an
   input's declared domain, a non-finite value, a time the engine cannot take) is
-  `frame-refused`, with the `EngineRefusal` class as its cause (`oce-verify`'s
-  `ENGINE_REFUSAL_CLASSES`), the frame's time and the input. On a trend it most often means a
-  wrong unit or mapping, and from that frame on the engine has not run what the controller ran,
-  so no verdict on the frames after it would be evidence.
+  `frame-refused`. On a trend it most often means a wrong unit or mapping, and from that frame
+  on the engine has not run what the controller ran, so no verdict on the frames after it would
+  be evidence.
+- **How a refusal is found, and what the error carries.** After each `Replay::advance` chunk
+  the verifier reads the refusal rows added to `Replay::trace()`. A row whose cause is
+  `RefusalCause::MissingInput` is a missing sample (the frame's status is `RefusedMissing`),
+  and the run goes on. The first row whose cause is `RefusalCause::Engine` (status
+  `RefusedEngine`) ends the run. Replay gives that cause as a class and the engine's message,
+  with no slot and no path (`crates/leverage/oce-replay/src/trace.rs:228`), so the error
+  carries exactly: its cause, the kebab-case `EngineRefusal` class (`oce-verify`'s
+  `ENGINE_REFUSAL_CLASSES`); and in its detail the row's frame index, that frame's time in
+  model seconds, and the engine's message, cut to 256 bytes at a character boundary. For the
+  three input classes the engine's own message names the input
+  (`crates/oce-api/src/frame_slots.rs:342`); the verifier does not parse it, and the error has
+  no `path`.
 
 Rejected: every refusal an error (a trend with a gap past its hold would give no receipt); every
 refusal recorded; an engine frame-class refusal failing the verdict with exit 1, as it fails a
@@ -765,21 +847,23 @@ is present, its order and its bound. Its goldens and the library pin that table.
 closed object (`"window": { "start", "stop" }`, `"half_width": { "min", "max" }`), never a
 two-element array, for the reason the vectors note's decision 4 gives against `[[t, v]]` pairs.
 
-**32. `comparison` names the envelope and its version for both envelopes, and the verdict is
-taken at the test instants.** The header's `comparison` is
-`{ "mode": "tolerance", "envelope": …, "envelope_version": … }`, all three keys present
-whenever the mode is `tolerance`; [Report and receipt](#report-and-receipt) has the two
-versions. `aligned-grid@1` is a revision this project defines, so it stays at 1 until 1.0.0
-(standing rule 9): a change to that arithmetic is made in place, and the engine version in the
-same header tells the two apart (standing rule 10). `funnel@a12fa96` moves only when the port
-is proven against another `lbl-srg/funnel` commit. A commissioning receipt always says
-`tolerance`, whatever the types of its outputs. Under either envelope an instant's exceedance
-is "Envelope" step 5's error at that test instant, from the envelope's two bound curves.
-`oce-conformance`'s `compare` also checks the bounds' breakpoints between test samples; that
-check is not carried into an `oce-verify` verdict, because an exceedance at a time that is no
-test instant would have no row in the exceedance column, no place in `compared`, and no
-counterpart under `funnel`. Rejected: no `envelope_version` under `aligned-grid` (a header
-whose shape depends on the envelope); the engine version repeated there.
+**32. `comparison` names the envelope and its version for both envelopes, and the verdict is taken
+at the test instants.** The header's `comparison` is `{ "mode": "tolerance", "envelope": …,
+"envelope_version": … }`, all three keys present whenever the mode is `tolerance`; [Report and
+receipt](#report-and-receipt) has the two versions. `aligned-grid@1` is a revision this project
+defines, so it stays at 1 until 1.0.0 (standing rule 9): a change to that arithmetic is made in
+place, and the engine version in the same header tells the two apart (standing rule 10).
+`funnel@a12fa96` moves only when the port is proven against another `lbl-srg/funnel` commit. Both
+strings are constants of the funnel port (#655), `FUNNEL_VERSION` and `ALIGNED_GRID_VERSION`;
+neither #663 nor #684 defines one. A commissioning receipt always says `tolerance`, whatever the
+types of its outputs. Under either envelope an instant's exceedance is "Envelope" step 5's error
+at that test instant, from the envelope's two bound curves. `oce-conformance`'s `compare` also
+checks the bounds' breakpoints between test samples, and the `aligned-grid` copy lists those
+errors beside the test's; an `oce-verify` verdict reads the errors at the test's own instants and
+no other, because an exceedance at a time that is no test instant would have no row in the
+exceedance column, no place in `compared`, and no counterpart under `funnel`. Rejected: no
+`envelope_version` under `aligned-grid` (a header whose shape depends on the envelope); the engine
+version repeated there.
 
 **33. Warnings are listed beside the findings, not inside them.** The body carries
 `load_warnings` and `load_warnings_total`, the vector body's two fields with the same content,
@@ -908,13 +992,19 @@ caller's option.**
   references; an exact key, a glob over last segments, a key without the prefix, an ambiguous
   rest; an indicator from a file named as Listing 12.1 names `fanSta.y`; `unknown-indicator`.
 - **Refused frames.** A hold one ulp past `maxAge` giving `frames.refused == 1` and the uncovered
-  instants; every frame of a window refused giving `no_data`; an input outside its declared
-  domain giving `frame-refused` and no receipt.
+  instants; a stretch ended by a substituted frame, and one that runs to `stop`; a `frame-refused`
+  error carrying its class, frame index, time and the engine's message cut at 256 bytes; every
+  frame of a window refused giving `no_data`; an input outside its declared domain giving
+  `frame-refused` and no receipt.
 - **Parameters.** Raising and lowering both hysteresis thresholds; an edit no order admits; the
   body's `content_id` present only with edits.
 - **Report and receipt.** Golden receipts for pass, fail and `no_data`; each capped list at its
   cap and one past with its `_total`; each complete list at its bound and one past, refused; a
-  NaN engine sample; one reference under each envelope, the header naming `funnel@a12fa96` and
+  NaN engine sample and one above 2^1000; a mask edge between the two series' sample times
+  giving a `masked_exceedance` entry, and none under `sampling`; a breakpoint error under
+  `aligned-grid` that no test instant shares changing no verdict; two identical series failing
+  by rounding in the measured case; a reference with no `window` refused as
+  `reference-incomplete`; one reference under each envelope, the header naming `funnel@a12fa96` and
   `aligned-grid@1`; `receipt_id` and `spec_id` recomputed outside the crate; `receipt_id`
   identical across runs and replay chunk sizes and unchanged by `timings`.
 - **CLI.** A transcript per exit class: 0, 1 (`fail`, `no_data`) and 2; a spec with two
@@ -982,9 +1072,10 @@ decided as recommended:
 4. **The `data` label** (decision 41). The caller's option, and `--data` on the verb.
 
 The same day the owner ruled on the workspace version (decision 38, on issues #656, #657, #663
-and #671) and on the M3 gate row (decision 39, on #663). Every other decision of the sixteen
-follows from a standing ruling or from `oce verify` as built. The owner was given the list and
-raised nothing, so each stands as written.
+and #671) and on the M3 gate row (decision 39, on #663). Those six are the owner's rulings. The
+other ten, decisions 29 to 37 and 42, follow from a standing ruling or from `oce verify` as
+built. The owner was given the list and raised nothing, so each stands as written; none is
+recorded as a ruling.
 
 **What the decisions rest on,** checked on `development` at commit `71256f99`:
 
@@ -1060,3 +1151,28 @@ raised nothing, so each stands as written.
 Listings 12.1 and 12.2 as published carry none. The sentence states the loader's rule alone,
 which is decision 3's and does not change, and the test plan asks for a commented copy beside
 the verbatim listing.
+
+**Readings added in review** *(2026-11-21, the review of GitHub #676)*. None reopens a ruling;
+each closes a place where a builder would have had to guess, and each is decided from the
+rulings and the code as built.
+
+- **What `frame-refused` carries** (decision 28). Replay reports an engine refusal as a class
+  and a message, with no slot and no path (`crates/leverage/oce-replay/src/trace.rs:228`), and
+  `Replay::trace()` gives the rows so far (`src/replay.rs:292`). The error carries the class as
+  its cause and, in its detail, the frame index, its time and the engine's bounded message. It
+  carries no input path.
+- **Codes.** The three lists a commissioning run's codes come from, `frame-refused` as one word
+  in two lists, and `too-many-points` caught at bind ("Rust API sketch").
+- **`masked_exceedance`.** What is compared at a masked instant and when it can be above zero
+  ("Report and receipt"). OBC §12.7.2 step 8 zeroes and then compares; pyfunnel has no mask.
+- **The tables.** `window` is required to run (`reference-incomplete`); `sources[].rows`,
+  `units.columns[].cdl`, `compared` without `sampling`, the half-sizes under `aligned-grid`, and
+  the ends of an uncovered stretch are each stated in their rows.
+- **No self-enclosure refusal in commissioning,** and what that means for two identical series
+  ("Envelope"), after the funnel port's measurement on a tick grid (GitHub #687,
+  `crates/leverage/oce-verify/tests/funnel_tick_grid.rs`).
+- **A non-finite or out-of-range engine sample** fails its output, and why a vector window
+  treats the same value differently ("Report and receipt").
+- **Shared items.** `ALIGNED_GRID_VERSION` comes from the funnel port beside `FUNNEL_VERSION`;
+  the tolerance mode, `compare-refused` and `too-many-points` arrive with whichever of #663 and
+  #684 merges first.
