@@ -318,7 +318,7 @@ verifier refuses a `0.5` instead (decision 19).
 
 ### As landed: the unit table and the type rules
 
-*(GitHub #PRNUM, issue #659.)* `units/v1` is `convert_unit` in `crates/leverage/oce-verify`
+*(GitHub #716, issue #659.)* `units/v1` is `convert_unit` in `crates/leverage/oce-verify`
 (`src/commissioning/units.rs`, with `UnitError`, `UnitSide`, `UNITS_TABLE` and
 `UNIT_ERROR_CODES`), and the type rules are `src/commissioning/type_rules.rs`, crate-internal
 until the trend sources (#660) call them. Its bit goldens come from a script that shares no code

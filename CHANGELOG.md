@@ -615,7 +615,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Leverage
 
 - **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point
-  mapping** (GitHub #PRNUM, issue #659; commissioning note, "Point mapping", decisions 5, 19 and
+  mapping** (GitHub #716, issue #659; commissioning note, "Point mapping", decisions 5, 19 and
   24). `oce-verify` gains `convert_unit(from, to, x)`, which converts a trended reading from its
   device unit to its CDL point's unit by a closed table of eleven one-way pairs (`degF`, `degC`
   and `K`; `kPa`, the conventional `inH2O` at 249.08891 Pa and `inH2O_60F` at 248.84 Pa to `Pa`;
