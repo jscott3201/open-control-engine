@@ -1,0 +1,5 @@
+time,Count,Enable
+0,3,true
+2.5,4.0,1
+10,5,false
+25,,0

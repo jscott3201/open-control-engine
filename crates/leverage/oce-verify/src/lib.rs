@@ -241,6 +241,11 @@ pub use commissioning::{
     SpecReference, TOLERANCE_NAMES, TrendFormat, TrendSource, UNIT_ERROR_CODES, UNITS_TABLE,
     UnitError, UnitSide, convert_unit,
 };
+pub use commissioning::{
+    InputColumn, MappingRecord, SOURCE_ERROR_CODES, SeriesValues, SourceError, SourceErrorKind,
+    SourceRecord, SourceRole, SpecInputs, TrendFrameSource, TrendInputs, TrendLimits, TrendSeries,
+    TrendSources, UnitColumn,
+};
 pub use compare_error::{Axis, COMPARE_ERROR_CODES, CompareError, SeriesEnd, SeriesRole};
 pub use compare_limits::CompareLimits;
 pub use envelope::{Curve, Envelope, FunnelResult, Series, Tolerances};

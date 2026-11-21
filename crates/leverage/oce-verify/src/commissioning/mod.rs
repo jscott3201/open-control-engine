@@ -33,6 +33,7 @@
 
 mod canonical;
 mod choices;
+mod combi_time_table;
 mod comments;
 mod decode;
 mod decode_sources;
@@ -43,8 +44,15 @@ mod limits;
 mod mapping;
 mod model;
 mod selection;
+mod source_error;
 mod spec;
 mod tolerances;
+mod trend_limits;
+mod trend_merge;
+mod trend_plan;
+mod trend_read;
+mod trend_sources;
+mod trend_types;
 mod type_rules;
 mod units;
 
@@ -56,8 +64,14 @@ pub use model::{
     ComparisonWindow, IndicatorRule, OutputOverride, PointNameMapping, SourceColumn,
     SourceTimeColumn, SpecReference, TrendSource,
 };
+pub use source_error::{SOURCE_ERROR_CODES, SourceError, SourceErrorKind};
 pub use spec::{CommissioningSpec, Finding, LBL_FIELD_IGNORED, SPEC_FINDING_CODES};
 pub use tolerances::{PartialTolerances, TOLERANCE_NAMES};
+pub use trend_limits::TrendLimits;
+pub use trend_types::{
+    InputColumn, MappingRecord, SeriesValues, SourceRecord, SourceRole, SpecInputs,
+    TrendFrameSource, TrendInputs, TrendSeries, TrendSources, UnitColumn,
+};
 pub use units::{UNIT_ERROR_CODES, UNITS_TABLE, UnitError, UnitSide, convert_unit};
 
 /// The format tag a commissioning spec carries in its `schema` key. A spec without the key is an
