@@ -322,8 +322,10 @@ or `oce emit` judges the result. Import then `emit` keeps the content id whereve
 accepts the sequence, except for a name prefix on the root (every imported G36 fixture,
 re-stamped) and, until #683 lands, an Integer literal on a Real parameter; the
 [per-fixture table](crates/leverage/oce-cli/tests/fixtures/import_corpus.tsv) records what
-every CXF fixture under `crates/` does. Neither `import -o` nor `emit -o` will replace its own
-input (on Unix, the file stdin was opened from included), and each refuses a name `oce` would read as another form.
+every CXF fixture under `crates/` does. Neither `import -o` nor `emit -o` will replace
+the input file named on the command line, nor, on Unix, a regular file redirected as stdin
+(`< doc`); a pipe (`cat doc | oce emit - -o doc`) and, on Windows, stdin are not checked. Each
+refuses a name `oce` would read as another form.
 
 Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457) and checking a
 sequence parameter's unit suffix against the block parameter it feeds (#590); `oce check` (#574)

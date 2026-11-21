@@ -286,6 +286,36 @@ mod unix {
     }
 }
 
+#[test]
+fn a_pipe_carrying_the_bytes_of_the_output_is_not_checked_and_the_output_is_replaced() {
+    // The documented limit: only a regular file as stdin is the input; a pipe is no file.
+    let dir = workspace("guard_stdin_pipe");
+    fs::copy(dir.join("econ.cxf.json"), dir.join("doc")).expect("copy");
+    let run = oce_in(
+        &dir,
+        &["import", "-", "-o", "doc"],
+        &fixture("emit/econ_enable.cxf.json"),
+    );
+    assert_eq!(run.code, 0, "{}", run.transcript());
+    assert!(
+        fs::read(dir.join("doc"))
+            .expect("doc")
+            .starts_with(b"sequence ")
+    );
+    fs::copy(dir.join("econ.oce"), dir.join("text-doc")).expect("copy");
+    let run = oce_in(
+        &dir,
+        &["emit", "-", "--from", "text", "-o", "text-doc"],
+        &fixture("text/econ_enable.oce"),
+    );
+    assert_eq!(run.code, 0, "{}", run.transcript());
+    assert!(
+        fs::read(dir.join("text-doc"))
+            .expect("doc")
+            .starts_with(b"{")
+    );
+}
+
 // --- the output's name against the form written ---
 
 #[test]

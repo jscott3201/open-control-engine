@@ -205,7 +205,8 @@ oce import rule.cxf.jsonld | oce emit - --from text | oce id - --from cxf
   file and replaces nothing. Stdin (`-`) is the input when, on Unix, the shell made it a
   regular file (`oce import - -o doc < doc`, `oce emit - --from text -o doc < doc`): file
   descriptor 0 is compared by (device, inode), and a pipe, a terminal or a closed descriptor is
-  no file. **On Windows stdin is not checked** (std has no stable file index); the check also
+  no file, so `cat doc | oce emit - --from text -o doc` is not refused and replaces `doc`.
+  **On Windows stdin is not checked** (std has no stable file index); the check also
   reads the process's own descriptor 0, never a reader a host passes in.
 - **Nothing is judged.** The importer decodes; whether a class is in the catalog, a name is a
   reserved word or the graph has a loop is `oce validate`'s answer on the result. So `import`
