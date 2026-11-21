@@ -650,7 +650,7 @@ Checked on `development` at commit `13b9152b`. Each proposal below cites what it
   to stderr and never changes stdout. `oce verify` puts one document on stdout: the receipt for
   exit 0 or 1 through `Outcome::verdict` (`src/commands/mod.rs:75`), the `oce-report/1` report
   for exit 2. With `--out DIR` it writes `DIR/receipt.json` atomically and prints the report
-  (`src/commands/verify.rs:112` to `140`). No `oce` command has a `--format` flag.
+  (`src/commands/verify.rs:112` to `139`). No `oce` command has a `--format` flag.
 - **The trace.** `Trace::canonical_bytes` "is not a published interchange format"
   (`crates/leverage/oce-replay/src/canonical.rs:2`). A trace retains its inputs only when
   `TraceOptions::inputs` is set (`src/replay.rs:29`).
