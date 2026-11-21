@@ -191,7 +191,7 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
-- **A model-wide budget on what block constructors allocate from parameters** (GitHub #PRNUM,
+- **A model-wide budget on what block constructors allocate from parameters** (GitHub #721,
   issue #700). **Breaking, in place:** a blob or a CXF document whose blocks together hold more
   than 4,194,304 words (32 MiB) outside their state decoded or loaded before and is refused
   now. No format byte changes and no golden moves.
