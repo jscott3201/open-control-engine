@@ -189,7 +189,6 @@ fn the_location_is_the_exact_line_and_column_of_the_refused_token() {
         Some(Location::new(3, 3))
     );
     assert_eq!(refusal(b"{").location(), Some(Location::new(1, 1)));
-    assert_eq!(refusal(b"").location(), Some(Location::new(1, 0)));
 }
 
 #[test]

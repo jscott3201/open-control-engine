@@ -67,7 +67,9 @@ impl WireError {
     /// carries, or `None` for a refusal with no line and column ([`WireError::NotUtf8`], which
     /// carries a byte offset; [`WireError::ByteOrderMark`] and [`WireError::TooLarge`], which
     /// concern the whole document; and [`WireError::MalformedConnection`], which carries the
-    /// connection's index). Never panics.
+    /// connection's index). The position is returned as the reader recorded it: a document that
+    /// ends where a value is expected is placed at column 0 today (GitHub issue #560). Never
+    /// panics.
     #[must_use]
     pub fn location(&self) -> Option<Location> {
         match self {
