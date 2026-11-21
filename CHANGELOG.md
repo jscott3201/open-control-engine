@@ -834,7 +834,10 @@ so far, and no tag is cut by the bump.
     missing required cell table_1_1`, and so on for each. Now:
     `table `table` on block `CDL.Reals.Sources.TimeTable` is missing 1048575 required cells of
     its 524288x2 shape: table_1_1, table_1_2, table_2_1, table_2_2 and 1048571 more`. A table
-    short exactly one cell keeps the message it had, which names that cell.
+    short exactly one cell keeps the message it had, which names that cell. Every other finding
+    is raised as before: each bound cell is still judged, and the time-column checks (finite,
+    nondecreasing, periodic range, period) still run whenever every row has a numeric time, an
+    output cell absent or not.
   - **Found, not walked.** The absent cells are counted from the cells the block binds and the
     first four found between them, so the rule's work is the block's parameters, not its shape.
     The same holds for an `ExtractSignal`'s omitted selectors, whose default is their index:
@@ -854,12 +857,18 @@ so far, and no tag is cut by the bump.
     built. `unify_and_validate` returns its two passes' warnings together. The list type,
     `DiagnosticList`, moved from `oce-cxf` to `oce-diag` and is public there, with the quoting
     its closing error uses (`excerpt`, `visible`, `is_format_or_control` and the `Cf` table
-    `FORMAT_RANGES`); `oce_cxf::is_format_or_control` and `oce_api::is_format_or_control` are
+    `FORMAT_RANGES`, the last and `is_format` hidden from the documentation: they are public only
+    for `oce-cxf`'s Unicode-data test); `oce_cxf::is_format_or_control` and `oce_api::is_format_or_control` are
     re-exports of it, so no caller changes.
   - **Breaking, in place: warnings alone can refuse a model at validation,** as they can at the
     reader since GitHub #713 (the owner's ruling there, mirrored): a pass whose warnings pass the
     bound is refused, never passed with warnings missing. A document refused before is refused
     still, and nothing that loaded before is refused by the one-finding change.
+  - **What is left on the issue's shape** is the constructor probes of the resolve and
+    validation passes (issue #722): 5,000 such blocks, a 2.6 MB document, are refused by
+    validation with 5,000 findings at a 75 MB peak but request 84 GB in total; the constructed
+    budget of GitHub #721 is charged only at instantiation, which validation's refusal comes
+    before.
   - **Only a sparse table's or a vector's defaulted findings change.** Every diagnostic of the
     257 tracked documents that hold an `@graph` and of the 139 CXF documents of
     `open-control-library` (`main` at `d90f63b`), as written and with the retired namespace
@@ -867,7 +876,9 @@ so far, and no tag is cut by the bump.
     so is `oce id --json` over the same 535; none of them has a sparse table. No format, content
     id, blob or golden moves, and the workspace version is not bumped.
   - **Tests:** `crates/oce-api/tests/validate_sparse_table_cost.rs` (the issue's three
-    documents: refusal, peak, allocations a block), `crates/oce-validate/src/tests/`
+    documents: refusal, peak, allocations and requested bytes a block),
+    `crates/oce-api/tests/validate_diagnostic_list_bound.rs` (a validator list past the budget
+    through `Engine::load_cxf`, the closing error last), `crates/oce-validate/src/tests/`
     `diagnostic_budget.rs` (both edges of the budget, warnings, errors, sorted order, one finding
     larger than the budget, a block's parameters), `source_timetable_absent_cells.rs` and
     `routing_defaulted_selectors.rs`, `rules/params_absent_tests.rs` (counting against walking

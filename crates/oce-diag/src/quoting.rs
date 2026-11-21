@@ -45,6 +45,11 @@ pub fn excerpt(text: &str) -> Cow<'_, str> {
 }
 
 /// The Unicode 17.0.0 general category `Cf`, as inclusive code-point ranges in ascending order.
+///
+/// Hidden from the documentation: it is public only so `oce-cxf`'s test can check it, range for
+/// range, against the Unicode data excerpt checked in beside that test. Callers decide with
+/// [`is_format_or_control`].
+#[doc(hidden)]
 pub const FORMAT_RANGES: [(u32, u32); 21] = [
     (0x00AD, 0x00AD),
     (0x0600, 0x0605),
@@ -71,6 +76,10 @@ pub const FORMAT_RANGES: [(u32, u32); 21] = [
 
 /// Whether `c` is in the general category `Cf` ([`FORMAT_RANGES`], by binary search). Never
 /// panics and allocates nothing.
+///
+/// Hidden from the documentation for the reason [`FORMAT_RANGES`] is: callers decide with
+/// [`is_format_or_control`].
+#[doc(hidden)]
 #[must_use]
 pub fn is_format(c: char) -> bool {
     let code = u32::from(c);

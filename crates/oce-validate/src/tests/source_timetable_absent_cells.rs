@@ -150,3 +150,55 @@ fn a_whole_model_and_the_block_alone_agree_on_an_absent_cell_finding() {
         .collect();
     assert_eq!(whole, messages(&[(1, 1), (3, 2)]));
 }
+
+#[test]
+fn the_time_column_is_still_judged_when_only_an_output_cell_is_absent() {
+    // Every time cell bound, the second before the first, and one output cell absent: the
+    // time-column findings beside the absent cell's, as before issue #726 (the review's repro).
+    // The default extrapolation is periodic, so a range ending before it starts is one of them.
+    let params = ParamTable {
+        values: vec![
+            rp("table_1_1", 1.0),
+            rp("table_1_2", 0.0),
+            rp("table_2_1", 0.0),
+        ],
+    };
+    let err = validate_block_parameters(CLASS, &params).expect_err("absent and out of order");
+    let messages: Vec<&str> = err.diagnostics.iter().map(|d| d.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        [
+            "periodic table `table` on block `CDL.Reals.Sources.TimeTable` must span a positive \
+             time range",
+            "table `table` on block `CDL.Reals.Sources.TimeTable` is missing required cell \
+             table_2_2",
+            "table `table` on block `CDL.Reals.Sources.TimeTable` must have nondecreasing time \
+             values; row 2 is before row 1",
+        ]
+    );
+    // Three output cells absent, the same time-column findings beside the one for the cells.
+    let params = ParamTable {
+        values: vec![
+            rp("table_1_1", 1.0),
+            rp("table_2_1", 0.0),
+            rp("table_1_3", 0.0),
+        ],
+    };
+    let messages: Vec<String> = validate_block_parameters(CLASS, &params)
+        .expect_err("absent and out of order")
+        .diagnostics
+        .into_iter()
+        .map(|d| d.message)
+        .collect();
+    assert_eq!(
+        messages,
+        [
+            "periodic table `table` on block `CDL.Reals.Sources.TimeTable` must span a positive \
+             time range",
+            "table `table` on block `CDL.Reals.Sources.TimeTable` is missing 3 required cells of \
+             its 2x3 shape: table_1_2, table_2_2, table_2_3",
+            "table `table` on block `CDL.Reals.Sources.TimeTable` must have nondecreasing time \
+             values; row 2 is before row 1",
+        ]
+    );
+}

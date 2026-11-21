@@ -10,7 +10,7 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic, Severity};
 use oce_model::{EnumClassId, Value};
 
-use crate::diagnostic_list::DiagnosticList;
+use oce_diag::DiagnosticList;
 
 use super::real_parameters::{
     MAX_EXACT_INTEGER_AS_REAL, exact_real, hold_real_parameters_as_reals,

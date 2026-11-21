@@ -131,6 +131,7 @@ mod topology_boundary;
 mod topology_boundary_corpus;
 mod topology_content_bytes;
 mod unused_boundary_input;
+mod validate_diagnostic_list_bound;
 mod vendored_translation_units;
 
 /// Every file Cargo would have discovered as a test target, keyed by its path under `tests/`

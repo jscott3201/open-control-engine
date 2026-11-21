@@ -204,9 +204,10 @@ pub(super) fn check_time_table_matrix(
         ),
     }
 
-    // A complete table has a time for each row; a table with a cell absent is refused above and
-    // its times are not read, so nothing here is sized by a shape no cell fills.
-    let mut times = Vec::with_capacity(if absent.count == 0 { n_row } else { 0 });
+    // The time column as bound, in row order. Its checks below run when every row has a numeric
+    // time, whether or not an output cell is absent, as they did when the shape was walked. It
+    // grows with the time cells bound, never with a shape no cell fills.
+    let mut times = Vec::new();
     for (&(row, col), &value) in &cells {
         let Some(value) = real_value(value) else {
             push_range_error(
@@ -230,9 +231,7 @@ pub(super) fn check_time_table_matrix(
                     ),
                 );
             }
-            if absent.count == 0 {
-                times.push(value);
-            }
+            times.push(value);
         } else {
             check_table_output_value(blk, diags, rule.base, row, col, value, rule.values);
         }
