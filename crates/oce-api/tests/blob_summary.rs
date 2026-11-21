@@ -1,7 +1,8 @@
 //! What `oce_api::inspect_blob` and `oce_graph::blob::inspect` report about a compiled-schedule
 //! blob (issue #448): the summary of every golden states what the decoded executable holds, and
 //! a changed class signature hash, initial-state CRC, state length, kind, content id or I/O path
-//! shows in the summary and nowhere else.
+//! shows in the summary and nowhere else. Every golden's verdict is acceptance, and each change
+//! the decoder refuses carries the decoder's refusal in `decode_refusal` (issue #680).
 //!
 //! The oracle is the test-side blob writer: `Facts::of_image` reads the lists a blob was written
 //! from, and `Image::from_decoded` derives those lists from a decoded executable without the
@@ -17,7 +18,7 @@ use crate::blob_summary_facts;
 use blob_corpus::{FIXTURES, compile, golden, load};
 use blob_image::{Image, words_crc};
 use blob_models::{adder, chain, delay};
-use blob_summary_facts::{Facts, assert_invariants, summarise};
+use blob_summary_facts::{Facts, assert_invariants, summarise, summarise_with_refusal};
 use oce_api::{BlobError, ENGINE_VERSION, InstanceField};
 use oce_graph::blob::decode;
 
@@ -51,8 +52,11 @@ fn every_golden_summary_states_what_the_decoded_executable_holds() {
     for name in FIXTURES {
         let bytes = golden(name);
         let decoded = decode(&bytes).unwrap_or_else(|err| panic!("{name}: {err}"));
-        let facts = summarise(&bytes).unwrap_or_else(|err| panic!("{name}: {err:?}"));
+        let (facts, refusal) =
+            summarise_with_refusal(&bytes).unwrap_or_else(|err| panic!("{name}: {err:?}"));
         assert_invariants(&facts, name);
+        // This build's decoder accepts every golden, and the summary says so.
+        assert_eq!(refusal, None, "{name}");
 
         // The lists the blob is written from, derived without the production encoder.
         assert_eq!(
@@ -157,9 +161,16 @@ fn the_summary_content_id_and_inputs_are_the_loaded_engines() {
             .collect();
         defined.sort_unstable();
         assert_eq!(facts.inputs, defined, "{name}");
-        // The engine's own blob and the checked-in golden summarise alike.
-        assert_eq!(facts, summarise(&compile(name).bytes).unwrap(), "{name}");
-        assert_eq!(facts, summarise(&golden(name)).unwrap(), "{name}");
+        // The engine's own blob and the checked-in golden summarise alike, and a blob
+        // `compile_blob` returned is one this build accepts.
+        let accepted = Ok((facts, None));
+        assert_eq!(summarise_with_refusal(&compiled.bytes), accepted, "{name}");
+        assert_eq!(
+            summarise_with_refusal(&compile(name).bytes),
+            accepted,
+            "{name}"
+        );
+        assert_eq!(summarise_with_refusal(&golden(name)), accepted, "{name}");
     }
 }
 
@@ -174,22 +185,24 @@ fn a_changed_class_signature_hash_shows_in_the_summary_and_nowhere_else() {
             changed.classes[class].1 ^= 1 << bit;
             let hostile = changed.to_bytes();
             // The decoder refuses the blob: the hash is not this build's for the class.
+            let refusal = Some(BlobError::ClassSignatureMismatch {
+                class: u32::try_from(class).unwrap(),
+                expected: image.classes[class].1,
+                found: changed.classes[class].1,
+            });
             assert_eq!(
                 decode(&hostile).err(),
-                Some(BlobError::ClassSignatureMismatch {
-                    class: u32::try_from(class).unwrap(),
-                    expected: image.classes[class].1,
-                    found: changed.classes[class].1,
-                }),
+                refusal,
                 "{name}: class {class} bit {bit}"
             );
-            // The summary reports the hash the blob carries, in that entry only.
+            // The summary reports the hash the blob carries, in that entry only, and the
+            // decoder's refusal beside it.
             let mut expected = original.clone();
             expected.classes[class].1 = changed.classes[class].1;
             assert_ne!(expected, original);
             assert_eq!(
-                summarise(&hostile),
-                Ok(expected),
+                summarise_with_refusal(&hostile),
+                Ok((expected, refusal)),
                 "{name}: class {class} bit {bit}"
             );
         }
@@ -237,8 +250,8 @@ fn a_changed_initial_state_crc_shows_in_the_summary_and_nowhere_else() {
             expected.instances[block].4 = changed.instances[block].state_crc;
             assert_ne!(expected, original);
             assert_eq!(
-                summarise(&hostile),
-                Ok(expected),
+                summarise_with_refusal(&hostile),
+                Ok((expected, Some(refusal))),
                 "{name}: block {block} bit {bit}"
             );
         }
@@ -260,33 +273,43 @@ fn a_changed_state_length_or_kind_shows_in_the_summary_and_nowhere_else() {
             let mut changed = image.clone();
             changed.instances[block].state_len = words;
             let hostile = changed.to_bytes();
+            let refusal = Some(BlobError::InstanceMismatch {
+                block: id,
+                field: InstanceField::StateLen,
+            });
             assert_eq!(
                 decode(&hostile).err(),
-                Some(BlobError::InstanceMismatch {
-                    block: id,
-                    field: InstanceField::StateLen
-                }),
+                refusal,
                 "{name}: block {block} words {words}"
             );
             let mut expected = original.clone();
             expected.instances[block].3 = words;
-            assert_eq!(summarise(&hostile), Ok(expected), "{name}: block {block}");
+            assert_eq!(
+                summarise_with_refusal(&hostile),
+                Ok((expected, refusal)),
+                "{name}: block {block}"
+            );
         }
 
         let mut changed = image.clone();
         changed.instances[block].kind ^= 1;
         let hostile = changed.to_bytes();
+        let refusal = Some(BlobError::InstanceMismatch {
+            block: id,
+            field: InstanceField::Kind,
+        });
         assert_eq!(
             decode(&hostile).err(),
-            Some(BlobError::InstanceMismatch {
-                block: id,
-                field: InstanceField::Kind
-            }),
+            refusal,
             "{name}: block {block} kind"
         );
         let mut expected = original.clone();
         expected.instances[block].2 = !original.instances[block].2;
-        assert_eq!(summarise(&hostile), Ok(expected), "{name}: block {block}");
+        assert_eq!(
+            summarise_with_refusal(&hostile),
+            Ok((expected, refusal)),
+            "{name}: block {block}"
+        );
     }
 }
 
@@ -306,7 +329,12 @@ fn the_content_id_field_is_reported_verbatim_and_all_zero_bytes_are_none() {
             let bytes = changed.to_bytes();
             let mut expected = original.clone();
             expected.content_id = Some(changed.content_id);
-            assert_eq!(summarise(&bytes), Ok(expected), "byte {at} = {value:#x}");
+            // The decoder checks the field against nothing, so the verdict stays acceptance.
+            assert_eq!(
+                summarise_with_refusal(&bytes),
+                Ok((expected, None)),
+                "byte {at} = {value:#x}"
+            );
             assert_eq!(decode(&bytes).unwrap().content_id, Some(changed.content_id));
         }
     }
@@ -317,7 +345,7 @@ fn the_content_id_field_is_reported_verbatim_and_all_zero_bytes_are_none() {
     let bytes = none.to_bytes();
     let mut expected = original.clone();
     expected.content_id = None;
-    assert_eq!(summarise(&bytes), Ok(expected));
+    assert_eq!(summarise_with_refusal(&bytes), Ok((expected, None)));
     assert_eq!(decode(&bytes).unwrap().content_id, None);
     for model in [chain(), adder(), delay()] {
         assert_eq!(summarise(&model.to_bytes()).unwrap().content_id, None);
@@ -345,7 +373,11 @@ fn a_changed_boundary_path_shows_in_the_summary_and_nowhere_else() {
         decode(&bytes).unwrap();
         let mut expected = original.clone();
         expected.inputs = vec![path.to_owned()];
-        assert_eq!(summarise(&bytes), Ok(expected.clone()), "input {path:?}");
+        assert_eq!(
+            summarise_with_refusal(&bytes),
+            Ok((expected.clone(), None)),
+            "input {path:?}"
+        );
         // The golden spelling carries the path through an independent JSON reader unchanged.
         assert_eq!(Facts::from_json(&expected.to_json()), expected, "{path:?}");
 
@@ -355,7 +387,11 @@ fn a_changed_boundary_path_shows_in_the_summary_and_nowhere_else() {
         decode(&bytes).unwrap();
         let mut expected = original.clone();
         expected.outputs = vec![path.to_owned()];
-        assert_eq!(summarise(&bytes), Ok(expected), "output {path:?}");
+        assert_eq!(
+            summarise_with_refusal(&bytes),
+            Ok((expected, None)),
+            "output {path:?}"
+        );
     }
 }
 
@@ -366,7 +402,9 @@ fn an_executable_with_no_blocks_summarises_to_empty_lists() {
     // Header, five empty sections and the trailer: the smallest blob there is.
     assert_eq!(bytes.len(), 52 + 5 * 8 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4);
     decode(&bytes).unwrap();
-    let facts = summarise(&bytes).unwrap();
+    let (facts, refusal) = summarise_with_refusal(&bytes).unwrap();
+    // The smallest blob is one this build accepts: nothing to build is nothing to refuse.
+    assert_eq!(refusal, None);
     assert_eq!(
         facts,
         Facts {

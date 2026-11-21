@@ -4,8 +4,8 @@
 //!
 //! The defects are the ones `blob_hostile_bytes.rs` and `blob_refusal_precedence.rs` feed the
 //! decoder, built with the same test-side writer and re-checksummed so each reaches the check
-//! under test. Every case goes through [`against_the_decoder`], which holds the summary to the
-//! decoder's verdict.
+//! under test. Every case goes through [`against_the_decoder`], which holds the summary, and the
+//! `decode_refusal` it carries (issue #680), to the decoder's verdict.
 
 // Shared helpers, declared once for this binary in its root `facade.rs`.
 use crate::blob_corpus;
@@ -17,7 +17,7 @@ use crate::blob_summary_facts;
 
 use blob_corpus::{FIXTURES, golden};
 use blob_image::{Image, VType, Val, rechecksum, reseal};
-use blob_summary_facts::{Facts, assert_invariants, summarise};
+use blob_summary_facts::{Facts, assert_invariants, summarise, summarise_with_refusal};
 use oce_api::{BlobError, ConnectorFault, ENGINE_VERSION, InstanceField, MalformedFault};
 use oce_graph::blob::{HEADER_BYTES, MAX_BLOB_BYTES, decode};
 
@@ -26,12 +26,13 @@ const WORKED: &str = "generic_air_economizer_high_limits_ashrae_differential";
 /// How a summary relates to the decoder's verdict on the same bytes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Verdict {
-    /// The decoder accepts the blob and the summary states what it decoded.
+    /// The decoder accepts the blob and the summary states what it decoded, with no refusal.
     Decoded,
     /// Both refuse with the identical error: every refusal of the decoder's steps 1 to 6, an
     /// unregistered class and a class index outside the table.
     SameRefusal,
-    /// The decoder refuses at a later step; the summary reports the blob as written.
+    /// The decoder refuses at a later step; the summary reports the blob as written and carries
+    /// that refusal.
     SummarisedAsWritten,
     /// The decoder refuses at a later step; the summary refuses an unregistered class or a class
     /// index further on in the table, which the decoder had not reached.
@@ -40,10 +41,15 @@ enum Verdict {
 
 /// Summarise `bytes` through the core and the facade and hold the result to the decoder's verdict.
 fn against_the_decoder(bytes: &[u8], what: &str) -> Verdict {
-    let summary = summarise(bytes);
+    let summary = summarise_with_refusal(bytes);
     match decode(bytes) {
         Ok(decoded) => {
-            let facts = summary.unwrap_or_else(|err| panic!("{what}: decodes, yet {err:?}"));
+            let (facts, refusal) =
+                summary.unwrap_or_else(|err| panic!("{what}: decodes, yet {err:?}"));
+            assert_eq!(
+                refusal, None,
+                "{what}: decodes, yet the summary says refused"
+            );
             assert_eq!(
                 facts,
                 Facts::of_image(&Image::from_decoded(&decoded)),
@@ -71,8 +77,9 @@ fn against_the_decoder(bytes: &[u8], what: &str) -> Verdict {
             Verdict::SameRefusal
         }
         Err(later) => match summary {
-            Ok(facts) => {
+            Ok((facts, refusal)) => {
                 assert_invariants(&facts, what);
+                assert_eq!(refusal, Some(later), "{what}: the decoder's own refusal");
                 Verdict::SummarisedAsWritten
             }
             Err(BlobError::UnknownClass { class }) => {

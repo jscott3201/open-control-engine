@@ -199,8 +199,9 @@ fn summary_golden_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/blob_summary")
 }
 
-/// One `<fixture>.json` per blob golden: everything `oce_api::inspect_blob` reports for the
-/// fixture's blob, in the fixed spelling of `blob_summary_facts::Facts::to_json`. Every
+/// One `<fixture>.json` per blob golden: everything `oce_api::inspect_blob` reports the
+/// fixture's blob to record, in the fixed spelling of `blob_summary_facts::Facts::to_json`; its
+/// verdict on each (`decode_refusal`) is asserted here to be acceptance. Every
 /// determinism cell (x86_64 and aarch64, debug and release codegen) and both platform cells
 /// compare against these same bytes, so a summary that differed on one of them fails there.
 #[test]
@@ -214,6 +215,12 @@ fn every_fixture_blob_summary_matches_its_checked_in_json_byte_for_byte() {
             .unwrap_or_else(|err| panic!("{name}: inspect: {err}"));
         let again = oce_api::inspect_blob(&compiled.bytes).unwrap();
         assert_eq!(summary, again, "{name}: two summaries of one blob differ");
+        // The verdict is not in the JSON, which spells what a blob records about itself: every
+        // golden is of a blob this build's decoder accepts (issue #680).
+        assert_eq!(
+            summary.decode_refusal, None,
+            "{name}: the build that encoded the blob refuses it"
+        );
         let json = Facts::of_summary(&summary).to_json();
         assert_eq!(
             json,
@@ -241,6 +248,10 @@ fn every_fixture_blob_summary_matches_its_checked_in_json_byte_for_byte() {
         let checked_in = oce_api::inspect_blob(&blob_corpus::golden(name))
             .unwrap_or_else(|err| panic!("{name}: inspect the golden: {err}"));
         assert_eq!(checked_in, summary, "{name}: the golden blob's summary");
+        assert_eq!(
+            checked_in.decode_refusal, None,
+            "{name}: this build refuses the checked-in blob"
+        );
         // An independent JSON reader finds every fact the summary holds in the golden text.
         assert_eq!(
             Facts::from_json(&golden),

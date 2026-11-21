@@ -609,8 +609,10 @@ default. Why: `unit` reaches the CXF and the rest does not before M8; the diff n
 and initial-state CRCs: the decoder is `oce_graph::blob`, a core crate a leverage crate may not
 call, so the accessor is engine work, GitHub #448. It landed as `oce_api::inspect_blob`
 ([inspecting a blob](../compiled-schedule-blob.md#inspecting-a-blob)): it reports hashes and CRCs
-as the blob records them, without comparing them with the running build's, so a comparison can
-show a class whose signature changed.
+as the blob records them, without correcting them to the running build's, so a comparison can
+show a class whose signature changed. Since issue #680 the summary also carries the running
+build's verdict on each blob (`decode_refusal`: `None`, or the decoder's own error), which a blob
+comparison reads to say whether the build that compares would run either side.
 
 **16. `oce diff` exits 0 only when `equal`**, so a `reordered`-only or metadata-only diff
 exits 1 and scripts that want "same structure" read `summary.graph_equal`. For every `oce`

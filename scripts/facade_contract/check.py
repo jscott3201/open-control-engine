@@ -106,6 +106,9 @@ fn supported(bytes: &[u8]) -> Result<(), oce_api::OcError> {
     let _: Option<&oce_api::BlobClass> = summary.classes.first();
     let _: Option<&oce_api::BlobInstance> = summary.instances.first();
     let _: (&[String], &[String], bool) = (&summary.inputs, &summary.outputs, summary.target_bound);
+    let refusal: Option<oce_api::BlobError> = summary.decode_refusal;
+    let _: bool = matches!(oce_api::inspect_blob(bytes), Ok(read) if read.decode_refusal.is_none());
+    let _ = matches!(refusal, Some(oce_api::BlobError::ClassSignatureMismatch { .. }));
     Ok(())
 }
 """

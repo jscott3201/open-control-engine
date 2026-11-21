@@ -8,7 +8,8 @@ use super::EngineVersion;
 /// source. [`inspect()`](super::inspect()) refuses with the same type: every variant up to
 /// [`NonzeroFlags`](Self::NonzeroFlags) as the decoder does, then only
 /// [`UnknownClass`](Self::UnknownClass) and [`InstanceMismatch`](Self::InstanceMismatch) with
-/// [`InstanceField::ClassIndex`].
+/// [`InstanceField::ClassIndex`]. Any other refusal of the decoder it reports beside the summary,
+/// in [`Summary::decode_refusal`](super::Summary::decode_refusal).
 ///
 /// The variants up to [`NonzeroFlags`](Self::NonzeroFlags) are listed in the decoder's refusal
 /// order, so a blob with several header defects reports the first of them in this list.

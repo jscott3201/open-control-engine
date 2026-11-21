@@ -1,19 +1,26 @@
-//! A blob summary as plain comparable facts, for the blob-summary tests (issue #448).
+//! A blob summary as plain comparable facts, for the blob-summary tests (issues #448 and #680).
 //!
 //! `oce_api::BlobSummary` is `#[non_exhaustive]`, so a test cannot build the value it expects.
-//! [`Facts`] holds the same fields as plain data and is built three ways: from the facade's
-//! summary, from the core's borrowed summary, and from a test-side [`Image`], which is what a
-//! blob was written from and so is the oracle for what a summary of it must say.
+//! [`Facts`] holds what a summary says the blob records about itself, as plain data, and is built
+//! three ways: from the facade's summary, from the core's borrowed summary, and from a test-side
+//! [`Image`], which is what a blob was written from and so is the oracle for what a summary of it
+//! must say.
+//!
+//! The summary's one other field, `decode_refusal`, is this build's verdict on the blob and not
+//! something the blob records, so it is not a fact: [`summarise_with_refusal`] returns it beside
+//! the facts, and holds it to its own oracle, the decoder, on every call.
 //!
 //! [`Facts::to_json`] is the one spelling the summary goldens are checked in as
-//! (`tests/fixtures/blob_summary/`). It is test evidence, not a format the engine publishes.
+//! (`tests/fixtures/blob_summary/`). It is test evidence, not a format the engine publishes, and
+//! it spells the facts only: every golden is of a blob this build accepts, which
+//! `blob_goldens.rs` asserts beside the comparison.
 
 #![allow(dead_code)]
 
 use std::fmt::Write as _;
 
 use oce_api::{BlobSummary, OcError, inspect_blob};
-use oce_graph::blob::{BlobError, ENGINE_VERSION, Summary, inspect};
+use oce_graph::blob::{BlobError, ENGINE_VERSION, Summary, decode, inspect};
 
 use super::blob_image::Image;
 
@@ -27,7 +34,7 @@ pub(crate) type ClassFact = (String, u64);
 /// One instance: block id, class index, stateful, state word count and initial-state CRC.
 pub(crate) type InstanceFact = (u32, u32, bool, u32, u32);
 
-/// Every field of a blob summary.
+/// Every field of a blob summary that states what the blob records: all but `decode_refusal`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Facts {
     pub(crate) format_version: u16,
@@ -295,14 +302,33 @@ impl Facts {
 
 /// Summarise `bytes` through the core reader and through the facade, require the two to agree
 /// (the same facts, or the same refusal wrapped as `OcError::Blob`), and return what they said.
+/// The verdict is checked on the way and dropped: see [`summarise_with_refusal`].
 pub(crate) fn summarise(bytes: &[u8]) -> Result<Facts, BlobError> {
-    let core = inspect(bytes).map(|summary| Facts::of_core(&summary));
+    summarise_with_refusal(bytes).map(|(facts, _)| facts)
+}
+
+/// [`summarise`], with the summary's `decode_refusal` beside the facts.
+///
+/// Every summary any test reads comes through here, so this is where the verdict is held to its
+/// oracle: the core's and the facade's `decode_refusal` must be equal, and equal to the error
+/// `oce_graph::blob::decode` returns for the same bytes (`None` exactly when it decodes them).
+pub(crate) fn summarise_with_refusal(
+    bytes: &[u8],
+) -> Result<(Facts, Option<BlobError>), BlobError> {
+    let core = inspect(bytes).map(|summary| (Facts::of_core(&summary), summary.decode_refusal));
     let facade = match inspect_blob(bytes) {
-        Ok(summary) => Ok(Facts::of_summary(&summary)),
+        Ok(summary) => Ok((Facts::of_summary(&summary), summary.decode_refusal)),
         Err(OcError::Blob(error)) => Err(error),
         Err(other) => panic!("a refusal that is not OcError::Blob: {other:?}"),
     };
     assert_eq!(core, facade, "the facade's summary is not the core's");
+    if let Ok((_, refusal)) = &core {
+        assert_eq!(
+            *refusal,
+            decode(bytes).err(),
+            "the summary's decode_refusal is not what the decoder returns for the same bytes"
+        );
+    }
     core
 }
 

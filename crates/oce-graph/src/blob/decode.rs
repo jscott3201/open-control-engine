@@ -59,18 +59,25 @@ use crate::{MAX_STATE_WORDS, Schedule, allocate_state, build_driver_of};
 pub fn decode(bytes: &[u8]) -> Result<Decoded<'_>, BlobError> {
     let layout = sections::frame(bytes)?;
     let counts = sections::check_structure(&layout)?;
+    build(&layout, &counts)
+}
 
+/// Steps 7 to 10 of [`decode()`] over a framed blob whose structure `counts` proves: the whole
+/// building pass, and the only code that says whether this build accepts such a blob.
+/// [`decode()`] returns its result, and [`inspect()`](super::inspect()) keeps only its refusal,
+/// so the two cannot disagree about a blob.
+pub(super) fn build<'a>(layout: &Layout<'a>, counts: &Counts) -> Result<Decoded<'a>, BlobError> {
     let Instances {
         mut model,
         blocks,
         classes,
         mut owners,
-    } = build_instances(&layout, &counts)?;
+    } = build_instances(layout, counts)?;
     let target_bound = any_class_target_bound(classes.iter().map(|(_, path, _)| path.as_ref()));
     drop(classes);
 
-    let inputs = build_inputs(&layout, &mut owners)?;
-    model.connections = build_connections(&layout, &owners)?;
+    let inputs = build_inputs(layout, &mut owners)?;
+    model.connections = build_connections(layout, &owners)?;
     let driver_of = build_driver_of(&model);
     for (id, driver) in driver_of.iter().enumerate() {
         let id = index_u32(id);
@@ -81,9 +88,9 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded<'_>, BlobError> {
             return Err(BlobError::UndrivenInput { connector: id });
         }
     }
-    let outputs = build_outputs(&layout, &owners)?;
+    let outputs = build_outputs(layout, &owners)?;
 
-    let order = build_order(&layout, &model, &blocks, &owners)?;
+    let order = build_order(layout, &model, &blocks, &owners)?;
     drop(owners);
     let schedule = Schedule {
         order,
@@ -91,7 +98,7 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded<'_>, BlobError> {
         driver_of,
     };
 
-    let state = build_state(&layout, &model, &blocks)?;
+    let state = build_state(layout, &model, &blocks)?;
     let content_id = recorded_content_id(layout.content_id);
     Ok(Decoded {
         model,

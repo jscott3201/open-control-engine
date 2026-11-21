@@ -15,7 +15,9 @@
 //!
 //! [`inspect()`] reads what a blob records about itself (its header facts, class table,
 //! per-instance initial-state CRCs and I/O paths) through the same framing and structural pass,
-//! without building it: a [`Summary`] is for comparing blobs and is not acceptance.
+//! for comparing blobs, including one this build refuses. Its [`Summary`] also carries the
+//! decoder's verdict on the bytes ([`Summary::decode_refusal`]): the refusal of the same building
+//! pass [`decode()`] runs, whose result is dropped.
 //!
 //! This one module owns the format in both directions (the tag tables, the section layout, the
 //! checks), so the encoder and decoder cannot drift. The user-facing contract is
@@ -53,8 +55,12 @@
 //!
 //! ## Peak memory against blob length
 //!
-//! Every allocation is sized from bytes already in hand, so peak memory is linear in the blob
-//! length. The structural pass refuses a port list longer than
+//! The framing and structural passes size every allocation from bytes already in hand, so they
+//! are linear in the blob length. The building pass is not: block constructors allocate from
+//! parameter names and values, capped per block (up to about 8 MiB) but not across the model, so
+//! a blob of a few kilobytes can allocate hundreds of megabytes until GitHub #700 adds a
+//! model-wide budget. The table below is a measurement of the shapes listed, not a bound. The
+//! structural pass refuses a port list longer than
 //! [`oce_blocks::MAX_RESOLVED_ARITY`] before anything is sized by it, and connector ownership is
 //! tracked in 8 bytes per id; the 144-byte `Connector` arena is built only after every port list
 //! has matched its constructed block. Measured peaks, as multiples of the blob length (pinned by

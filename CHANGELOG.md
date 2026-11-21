@@ -39,6 +39,61 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Facade
 
+- **`BlobSummary` says whether this build accepts the blob: `decode_refusal`** (GitHub #699,
+  issue #680). `oce_api::inspect_blob` returned a summary for some blobs the engine refuses to
+  run (a wrong class signature hash, a wrong initial-state CRC), and the facade had no other
+  function that reads blob bytes, so `inspect_blob(bytes).is_ok()` written as a gate admitted a
+  blob the target refuses. The owner ruled for a field on the summary, over a separate
+  `check_blob` function and over documentation alone.
+  - **The field.** `BlobSummary::decode_refusal: Option<BlobError>`, and the same field on the
+    core's `oce_graph::blob::Summary`. `None`: this build's full decoder
+    (`oce_graph::blob::decode`, which `Executable::from_blob` runs) accepts the bytes. `Some`:
+    this build refuses the blob, and the value is the decoder's own first refusal for those
+    bytes. So `Ok` with no refusal is acceptance by this build, `Ok` with a refusal describes a
+    blob this build refuses, and the acceptance check is
+    `matches!(inspect_blob(bytes), Ok(s) if s.decode_refusal.is_none())`. `BlobError` is the
+    facade's existing re-export, the type `OcError::Blob` wraps.
+  - **Where it comes from.** The decoder, not a second set of checks: `decode` is now its
+    framing and structural pass followed by one building function (its steps 7 to 10), and
+    `inspect` calls that same function over the same framed bytes, keeps the refusal and drops
+    what was built. It is computed in the core so that the checks, the building pass and the
+    lists run in one fixed order over one framing: a refusal of the summary still allocates
+    nothing, and the decoded executable is freed before the lists are allocated. The schedule
+    never ticks. An unregistered class and a class index outside the class table stay refusals of
+    the summary itself (`Err`), by the owner's ruling, and are never reported in the field.
+  - **Cost, restated.** A summary used to cost its lists alone (at most 2 bytes held per blob
+    byte in the core, 4 requested in the facade). It now costs the decoder's building pass
+    first: exactly `decode`'s allocations for the same bytes, freed, then the lists. The peak is
+    the larger of the two, not their sum. The building pass is not bounded by the blob length:
+    it includes the state the blocks declare (at most `MAX_STATE_WORDS`, 32 MiB; a 287-byte blob
+    whose one block owns the whole state budget holds it while it is checked) and what block
+    constructors allocate from parameters, which is capped per block (up to about 8 MiB) but not
+    across the model, so a 4,003-byte blob of 64 `TimeTable` blocks peaks at 536,903,536 bytes
+    (GitHub #700 adds a model-wide budget). Until then, do not run `inspect` or `inspect_blob` on
+    untrusted bytes without your own memory limit. Measured, as multiples of the blob length:
+    1.55 to 21.59 for the 46 goldens (their lists are 0.17 to 0.41), 26.62 for the densest
+    accepted shape measured, 3.33 for 500,000 empty-path outputs (lists 1.33), 5.12 for 100,000
+    minimal instances (lists 0.80). The 2 and 4 bounds still hold for the result. A refusal
+    (`Err`) still allocates nothing.
+  - **Evidence.** The test support through which every summary test reads a summary now
+    requires the core's and the facade's `decode_refusal` to equal what `decode` returns for the
+    same bytes, so the bit-flip suites, the hostile-bytes suites and the 10,000 seeded mutations
+    all hold the field to the decoder. All 46 goldens, fresh and checked in, have no refusal.
+    `tests/blob_summary_acceptance.rs` requires the exact error for the nine refused blobs it
+    had and for fifteen more that reach the remaining refusals of the decoder's later steps,
+    reports the decoder's first refusal of a blob with four defects and then the next as each
+    is repaired, and shows a summary refusal is never reported as a decode refusal.
+    `tests/blob_summary_allocations.rs` requires, for every golden and seven other shapes, the
+    summary's allocation count to equal `decode`'s plus one per non-empty list and its peak to
+    equal the larger of `decode`'s peak and the lists' bytes. `oce-graph`'s
+    `tests/blob_summary.rs` flips every bit after the engine version of two goldens through the
+    core reader alone, and passes against the `no_std + alloc` build.
+  - No blob byte, content id, refusal or refusal order changes, and no golden moves: the 46
+    summary goldens spell what a blob records about itself, and the verdict, which is this
+    build's and is `None` for every one of them, is asserted beside the comparison instead of
+    being written into them. Documented in
+    [inspecting a blob](docs/compiled-schedule-blob.md#whether-this-build-accepts-the-blob).
+
 - **`Topology` carries the boundary facts the content id encodes, and the root id** (GitHub
   #702, issue #701). Two loaded documents that differed only in a boundary's unit, quantity,
   display unit, type or an input's bound had different canonical content ids and equal
