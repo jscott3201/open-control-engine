@@ -612,7 +612,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - **Nothing a format defines changes, and the workspace version is not bumped:** tightening
     accepted input is not a format change (unit-spellings ruling 7; the ruling on #647). No
     content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
-- **The CXF reader's diagnostic list holds at most 8 MiB of text** (GitHub #PRNUM, issue #695).
+- **The CXF reader's diagnostic list holds at most 8 MiB of text** (GitHub #713, issue #695).
   A diagnostic copies document text: its subject is a node's `@id`, and most messages name that
   `@id` again. Nothing tied the number of diagnostics to the length of what they copy, so a node
   with a long `@id` and many refused keys built a list of `keys × id bytes`. 400 padded keys on

@@ -18,7 +18,9 @@ pub struct ValidationReport {
     /// the source CXF model IRI for M3. It is `Some` on every successful resolver-owned import
     /// path and `None` only for manually default-constructed reports.
     pub model_iri: Option<String>,
-    /// The (sorted, error-free on the `Ok` path) diagnostics.
+    /// The (sorted, error-free on the `Ok` path) diagnostics: every warning the import raised.
+    /// A list whose messages and subjects would pass 8 MiB is never returned here: it ends with
+    /// an error, so the import is refused ([`CxfError::Validation`](crate::CxfError::Validation)).
     pub diagnostics: Vec<Diagnostic>,
 }
 

@@ -77,6 +77,13 @@ pub enum CxfError {
     Json(#[from] serde_json::Error),
     /// Validation produced one or more diagnostics, at least one of them an error (the shared
     /// [`oce_diag`] vocabulary, so a host sees one diagnostic shape across resolve + validate).
+    ///
+    /// An import's list holds at most 8 MiB (8,388,608 bytes) of message and subject text, a
+    /// subject that several diagnostics share as one allocation counted once (GitHub issue
+    /// #695). The first diagnostic that does not fit ends the list, and its last entry is then
+    /// one [`oce_diag::DiagCode::ResourceLimitExceeded`] error, with no subject, whose message
+    /// starts with how many diagnostics were raised and are not listed. An export's list is not
+    /// held to that bound.
     #[error("CXF validation failed with {} diagnostic(s)", .0.len())]
     Validation(Vec<oce_diag::Diagnostic>),
 }
