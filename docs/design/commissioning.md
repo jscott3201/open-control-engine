@@ -291,6 +291,59 @@ version, wheel SHA-256, funnel commit, platform); the script, its pins and the f
 committed, and the fixtures are regenerated only by an issue that says so. The port's own outputs
 are also golden-tested bit for bit.
 
+*(As landed, GitHub #687, issue #655:)* the envelope arithmetic is in `oce-verify` as a
+library surface (`funnel`, `aligned_grid`, `Tolerances`, `Series`, `Curve`, `Envelope`,
+`FunnelResult`, `CompareLimits`, `CompareError`, `format_g16`, `FUNNEL_VERSION`,
+`ALIGNED_GRID_VERSION`); no vector file,
+receipt or verb reaches it yet. The fixture is
+`crates/leverage/oce-verify/tests/fixtures/funnel/` (its README has the pins, the capture and a
+row per case). Six things are as the tree found them, not as this section said:
+
+- **Two of funnel's 17 cases are refusals.** At the pinned commit funnel refuses `fail2` and
+  `fail6` ("maximum x values are different", which its own test list expects) and writes no
+  curve, so those two are compared as refusals: the port returns `mismatched-endpoints` at the
+  same end. The other 15, and 45 of the 49 hostile cases, are compared as five files each; the
+  remaining four hostile cases are refusals by the ends as well.
+- **Upstream's committed `results/` are not the oracle.** None equals what the pinned script
+  writes byte for byte: they predate the `%.16g` print format, the current tube and the endpoint
+  refusal, and upstream's harness reads its inputs through pandas. The fixture README records the
+  difference case by case.
+- **The port refuses where funnel defines no result.** A local `x` tolerance above one can make
+  funnel's loop removal read outside its arrays (found by a seeded search of random cases, checked
+  with an AddressSanitizer build of the pinned source). The port returns `loop-removal-undefined`
+  on exactly those inputs, and `non-finite-envelope` where a bound or an error overflows.
+- **The work bound is 2^28 units** (decision 22 named a work counter and no number), one budget
+  per comparison. The cost per reference point grows with the width of the `x` tolerance in
+  samples: measured on a random walk, 9 units at one sample wide, 28 at 35, 70 at 300, 123 at
+  1,000 and 205 at 3,000. A day at 5 s uses under 1 % of the bound at any of these. A series at
+  the point cap has 256 units per point, so a trend of a million points under an `x` tolerance
+  thousands of samples wide is refused `work-limit-exceeded` (the random walk at 5,000 samples;
+  the review of GitHub #687 measured refusal from about 1,500 on its signals). A rising sawtooth
+  under a local `x` tolerance costs about 0.7 units per point squared and is refused from about
+  19,400 points.
+- **Whether a series is inside its own funnel depends on the grid.** On a grid from `x = 0`
+  with one sample per instant the construction does not leak: a series is inside its own band
+  for every `x` tolerance from none to ten ticks. Three limits, each pinned as a hostile case
+  that pyfunnel answers the same way and as a test (`tests/funnel_tick_grid.rs`):
+  - *rounding, with no `y` tolerance.* The band is then only the `1e-10` floor high; with an `x`
+    tolerance of exactly one tick a corner of the bound sits on a sample, and a step of a
+    million or more rounds by more than the floor (`identical_large_step_no_y_tolerance`:
+    outside by `2.3e-10`). Any `y` tolerance above the rounding removes it.
+  - *several samples at one instant, with no `x` tolerance.* The rectangles are the `1e-10`
+    floor wide, which funnel's equality cannot tell from zero once `x` is a few units large.
+    Three samples that do not rise or fall in order leak from an `x` of about 4; a step written
+    as two equal time stamps (§12.2) is inside while `x` is in the hundreds of thousands and
+    leaks once it is in the millions. Any `x` tolerance removes both.
+  - *`x` more than about 1e10 times its step*, such as epoch seconds in steps under 0.17 s:
+    funnel's equality, `1e-10` relative, reads neighbouring instants as one. Model seconds from
+    `time.origin` stay far below that.
+- **pyfunnel's output depends on its platform.** Its arm64 macOS library contracts fused
+  multiply-adds and prints 38 of the fixture's 306 files differently; the port pins the x86_64
+  Linux result on every target, which is why the capture requires that platform.
+
+The Building 33 day of the differential set follows in #664, captured with the same script once
+the trends (#661) and an engine series (#663) exist.
+
 **`aligned-grid`.** The conservative envelope `oce-conformance` uses today (`build_bounds`): a grid
 of every sample and rectangle edge, min and max over covering rectangles, half-sizes as a **sum** of
 terms. Wider than funnel and never leaky, but not what §12 references; a receipt names it, and it
@@ -309,10 +362,14 @@ reports those too; an `oce-verify` verdict reads only the errors at the test's o
 
 **No self-enclosure refusal here.** A vector window refuses a reference that lies outside its
 own envelope ([vectors note](vectors.md), decision 41). A commissioning run does not: it
-reports what the envelope the specification cites gives. So two identical series can fail here
-by rounding, in the one case the funnel port measured: no `y` tolerance, an `x` tolerance that
-puts a corner of a bound on a sample, and a step of about a million or more. Any `y` tolerance
-above the rounding removes it.
+reports what the envelope the specification cites gives. So two identical series can fail here,
+in the cases the funnel port measured ("as landed", above). By rounding: no `y` tolerance, an
+`x` tolerance that puts a corner of a bound on a sample, and a step of about a million or more;
+any `y` tolerance above the rounding removes it. With no `x` tolerance, where samples share an
+instant: three that do not rise or fall in order, or a step written as two equal time stamps
+(§12.2) once model seconds are in the millions, some weeks into a trend; any `x` tolerance
+removes it, and Listing 12.1's is 10 s. And where `x` is more than about 1e10 times its step, which
+model seconds from `time.origin` do not reach.
 
 ## Indicators
 
