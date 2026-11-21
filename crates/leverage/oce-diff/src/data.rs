@@ -111,7 +111,8 @@ pub struct Diff {
 pub enum Source {
     /// Two authoring models ([`crate::diff`]).
     Authoring,
-    /// Two loaded CXF documents, compared through their topology views.
+    /// Two loaded CXF documents, compared through their topology views
+    /// ([`crate::diff_topology`]).
     Cxf,
 }
 
@@ -152,7 +153,9 @@ pub struct Summary {
     pub parameters_equal: Option<bool>,
     /// True when the interface section holds no entry other than `reordered`.
     pub interface_equal: bool,
-    /// True when the metadata section is empty; `None` at a level that carries no metadata.
+    /// True when the metadata section is empty; `None` where the level cannot tell. The CXF
+    /// level sees one metadata fact, a renamed root: `Some(false)` beside its `sequence-renamed`
+    /// entry, `None` without it.
     #[serde(deserialize_with = "crate::read::nullable")]
     pub metadata_equal: Option<bool>,
     /// How the blocks of the two sides matched.
@@ -189,6 +192,11 @@ pub enum Note {
     RenamePassSkipped,
     /// The rename pass was turned off by the caller ([`DiffOptions`]).
     RenamePassOff,
+    /// A side of a CXF diff ([`crate::diff_topology`]) has a block with no instance IRI. The
+    /// facade spells such a block by its loader-order id (`b<id>`), which is no identity across
+    /// two documents, so it is matched only by the rename pass and its entries carry that
+    /// spelling. No public load path produces one.
+    UnnamedBlocks,
 }
 
 /// How much of a renamed pair's neighbourhood the rename pass saw.

@@ -11,10 +11,11 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::EvalResult;
 use oce_model::Value;
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
 use crate::scope_chain::ScopeFrame;
 
-use super::declaration_scope::{Pass, evaluate_declarations, identifier_heads};
+use super::declaration_scope::{Pass, TaggedFinding, evaluate_declarations, identifier_heads};
 use super::parameter_attrs::CheckedParameters;
 use super::specialize::Specialization;
 
@@ -73,7 +74,7 @@ fn evaluate_root(
             .collect::<Vec<_>>(),
     }));
     let map = by_id(nodes);
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let evaluation = evaluate_declarations(
         &root,
         &[],
@@ -89,7 +90,7 @@ fn evaluate_root(
         evaluation.withheld.is_empty(),
         "the lowering invocation emits directly and withholds nothing"
     );
-    (evaluation.scope.flattened(), diags)
+    (evaluation.scope.flattened(), diags.into_iter().collect())
 }
 
 #[test]
@@ -156,7 +157,7 @@ fn own_name_masks_enclosing_binding_even_when_the_own_declaration_cannot_ground(
     }));
     let map = by_id(&nodes);
     let enclosing = vec![(Arc::<str>::from("k"), EvalResult::Scalar(Value::Real(1.0)))];
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let evaluation = evaluate_declarations(
         &root,
         &[],
@@ -249,7 +250,7 @@ fn self_reference_refuses_as_a_length_one_cycle_never_reading_the_enclosing_bind
     }));
     let map = by_id(&nodes);
     let enclosing = vec![(Arc::<str>::from("x"), EvalResult::Scalar(Value::Real(1.0)))];
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let evaluation = evaluate_declarations(
         &root,
         &[],
@@ -326,11 +327,20 @@ fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machiner
          is non-emitting in this pass: {:?}",
         evaluation.withheld
     );
-    assert!(
-        evaluation.withheld[0]
-            .message
-            .starts_with("composite/declaration-cycle: "),
+    assert_eq!(
+        evaluation.withheld,
+        [TaggedFinding::Cycle {
+            participants: vec!["ex:M.a", "ex:M.b"],
+        }]
     );
+    // The finding's diagnostic is the one lowering reports for the same chain.
+    let diagnostic = evaluation.withheld[0].diagnostic();
+    assert_eq!(
+        diagnostic.message,
+        "composite/declaration-cycle: cycle in the block's own declaration references: \
+         ex:M.a -> ex:M.b -> ex:M.a"
+    );
+    assert_eq!(diagnostic.subject.as_deref(), Some("ex:M.a"));
     assert!(
         scalar(&evaluation.scope.flattened(), "ok")
             .unwrap()

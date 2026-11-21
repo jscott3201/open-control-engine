@@ -682,7 +682,118 @@ so far, and no tag is cut by the bump.
   - **Nothing a format defines changes, and the workspace version is not bumped:** tightening
     accepted input is not a format change (unit-spellings ruling 7; the ruling on #647). No
     content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
+- **The CXF reader's diagnostic list holds at most 8 MiB of text** (GitHub #713, issue #695;
+  owner rulings of 2026-11-21).
+  A diagnostic copies document text: its subject is a node's `@id`, and most messages name that
+  `@id` again. Nothing tied the number of diagnostics to the length of what they copy, so a node
+  with a long `@id` and many refused keys built a list of `keys × id bytes`. 400 padded keys on
+  a 1 MB `@id`, a document of 2.09 MB, requested 1,206 MB at its peak; it now peaks at 17 MB.
+  - **The bound.** The diagnostics of one read, a refusal list or the warnings of a load, hold
+    at most 8,388,608 bytes of messages and subjects together. A subject is counted for every
+    diagnostic that carries it, whether or not they share one allocation of it, so the bound is
+    what a consumer that copies or prints each diagnostic pays: a receipt, a report, a log, a
+    binding. Diagnostics are listed in the order raised; the first that does not fit ends the
+    list, and it and every later one are counted, not kept.
+  - **The closing error.** A list that ended closes with one `resource-limit-exceeded` error
+    with no subject. Its message states the count and names the first diagnostic left out, by
+    its code and at most 64 bytes of its subject, escaped: `385 more diagnostic(s) are not
+    listed, the first of them `malformed-document` on `urn:long:xxx…`: a diagnostic list holds
+    at most 8388608 bytes of message and subject text`. One diagnostic larger than the whole
+    bound leaves that error alone (a literal of 1.5 million DEL characters, whose quoted form
+    is 9 MB, is refused as `1 more … the first of them `grounding-failed` on
+    `http://example.org#MinLoop.con.k``). It is last in `CxfError::Validation` and
+    `OcError::diagnostics()`, and the first import-stage record of a receipt, which sorts a
+    record with no subject first. No new code; `oce-diag`'s description of the code and
+    `DiagnosticReceipt`'s rustdoc name this use.
+  - **Breaking, in place: warnings alone can refuse a load.** The closing error is an error
+    whatever was left out, so a document whose warnings pass the bound is refused where it
+    loaded with all of them: a load never succeeds with warnings missing. At the edge, 127
+    unused boundary inputs under a 64 KiB namespace load with 127 warnings and 128 are refused.
+    No tracked or library document is within a factor of 280 of the bound.
+  - **Two pinned lists are cut.** A diagnostic's subject counts for each diagnostic, so a list
+    of many diagnostics on one long shared subject ends where it was whole: 65,535 verdicts on a
+    1 MiB source list seven and count 65,530 or 65,531 (`lowering_cpu`, issue #480), and 128
+    scoped-context refusals on a 64 KiB node list 127 (`resolve_context_scope`). Both documents
+    are refused as before, within the same CPU bound, and the listed verdicts still share one
+    subject allocation.
+  - **A list within the bound is whole:** every diagnostic the reader raises is listed, with its
+    message and subject as they are. Every diagnostic of the 257 tracked documents that hold an
+    `@graph` and of the 139 CXF documents of `open-control-library` (`main` at `d90f63b`), as
+    written and with the retired namespace rewritten, is byte-identical before and after:
+    severity, code, message and subject, 535 loads. The largest list among them is 196
+    diagnostics and 29,460 bytes.
+  - **Work past the bound.** On eighteen routes, where one node raises a diagnostic per item of a
+    list the document sets, a finding past the bound is counted and nothing is built for it: a
+    key written twice, a modeled or `hasUnit` key in surrounding whitespace, a modeled term in a
+    foreign namespace, `hasUnit` in a near miss of a QUDT namespace, a second spelling of one
+    property, a relative reference, the four refusals of a typing token, a reference carrying a
+    key beside its `@id`, a Modelica construct that survived lowering, a re-bound declaration
+    (as lowering reads it, beside a conditional child, and as it is released for a composite
+    its guard prunes), a child listed again, and a `hasInstance` member outside its owner. Each
+    is measured through `Engine::load_cxf` on a 256 KiB `@id` at 400 and 1,600 items
+    (`crates/oce-api/tests/cxf_diagnostic_list_cost.rs`): peaks of 6.1 to 11.5 MB where they
+    were 106 to 316 MB at 400 items, and 142 to 1,966 requested bytes for a further item where
+    it was 262,144 or more. Elsewhere a finding past the bound is built and dropped (issue
+    #711): memory is bounded there, time is not, so a document that failed on allocation within
+    seconds can instead run for as long as building its findings takes.
+  - **Withheld findings are references.** What the specialization pass withholds until lowering
+    (a re-bound declaration, a declaration cycle) is kept as references into the document and
+    built into a diagnostic only when it is released, so it holds three references a finding
+    where it held a built diagnostic, and a chain lowering reads itself costs the released
+    chains nothing.
+  - **What a list holds in memory** is its text and one record a diagnostic; a listed message
+    gives back the capacity formatting left it. Measured on a returned refusal: 1,073 bytes
+    beside 7.9 MB of text in 16 diagnostics, and 64 bytes a diagnostic, 1.26 times the text, in
+    33,421.
+  - **The receipt.** `load_cxf_with_receipt` copies each record's subject, which the bound now
+    covers for the import stage: the 149 KB document of issue #708 (1,024 refusals on one
+    shared 64 KiB subject) peaks at 8.5 MB with a receipt where it peaked at 67.9 MB. The later
+    stages' lists are not held to the bound, so #708 stays open for them.
+  - **Not held to this bound:** the lists the later load stages return and an export's
+    diagnostics. `@context` expansion and an array parameter's element names amplify a document
+    without a diagnostic (issues #709 and #710).
+  - **Both readers.** `oce-author`'s importer answers with one refusal and already refuses a
+    name longer than 64 bytes as `invalid-name`; the same document is pinned there as one
+    refusal that names the `@id` once. Its source is unchanged.
+  - **No public type changes.** `Diagnostic`, `CxfError::Validation` and
+    `ValidationReport::diagnostics` are the types they were; the list type is internal to
+    `oce-cxf`. No format, content id, blob or golden moves, and the workspace version is not
+    bumped.
+
 ### Leverage
+
+- **`oce-diff` compares two loaded CXF documents** (GitHub #715, issue #666;
+  design note `docs/design/diff.md`, part 2 of 4). `diff_topology(base, head, options)` takes the
+  facade's `Topology` views of two documents the caller loaded and returns the same `Diff` data
+  as the authoring diff, with `source: cxf`; it loads nothing and reads no CXF bytes.
+  - **Identity.** A block or boundary is its path with the root prefix (`model_id` and a `.`)
+    stripped, the name holding no `#`, `/` or `:`; a block is matched, renamed and rewired as at
+    the authoring level, its ports named by index through `oce_api::class_ports`. A path not so
+    named is refused with the new typed `DiffError` (`#[non_exhaustive]`, `code()`,
+    `DiffError::CODES`): `outside-root`, which also refuses a document the engine exported
+    (issue #717 is to make one diffable), and `unresolved-ports` for a block whose ports cannot
+    be named. A block with no instance IRI (`b<id>`) is matched
+    only by the rename pass and adds the new note `unnamed-blocks`.
+  - **Sections.** A changed ground parameter is `reparameterized` on its leaf, so a
+    sequence-parameter retune is one entry per leaf it reaches and `parameters_equal` is
+    `null`; a one-sided value is `parameter-defaulted` against the
+    catalog's literal default; an Integer against the equal Real is a change of value until
+    issue #683. The interface compares each boundary's type, labels and, for an input, its
+    effective bounds. Order is never compared and nothing is `reordered`. A renamed root is a
+    `sequence-renamed` metadata entry, the one metadata a topology holds, so `metadata_equal` is
+    `false` beside it and `null` otherwise (owner ruling of 2026-11-21); the strict reader takes
+    a CXF diff in exactly those shapes.
+  - **Content ids.** `diff_topology_with_ids` takes the two documents' content ids beside the
+    topologies and gives the same result whatever ids it is given. Equal content ids and equal
+    sequence names never coexist with a graph or interface entry: the diff reads only facts
+    the id encodes, plus the root. Held over the content-id pin's 47 documents, each with four
+    re-spelled copies and a re-rooted copy (which keeps the id under another sequence name):
+    every pair within each family of six, and every pair of two families' originals.
+  - **Across the levels.** For two authoring models that emit and load, the CXF diff equals the
+    authoring diff of the models as loaded, held over every ordered pair of the 42 tracked
+    authoring fixtures that load and eleven edits of each; the note's worked examples have
+    golden CXF diffs. The cost is pinned in counted work at 16 units per topology element and
+    bit. The authoring diff and its goldens are unchanged; `oce-api` and the CLI are untouched.
 
 - **`oce-verify` reads the commissioning test spec and the point mapping** (GitHub #704, issue
   #658). Part 1 of 7 of the commissioning verifier (OBC §12; design note
@@ -735,6 +846,7 @@ so far, and no tag is cut by the bump.
     (`strict::StrictKind`), so the two readers share one profile and each keeps its own codes;
     no vector code, sentence or place moves. The path rule a mutant path is held to is one
     function both readers call.
+
 - **`oce-verify` declares the funnel port's licence in its package metadata** (GitHub #706,
   issue #703). The crate's `license` field is now `(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`
   and no longer inherits the workspace's `MIT OR Apache-2.0`: `src/funnel/`, the port of LBNL

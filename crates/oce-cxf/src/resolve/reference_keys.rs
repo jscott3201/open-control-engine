@@ -22,13 +22,14 @@ use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, IriRef};
 use crate::excerpt::named_keys;
 
 /// Refuse every reference object of `doc` that carries a key beside its `@id`: one error per
 /// reference, subject the node that holds it (`connector at @graph[N]` for a node without an
 /// `@id`, as the index step names it), in `@graph` order and then property order.
-pub(super) fn refuse(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
+pub(super) fn refuse(doc: &CxfDocument, diags: &mut DiagnosticList) {
     for (index, node) in doc.graph.iter().enumerate() {
         let mut subject: Option<Arc<str>> = None;
         let mut refuse_one = |slot: &str, reference: &IriRef| {
@@ -39,7 +40,7 @@ pub(super) fn refuse(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
                     Arc::from(node.id.as_str())
                 }
             }));
-            diags.push(
+            diags.raise(|| {
                 Diagnostic::error(
                     DiagCode::NonSubsetConstruct,
                     format!(
@@ -50,8 +51,8 @@ pub(super) fn refuse(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
                         named_keys(&reference.other),
                     ),
                 )
-                .with_subject(subject),
-            );
+                .with_subject(subject)
+            });
         };
         for (slot, references) in [
             ("S231:hasInput", node.has_input.as_slice()),

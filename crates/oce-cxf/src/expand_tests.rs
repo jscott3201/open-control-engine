@@ -11,12 +11,12 @@ fn table(entries: &[(&str, &str)]) -> PrefixTable {
 
 fn identity(token: &str, table: &PrefixTable) -> Result<String, Vec<Diagnostic>> {
     let mut token = token.to_owned();
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     expand_identity(&mut token, "@id", None, table, &mut diags);
     if diags.is_empty() {
         Ok(token)
     } else {
-        Err(diags)
+        Err(diags.into_iter().collect())
     }
 }
 
@@ -110,7 +110,7 @@ fn a_spelling_refused_as_a_binding_is_refused_as_an_identity_when_its_prefix_is_
     // undeclared-prefix spelling is simultaneously an illegal `@context` binding value
     // and a legal durable identity.
     for spelling in ["1st:x", "2024:x", ":x"] {
-        let mut binding_diags = Vec::new();
+        let mut binding_diags = DiagnosticList::new();
         let context = Context::Map(
             [("ex".to_owned(), serde_json::json!(spelling))]
                 .into_iter()
@@ -238,7 +238,7 @@ fn a_binding_value_with_an_empty_or_whitespace_remainder_is_refused() {
     // by policy — a bare-scheme binding would concatenate every CURIE under it into
     // keys no canonical absolute spelling can reach.
     for value in ["urn:", "ab:c d", "ab:c\nd"] {
-        let mut diags = Vec::new();
+        let mut diags = DiagnosticList::new();
         let context = Context::Map(
             [("ex".to_owned(), serde_json::json!(value))]
                 .into_iter()
@@ -274,7 +274,7 @@ fn binding_acceptance_and_identity_acceptance_agree_when_no_prefix_is_declared()
         "urn:x",
         "mailto:a@b.example",
     ] {
-        let mut binding_diags = Vec::new();
+        let mut binding_diags = DiagnosticList::new();
         let context = Context::Map(
             [("ex".to_owned(), serde_json::json!(token))]
                 .into_iter()
@@ -300,7 +300,7 @@ fn double_slash_suffix_is_never_treated_as_a_curie() {
 
 #[test]
 fn at_keyword_context_entries_are_skipped_not_refused() {
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let context = Context::Map(
         [
             ("@version".to_owned(), serde_json::json!(1.1)),
@@ -321,7 +321,7 @@ fn at_keyword_context_entries_are_skipped_not_refused() {
 
 #[test]
 fn non_string_context_term_is_refused_as_malformed_document() {
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let context = Context::Map(
         [(
             "ex".to_owned(),
@@ -342,7 +342,7 @@ fn list_of_maps_merges_in_order_with_later_bindings_winning() {
         serde_json::json!({ "ex": "http://first.example#", "S231": "http://s231#" }),
         serde_json::json!({ "ex": "http://second.example#" }),
     ]);
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let table = prefix_table(&context, &mut diags);
     assert!(diags.is_empty(), "{diags:?}");
     // JSON-LD processes context entries in order: the later `ex` binding overrides.
@@ -359,7 +359,7 @@ fn remote_context_references_are_refused_in_both_shapes() {
             serde_json::json!("http://example.org/context.jsonld"),
         ]),
     ] {
-        let mut diags = Vec::new();
+        let mut diags = DiagnosticList::new();
         prefix_table(&context, &mut diags);
         assert_eq!(diags.len(), 1, "{diags:?}");
         assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct);
@@ -374,7 +374,7 @@ fn remote_context_references_are_refused_in_both_shapes() {
 #[test]
 fn identity_changing_context_keywords_are_refused_naming_the_keyword() {
     for keyword in ["@base", "@import", "@vocab"] {
-        let mut diags = Vec::new();
+        let mut diags = DiagnosticList::new();
         let context = Context::Map(
             [
                 (keyword.to_owned(), serde_json::json!("http://example.org/")),
@@ -400,7 +400,7 @@ fn non_absolute_prefix_bindings_are_refused_naming_the_term() {
     // cannot see (the joined token carries the CURIE's own `:`): empty, scheme-less,
     // relative-path, and digit-led-scheme spellings all refuse.
     for value in ["", "example.org/", "../up#", "1st:x"] {
-        let mut diags = Vec::new();
+        let mut diags = DiagnosticList::new();
         let context = Context::Map(
             [("ex".to_owned(), serde_json::json!(value))]
                 .into_iter()
@@ -423,7 +423,7 @@ fn absolute_prefix_bindings_pass_the_scheme_predicate() {
     // Controls, including the pre-ruled edge: `S231:x` passes because `S231` is an RFC
     // 3986-valid scheme and is not an active prefix in this context.
     for value in ["http://example.org#", "urn:oce:names#", "S231:x"] {
-        let mut diags = Vec::new();
+        let mut diags = DiagnosticList::new();
         let context = Context::Map(
             [("ex".to_owned(), serde_json::json!(value))]
                 .into_iter()
@@ -496,7 +496,7 @@ fn relative_identity_token_is_refused_and_relative_typing_token_is_not() {
 fn relative_reference_names_its_slot_owner_and_token() {
     let table = table(&[]);
     let mut token = "gain.u".to_owned();
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     expand_identity(
         &mut token,
         "S231:isConnectedTo",

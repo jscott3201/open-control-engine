@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use crate::diagnostic_list::DiagnosticList;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Connection, Connector, ConnectorId, Dir};
 
@@ -20,7 +21,7 @@ pub(super) fn check(
     connectors: &[Connector],
     connections: &[Connection],
     external_inputs: &[ConnectorId],
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let mut in_degree: HashMap<ConnectorId, u32> = HashMap::new();
     for connection in connections {

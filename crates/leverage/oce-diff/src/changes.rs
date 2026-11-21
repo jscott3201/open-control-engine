@@ -27,7 +27,7 @@ pub enum GraphChange {
         subject: String,
         /// Its class path.
         class: String,
-        /// Its assignments, in authored order.
+        /// Its assignments, in authored order; at the CXF level its ground parameters, by name.
         params: Vec<Assignment>,
         /// Its driven input ports, sorted by port, then source.
         inputs: Vec<Driver>,
@@ -38,7 +38,7 @@ pub enum GraphChange {
         subject: String,
         /// Its class path.
         class: String,
-        /// Its assignments, in authored order.
+        /// Its assignments, in authored order; at the CXF level its ground parameters, by name.
         params: Vec<Assignment>,
         /// Its driven input ports, sorted by port, then source.
         inputs: Vec<Driver>,
@@ -52,7 +52,8 @@ pub enum GraphChange {
         from: String,
         /// The class path both have.
         class: String,
-        /// The head block's assignments, in authored order (the base block's are the same set).
+        /// The head block's assignments, in authored order (the base block's are the same set);
+        /// at the CXF level its ground parameters, by name.
         params: Vec<Assignment>,
         /// How much of the neighbourhood was seen.
         confidence: Confidence,

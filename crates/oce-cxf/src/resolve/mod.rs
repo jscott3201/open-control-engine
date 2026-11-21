@@ -41,6 +41,7 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 use crate::{CxfError, bridge};
 
@@ -59,6 +60,8 @@ mod connections;
 mod declaration_scope;
 #[cfg(test)]
 mod declaration_scope_tests;
+#[cfg(test)]
+mod declaration_scope_withheld_tests;
 mod diags;
 pub(crate) mod extension_blocks;
 mod instance_interface;
@@ -150,7 +153,7 @@ pub(crate) fn resolve(
         Err(diags) => return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new()))),
     };
     let doc = &expanded;
-    let mut diags: Vec<Diagnostic> = Vec::new();
+    let mut diags = DiagnosticList::new();
 
     // --- Step 1: @graph presence + index by @id (DuplicateId / MalformedDocument), and every
     // reference read as its `@id` alone (`reference_keys`). by_id is lookup-only. A poisoned index

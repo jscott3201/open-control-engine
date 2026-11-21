@@ -12,7 +12,7 @@ use crate::wiring::{End, Node, Side};
 use crate::work::visited;
 
 /// The data literal of an authored literal: a Real by its bits.
-pub(super) fn literal(value: &oce_author::Literal) -> Literal {
+pub(crate) fn literal(value: &oce_author::Literal) -> Literal {
     match value {
         oce_author::Literal::Integer(integer) => Literal::Integer { integer: *integer },
         oce_author::Literal::Real(real) => Literal::real(*real),
@@ -108,6 +108,7 @@ pub(super) fn side(sequence: &Sequence) -> Side<'_> {
                 visited(block.assignments.len());
                 Node {
                     name: block.name.as_str(),
+                    named: true,
                     class: &block.class_path,
                     assignments: block
                         .assignments

@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::bridge;
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, IriRef, Node, OneOrMany};
 use oce_diag::{DiagCode, Diagnostic};
 
@@ -97,9 +98,9 @@ pub(super) fn lower(
     doc: &CxfDocument,
     by_id: &HashMap<&str, &Node>,
     specialization: &Specialization,
-    withheld: WithheldFindings,
+    withheld: WithheldFindings<'_>,
     checked: &mut CheckedParameters,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> LoweredCxf {
     let lowered = doc.clone();
 
@@ -193,7 +194,7 @@ fn take_authored_targets(node: &mut Node) -> Vec<Arc<str>> {
 fn root_composite<'a>(
     doc: &'a CxfDocument,
     by_id: &HashMap<&str, &Node>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Option<&'a str> {
     let composites: Vec<&str> = doc
         .graph
@@ -275,7 +276,7 @@ fn first_type(node: &Node) -> Option<&str> {
 fn reject_unsupported_constructs(
     doc: &CxfDocument,
     specialization: &Specialization,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     for node in &doc.graph {
         if specialization.is_inactive(&node.id) {
@@ -293,15 +294,15 @@ fn reject_unsupported_constructs(
         }
         for key in node.other.keys() {
             if unsupported_modelica_key(key) {
-                diags.push(
+                diags.raise(|| {
                     Diagnostic::error(
                         BANNED_MODELICA_KEY.code,
                         BANNED_MODELICA_KEY.message(format!(
                             "unsupported Modelica construct `{key}` survived CXF lowering"
                         )),
                     )
-                    .with_subject(node.id.clone()),
-                );
+                    .with_subject(node.id.clone())
+                });
             }
         }
     }
