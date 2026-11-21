@@ -5,6 +5,7 @@
     reason = "each test binary uses its own part of the helpers"
 )]
 
+pub mod blobs;
 pub mod grounding;
 pub mod loaded;
 

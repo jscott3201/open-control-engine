@@ -2,16 +2,19 @@
 //! Structural diff for Open Control Engine sequences (design note `docs/design/diff.md`,
 //! issue #665).
 //!
-//! Status: the first two of the four parts of the diff (M3): the authoring-level diff, the
-//! bounded rename pass and the two renderers (issue #665), and the CXF adapter (issue #666). The
-//! blob comparison and the `oce diff` verb build on them.
+//! Status: the first three of the four parts of the diff (M3): the authoring-level diff, the
+//! bounded rename pass and the two renderers (issue #665), the CXF adapter (issue #666) and the
+//! blob comparison (issue #667). The `oce diff` verb builds on them.
 //!
 //! [`diff`] compares two authoring models (`oce_author::Sequence`, from the text or the wire
 //! form) and returns a [`Diff`]: plain serde data, tagged [`DIFF_SCHEMA`], with a [`Summary`],
 //! closed-enum [`Note`]s and four sorted sections. [`diff_topology`] gives the same data for two
 //! loaded CXF documents, compared through the facade's `oce_api::Topology` views keyed by IRI
 //! with the root prefix stripped; it refuses a topology it cannot name with a typed
-//! [`DiffError`].
+//! [`DiffError`]. [`compare_blobs`] says only same or different for two compiled-schedule blobs,
+//! read through the facade's `oce_api::inspect_blob`: by content id, by the class table and by
+//! the per-instance initial-state CRCs, with each side's verdict from this build
+//! ([`BlobComparison`]).
 //!
 //! - **Identity is the authored block name.** The same name and class path is the same block;
 //!   the same name with another class path is `removed` plus `added`; the blocks left over go
@@ -39,6 +42,7 @@
 //! `oce-author` only.
 
 mod authoring;
+mod blob;
 mod catalog;
 mod changes;
 mod data;
@@ -52,6 +56,7 @@ mod wiring;
 mod work;
 
 pub use authoring::diff;
+pub use blob::{BlobComparison, BlobSide, ClassChange, Equality, compare_blobs};
 pub use changes::{GraphChange, InterfaceChange, MetadataChange, ParameterChange};
 pub use data::{
     Assignment, BlockCounts, Confidence, DIFF_SCHEMA, Diff, DiffOptions, Direction, Driver,

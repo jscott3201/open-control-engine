@@ -1,0 +1,21 @@
+{
+  "base": {
+    "accepted": true,
+    "content_id": "oce:canon1:22d010e1298d0a1392a8bcc0475d9e201c2b41406bd90593c5207b60aa015a51"
+  },
+  "classes": [
+    {
+      "kind": "signature-changed",
+      "new": "0xe71fcfa5e45fc30c",
+      "old": "0xe71fcfa5e45fc30d",
+      "subject": "CDL.Reals.AddParameter"
+    }
+  ],
+  "content_id": "same",
+  "head": {
+    "accepted": false,
+    "content_id": "oce:canon1:22d010e1298d0a1392a8bcc0475d9e201c2b41406bd90593c5207b60aa015a51"
+  },
+  "initial_state": "same",
+  "same_bytes": false
+}

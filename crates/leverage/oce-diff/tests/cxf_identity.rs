@@ -305,7 +305,15 @@ fn a_block_whose_ports_cannot_be_named_is_refused() {
 
 #[test]
 fn the_refusal_codes_are_pinned() {
-    assert_eq!(DiffError::CODES, ["outside-root", "unresolved-ports"]);
+    assert_eq!(
+        DiffError::CODES,
+        [
+            "outside-root",
+            "unresolved-ports",
+            "unreadable-blob",
+            "unexpected-refusal"
+        ]
+    );
     let errors = [
         DiffError::OutsideRoot {
             side: Side::Base,
@@ -318,12 +326,29 @@ fn the_refusal_codes_are_pinned() {
             block: String::new(),
             class: String::new(),
         },
+        DiffError::UnreadableBlob {
+            side: Side::Head,
+            refusal: oce_api::BlobError::UnknownClass { class: 0 },
+        },
+        DiffError::UnexpectedRefusal {
+            side: Side::Head,
+            message: String::new(),
+        },
     ];
     let codes: Vec<&str> = errors.iter().map(DiffError::code).collect();
     assert_eq!(codes, DiffError::CODES);
     assert!(errors[0].to_string().starts_with("base: "));
     let boxed: Box<dyn std::error::Error> = Box::new(errors[1].clone());
     assert!(boxed.to_string().starts_with("base: the ports"));
+    assert_eq!(
+        errors[2].to_string(),
+        "head: the blob has no summary: class 0 is not registered"
+    );
+    assert!(
+        errors[3]
+            .to_string()
+            .starts_with("head: the facade refused")
+    );
 }
 
 #[test]

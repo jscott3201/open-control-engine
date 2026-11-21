@@ -5,17 +5,20 @@ receipt, a bundle card or an agent can read, with authored block names as the id
 Design note: [`docs/design/diff.md`](../../../docs/design/diff.md), which is the specification of
 everything here.
 
-Two of four parts are in. **The authoring diff** (issue #665): `diff` compares two authoring
+Three of four parts are in. **The authoring diff** (issue #665): `diff` compares two authoring
 models and returns a sorted, schema-tagged `Diff`; the bounded rename pass presents renamed blocks;
 two pure renderers turn the data into text and a Markdown table. **The CXF adapter** (issue #666):
 `diff_topology` gives the same data for two loaded CXF documents, compared through the facade's
-`Topology` views ([below](#the-cxf-adapter)). The blob comparison (#667) and the `oce diff` verb
-(#668) build on them.
+`Topology` views ([below](#the-cxf-adapter)). **The blob comparison** (issue #667):
+`compare_blobs` says same or different for two compiled-schedule blobs, by content id, class
+table and initial-state CRCs ([below](#the-blob-comparison)). The `oce diff` verb (#668) builds
+on them.
 
 It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-author` only. It
-never validates and never evaluates: it takes parsed models or loaded topologies as they are, reads
-the catalog only for a parameter's literal default and type and the facade only for a block's port
-names, loads no engine, opens no file and is not published.
+never validates and never evaluates: it takes parsed models, loaded topologies or blob bytes as
+they are, reads the catalog only for a parameter's literal default and type, the facade only for a
+block's port names and a blob only through `oce_api::inspect_blob`, loads no engine, opens no file
+and is not published.
 
 ```rust
 use oce_author::parse_text;
@@ -42,6 +45,17 @@ base.load_cxf(&std::fs::read("reset.v1.jsonld")?)?;
 head.load_cxf(&std::fs::read("reset.v2.jsonld")?)?;
 let changes = diff_topology(&base.topology(), &head.topology(), &DiffOptions::default())?;
 assert_eq!(changes.summary.parameters_equal, None); // a retune is on the leaves it reaches
+```
+
+```rust
+use oce_diff::{Equality, compare_blobs};
+
+// Same or different, never a structural diff; each side says whether this build runs it.
+let blobs = compare_blobs(&std::fs::read("reset.v1.oceb")?, &std::fs::read("reset.v2.oceb")?)?;
+if blobs.classes.is_empty() && blobs.initial_state == Equality::Same && blobs.head.accepted() {
+    println!("same classes and initial state, and this build runs the head");
+}
+print!("{}", blobs.to_json()); // sorted keys, two-space indentation
 ```
 
 ## Identity
@@ -172,6 +186,55 @@ the only entries counted, with the rename pass on and off.
 `tests/cxf_cross_level.rs` holds it over every ordered pair of the 42 tracked authoring fixtures
 that load and over eleven edits of each.
 
+## The blob comparison
+
+`compare_blobs(base, head)` compares two compiled-schedule blobs (`OCEB`) as same or different
+(design note decisions 3 and 15). A blob's block ids are declaration-order numbers that renumber
+whenever order or topology moves, so it is never a structural diff: it compares what the two
+blobs record about themselves, read through `oce_api::inspect_blob` (the decoder's own reader;
+this crate parses no blob byte), on three axes and nothing more, beside whether the bytes are
+equal. It shares the crate's error type and JSON spelling and nothing of the matching.
+
+| Field | What it says |
+| --- | --- |
+| `same_bytes` | The two inputs are the same bytes |
+| `content_id` | `same` or `different` when both headers record a content id; `unknown` when either records none (32 zero bytes, a hand-built model) |
+| `classes` | The class-table entries that differ, by class path: `added` and `removed` (a class in one table only, with its `hash`) and `signature-changed` (both tables, two hashes: `old`, `new`). Sorted by class path bytewise, one entry a class |
+| `initial_state` | `unknown` unless the block lists align by class (the same count, the same class path at each block id); then `same` when every position records the same state word count and initial-state CRC-32C, `different` otherwise |
+| `base`, `head` | Each side's `content_id` (`null` for none) and `accepted`: whether this build's decoder accepts the blob |
+
+A hash is written as `0x` and 16 lowercase hex digits, never a JSON number. `to_json()` writes the
+`Diff`'s spelling (sorted keys, two-space indentation). The comparison is written, not read back.
+
+- **Each axis is the blobs' statement, compared on its own.** The content id is read from a
+  header and never recomputed, and the CRC-32C trailer is not tamper evidence, so equal ids are
+  never taken as proof: the class table and the instances are compared whatever the ids say.
+  Honest equal ids from one build do come with equal class tables and the same initial state per
+  block (decision 8), but not with the same block order, which the id leaves out. A changed bound
+  parameter moves the id; a changed initial parameter moves the id and `initial_state`.
+- **Compared is not runnable.** A blob this build would refuse to run still has a summary when
+  its framing reads (a class signature hash or an initial-state CRC that is not this build's, a
+  parameter, connector, connection or schedule fault), and it is compared. Its side carries the
+  decoder's own refusal (`BlobSide::decode_refusal`, the facade's typed `BlobError`, in memory
+  only) and is written `"accepted": false`. So `same` on every axis never means "runs here":
+  `BlobSide::accepted()` does.
+- **Same version, same registry.** `inspect_blob` reads only a blob this engine version wrote
+  whose every class this build registers, so blobs compare only under both conditions.
+  `signature-changed` therefore comes only from a blob a build of the same engine version with
+  another class registry wrote, and this build refuses that side (`ClassSignatureMismatch`);
+  the tests make one by flipping a bit of a recorded hash.
+- **Alignment is by position.** Two blobs of one graph whose blocks were declared in another order
+  may not align, and are `unknown`; two blocks of one class whose initial states traded places
+  read as `different`; neither reads as `same`. Two CRCs say the same state only of words of one
+  length, so a different state word count at a position is `different` whatever the CRCs, and
+  `same` is equal recorded lengths and CRC-32Cs, never a comparison of the words themselves.
+- **Refusals.** Bytes the facade reads no summary from are `DiffError::UnreadableBlob`
+  (`unreadable-blob`) carrying the side and the facade's typed refusal: empty, truncated or
+  corrupted bytes, another engine version's blob (`EngineVersionMismatch`), an unregistered class.
+  Base is read first, so a pair refused on both sides names base. `DiffError::UnexpectedRefusal`
+  (`unexpected-refusal`) keeps a facade error that is not a blob refusal as itself, which
+  `inspect_blob` documents it never returns. Hostile bytes never panic.
+
 ## The data: `oce-diff/1`
 
 A `Diff` holds `schema` (`DIFF_SCHEMA`), `source` (`authoring` or `cxf`), `catalog` (the content id of the
@@ -288,6 +351,18 @@ naming costs as much as the counted ports, since each named port is one; before 
 one block build of at most `MAX_RESOLVED_ARITY` (2^21) ports, the bound every block constructor
 holds.
 
+**A blob comparison costs two `oce_api::inspect_blob` calls, and that is not bounded by the blob
+length yet.** A summary costs what the decoder's building pass costs for the same bytes: the
+state the blocks declare (at most the engine's state budget, 32 MiB) and what the block
+constructors allocate from the blob's parameters, which is capped per block (up to about 8 MiB)
+but not across the model, so a blob of a few kilobytes can make it allocate hundreds of megabytes
+([`docs/compiled-schedule-blob.md`](../../../docs/compiled-schedule-blob.md#what-a-summary-costs)).
+Until the model-wide budget of
+[#700](https://github.com/jscott3201/open-control-engine/issues/700) lands, do not compare
+untrusted bytes without your own memory limit; this crate does not work around it. A side the
+facade refuses allocates nothing. The comparison itself is linear in the instances and in the class tables,
+which hold only registered classes (`src/blob_tests.rs` pins it in counted work).
+
 ## Tests and goldens
 
 `tests/fixtures/examples/` holds the note's three worked examples and the literal variant of the
@@ -318,11 +393,27 @@ id and the diff agreeing on each of the 47), `tests/cxf_identity.rs` (roots, ref
 unnamed block, topologies no load writes), `tests/cxf_values.rs` (each value kind and entry
 kind) and `tests/cxf_metadata.rs` (the renamed root and what the reader accepts).
 
-## Parts 3 and 4
+The blob comparison's tests read the facade's checked-in blobs, summaries and release-0.4.0 blob
+in place (`crates/oce-api/tests/fixtures/`), and edit a blob only by finding the value the
+facade's summary reports and rewriting the CRC-32C trailer; nothing parses a blob but the
+facade. `tests/blob_axes.rs` holds every ordered pair of the 46 blobs to a second implementation
+of the three rules over the facade's checked-in summaries, flips each class hash of a
+multi-class blob (exactly that class `signature-changed`, the side refused), and compiles the
+authoring pair `tests/fixtures/blobs/initial_state.{base,head}.oce` (a changed `y_start`:
+`initial_state` and the content id differ, nothing else). `tests/blob_refusals.rs` holds empty,
+truncated, corrupted, unregistered and another version's bytes to the facade's own refusal on
+each side, and sweeps every truncation and every bit flip, resealed and not, of one blob.
+`tests/blob_goldens.rs` pins the JSON of three pairs (`same`, `class_change`, `initial_state`,
+as `tests/fixtures/blobs/*.comparison.json`), the same bytes on every run, and the mirror:
+`compare_blobs(b, a)` swaps `added` and `removed`, the two hashes of a `signature-changed` class
+and the two sides, and nothing else. The goldens record content ids and class hashes, so they
+move with the content id's encoding, a class signature, or what the pair compiles to; the same
+bless switch rewrites them.
 
-- **The blob comparison** (#667) is a function of its own over `oce_api::inspect_blob`; it
-  shares the crate and nothing of the matching.
+## Part 4
+
 - **`oce diff`** (#668) puts a `Diff` in the CLI's report. `Diff::to_json` writes the report's
   spelling (sorted keys, two-space indentation), and `Diff` reads back with `serde`. For two
   `.jsonld` files it loads each into a throwaway engine and calls `diff_topology_with_ids` with
   the two topologies and content ids; a `DiffError` is an error (exit 2), like a load refusal.
+  It takes authoring models and CXF only, never blobs.

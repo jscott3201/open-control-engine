@@ -1,17 +1,22 @@
-//! Why a diff of two loaded documents could not be made (diff note, decision 15; issue #666).
+//! Why a diff of two loaded documents, or a comparison of two blobs, could not be made (diff
+//! note, decision 15; issues #666 and #667).
 //!
 //! The authoring diff is infallible: both of its inputs are parsed models. A topology is a view
 //! of a loaded document, and two of its facts are only conventions the loader does not check:
 //! that every block and boundary is named under the document's root, and that a block's ports
 //! can be named from its class and ground parameters. A topology that breaks either is refused
-//! with a typed [`DiffError`], never guessed at and never a panic.
+//! with a typed [`DiffError`], never guessed at and never a panic. A blob comparison reads each
+//! side through the facade's `oce_api::inspect_blob`, and bytes it can read no summary from are
+//! refused the same way, carrying the facade's own refusal.
 
 use std::fmt;
 
+use oce_api::BlobError;
+
 use crate::data::Side;
 
-/// Why [`crate::diff_topology`] refused. Closed and typed; [`DiffError::code`] is a stable
-/// kebab-case string, and [`DiffError::CODES`] lists every one.
+/// Why [`crate::diff_topology`] or [`crate::compare_blobs`] refused. Closed and typed;
+/// [`DiffError::code`] is a stable kebab-case string, and [`DiffError::CODES`] lists every one.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DiffError {
@@ -48,11 +53,40 @@ pub enum DiffError {
         /// The block's class path.
         class: String,
     },
+    /// The facade read no summary from a blob: `oce_api::inspect_blob` refused the bytes, and
+    /// `refusal` is its typed refusal (the payload of `OcError::Blob`). That is bytes this build
+    /// refuses before reading what they record: a framing, length, CRC-32C or structural fault,
+    /// another engine version's blob (`BlobError::EngineVersionMismatch`; a blob is accepted
+    /// only by the engine version that wrote it), an unregistered class, or a class index
+    /// outside the class table. A blob whose summary reads but which this build would refuse to
+    /// run is not refused here: it is compared, and its side says so
+    /// ([`crate::BlobSide::decode_refusal`]).
+    UnreadableBlob {
+        /// The side the bytes are on.
+        side: Side,
+        /// The facade's typed refusal.
+        refusal: BlobError,
+    },
+    /// The facade refused a blob with an error that is not a blob refusal, which
+    /// `oce_api::inspect_blob` documents it never returns. Kept so that such an error is reported
+    /// as itself, never read as a blob refusal it is not and never a panic; `message` is the
+    /// error's text.
+    UnexpectedRefusal {
+        /// The side the bytes are on.
+        side: Side,
+        /// The facade error's text.
+        message: String,
+    },
 }
 
 impl DiffError {
     /// Every code [`DiffError::code`] returns, in the order the variants are declared.
-    pub const CODES: &'static [&'static str] = &["outside-root", "unresolved-ports"];
+    pub const CODES: &'static [&'static str] = &[
+        "outside-root",
+        "unresolved-ports",
+        "unreadable-blob",
+        "unexpected-refusal",
+    ];
 
     /// The stable kebab-case code of the refusal.
     #[must_use]
@@ -60,6 +94,8 @@ impl DiffError {
         match self {
             Self::OutsideRoot { .. } => "outside-root",
             Self::UnresolvedPorts { .. } => "unresolved-ports",
+            Self::UnreadableBlob { .. } => "unreadable-blob",
+            Self::UnexpectedRefusal { .. } => "unexpected-refusal",
         }
     }
 }
@@ -97,6 +133,16 @@ impl fmt::Display for DiffError {
             Self::UnresolvedPorts { side, block, class } => write!(
                 f,
                 "{}: the ports of block `{block}` ({class}) cannot be named",
+                side_name(*side)
+            ),
+            Self::UnreadableBlob { side, refusal } => write!(
+                f,
+                "{}: the blob has no summary: {refusal}",
+                side_name(*side)
+            ),
+            Self::UnexpectedRefusal { side, message } => write!(
+                f,
+                "{}: the facade refused the blob with an error that is not a blob refusal: {message}",
                 side_name(*side)
             ),
         }

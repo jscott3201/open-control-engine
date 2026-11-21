@@ -1,0 +1,14 @@
+{
+  "base": {
+    "accepted": true,
+    "content_id": "oce:canon1:f0bafa3ea8e8d6982beb01c78bb727981c61a5b4eba7d9bd6c9f5d2c1b088740"
+  },
+  "classes": [],
+  "content_id": "different",
+  "head": {
+    "accepted": true,
+    "content_id": "oce:canon1:5b842aea90f8ec84f3c112e58634d3618ff7bf5862540bbd03ae61a6f747f32b"
+  },
+  "initial_state": "different",
+  "same_bytes": false
+}
