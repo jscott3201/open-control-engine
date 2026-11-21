@@ -10,9 +10,9 @@ reopened. Decisions 9 to 16 were made while drafting and accepted by the archite
 
 **As landed.** The authoring diff, the rename pass and the two renderers are built as
 `crates/leverage/oce-diff` (issue #665, GitHub #692,
-[crate README](../../crates/leverage/oce-diff/README.md));
-the CXF adapter, the blob comparison and the `oce diff` verb are #666 to #668. What building it
-showed is written back where it belongs and listed under [As landed](#as-landed).
+[crate README](../../crates/leverage/oce-diff/README.md)), and the CXF adapter as its
+`diff_topology` (issue #666); the blob comparison and the `oce diff` verb are #667 and #668. What
+building them showed is listed under [As landed](#as-landed).
 
 The owner's work plan names the M3 deliverable as "a structural diff of two authoring models or CXF
 documents, used in receipts and bundle cards", with `oce diff` in the CLI. Its consumers are M3
@@ -746,6 +746,40 @@ What starting the CXF adapter (issue #666) showed about the facade, ruled by the
   of the adapter is tested below the public entry. And the claim across levels runs one way:
   equal content ids never coexist with a non-empty graph or interface section; an
   interface-only change moves the id while the graph section stays empty.
+
+What building the CXF adapter (issue #666) showed. Each is a consequence of building decisions 3,
+8 and 15 against the facade as it stands, not a new decision; the
+[crate README](../../crates/leverage/oce-diff/README.md#the-cxf-adapter) states each in full.
+
+- **The root is read, never guessed, and a path outside it is refused.** A name is a path with
+  the root id, a `.` and a non-empty name; the 47 documents of the content-id pin all follow the
+  convention, the twelve with one block included. A path that does not is the typed refusal
+  `outside-root`, which is how "blocks under two root prefixes" is refused. So is every block of
+  a document the engine exported, whose root is the exporter's fixed `@id`: it has the
+  original's content id and cannot be diffed at this level.
+- **Ports are named by index**, from `oce_api::class_ports` over the class and the ground
+  parameters, never from a path; a block whose ports cannot be named so is the refusal
+  `unresolved-ports`, which no loaded document reaches. A block's `hasInput` and `hasOutput`
+  order is therefore no re-spelling: unnamed vector ports bind by position (the ordering
+  contract), and the adapter reports a reversed list as the rewiring it is.
+- **The unnamed block.** A path of `b` and decimal digits is never matched by name, only by the
+  rename pass, and adds the note `unnamed-blocks`; it is reached by editing a topology.
+- **Ground values follow the authoring level's rules.** A value on one side only is
+  `parameter-defaulted` against the catalog's literal default, a block's parameters are listed by
+  name, and an Integer against the equal Real is a change of value until #683 makes the engine
+  hold the Real.
+- **An input's bounds are its effective domain** (an Integer input left open is the `i32` range);
+  an output carries none, and `derived_from` is `null`: a topology holds neither.
+- **A renamed root moves the id and leaves every section empty.** Every name is stripped of the
+  root, so the rename shows only in the two sequence names and `equal` is true; `oce diff` will
+  exit 0 for it. Two corpus documents differ only so.
+- **The fast path is a function that changes nothing.** `diff_topology_with_ids` takes the two
+  ids and records them as `canonical_ids_equal`; with equal ids the matching leaves nothing for
+  the rename pass by itself, as the authoring diff's fast path does.
+- **The claim across levels holds as an equality.** For two authoring models that emit and load,
+  the CXF diff equals the authoring diff of the two models as loaded (references grounded,
+  widened literals, unread inputs, undriven outputs and output bounds dropped) on the graph and
+  interface sections, their flags, the counts, the notes and the names.
 
 ## Review rulings
 

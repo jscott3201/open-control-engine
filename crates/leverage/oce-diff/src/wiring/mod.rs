@@ -19,6 +19,7 @@
 //!   names it means the first.
 //! - A link end that names no declared block is kept as spelled and never matched.
 //! - A target with several drivers is compared as a multiset of drivers.
+//! - A block whose name is no identity ([`Node::named`] false) is never matched by name.
 
 mod entries;
 mod index;
@@ -59,6 +60,10 @@ impl End<'_> {
 pub(crate) struct Node<'a> {
     /// The block name.
     pub(crate) name: &'a str,
+    /// Whether the name is an identity. A block of a loaded topology with no instance IRI is
+    /// spelled by its loader-order id (`b<id>`), which names no block across two documents, so
+    /// such a block is never matched by name: only the rename pass can match it.
+    pub(crate) named: bool,
     /// The class path.
     pub(crate) class: &'a str,
     /// The assignments, in authored order.
@@ -110,22 +115,41 @@ pub(crate) struct Outcome {
 ///
 /// Step 1 pairs blocks of the same name and class. Step 2 leaves a pair of the same name and
 /// different classes unmatched on both sides. Step 3, the rename pass, runs over what is left
-/// unless `options.renames` is off, a side has nothing left, or a cap is passed.
+/// unless `options.renames` is off, a side has nothing left, or a cap is passed. A block whose
+/// name is no identity skips steps 1 and 2 and is left for step 3.
 pub(crate) fn compare(base: &Side<'_>, head: &Side<'_>, options: &DiffOptions) -> Outcome {
     let base_index = Index::new(base);
     let head_index = Index::new(head);
-    let base_names: Vec<&str> = base.nodes.iter().map(|node| node.name).collect();
-    let head_names: Vec<&str> = head.nodes.iter().map(|node| node.name).collect();
+    let (base_named, base_unnamed) = by_name(base);
+    let (head_named, head_unnamed) = by_name(head);
+    let base_names: Vec<&str> = base_named.iter().map(|&(_, name)| name).collect();
+    let head_names: Vec<&str> = head_named.iter().map(|&(_, name)| name).collect();
     let named = pair(&base_names, &head_names);
+    let base_at = |at: usize| base_named.get(at).map(|&(position, _)| position);
+    let head_at = |at: usize| head_named.get(at).map(|&(position, _)| position);
 
     let mut matching = Matching {
         partner: vec![None; base.nodes.len()],
         matched_head: vec![false; head.nodes.len()],
         ..Matching::default()
     };
-    let mut loose_base = named.base_only;
-    let mut loose_head = named.head_only;
-    for (b, h) in named.both {
+    let mut loose_base: Vec<usize> = named
+        .base_only
+        .iter()
+        .filter_map(|&at| base_at(at))
+        .collect();
+    let mut loose_head: Vec<usize> = named
+        .head_only
+        .iter()
+        .filter_map(|&at| head_at(at))
+        .collect();
+    loose_base.extend(base_unnamed);
+    loose_head.extend(head_unnamed);
+    let both = named
+        .both
+        .iter()
+        .filter_map(|&(b, h)| Some((base_at(b)?, head_at(h)?)));
+    for (b, h) in both {
         let same_class = matches!(
             (base.nodes.get(b), head.nodes.get(h)),
             (Some(old), Some(new)) if old.class == new.class
@@ -193,6 +217,20 @@ pub(crate) fn compare(base: &Side<'_>, head: &Side<'_>, options: &DiffOptions) -
         notes,
         counts,
     }
+}
+
+/// The positions and names of a side's named blocks, in order, and the positions of the others.
+fn by_name<'a>(side: &Side<'a>) -> (Vec<(usize, &'a str)>, Vec<usize>) {
+    let mut named = Vec::new();
+    let mut unnamed = Vec::new();
+    for (position, node) in side.nodes.iter().enumerate() {
+        if node.named {
+            named.push((position, node.name));
+        } else {
+            unnamed.push(position);
+        }
+    }
+    (named, unnamed)
 }
 
 /// Store `value` at `position`; a position outside the list is ignored, which cannot happen for

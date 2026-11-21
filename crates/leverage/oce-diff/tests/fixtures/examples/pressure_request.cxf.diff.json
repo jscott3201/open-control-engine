@@ -1,0 +1,124 @@
+{
+  "base": {
+    "derived_from": null,
+    "sequence": "zone_pressure_request"
+  },
+  "catalog": "catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892",
+  "graph": [
+    {
+      "kind": "reparameterized",
+      "new": {
+        "bits": "0x3feb333333333333",
+        "real": "0.85"
+      },
+      "old": {
+        "bits": "0x3fee666666666666",
+        "real": "0.95"
+      },
+      "subject": "damOpen.t"
+    },
+    {
+      "class": "CDL.Logical.TrueDelay",
+      "inputs": [
+        {
+          "port": "u",
+          "source": "damOpen.y"
+        }
+      ],
+      "kind": "removed",
+      "params": [
+        {
+          "name": "delayOnInit",
+          "value": {
+            "boolean": true
+          }
+        },
+        {
+          "name": "delayTime",
+          "value": {
+            "bits": "0x404e000000000000",
+            "real": "60.0"
+          }
+        }
+      ],
+      "subject": "openLong"
+    },
+    {
+      "class": "CDL.Reals.MultiplyByParameter",
+      "confidence": "exact",
+      "from": "seventySet",
+      "kind": "renamed",
+      "params": [
+        {
+          "name": "k",
+          "value": {
+            "bits": "0x3fe6666666666666",
+            "real": "0.7"
+          }
+        }
+      ],
+      "subject": "setFrac"
+    },
+    {
+      "class": "CDL.Logical.TrueDelay",
+      "inputs": [
+        {
+          "port": "u",
+          "source": "starved.y"
+        }
+      ],
+      "kind": "added",
+      "params": [
+        {
+          "name": "delayOnInit",
+          "value": {
+            "boolean": true
+          }
+        },
+        {
+          "name": "delayTime",
+          "value": {
+            "bits": "0x405e000000000000",
+            "real": "120.0"
+          }
+        }
+      ],
+      "subject": "starvedLong"
+    },
+    {
+      "kind": "rewired",
+      "new": "damOpen.y",
+      "old": "openLong.y",
+      "subject": "want.u1"
+    },
+    {
+      "kind": "rewired",
+      "new": "starvedLong.y",
+      "old": "starved.y",
+      "subject": "want.u2"
+    }
+  ],
+  "head": {
+    "derived_from": null,
+    "sequence": "zone_pressure_request"
+  },
+  "interface": [],
+  "metadata": [],
+  "notes": [],
+  "parameters": [],
+  "schema": "oce-diff/1",
+  "source": "cxf",
+  "summary": {
+    "blocks": {
+      "base_only": 1,
+      "by_name": 4,
+      "head_only": 1,
+      "renamed": 1
+    },
+    "equal": false,
+    "graph_equal": false,
+    "interface_equal": true,
+    "metadata_equal": null,
+    "parameters_equal": null
+  }
+}

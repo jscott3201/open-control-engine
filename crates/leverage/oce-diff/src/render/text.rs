@@ -81,6 +81,9 @@ pub fn render_text(diff: &Diff) -> String {
                 "# rename pass skipped: more than {MAX_RENAME_CANDIDATES} unmatched blocks on a side or more than {MAX_RENAME_PAIRS} candidate pairs"
             ),
             Note::RenamePassOff => "# rename pass off".to_owned(),
+            Note::UnnamedBlocks => {
+                "# unnamed blocks: a block with no instance IRI is spelled b<id> and matched only by the rename pass".to_owned()
+            }
         });
     }
     if !diff.parameters.is_empty() {

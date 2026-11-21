@@ -2,13 +2,16 @@
 //! Structural diff for Open Control Engine sequences (design note `docs/design/diff.md`,
 //! issue #665).
 //!
-//! Status: the first of the four parts of the diff (M3): the authoring-level diff, the bounded
-//! rename pass and the two renderers. The CXF adapter, the blob comparison and the `oce diff`
-//! verb build on it.
+//! Status: the first two of the four parts of the diff (M3): the authoring-level diff, the
+//! bounded rename pass and the two renderers (issue #665), and the CXF adapter (issue #666). The
+//! blob comparison and the `oce diff` verb build on them.
 //!
 //! [`diff`] compares two authoring models (`oce_author::Sequence`, from the text or the wire
 //! form) and returns a [`Diff`]: plain serde data, tagged [`DIFF_SCHEMA`], with a [`Summary`],
-//! closed-enum [`Note`]s and four sorted sections.
+//! closed-enum [`Note`]s and four sorted sections. [`diff_topology`] gives the same data for two
+//! loaded CXF documents, compared through the facade's `oce_api::Topology` views keyed by IRI
+//! with the root prefix stripped; it refuses a topology it cannot name with a typed
+//! [`DiffError`].
 //!
 //! - **Identity is the authored block name.** The same name and class path is the same block;
 //!   the same name with another class path is `removed` plus `added`; the blocks left over go
@@ -26,8 +29,9 @@
 //!   number, so `-0.0` against `0.0` and one NaN payload against another are differences.
 //! - **Renderers.** [`render_text`] and [`render_markdown`] are pure functions of the data.
 //!
-//! The diff never validates and never evaluates: it takes parsed models as they are, reads the
-//! catalog only for a parameter's literal default and type, and loads no engine. It is two-way.
+//! The diff never validates and never evaluates: it takes parsed models or loaded topologies as
+//! they are, reads the catalog only for a parameter's literal default and type and the facade
+//! only for a block's port names, and loads no engine. It is two-way.
 //! It does not match blocks by what they compute: a block with commuted operands or a retuned
 //! parameter under a new name is `removed` plus `added`, for a reviewer to judge.
 //!
@@ -38,10 +42,12 @@ mod authoring;
 mod catalog;
 mod changes;
 mod data;
+mod error;
 mod json;
 mod pairing;
 mod read;
 mod render;
+mod topology;
 mod wiring;
 mod work;
 
@@ -52,4 +58,6 @@ pub use data::{
     GraphList, Literal, MAX_RENAME_CANDIDATES, MAX_RENAME_PAIRS, MAX_RENAME_ROUNDS, Note,
     SequenceRef, Side, Source, Summary,
 };
+pub use error::DiffError;
 pub use render::{render_markdown, render_text};
+pub use topology::{diff_topology, diff_topology_with_ids};

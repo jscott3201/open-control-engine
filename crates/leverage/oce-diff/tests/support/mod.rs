@@ -5,6 +5,9 @@
     reason = "each test binary uses its own part of the helpers"
 )]
 
+pub mod grounding;
+pub mod loaded;
+
 use std::path::PathBuf;
 
 use oce_author::{

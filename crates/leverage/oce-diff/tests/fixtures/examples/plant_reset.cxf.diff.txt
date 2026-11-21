@@ -1,0 +1,18 @@
+# oce diff chw_plant_reset -> chw_plant_reset
+# graph differs; parameters not separable; interface equal; metadata not compared
+# names disjoint: no block kept its name and class; 3 of 5 base blocks matched by the rename pass, 2 removed, 2 added
+# graph
+> block TMax = CDL.Reals.Sources.Constant(k = 285.15)   # was THigh; renamed, exact
+> block TMin = CDL.Reals.Sources.Constant(k = 279.15)   # was TLow; renamed, exact
+- block ena = CDL.Logical.And
+- uPlaEna -> ena.u1
+- uReq -> ena.u2
+- block hold = CDL.Logical.TrueDelay(delayOnInit = true, delayTime = 300.0)
+- ena.y -> hold.u
++ block onDelay = CDL.Logical.TrueDelay(delayOnInit = true, delayTime = 600.0)
++ plaOn.y -> onDelay.u
++ block plaOn = CDL.Logical.And
++ uReq -> plaOn.u1
++ uPlaEna -> plaOn.u2
+> block sw = CDL.Reals.Switch   # was sel; renamed, high
+~ onDelay.y -> sw.u2   # was hold.y

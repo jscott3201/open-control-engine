@@ -111,7 +111,8 @@ pub struct Diff {
 pub enum Source {
     /// Two authoring models ([`crate::diff`]).
     Authoring,
-    /// Two loaded CXF documents, compared through their topology views.
+    /// Two loaded CXF documents, compared through their topology views
+    /// ([`crate::diff_topology`]).
     Cxf,
 }
 
@@ -189,6 +190,11 @@ pub enum Note {
     RenamePassSkipped,
     /// The rename pass was turned off by the caller ([`DiffOptions`]).
     RenamePassOff,
+    /// A side of a CXF diff ([`crate::diff_topology`]) has a block with no instance IRI. The
+    /// facade spells such a block by its loader-order id (`b<id>`), which is no identity across
+    /// two documents, so it is matched only by the rename pass and its entries carry that
+    /// spelling. No public load path produces one.
+    UnnamedBlocks,
 }
 
 /// How much of a renamed pair's neighbourhood the rename pass saw.
