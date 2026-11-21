@@ -55,8 +55,12 @@
 //!
 //! ## Peak memory against blob length
 //!
-//! Every allocation is sized from bytes already in hand, so peak memory is linear in the blob
-//! length. The structural pass refuses a port list longer than
+//! The framing and structural passes size every allocation from bytes already in hand, so they
+//! are linear in the blob length. The building pass is not: block constructors allocate from
+//! parameter names and values, capped per block (up to about 8 MiB) but not across the model, so
+//! a blob of a few kilobytes can allocate hundreds of megabytes until GitHub #700 adds a
+//! model-wide budget. The table below is a measurement of the shapes listed, not a bound. The
+//! structural pass refuses a port list longer than
 //! [`oce_blocks::MAX_RESOLVED_ARITY`] before anything is sized by it, and connector ownership is
 //! tracked in 8 bytes per id; the 144-byte `Connector` arena is built only after every port list
 //! has matched its constructed block. Measured peaks, as multiples of the blob length (pinned by

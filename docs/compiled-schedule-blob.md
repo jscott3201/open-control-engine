@@ -172,7 +172,7 @@ below, the reader runs the decoder's own building pass once over the same bytes 
 `decode` itself calls for its steps 7 to 10 in [Refusals](#refusals): classes and their signature
 hashes, parameters, constructed blocks, connectors, boundary I/O, connections, the schedule, the
 state budget and each initial-state CRC), keeps its refusal and drops what it built. Blocks are
-constructed and state is allocated, as on a target; nothing is executed. The verdict is this
+constructed from the blob's parameters and their state is seeded, as on a target; the schedule never ticks. The verdict is this
 build's: a blob is accepted only by the engine version that wrote it, and within one version a
 build whose class registry differs can answer differently. Acceptance is about the bytes, not
 their origin: the CRC-32C trailer is not tamper evidence ([trust model](#trust-model)), so
@@ -213,9 +213,15 @@ A summary costs two things in turn, never held together:
 
 1. **The decoder's building pass**, exactly what `decode` allocates for the same bytes up to its
    result or its refusal, all of it freed before step 2. Its peak is the decoder's
-   ([Cost](#cost)): the state the blocks declare, at most the engine's 4,194,304-word state
-   budget (32 MiB), plus memory linear in the blob length, measured at 26.6× for the densest
-   accepted shape and bounded at 32×. For the 46 goldens it is 1.55× to 21.59× the blob length.
+   ([Cost](#cost)). That includes the state the blocks declare, at most the engine's
+   4,194,304-word state budget (32 MiB), and what block constructors allocate from the blob's
+   parameters (a `CDL.Reals.Sources.TimeTable` sizes its table from the largest `table_r_c`
+   parameter-name index, a `CDL.Reals.MatrixGain` from nin×nout). That is capped per block, at
+   up to about 8 MiB, but not across the model, so **the peak is not bounded by the blob
+   length**: a 4,003-byte blob of 64 such TimeTables peaks at 536,903,536 bytes. Do not run a
+   summary on untrusted bytes without your own memory limit until a model-wide budget lands
+   (issue #700). The shapes in the table below are measurements, not bounds; for the 46 goldens
+   it is 1.55× to 21.59× the blob length.
 2. **The result.** The core reader's four lists are each allocated once at a count the structural
    pass proved against the bytes: four allocations at most, and at most 2 bytes held per blob
    byte (measured: 1.33× for 500,000 outputs with empty paths, 0.8× for 100,000 minimal
@@ -224,7 +230,8 @@ A summary costs two things in turn, never held together:
    the bytes asked of the allocator, not its per-allocation overhead, which a blob of millions of
    short paths multiplies.
 
-So the peak of a summary is the larger of the two, and its allocation count in the core is the
+So the peak of a summary is the larger of the two (the lists are bounded as above; the building
+pass is not, as step 1 says), and its allocation count in the core is the
 decoder's for the same bytes plus one per non-empty list. Before issue #680 a summary cost step 2
 alone; the verdict is what step 1 buys. Measured peaks, as multiples of the blob length:
 
@@ -275,11 +282,14 @@ typed `BlobError` that names the offset, index or hashes concerned, and checks e
 the bytes that remain before allocating for it. A port list longer than any registered class can
 resolve (`oce_blocks::MAX_RESOLVED_ARITY`, twice `MAX_RESOLVED_PORT_WIDTH`) is refused before
 anything is sized by it, and connector ownership costs 8 bytes per id until every block's arity
-has been checked, so peak memory is linear in the blob length: a hostile blob that lists a
-million connector ids its block does not have is refused holding 2.0× its length (the test bounds
-it at 8×); the densest blob that decodes holds 26.6× its length, which is the decoded executable
-itself. Every registered block constructor is fuzzed with hostile parameter tables bounded by
-`MAX_RESOLVED_PORT_WIDTH`.
+has been checked, so the framing and structural passes are linear in the blob length: a hostile
+blob that lists a million connector ids its block does not have is refused holding 2.0× its
+length (the test bounds it at 8×); the densest blob that decodes of the shapes measured holds
+26.6× its length, which is the decoded executable itself. That is a measurement, not a bound
+for the whole decoder: block constructors allocate from parameter names and values, capped per
+block (up to about 8 MiB) but not across the model, so a blob of a few kilobytes can allocate
+hundreds of megabytes until the model-wide budget of issue #700 lands. Every registered block
+constructor is fuzzed with hostile parameter tables bounded by `MAX_RESOLVED_PORT_WIDTH`.
 
 **Integrity** is a CRC-32C trailer over every preceding byte. It detects corruption in flash,
 transfer or storage; it is not tamper evidence, because anyone can recompute it.

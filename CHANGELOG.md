@@ -58,18 +58,23 @@ and a gate that accepted any text would restore exactly the false assurance desc
     `inspect` calls that same function over the same framed bytes, keeps the refusal and drops
     what was built. It is computed in the core so that the checks, the building pass and the
     lists run in one fixed order over one framing: a refusal of the summary still allocates
-    nothing, and the decoded executable is freed before the lists are allocated. Nothing is
-    executed. An unregistered class and a class index outside the class table stay refusals of
+    nothing, and the decoded executable is freed before the lists are allocated. The schedule
+    never ticks. An unregistered class and a class index outside the class table stay refusals of
     the summary itself (`Err`), by the owner's ruling, and are never reported in the field.
   - **Cost, restated.** A summary used to cost its lists alone (at most 2 bytes held per blob
     byte in the core, 4 requested in the facade). It now costs the decoder's building pass
     first: exactly `decode`'s allocations for the same bytes, freed, then the lists. The peak is
-    the larger of the two, not their sum. Measured as multiples of the blob length: 1.55 to
-    21.59 for the 46 goldens (their lists are 0.17 to 0.41), 26.62 for the decoder's densest
-    accepted shape (its bound is 32), 3.33 for 500,000 empty-path outputs (lists 1.33), 5.12 for
-    100,000 minimal instances (lists 0.80); a 287-byte blob whose one block owns the whole state
-    budget holds that state's 32 MiB while it is checked. The 2 and 4 bounds still hold for the
-    result. A refusal (`Err`) still allocates nothing.
+    the larger of the two, not their sum. The building pass is not bounded by the blob length:
+    it includes the state the blocks declare (at most `MAX_STATE_WORDS`, 32 MiB; a 287-byte blob
+    whose one block owns the whole state budget holds it while it is checked) and what block
+    constructors allocate from parameters, which is capped per block (up to about 8 MiB) but not
+    across the model, so a 4,003-byte blob of 64 `TimeTable` blocks peaks at 536,903,536 bytes
+    (GitHub #700 adds a model-wide budget). Until then, do not run `inspect` or `inspect_blob` on
+    untrusted bytes without your own memory limit. Measured, as multiples of the blob length:
+    1.55 to 21.59 for the 46 goldens (their lists are 0.17 to 0.41), 26.62 for the densest
+    accepted shape measured, 3.33 for 500,000 empty-path outputs (lists 1.33), 5.12 for 100,000
+    minimal instances (lists 0.80). The 2 and 4 bounds still hold for the result. A refusal
+    (`Err`) still allocates nothing.
   - **Evidence.** The test support through which every summary test reads a summary now
     requires the core's and the facade's `decode_refusal` to equal what `decode` returns for the
     same bytes, so the bit-flip suites, the hostile-bytes suites and the 10,000 seeded mutations

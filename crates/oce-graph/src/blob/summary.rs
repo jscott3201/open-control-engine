@@ -12,8 +12,9 @@
 //! verdict.** Between the checks and the lists, [`inspect()`] runs the decoder's own building
 //! pass (steps 7 to 10, the function [`decode()`](super::decode()) itself calls) over the same
 //! framed bytes, keeps its refusal and drops what it built. `None` there is acceptance by this
-//! build; `Some` is the error [`decode()`](super::decode()) returns for the same bytes. Nothing
-//! is evaluated: the building pass constructs blocks and allocates state, and never ticks.
+//! build; `Some` is the error [`decode()`](super::decode()) returns for the same bytes. The
+//! building pass constructs every block from the blob's parameters and seeds its state; it never
+//! ticks.
 
 use alloc::vec::Vec;
 
@@ -135,10 +136,14 @@ pub struct SummaryInstance {
 /// whatever the counts in the refused bytes say. A summary then costs, in this order:
 ///
 /// 1. the building pass, exactly what [`decode()`](super::decode()) allocates for the same bytes
-///    up to its result or its refusal (the [module documentation](super#allocation) lists it and
-///    bounds its peak against the blob length; the state the blocks declare is bounded by
-///    [`MAX_STATE_WORDS`](crate::MAX_STATE_WORDS) instead), all of it freed before step 2:
-///    blocks are constructed and state is allocated, and nothing is evaluated;
+///    up to its result or its refusal (the [module documentation](super#allocation) lists it), all
+///    of it freed before step 2. It includes the state the blocks declare, bounded by
+///    [`MAX_STATE_WORDS`](crate::MAX_STATE_WORDS), and what block constructors allocate from the
+///    blob's parameters, which is capped per block (up to about 8 MiB) but not across the model.
+///    So **this step is not bounded by the blob length**: a few kilobytes can allocate hundreds
+///    of megabytes (GitHub #700 adds a model-wide budget). Do not run a summary on untrusted
+///    bytes without your own memory limit until it lands. Blocks are constructed and state is
+///    seeded; nothing ticks;
 /// 2. the four lists it returns, each allocated once at a count the structural pass proved
 ///    against the input: at most 2 bytes held per blob byte.
 ///

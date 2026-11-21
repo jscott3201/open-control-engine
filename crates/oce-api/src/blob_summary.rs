@@ -76,7 +76,7 @@ pub struct BlobSummary {
     ///   describe a blob that will not run here.
     ///
     /// The value is the result of the decoder itself, run once over the same bytes with what it
-    /// built dropped, not of a second set of checks; nothing is executed. It is never one of the
+    /// built dropped, not of a second set of checks; it never ticks. It is never one of the
     /// errors [`inspect_blob`] returns as `Err` (the framing and structural refusals,
     /// [`BlobError::UnknownClass`], [`InstanceField::ClassIndex`](crate::InstanceField)), because
     /// bytes refused that way have no summary. The verdict is this build's: the blob format
@@ -146,19 +146,24 @@ pub struct BlobInstance {
 /// `matches!(inspect_blob(bytes), Ok(summary) if summary.decode_refusal.is_none())`. The verdict
 /// is the decoder's, not a second set of checks: after the checks above, the decoder's building
 /// pass runs once over the same bytes (blocks are constructed and state is allocated, as on a
-/// target) and what it built is dropped. Nothing is executed. No [`Engine`](crate::Engine) is
+/// target) and what it built is dropped. Every block is constructed from the blob's parameters
+/// and its state is seeded; the schedule never ticks. No [`Engine`](crate::Engine) is
 /// involved and none is changed. Acceptance is of the bytes by this build; it does not say
 /// where they came from.
 ///
 /// # Cost
 /// An `Err` allocates nothing. A summary costs the decoder's building pass first, exactly what
 /// `oce_graph::blob::decode` allocates for the same bytes, all of it freed before the result is
-/// built: its peak is the decoder's, which is the state the blocks declare (at most the engine's
-/// state budget of 4,194,304 words, 32 MiB) plus memory linear in the blob length, measured at
-/// 26.6 times the blob length for the densest accepted shape and bounded at 32
-/// (`docs/compiled-schedule-blob.md`, "What a summary costs"). The result is then owned, one `String` per non-empty path: at most 4 bytes are
-/// requested and held per blob byte while it is built (a count of the bytes asked of the
-/// allocator, not of its per-allocation overhead, which a blob of many short paths multiplies).
+/// built: its peak is the decoder's. That includes the state the blocks declare (at most the
+/// engine's state budget of 4,194,304 words, 32 MiB) and what the block constructors allocate
+/// from the blob's parameters, which is capped per block (up to about 8 MiB) but not across the
+/// model, so **it is not bounded by the blob length**: a blob of a few kilobytes can make it
+/// allocate hundreds of megabytes (GitHub #700 tracks the model-wide budget). Until that lands,
+/// do not call this on untrusted bytes without your own memory limit
+/// (`docs/compiled-schedule-blob.md`, "What a summary costs"). The result is then owned, one
+/// `String` per non-empty path: at most 4 bytes are requested and held per blob byte while it is
+/// built (a count of the bytes asked of the allocator, not of its per-allocation overhead, which
+/// a blob of many short paths multiplies).
 /// The two are never held together, so the peak is the larger of them, and a blob is at most
 /// 64 MiB.
 ///
