@@ -820,7 +820,7 @@ so far, and no tag is cut by the bump.
     `oce-cxf`. No format, content id, blob or golden moves, and the workspace version is not
     bumped.
 - **`@context` expansion adds at most 8 MiB to a document, and reading a token copies nothing**
-  (GitHub #PRNUM, issue #709). A token read through a prefix is as long as the IRI the prefix
+  (GitHub #730, issue #709). A token read through a prefix is as long as the IRI the prefix
   binds. The document sets that length and the number of tokens and pays a few bytes for each,
   and nothing tied the two together: 1,024 `@type` tokens `p:T` under a 64 KiB binding, a
   document of 78,157 bytes, loaded and held 202 MB, and 16,384 tokens under a 16 KiB binding,
