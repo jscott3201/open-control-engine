@@ -512,7 +512,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
 ### Leverage
 
-- **`oce-verify` declares the funnel port's licence in its package metadata** (GitHub #PRNUM,
+- **`oce-verify` declares the funnel port's licence in its package metadata** (GitHub #706,
   issue #703). The crate's `license` field is now `(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`
   and no longer inherits the workspace's `MIT OR Apache-2.0`: `src/funnel/`, the port of LBNL
   funnel that GitHub #687 added, is a derived work under funnel's licence, whose text has shipped
