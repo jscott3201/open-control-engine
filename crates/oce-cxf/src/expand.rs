@@ -99,6 +99,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use oce_diag::{DiagCode, Diagnostic};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{Context, CxfDocument, IriRef, Node, OneOrMany, TermAttr};
 use crate::resolve::term_shape;
 use crate::unit_iri::unit_of_iri;
@@ -131,8 +132,8 @@ type PrefixTable = BTreeMap<String, String>;
 pub(crate) fn expand_document(
     doc: &CxfDocument,
     raw: Option<&[u8]>,
-) -> Result<CxfDocument, Vec<Diagnostic>> {
-    let mut context_diags = Vec::new();
+) -> Result<CxfDocument, DiagnosticList> {
+    let mut context_diags = DiagnosticList::new();
     let table = prefix_table(&doc.context, &mut context_diags);
     let mut expanded = doc.clone();
     // A well-formed `@context` must spell the S231 vocabulary in the one namespace this engine
@@ -155,7 +156,7 @@ pub(crate) fn expand_document(
         // true, because a document declaring one was already refused here.
         return Err(context_diags);
     }
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     for node in &mut expanded.graph {
         expand_node(node, &table, &mut diags);
     }
@@ -170,7 +171,7 @@ pub(crate) fn expand_document(
 /// inline maps merged in order (later bindings win). Remote references, `@base`, `@import`,
 /// `@vocab`, malformed term values, and a term spelled as an IRI that does not bind its own
 /// expansion are refused — see the module docs for why each is a refusal rather than a skip.
-fn prefix_table(context: &Context, diags: &mut Vec<Diagnostic>) -> PrefixTable {
+fn prefix_table(context: &Context, diags: &mut DiagnosticList) -> PrefixTable {
     let mut table = PrefixTable::new();
     match context {
         Context::Map(map) => merge_context_entries(map.iter(), &mut table, diags),
@@ -215,7 +216,7 @@ fn remote_context_refusal(reference: &str) -> Diagnostic {
 fn merge_context_entries<'a>(
     entries: impl Iterator<Item = (&'a String, &'a serde_json::Value)>,
     table: &mut PrefixTable,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let entries: Vec<_> = entries.collect();
     let local_terms: BTreeSet<&str> = entries.iter().map(|(term, _)| term.as_str()).collect();
@@ -365,7 +366,7 @@ fn iri_shaped_term_refusal(term: &str, iri: &str, table: &PrefixTable) -> Option
 /// such a context; this engine refuses it as `NonSubsetConstruct`, as it refuses a nested compact
 /// IRI, because a whole-token term match must never change what a token means. Only a list context
 /// can trip this, since one map binds each term once and merges a prefix before its terms.
-fn rebound_term_refusals(table: &PrefixTable, diags: &mut Vec<Diagnostic>) {
+fn rebound_term_refusals(table: &PrefixTable, diags: &mut DiagnosticList) {
     for (term, iri) in table {
         if !is_iri_shaped_term(term) {
             continue;
@@ -536,7 +537,7 @@ fn expand_identity(
     slot: &str,
     owner: Option<&str>,
     table: &PrefixTable,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     if token.is_empty() {
         // An empty `@id` has its own pinned diagnostic (`MissingConnectorId`) downstream.
@@ -545,7 +546,9 @@ fn expand_identity(
     match expand_token(token, table) {
         Expansion::Expanded(iri) => *token = iri,
         Expansion::Verbatim => {}
-        Expansion::Relative => {
+        // One node may carry any number of relative references, each refused about the same
+        // `@id`, so the refusal is built only while the list has room for it (GitHub issue #695).
+        Expansion::Relative => diags.raise(|| {
             let (message, subject) = match owner {
                 None => (
                     format!(
@@ -562,8 +565,8 @@ fn expand_identity(
                     owner.to_owned(),
                 ),
             };
-            diags.push(Diagnostic::error(DiagCode::RelativeIri, message).with_subject(subject));
-        }
+            Diagnostic::error(DiagCode::RelativeIri, message).with_subject(subject)
+        }),
     }
 }
 
@@ -585,7 +588,7 @@ fn each_mut<T>(values: &mut OneOrMany<T>, mut f: impl FnMut(&mut T)) {
 }
 
 /// Expand every in-scope slot of one node.
-fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut Vec<Diagnostic>) {
+fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut DiagnosticList) {
     expand_identity(&mut node.id, "@id", None, table, diags);
     let owner = node.id.clone();
     let mut expand_refs = |slot: &str, refs: &mut OneOrMany<IriRef>| {

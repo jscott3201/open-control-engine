@@ -12,6 +12,12 @@
 //!
 //! Peak memory stays within a fixed multiple of the document's bytes for both.
 //!
+//! A third case is the document that made the engine's own reader build a refusal list of
+//! `keys × id bytes` (GitHub issue #695): one node with a 256 KiB `@id` and 400 or 1,600 keys the
+//! reader refuses. The importer answers with one refusal, and here it is for the name: a local
+//! part of more than 64 bytes is `invalid-name`. It copies the `@id` once however many keys the
+//! node carries, and a further key costs what parsing it costs.
+//!
 //! Measured with `allocation-counter`, whose counters are local to the measuring thread. Naming
 //! that crate links its counting global allocator, which is why this file is a test binary of its
 //! own (`Cargo.toml`). The counts are a function of the input, the importer, and the `serde_json`
@@ -178,4 +184,68 @@ fn a_giant_array_of_the_wrong_size_is_refused_before_its_elements_are_read() {
     // difference is taken either way round, so a larger document that allocates less still
     // prints both counts rather than overflowing.
     assert!(counts[1].abs_diff(counts[0]) <= 8, "{counts:?}");
+}
+
+/// The node `hys.uLow` under an `@id` of `id_bytes` more bytes, carrying `keys` spellings of
+/// `S231:min` that differ only in surrounding spaces, none of which the importer reads.
+fn padded_keys_on_a_long_id(id_bytes: usize, keys: usize) -> (Vec<u8>, String) {
+    let short = format!("\"{ROOT}.hys.uLow\"");
+    let long = format!("{ROOT}.hys.uLow{}", "x".repeat(id_bytes));
+    let node = format!("\"@id\": \"{ROOT}.hys.uLow\",\n      \"@type\": \"S231:Parameter\",");
+    let written: String = (0..keys)
+        .map(|i| {
+            format!(
+                "\n      \"{}S231:min{}\": 0,",
+                " ".repeat(i / 40 + 1),
+                " ".repeat(i % 40)
+            )
+        })
+        .collect();
+    let text = econ();
+    assert!(text.contains(&node));
+    let document = text
+        .replacen(&node, &format!("{node}{written}"), 1)
+        .replace(&short, &format!("\"{long}\""));
+    (document.into_bytes(), long)
+}
+
+#[test]
+fn many_refused_keys_on_a_long_node_id_cost_one_refusal_that_names_the_id_once() {
+    warm_up();
+    let id_bytes = 256 * 1024;
+    let mut costs = Vec::new();
+    for keys in [400_usize, 1_600] {
+        let (document, id) = padded_keys_on_a_long_id(id_bytes, keys);
+        let (info, refusal) = measured(&document);
+        let refusal = refusal.unwrap_or_else(|| panic!("{keys} keys: the document imported"));
+        // One refusal, whatever the node carries: the name is too long to be an identifier, and
+        // the `@id` is the refusal's subject and nowhere else in it.
+        assert_eq!(
+            refusal,
+            ImportError::new(SourceForm::Cxf, id.as_str(), ImportErrorKind::InvalidName),
+            "{keys} keys"
+        );
+        assert!(refusal.kind.to_string().len() <= 128, "{}", refusal.kind);
+        // [measured: 1.6 and 1.7 bytes held per document byte]
+        assert!(
+            info.bytes_max <= 4 * length(&document),
+            "{keys} keys: {} bytes held for {} bytes read",
+            info.bytes_max,
+            document.len()
+        );
+        costs.push(info);
+    }
+    // A further key costs its parse, a fixed amount, and never the `@id` again [measured: 167
+    // bytes and 1.2 allocations a key].
+    let further = 1_200;
+    assert!(
+        costs[1].bytes_total - costs[0].bytes_total <= 1_024 * further,
+        "{} more bytes requested for {further} more keys",
+        costs[1].bytes_total - costs[0].bytes_total
+    );
+    assert!(
+        costs[1].count_total - costs[0].count_total <= 8 * further,
+        "{} more allocations for {further} more keys",
+        costs[1].count_total - costs[0].count_total
+    );
 }

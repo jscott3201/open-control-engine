@@ -43,6 +43,7 @@ use std::sync::OnceLock;
 
 use oce_diag::{DiagCode, Diagnostic};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
 
@@ -156,12 +157,7 @@ fn vocabulary() -> &'static HashSet<String> {
 
 /// Refuse a typing token in the S231 namespace whose term the vocabulary does not hold, after
 /// expansion; returns whether it refused. `owner` is the node's expanded `@id`.
-pub(super) fn check_term(
-    token: &str,
-    slot: &str,
-    owner: &str,
-    diags: &mut Vec<Diagnostic>,
-) -> bool {
+pub(super) fn check_term(token: &str, slot: &str, owner: &str, diags: &mut DiagnosticList) -> bool {
     let Some(term) = token
         .strip_prefix(S231_CONTEXT_IRI)
         .or_else(|| token.strip_prefix("S231:"))
@@ -171,25 +167,25 @@ pub(super) fn check_term(
     if vocabulary().contains(term) {
         return false;
     }
-    let (quoted, named) = (excerpt(token), excerpt(term));
-    let subject = if owner.is_empty() { &quoted } else { owner };
-    // A CDL block class the registry does not implement is refused as a leaf reader refuses it in
-    // any other spelling, so the S231 and the `ex:` spellings of one class read the same.
-    if slot == "@type"
-        && let Some(class_path) = term.strip_prefix(OBC_PACKAGE)
-        && class_path.starts_with("CDL.")
-        && !class_path.starts_with("CDL.Types.")
-    {
-        diags.push(
-            Diagnostic::error(
+    // One node may carry any number of typing tokens, each refused about the same `@id`, so the
+    // refusal is built only while the list has room for it (GitHub issue #695).
+    diags.raise(|| {
+        let (quoted, named) = (excerpt(token), excerpt(term));
+        let subject = if owner.is_empty() { &quoted } else { owner };
+        // A CDL block class the registry does not implement is refused as a leaf reader refuses
+        // it in any other spelling, so the S231 and the `ex:` spellings of one class read the
+        // same.
+        if slot == "@type"
+            && let Some(class_path) = term.strip_prefix(OBC_PACKAGE)
+            && class_path.starts_with("CDL.")
+            && !class_path.starts_with("CDL.Types.")
+        {
+            return Diagnostic::error(
                 DiagCode::ClassNotFound,
                 format!("no registered block class for `{}`", excerpt(class_path)),
             )
-            .with_subject(subject.to_owned()),
-        );
-        return true;
-    }
-    diags.push(
+            .with_subject(subject.to_owned());
+        }
         Diagnostic::error(
             DiagCode::MalformedDocument,
             format!(
@@ -199,8 +195,8 @@ pub(super) fn check_term(
                  path)"
             ),
         )
-        .with_subject(subject.to_owned()),
-    );
+        .with_subject(subject.to_owned())
+    });
     true
 }
 

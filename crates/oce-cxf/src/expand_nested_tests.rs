@@ -18,7 +18,7 @@ fn nested_compact_context_bindings_are_refused_before_identity_expansion() {
             serde_json::json!({ "alias": "ex:A" }),
         ]),
     ] {
-        let mut diags = Vec::new();
+        let mut diags = DiagnosticList::new();
         prefix_table(&context, &mut diags);
         assert_eq!(diags.len(), 1, "{diags:?}");
         assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct);
@@ -45,7 +45,7 @@ fn declared_scheme_does_not_capture_double_slash_context_values() {
         .into_iter()
         .collect(),
     );
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let table = prefix_table(&context, &mut diags);
     assert!(diags.is_empty(), "{diags:?}");
     assert_eq!(table["alias"], "http://example.org#A");
@@ -58,7 +58,7 @@ fn large_flat_context_preserves_every_binding() {
             .map(|index| (format!("p{index:05}"), serde_json::json!("urn:x")))
             .collect(),
     );
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let table = prefix_table(&context, &mut diags);
     assert!(diags.is_empty(), "{diags:?}");
     assert_eq!(table.len(), 50_000);

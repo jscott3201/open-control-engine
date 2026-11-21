@@ -47,6 +47,7 @@
 //! matching signature position. Any other partial match still earns [`DiagCode::PortNameMismatch`]
 //! rather than a guess.
 
+use crate::diagnostic_list::DiagnosticList;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockInstance, ConnectorId};
 
@@ -150,7 +151,7 @@ pub(super) fn check_and_bind(
     subject: &str,
     want: (usize, usize),
     port_iris: (&[&str], &[&str]),
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let got = (block.inputs.len(), block.outputs.len());
     if got != want {

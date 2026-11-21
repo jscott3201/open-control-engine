@@ -22,6 +22,7 @@ use std::collections::HashSet;
 
 use oce_diag::{Diagnostic, Severity};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 
 use super::composite_rules::{ARRAY_CONNECTOR, ARRAY_INSTANCE};
@@ -40,7 +41,7 @@ use super::value_types::term_of;
 pub(super) fn reject_unsupported(
     doc: &CxfDocument,
     specialization: &Specialization,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let contains_referents = contains_block_referents(doc);
     let mut connector_ids = HashSet::new();

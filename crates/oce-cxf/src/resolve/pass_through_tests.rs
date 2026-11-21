@@ -6,6 +6,7 @@ use std::sync::Arc;
 use serde_json::json;
 
 use super::derive_boundary_types;
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::CxfDocument;
 
 /// A top input wired to a long String-typed top output, so the output's type is derived only
@@ -27,7 +28,7 @@ fn document(output: &str) -> CxfDocument {
 fn derived(doc: &CxfDocument, output: &str, edges: &[(&str, Vec<Arc<str>>)]) -> String {
     let boundary_in = HashSet::from(["urn:top:u"]);
     let boundary_out = HashSet::from([output]);
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let types = derive_boundary_types(
         doc,
         edges

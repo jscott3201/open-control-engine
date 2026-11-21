@@ -46,6 +46,7 @@ use std::collections::HashSet;
 
 use oce_diag::{DiagCode, Diagnostic};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 use crate::export::S231_CONTEXT_IRI;
 
@@ -120,7 +121,7 @@ fn own_marker(node: &Node) -> Option<Marker> {
 pub(super) fn refuse(
     doc: &CxfDocument,
     specialization: &Specialization,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     let markers: Vec<Option<Marker>> = doc.graph.iter().map(own_marker).collect();
     // Lookup-only: every node that is an extension block in its own right, active or not.
@@ -131,7 +132,7 @@ pub(super) fn refuse(
         .filter(|(_, marker)| marker.is_some())
         .map(|(node, _)| node.id.as_str())
         .collect();
-    let before = diags.len();
+    let before = diags.raised();
     for (node, marker) in doc.graph.iter().zip(markers) {
         if specialization.is_inactive(&node.id) {
             continue;
@@ -149,5 +150,9 @@ pub(super) fn refuse(
             );
         }
     }
-    diags.len() > before
+    diags.raised() > before
 }
+
+#[cfg(test)]
+#[path = "extension_blocks_tests.rs"]
+mod tests;

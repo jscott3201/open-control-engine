@@ -23,6 +23,7 @@ use oce_model::ModelGraph;
 
 mod arrays;
 mod bridge;
+mod diagnostic_list;
 pub mod dto;
 mod excerpt;
 mod expand;

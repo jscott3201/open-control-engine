@@ -673,12 +673,47 @@ changes.
 | Composite **nesting** (`containsBlock` lowering) | 64 | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 | Composite boundary path | 64 non-top `isConnectedTo` hops | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 | Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
+| Diagnostic text of one CXF read | 8 MiB (8,388,608 bytes) of messages and subjects together | `crates/oce-cxf/src/diagnostic_list.rs` | the list ends; one closing `resource-limit-exceeded` error counts what is not listed |
 
 Composite nesting and boundary traversal are different walks and have separate limits. Boundary
 traversal is iterative, so an accepted path does not consume one call-stack frame per hop. Its work
 budgets also bound shallow fan-out and repeated long IRIs that a depth limit alone would miss.
 Direct leaf wiring is outside those budgets. Below the limits the walk keeps target order and
 duplicate paths intact for single-assignment validation.
+
+### A refusal list is a bounded answer
+
+A diagnostic copies document text: its subject is a node's `@id`, and most messages name that
+`@id` again. So the CXF reader holds the diagnostics of one read, a refusal list or the warnings
+of a load, to 8 MiB of text (issue #695). What you can rely on:
+
+- **The bound.** The messages and subjects of the listed diagnostics are at most 8,388,608
+  bytes together. A subject that several diagnostics share as one allocation (the resolver's
+  findings on one connector share an `Arc`) is counted once, as it is held once. If you copy or
+  print each diagnostic with its subject, you pay for that subject each time: one long shared
+  subject on many diagnostics is larger printed than held, and
+  `load_cxf_with_receipt` copies every subject into its receipt today (issue #708).
+- **Past the bound.** Diagnostics are listed in the order the reader raises them. The first one
+  that does not fit ends the list: it and every later one are counted, never listed, even where
+  a later one would have fit. The list then ends with one `resource-limit-exceeded` error with
+  no subject, whose message starts with the count: `385 more diagnostic(s) are not listed: a
+  diagnostic list holds at most 8388608 bytes of message and subject text`. The diagnostics
+  before it are in the reader's usual order.
+- **It is always a refusal.** The closing error is an error whatever was left out, so a document
+  whose warnings alone pass the bound is refused. A load never succeeds with warnings missing.
+- **What it does not change.** A list within the bound is what it was: no message is shortened
+  and no subject is cut. Every tracked document and every document of `open-control-library`
+  is far inside it (the largest list among them is 196 diagnostics and 29,460 bytes, from a
+  document of 201,721 bytes).
+- **Work.** Where one node can raise a diagnostic per item of a list the document sets (its
+  keys, its `@type` tokens, its references, its `hasInstance` members, its repeated children, a
+  composite's repeated declarations), a finding past the bound is counted and nothing is built
+  for it. Other findings past the bound are built and dropped, so they cost their copying but
+  hold nothing (issue #711).
+
+The bound covers what `oce-cxf` raises while it reads. The later load stages (unification,
+validation, the schedule) return lists of their own, which this bound does not hold, and an
+export's diagnostics are not held to it either.
 
 ## Treat untrusted CXF as untrusted input
 

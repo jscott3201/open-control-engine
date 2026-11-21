@@ -6,6 +6,8 @@ use std::sync::Arc;
 use oce_diag::Diagnostic;
 use oce_model::{Connector, ConnectorId};
 
+use crate::diagnostic_list::DiagnosticList;
+
 /// The diagnostic subject for a connector — its source IRI when known, else a synthetic id.
 pub(super) fn subject_of(c: &Connector) -> Arc<str> {
     match &c.iri {
@@ -18,7 +20,7 @@ pub(super) fn subject_of(c: &Connector) -> Arc<str> {
 /// (connector subjects first), then by `DiagCode` string, then message. Non-connector subjects sort
 /// after all connectors (`u32::MAX`) by their raw subject string — total and panic-free.
 pub(super) fn finalize_diags(
-    diags: Vec<Diagnostic>,
+    diags: DiagnosticList,
     conn_of_iri: &HashMap<&str, ConnectorId>,
 ) -> Vec<Diagnostic> {
     // Resolve a subject IRI to its `ConnectorId.0`: either via a real source IRI (in `conn_of_iri`)
@@ -42,7 +44,8 @@ pub(super) fn finalize_diags(
     // keyed by allocation address while every subject is alive, so it only ever answers what
     // `key_cid` would; the sort order is unchanged.
     let mut keys_by_allocation: HashMap<*const u8, u32> = HashMap::new();
-    let mut keyed: Vec<(u32, Diagnostic)> = diags
+    let (listed, closing) = diags.into_parts();
+    let mut keyed: Vec<(u32, Diagnostic)> = listed
         .into_iter()
         .map(|diagnostic| {
             let key = match &diagnostic.subject {
@@ -71,6 +74,7 @@ pub(super) fn finalize_diags(
     keyed
         .into_iter()
         .map(|(_, diagnostic)| diagnostic)
+        .chain(closing)
         .collect()
 }
 

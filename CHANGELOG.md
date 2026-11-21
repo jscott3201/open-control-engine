@@ -612,6 +612,50 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - **Nothing a format defines changes, and the workspace version is not bumped:** tightening
     accepted input is not a format change (unit-spellings ruling 7; the ruling on #647). No
     content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
+- **The CXF reader's diagnostic list holds at most 8 MiB of text** (GitHub #PRNUM, issue #695).
+  A diagnostic copies document text: its subject is a node's `@id`, and most messages name that
+  `@id` again. Nothing tied the number of diagnostics to the length of what they copy, so a node
+  with a long `@id` and many refused keys built a list of `keys × id bytes`. 400 padded keys on
+  a 1 MB `@id`, a document of 2.09 MB, requested 1,206 MB at its peak; it now peaks at 21 MB.
+  - **The bound.** The diagnostics of one read, a refusal list or the warnings of a load, hold
+    at most 8,388,608 bytes of messages and subjects together. A subject several diagnostics
+    share as one allocation is counted once. Diagnostics are listed in the order raised; the
+    first that does not fit ends the list, and it and every later one are counted, not kept.
+  - **The closing error.** A list that ended closes with one `resource-limit-exceeded` error, no
+    subject, last in the list: `385 more diagnostic(s) are not listed: a diagnostic list holds
+    at most 8388608 bytes of message and subject text`. No new code; `oce-diag`'s description
+    of the code names this use. It is an error whatever was left out, so a document whose
+    warnings alone pass the bound is refused: a load never succeeds with warnings missing.
+  - **A list within the bound is unchanged:** no message is shortened, no subject is cut, no
+    finding is dropped, and a shared subject stays shared. Every diagnostic of the 257 tracked
+    documents that hold an `@graph` and of the 139 CXF documents of `open-control-library`
+    (`main` at `d90f63b`), as written and with the retired namespace rewritten, is byte-identical
+    before and after: severity, code, message and subject, 535 loads. The largest list among them
+    is 196 diagnostics and 29,460 bytes.
+  - **Work past the bound.** On seventeen routes, where one node raises a diagnostic per item of a
+    list the document sets, a finding past the bound is counted and nothing is built for it: a
+    key written twice, a modeled or `hasUnit` key in surrounding whitespace, a modeled term in a
+    foreign namespace, `hasUnit` in a near miss of a QUDT namespace, a second spelling of one
+    property, a relative reference, the four refusals of a typing token, a reference carrying a
+    key beside its `@id`, a Modelica construct that survived lowering, a re-bound declaration
+    (as lowering reads it and as the specialization pass withholds it), a child listed again,
+    and a `hasInstance` member outside its owner. Each is measured through `Engine::load_cxf` on
+    a 256 KiB `@id` at 400 and 1,600 items (`crates/oce-api/tests/cxf_diagnostic_list_cost.rs`):
+    peaks of 9.7 to 19.6 MB where they were 106 to 316 MB at 400 items, and 142 to 1,966
+    requested bytes for a further item where it was 262,144 or more. Elsewhere a finding past
+    the bound is built and dropped (issue #711).
+  - **Not held to this bound:** the lists the later load stages return, an export's
+    diagnostics, and the receipt of `load_cxf_with_receipt`, which copies each subject for
+    every record (issue #708). `@context` expansion and an array parameter's element names
+    amplify a document without a diagnostic (issues #709 and #710).
+  - **Both readers.** `oce-author`'s importer answers with one refusal and already refuses a
+    name longer than 64 bytes as `invalid-name`; the same document is pinned there as one
+    refusal that names the `@id` once. Its source is unchanged.
+  - **No public surface changes.** `Diagnostic`, `CxfError::Validation` and
+    `ValidationReport::diagnostics` are the types they were; the list type is internal to
+    `oce-cxf`. No format, content id, blob or golden moves, and the workspace version is not
+    bumped.
+
 ### Leverage
 
 - **`oce-diff` compares two loaded CXF documents** (GitHub #715, issue #666;

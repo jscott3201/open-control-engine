@@ -6,6 +6,7 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Attrs, BoundaryOutput, ConnectorId, NoAttrs, ValueType};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 
 use super::attrs::connector_attrs;
@@ -18,7 +19,7 @@ pub(super) fn materialize(
     doc: &CxfDocument,
     sources: &HashMap<String, ConnectorId>,
     boundary_types: &HashMap<&str, Option<ValueType>>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Vec<BoundaryOutput> {
     doc.graph
         .iter()
@@ -43,7 +44,7 @@ pub(super) fn materialize(
 fn declared_attrs(
     node: &Node,
     boundary_types: &HashMap<&str, Option<ValueType>>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Attrs {
     match boundary_types.get(node.id.as_str()).copied().flatten() {
         Some(vt) => connector_attrs(node, vt, diags),
@@ -61,7 +62,7 @@ pub(super) fn check_declared_interface(
     conn_of_iri: &HashMap<&str, ConnectorId>,
     by_id: &HashMap<&str, &Node>,
     drivers: &HashMap<String, HashSet<String>>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let shadowed = refuse_shadowed(top, boundary_in, boundary_out, conn_of_iri, diags);
     refuse_multiply_driven(drivers, diags);
@@ -81,7 +82,7 @@ fn refuse_shadowed<'doc>(
     boundary_in: &HashSet<&str>,
     boundary_out: &HashSet<&str>,
     conn_of_iri: &HashMap<&str, ConnectorId>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> HashSet<&'doc str> {
     let mut shadowed: HashSet<&str> = HashSet::new();
     for iri in top
@@ -109,7 +110,7 @@ fn refuse_shadowed<'doc>(
 
 /// Refuse every boundary output with more than one distinct driver (§7.10 single assignment):
 /// post-specialization multiplicity means two surviving values claim one declared name.
-fn refuse_multiply_driven(drivers: &HashMap<String, HashSet<String>>, diags: &mut Vec<Diagnostic>) {
+fn refuse_multiply_driven(drivers: &HashMap<String, HashSet<String>>, diags: &mut DiagnosticList) {
     // Emit in output-IRI order rather than hash order. `finalize_diags` re-sorts the resolver's
     // diagnostics before they leave the crate; sorting here keeps the push order canonical too.
     let mut multiply_driven: Vec<(&String, usize)> = drivers
@@ -143,7 +144,7 @@ fn warn_undriven(
     by_id: &HashMap<&str, &Node>,
     drivers: &HashMap<String, HashSet<String>>,
     shadowed: &HashSet<&str>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let mut seen: HashSet<&str> = HashSet::new();
     for iri in top.has_output.iter().map(|r| r.id.as_str()) {

@@ -16,6 +16,7 @@ use std::collections::{HashMap, HashSet};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Connection, Connector, ConnectorId, Dir};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
 
 use super::boundary_inputs::AssignmentTracker;
@@ -54,7 +55,7 @@ pub(super) fn collect<'a>(
     edges: impl Iterator<Item = (&'a str, &'a str)>,
     lookups: EndpointLookups<'a>,
     connectors: &mut [Connector],
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> CollectedConnections<'a> {
     let mut table = EndpointTable::new(lookups);
     let mut connections: Vec<Connection> = Vec::new();

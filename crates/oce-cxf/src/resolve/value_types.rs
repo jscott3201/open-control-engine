@@ -3,6 +3,7 @@
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{ValueType, enum_class_id, is_g36_integer_constant_package};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
 
 /// First `@type` term of a node, if any.
@@ -31,12 +32,12 @@ fn value_type_of_datatype(iri: &str) -> Option<ValueType> {
 }
 
 /// Derive a connector type, using `Real` only as dense-storage recovery after a diagnostic.
-pub(super) fn derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> ValueType {
+pub(super) fn derive_value_type(node: &Node, diags: &mut DiagnosticList) -> ValueType {
     try_derive_value_type(node, diags).unwrap_or(ValueType::Real)
 }
 
 /// Derive a connector type without introducing a placeholder-based follow-on mismatch.
-pub(super) fn try_derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> Option<ValueType> {
+pub(super) fn try_derive_value_type(node: &Node, diags: &mut DiagnosticList) -> Option<ValueType> {
     if let Some(datatype) = &node.is_of_data_type {
         return value_type_of_datatype(&datatype.id).or_else(|| {
             diags.push(
