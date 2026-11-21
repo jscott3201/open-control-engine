@@ -3,7 +3,7 @@
 //! The keywords (`oce_author::TEXT_FORM_KEYWORDS`), types, boundary tags and base-unit symbols
 //! (`oce_author::BASE_UNIT_SYMBOLS`); the parse codes (`oce_author::PARSE_CODES`), the stage-1
 //! finding codes (`oce_author::STAGE_ONE_CODES`), the stage-2 codes, the wire codes
-//! (`oce_author::WIRE_CODES`), the tool's
+//! (`oce_author::WIRE_CODES`), the importer's codes (`oce_author::IMPORT_ERROR_CODES`), the tool's
 //! own error codes, and the vector file's and the verifier's codes `verify` passes through
 //! (`oce_verify::VECTOR_ERROR_CODES`, `oce_verify::VERIFY_ERROR_CODES`), each with one line of
 //! meaning; and the exit statuses.
@@ -28,8 +28,8 @@ use serde_json::{Value, json};
 
 use super::Outcome;
 use crate::codes::{
-    EXIT_MEANINGS, PARSE_MEANINGS, STAGE_ONE_MEANINGS, STAGE_TWO_MEANINGS, TEXT_FORM_TAGS,
-    TOOL_CODES, WIRE_MEANINGS,
+    EXIT_MEANINGS, IMPORT_MEANINGS, PARSE_MEANINGS, STAGE_ONE_MEANINGS, STAGE_TWO_MEANINGS,
+    TEXT_FORM_TAGS, TOOL_CODES, WIRE_MEANINGS,
 };
 use crate::report::Report;
 use crate::verify_codes::{VECTOR_MEANINGS, VERIFY_MEANINGS};
@@ -48,6 +48,7 @@ pub(crate) fn run(json: bool) -> Outcome {
     report.set("parse_codes", table(PARSE_MEANINGS));
     report.set("finding_codes", finding_codes());
     report.set("wire_codes", table(WIRE_MEANINGS));
+    report.set("import_codes", table(IMPORT_MEANINGS));
     report.set("error_codes", table(TOOL_CODES));
     report.set("vector_codes", table(VECTOR_MEANINGS));
     report.set("verify_codes", table(VERIFY_MEANINGS));
@@ -188,6 +189,7 @@ fn render_text() -> String {
         STAGE_TWO_MEANINGS,
     );
     rows(&mut out, "wire codes (exit 2)", WIRE_MEANINGS);
+    rows(&mut out, "import codes (import, exit 2)", IMPORT_MEANINGS);
     rows(&mut out, "error codes (exit 2)", TOOL_CODES);
     rows(
         &mut out,

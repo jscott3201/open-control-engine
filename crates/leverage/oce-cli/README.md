@@ -4,8 +4,9 @@ The `oce` command-line tool (M2; design note [`docs/design/authoring-layer.md`](
 "CLI", decisions 9 and 20; issue #489): `emit`, `validate`, `fmt`, `catalog` and `vocab` over
 [`oce-author`](../oce-author/README.md), [`oce-vocab`](../oce-vocab/README.md) and the facade, and
 (M3; [vectors note](../../../docs/design/vectors.md), "CLI", decision 34; issue #522) `verify`
-over [`oce-verify`](../oce-verify/README.md) and (M3; [content-id note](../../../docs/design/content-id.md),
-"Mapping table for the library re-stamp"; issue #513) `id` over the facade. A leverage crate and the first binary above the
+over [`oce-verify`](../oce-verify/README.md), (M3; [content-id note](../../../docs/design/content-id.md),
+"Mapping table for the library re-stamp"; issue #513) `id` over the facade and (M3; [importer note](../../../docs/design/importer.md); issue #514) `import`
+over `oce-author`'s CXF importer. A leverage crate and the first binary above the
 facade (the engine crates ship none); it depends on `oce-api` and the leverage crates
 `oce-author`, `oce-vocab` and `oce-verify` only, opens no listener, and every engine it loads is a
 throwaway: the validator's, the verifier's, or the one `id` loads to name a document. Package `oce-cli`, binary `oce`,
@@ -22,6 +23,7 @@ oce verify <VECTORS> --subject <FILE> [--subject-form cxf|text|wire] [--out <DIR
                                                  a vector set replayed; the receipt on stdout
 oce id <FILE> [--from cxf|text|wire] [--namespace <NS>] [--json]
                                                  the canonical content id, alone on stdout
+oce import <FILE> [-o <OUT>] [--wire]            flat CXF into canonical text (or the wire form)
 ```
 
 `catalog` answers "what does this block take": the engine's facts (parameters, resolved ports)
@@ -36,7 +38,8 @@ auto|always|never` (default `auto`: a human-readable rendering of the report on 
 **stderr** is a terminal, whatever stdout is; stdout is the same bytes whatever `--render` says),
 `--help`, and `--version` (the workspace version). `--json` exists only on `catalog`, `vocab` and
 `id`, the three commands whose default stdout is text; every other command's report is already
-JSON. `id` reads a third form, CXF, and has its own form rule ([below](#oce-id)). A
+JSON. `id` reads a third form, CXF, and has its own form rule ([below](#oce-id)); `import`
+reads CXF only and takes no `--from` ([below](#oce-import)). A
 failing `catalog` (an unknown class, a refused table) prints the JSON report on stdout even
 without `--json`.
 
@@ -168,13 +171,128 @@ oce id rule.cxf.jsonld --json     # the report, with content_id
   and `form`); exit `2` with the report for every refusal. `id` never exits `1`: it answers no
   question that has a "no".
 
+## `oce import`
+
+`oce import <FILE>` reads one flat CXF document into the authoring form
+(`oce_author::import_cxf`; [importer note](../../../docs/design/importer.md); issue #514) and
+prints the sequence as canonical text, or with `--wire` as the canonical wire form. It is how a
+rule committed as CXF becomes a file a person or an agent edits.
+
+```sh
+oce import rule.cxf.jsonld > rule.oce          # canonical text
+oce import rule.cxf.jsonld --wire > rule.json  # the wire form
+oce import rule.cxf.jsonld -o rule.oce         # written atomically; the report on stdout
+oce import rule.cxf.jsonld | oce emit - --from text | oce id - --from cxf
+```
+
+- **The input** is CXF, the one form the verb reads. There is no `--from`, stdin (`-`) needs
+  none, and the file's name is not consulted. The frozen prototype's v0 graph JSON
+  (`oce_author::import_graph_v0`) is not exposed.
+- **The output's form** is text, or wire with `--wire`. The flag alone chooses it; `-o`'s name
+  never does. But a name `oce` would read as **another** form is refused before anything is
+  read (`output-form-mismatch`, exit `2`, nothing written; owner ruling of 2026-11-21): the
+  name is read by the rule `id` reads a file's name by, so `.oce` is text, `.json` is wire, and
+  `.jsonld` and `.cxf.json` are CXF, which `import` never writes. `-o rule.json` needs `--wire`,
+  `--wire -o rule.oce` is refused, and `-o rule.cxf.json` is refused for either form. A name
+  that gives no form (`rule`, `rule.txt`, `rule.JSON`: the rule is case-sensitive) is accepted
+  for either.
+- **The output is never the input.** `-o` naming the input file is `output-is-input` (exit
+  `2`, nothing written), for `import` and for `emit` alike (owner ruling of 2026-11-21).
+  "The input file" is file identity, not spelling: the same path written another way
+  (`./rule`, `dir/../rule`), a symbolic link to it and, on Unix, a hard link to it, where one
+  file is one (device, inode). On Windows one file is one canonical path, so a hard link is
+  not recognised there. An output that does not exist yet, a dangling link included, is no
+  file and replaces nothing; stdin is no file.
+- **Nothing is judged.** The importer decodes; whether a class is in the catalog, a name is a
+  reserved word or the graph has a loop is `oce validate`'s answer on the result. So `import`
+  never exits `1`, and a sequence it writes may still be one `oce emit` refuses.
+- **The document is read back before it is written.** The form's writer runs, then the form's
+  own reader over what it wrote, and the document is produced only when that reads back equal
+  to the imported sequence: exit `0` means `oce` reads what it wrote. With the name rule above
+  that holds by name too: a file written as `rule.oce` or `rule.json` is read by `validate`,
+  `emit`, `fmt` and `id` in the form it was written, with no `--from`. Otherwise the refusal is
+  `unspellable`. The text form has no spelling for a class path that is not dotted words, or
+  for a connection whose source is a statement keyword; neither form has one for a string
+  past 4,096 bytes; and the wire form has none for a sequence whose wire document would pass
+  its 4 MiB, which the terser text form may still carry. For a name or a class path the text
+  form cannot spell, `--wire` is the way to get the sequence out and let `oce validate` name
+  what is wrong with it.
+- **A refusal by the importer** is exit `2` under the importer's own code
+  (`oce_author::ImportError::code`, one of the thirty-one in `oce_author::IMPORT_ERROR_CODES`),
+  with what the kind says as `detail` and the refusal's subject as `at`: a node `@id`, or
+  `document`. The tool matches no kind, so a kind `oce-author` adds is reported under its own
+  code. `oce vocab` lists all thirty-one under `import_codes` with their meanings, in the
+  importer's order. Four of them no run earns: the three of the v0 graph JSON reader
+  (`limit-exceeded`, `string-value`, `malformed-connection`), and `too-large`, because the
+  tool's bounded read stops at the importer's own limit and reports `input-too-large`.
+  `tests/import_refusals.rs` earns each of the other twenty-seven.
+- **The report** is stdout under `-o` and on every refusal. `dropped` lists what the importer
+  read and did not carry, in reading order: each `{ "property", "subject", "value" }`, with
+  `property` one of `root-type`, `label`, `unit`, `quantity`, `display-unit`, `min`, `max` and
+  `value` as the document wrote it. `normalised` lists each boundary or port typed by a
+  constant package and read as the Integer the engine reads it as:
+  `{ "data_type", "subject", "to" }`. Without `-o` the document is stdout and the report is
+  not printed; the rendering on stderr then counts both lists.
+- **Reads** are bounded at 8 MiB (`oce_api::MAX_CXF_BYTES`), a file's size from its metadata
+  before a byte is read, stdin one byte past the limit.
+
+### The round trip
+
+`oce import FILE | oce emit - --from text | oce id - --from cxf` prints the line `oce id FILE`
+prints wherever `oce emit` accepts the imported sequence, with one exception by design and one
+known gap:
+
+1. **A name prefix on the root** (by design; importer note, decision 14). The importer keeps
+   the trailing identifier of the root `@id` as the sequence name, and names are inside the id.
+   A root such as `http://example.org#g36.source.reheat_overrides` carries `g36.source.`
+   between its namespace and that identifier, which no emitted document can spell (a namespace
+   ends in `#`, `/` or `:`). The round trip has the id of the original with its root
+   re-stamped to `<namespace><sequence>`. Every G36 corpus fixture the importer accepts is in
+   this class.
+2. **An Integer literal on a Real parameter** (a known gap, issue #683). The importer keeps
+   `k = 0` as written, the emitter writes a Real parameter's value as a Real, and the engine's
+   id tells an Integer literal from a Real one, an element of a Real array included. The round
+   trip has the id of the original with that literal written as a Real. #683 is ruled
+   "normalise at load"; when it lands the two spellings have one id and this exception goes.
+
+`oce emit` answers no wherever the validator has an error finding, and the validator is
+stricter than a bare engine load. A document that loads with a warning has an id, and its
+imported sequence is refused by `emit` ([`oce id`](#oce-id) has the same asymmetry). An
+Integer literal above 2^53 on a Real parameter loads in an engine and is refused by stage 1
+(`parameter-out-of-range`): the authoring layer will not write a Real it cannot write exactly.
+
+`tests/import_corpus.rs` runs this over every `.jsonld` and `.cxf.json` file git tracks under
+`crates/` (the vendored tree under `third_party/` is left out, so a pin advance does not move
+it) and writes one row per document to
+[`tests/fixtures/import_corpus.tsv`](tests/fixtures/import_corpus.tsv): the class, its detail,
+how many properties the importer dropped and normalised, and the path. That table is the
+record of what each tracked fixture does; it is blessed, so a fixture added to any crate gets
+its row from one `OCE_BLESS_CLI=1` run, and no count is written down here. The classes:
+
+| Class | Meaning |
+| --- | --- |
+| `refused` | the importer refuses the document under one stable code (the detail), and writes nothing |
+| `same-id` | imported, emitted, and the id is the original's |
+| `same-id-restamped` | imported, emitted, and the id is the original's once its root is re-stamped; the detail is the name prefix |
+| `same-id-real-literals` | imported, emitted, and the id is the original's once its Integer literals on Real parameters are written as Reals (issue #683; goes when it lands) |
+| `warned` | imported; the original loads with a warning and `oce emit` answers no; what the emitter alone writes has the original's id |
+| `author-refused` | imported; the original loads, and stage 1 refuses the sequence, so nothing is emitted |
+| `no-id` | imported; the original does not load in an engine, so it has no id, and `oce emit` answers no |
+
+A round trip whose id differs for a reason other than the two above fails the test: that is a
+finding, not a class. One split is asserted by hand, the importer note's: of the 46 G36
+catalog fixtures, 31 import and round-trip under the re-stamp and 15 are refused. For each
+imported document the test also holds the text and the wire output to the sequence
+`oce_author::import_cxf` returns, each canonical in its form, `oce emit` to one answer for
+both, and the report's lists to the importer's.
+
 ## Exit codes
 
 | Exit | Meaning | When |
 | --- | --- | --- |
-| `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, under `--require-mutants-caught` the set lists a mutant and none survived, under `--deny-warnings` no warning; `id`: the input has an id; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
+| `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, under `--require-mutants-caught` the set lists a mutant and none survived, under `--deny-warnings` no warning; `id`: the input has an id; `import`: the document is imported and written; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
 | `1` | no | an error finding (`validate`, `emit`, which then writes nothing); `fmt --check`: not canonical; `catalog`: an unknown class, or the class rules refuse the parameter table (including a required parameter with no default); `verify`: a scenario failed or the set is `no_data`, or, under their flags, a surviving mutant, a set that lists no mutant, or a warning |
-| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal; for `id`, also a document the engine does not load, an authored file with an error finding, or `--namespace` beside a CXF document |
+| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal; for `id`, also a document the engine does not load, an authored file with an error finding, or `--namespace` beside a CXF document; for `import`, also a document the importer refuses, a sequence the output form cannot spell, or an `-o` name that reads as another form (`import` never exits `1`); for `emit` and `import`, an `-o` that is the input file |
 
 ## Output
 
@@ -182,8 +300,9 @@ Stdout carries **exactly one document** per run:
 
 - the command's product when it succeeds and has one — the CXF (`emit` without `-o`), the
   canonical text (`fmt`), a text listing (`catalog`, `vocab` without `--json`), the receipt
-  (`verify` without `--out`), the content id and a line feed (`id` without `--json`);
-- otherwise the JSON report below (every exit `1` and `2`, `emit -o`, `fmt --check`, `fmt --write`,
+  (`verify` without `--out`), the content id and a line feed (`id` without `--json`), the
+  imported sequence as text or wire (`import` without `-o`);
+- otherwise the JSON report below (every exit `1` and `2`, `emit -o`, `import -o`, `fmt --check`, `fmt --write`,
   `catalog --json`, `vocab --json`, `id --json`, `verify --out`). **One exception:** a `verify` verdict of exit
   `1` prints the receipt, not the report, because the receipt is the answer;
 - nothing for a clap usage error (its message is on stderr) and clap's text for `--help` and
@@ -194,6 +313,21 @@ line feed, and the program is always named `oce` whatever path started it. No pa
 was not given as an argument: `input` and `output` are echoed exactly as given (`-` for stdin), and
 I/O failures are reported by kind, never with an operating-system message that could carry one.
 
+The rendering on stderr (`--render`) is for a terminal, and a report quotes strings a
+document wrote: a wire file's block `class` in a `class-not-found` finding, a CXF node's `@id`
+in an `import` refusal. So every Unicode format or control character in a rendered line, and
+every line or paragraph separator (U+2028, U+2029), is written as a `\u{…}` escape, the code
+point in at least four upper-case hexadecimal digits (`\u{001B}`, `\u{202E}`), which is how
+the engine's own messages spell such a character. An escape sequence, a line feed, a
+zero-width space or a right-to-left override in a document cannot move the cursor, start a
+line, hide or reorder one. A backslash is written as it is, so the rendering does not tell a
+U+202E from the characters `\u{202E}` a document spelled out: the rendering is advice for a
+person, the JSON on stdout is the exact form (its writer escapes what JSON requires, and
+this changes none of it), and doubling backslashes would double every separator of a Windows
+path in those lines. Until GitHub #688 a wire file whose `class` held a right-to-left
+override, a zero-width space or a line separator reached the terminal as it was through
+`validate` and `emit`.
+
 ## The JSON report (`schema: "oce-report/1"`)
 
 One JSON object, keys sorted at every depth, two-space indentation. The common keys are always
@@ -203,7 +337,7 @@ present:
 | --- | --- | --- |
 | `tool` | `"oce"` | |
 | `schema` | `"oce-report/1"` | the report contract's version; a breaking change bumps it |
-| `command` | string | `emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify` or `id` |
+| `command` | string | `emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`, `id` or `import` |
 | `input` | string or `null` | the input path as given, `-` for stdin (the vector file for `verify`); `null` for `catalog` and `vocab` |
 | `ok` | boolean | `true` exactly when the exit is `0` |
 | `findings` | array | the answers that make the exit `1` (below) |
@@ -222,7 +356,9 @@ with the refusal's span), a wire-form code (`oce_author::WIRE_CODES`, with the r
 where it has one), or one of
 the tool's own codes (`span` `null`). `oce vocab` lists every code with one line of meaning. An
 `id` document the engine refuses carries `at` (`"input"`) and `diagnostic_codes` from the keys
-below. A `verify` refusal adds optional keys, each written only when it has a value (owner rulings of
+below. An `import` refusal by the importer carries one of `oce_author::IMPORT_ERROR_CODES` and
+`at`, the refusal's subject (a node `@id`, or `document`; absent when the subject is an empty
+`@id`). A `verify` refusal adds optional keys, each written only when it has a value (owner rulings of
 2026-11-11; pinned by `tests/report_shape.rs`):
 - `at`: the place, such as `scenarios[0].inputs.u`, `mutants[2]`, `subject` or `line 2 column 1`
   (never `subject`, which is the report's subject file);
@@ -239,15 +375,19 @@ Command keys:
 | `emit` | `stages` as for `validate`; with `-o`, only once the write succeeded, `output` (the path as given) and `bytes` (absent from a failed write's report) |
 | `fmt` | `form` (`text`, `wire`, or `null` before the form is known); with `--check`, `canonical` (whether the input is already canonical **in its own form**: text against `fmt`, wire against the canonical wire writer); with `--write`, only once the file is known canonical on disk (unchanged, or rewritten), `changed` and `output` (absent from a failed write's report) |
 | `catalog` | without a class, `classes`; with one, `class` (`null` when the class is unknown or a `--param` is malformed) and `params` (the `--param` strings as given). A class is one closed object, the same in both ([below](#a-catalog-class)) |
-| `vocab` | `keywords`, `types`, `tags`, `base_units`, `scale_factors` ([below](#scale-factors)), `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `error_codes`, `vector_codes` and `verify_codes` (`oce-verify`'s load, bind and run codes, pinned to its lists), `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
+| `vocab` | `keywords`, `types`, `tags`, `base_units`, `scale_factors` ([below](#scale-factors)), `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `import_codes` (`oce_author::IMPORT_ERROR_CODES`, in order), `error_codes`, `vector_codes` and `verify_codes` (`oce-verify`'s load, bind and run codes, pinned to its lists), `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
 | `id` | `form` (`cxf`, `text`, `wire`, or `null` before the form is known); `content_id`, only when the input has one (so only with `--json`, exit `0`); `stages` as for `validate`, only once a validation stage of a text or wire file ran (absent after a read, parse or namespace refusal, and for a CXF document) |
+| `import` | `output_form` (`text` or `wire`, always); once the importer accepted the document, `dropped` and `normalised` ([above](#oce-import)), so they are absent after an output-guard, read or importer refusal and present beside an `unspellable` or `write-failed` error; with `-o`, only once the write succeeded, `output` (the path as given) and `bytes`. Never `stages`: no validation stage runs |
 | `verify` | `subject` (the subject's path as given); with `--out`, only once the receipt is written, `passed`, `status` (`pass`, `fail`, `no_data`), `receipt_id` and `output` (`DIR/receipt.json`, with `/`); after a text or wire subject's validation, `stages` as for `validate` |
 
 The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-file`,
 `read-failed`, `input-too-large`, `invalid-namespace`, `unspellable`, `write-failed`,
 `write-needs-file`, `write-needs-text`, `malformed-param`, `unknown-param`, `duplicate-param`,
 `malformed-value`, `ports-unresolvable`, `emit-refused`, `unknown-subject-form`,
-`mutant-outside-directory`, `namespace-needs-authored`, `not-loadable`, `no-content-id`. The wire-form refusal codes are `oce-author`'s: the tool reports
+`mutant-outside-directory`, `namespace-needs-authored`, `not-loadable`, `no-content-id`,
+`output-form-mismatch`, `output-is-input`.
+`unspellable` is `fmt`'s for a wire file the text form cannot spell and `import`'s for a
+sequence the output form cannot spell. The wire-form refusal codes are `oce-author`'s: the tool reports
 `oce_author::WireError::code()` and `location()` and names no refusal itself (issue #495), so the
 sixteen codes of `oce_author::WIRE_CODES` are documented once, in the
 [`oce-author` README](../oce-author/README.md#wire-refusal-codes). `oce vocab --json` lists them
@@ -331,7 +471,7 @@ ordinal or another type's member is `malformed-value`.
 ## Bounds and hostile input
 
 Every read is bounded by its form's limit (`oce_author::MAX_TEXT_BYTES`, `MAX_WIRE_BYTES`, 4 MiB;
-for a CXF document given to `id`, `oce_api::MAX_CXF_BYTES`, 8 MiB):
+for a CXF document given to `id` or `import`, `oce_api::MAX_CXF_BYTES`, 8 MiB):
 a file's size is checked from its metadata before a byte is read (a 100 MB file costs one `stat`),
 and every read, stdin included, stops one byte past the limit. Stdin is bounded in size, not in
 time: a pipe that never closes keeps `oce` waiting. Non-UTF-8, binary junk, an empty file, a
@@ -346,7 +486,10 @@ wrote 416 MB and peaked at 3.1 GB of memory; `CDL.Reals.MultiSum` at `nin=104857
 builds it too, so asking for text does not make a wide class cheaper. Ask for the width you
 mean; a cap on the output is a separate change.
 
-`fmt --write` and `emit -o` write a uniquely named temporary file beside the target
+An `import` report quotes the document: a refusal's `at`, and each `dropped` entry's `subject`
+and `value`. Its size is bounded by the input's, which is bounded at 8 MiB.
+
+`fmt --write`, `emit -o` and `import -o` write a uniquely named temporary file beside the target
 (`.NAME.<pid>.<counter>.oce-tmp`), opened with `create_new` so it never follows a link or
 truncates a file already there, sync it, give it the target's permissions (Unix mode bits) and
 rename it over the target; on any failure the temporary file is removed and the target is
@@ -356,7 +499,9 @@ whatever directory entry is at the target, so a FIFO or device there becomes a r
 replace is atomic, but the directory itself is not fsynced. A target that is a symbolic link is followed: the file it names is replaced and the
 link stays a link (a dangling link is `write-failed`). **The file is replaced, not rewritten in
 place: a hard link to the old inode keeps the old bytes.** `fmt --write` rewrites only when the
-text changes.
+text changes. `emit -o` and `import -o` refuse an output that is their own input file before
+anything is read (`output-is-input`; [above](#oce-import) says what one file is), so neither
+can replace an authored sequence with its CXF or a CXF document with its import.
 
 ## Tests and goldens
 
@@ -391,6 +536,30 @@ For `id`:
   emitted CXF. It also covers stdin against a file, the name rule, the namespace, both size
   bounds, hostile CXF, and the agreement of `oce emit` and `oce id` over every tracked authored
   fixture, with their counts pinned.
+
+For `import`:
+- `tests/import_runs.rs` pins one transcript per outcome class: the text and the wire form of
+  two in-repo fixtures (a G36 corpus fixture and a library rule), the report under `-o` with
+  both lists, stdin, and one refusal per construct outside the authoring subset (a nested
+  composite, a conditional component, an expression value, a block-port attribute,
+  `hasInstance`, `hasConstant`, an array connector, an array sequence parameter), each over a
+  tracked fixture read in place;
+- `tests/import_corpus.rs` is the round trip over every CXF fixture tracked under `crates/`
+  ([above](#the-round-trip)); its table, `tests/fixtures/import_corpus.tsv`, regenerates with
+  the transcripts. It asserts one split by hand, the G36 catalog's, and builds the two shapes
+  of issue #683 that no tracked fixture writes;
+- `tests/import_refusals.rs` earns each of the twenty-seven importer codes a CXF document can
+  earn, from a file and from stdin and in both output forms, names the four no run earns, and
+  holds hostile bytes and the escaped rendering;
+- `tests/output_guards.rs` holds the two `-o` guards, for `import` and for `emit`: the input
+  under another spelling of its path, through a symbolic link and (Unix) a hard link, with
+  nothing written or left behind; every contradicting name; and each file `import` writes read
+  back by name through `validate`, `fmt --check`, `emit` and `id`;
+- `tests/rendering.rs` is the regression test of the escaped rendering over `validate` and
+  `emit` of a wire file whose class carries format and separator characters;
+- `tests/import_files.rs` covers `-o`, the two output forms against each other and against
+  `oce_author::import_cxf`, the read-back refusals, the size bound, a Real's bits through both
+  forms, and the Integer-literal case of the round trip.
 
 The transcripts regenerate only with `OCE_BLESS_CLI=1 cargo nextest run -p oce-cli` (see
 `.agents/project-facts.md`). The `verify` transcripts embed receipts, which carry the engine

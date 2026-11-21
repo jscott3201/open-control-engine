@@ -1,8 +1,11 @@
-//! Reading one authored sequence: the form, a bounded read, and the parse.
+//! Reading one input: an authored sequence's form, the bounded read every verb shares, and the
+//! parse.
 //!
-//! The form comes from `--from` or the extension (`.oce` text, `.json` wire); stdin (`-`) needs
-//! `--from`. Every read is bounded by the form's own limit (`oce_author::MAX_TEXT_BYTES`,
-//! `oce_author::MAX_WIRE_BYTES`): a file's size is checked from its metadata **before** a byte is
+//! An authored sequence's form comes from `--from` or the extension (`.oce` text, `.json` wire);
+//! stdin (`-`) needs `--from`. Every read is bounded by the caller's limit: an authored form's
+//! own (`oce_author::MAX_TEXT_BYTES`, `oce_author::MAX_WIRE_BYTES`), or, for the CXF document
+//! `id` and `import` read through [`read_named`], `oce_api::MAX_CXF_BYTES`. A file's size is
+//! checked from its metadata **before** a byte is
 //! read, and the read itself stops one byte past the limit, so neither an over-size file nor an
 //! endless stdin is ever held in memory. Every refusal is a typed error code, never a panic, and
 //! the input is named only as it was given.
@@ -56,13 +59,7 @@ pub(crate) fn load(source: &Source, stdin: &mut dyn Read, report: &mut Report) -
             return None;
         }
     };
-    let bound = limit(form);
-    let read = if is_stdin(&source.file) {
-        read_bounded(stdin, bound)
-    } else {
-        read_file(Path::new(&source.file), bound)
-    };
-    match read {
+    match read_named(&source.file, limit(form), stdin) {
         Ok(bytes) => Some(Loaded { form, bytes }),
         Err((code, detail)) => {
             report.error(code, detail, None);
@@ -91,6 +88,19 @@ fn form_of(source: &Source) -> Result<Form, (&'static str, String)> {
              --from wire"
                 .to_owned(),
         )),
+    }
+}
+
+/// Read the input `file` names, stdin for `-` and a file otherwise, at most `bound` bytes.
+pub(crate) fn read_named(
+    file: &OsStr,
+    bound: usize,
+    stdin: &mut dyn Read,
+) -> Result<Vec<u8>, (&'static str, String)> {
+    if is_stdin(file) {
+        read_bounded(stdin, bound)
+    } else {
+        read_file(Path::new(file), bound)
     }
 }
 

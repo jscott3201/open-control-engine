@@ -1,0 +1,29 @@
+# oce-verify funnel golden: hostile/series_at_one_instant
+# Hex IEEE-754 bits, `x y` per point. Written by OCE_BLESS_VERIFY, never by hand.
+[reference] 3
+3fe0000000000000 0000000000000000
+3fe0000000000000 bfe778cbdf8ad062
+3fe0000000000000 bfd6ed877f958d24
+[test] 3
+3fe0000000000000 0000000000000000
+3fe0000000000000 bfe778cbdf8ad062
+3fe0000000000000 bfd6ed877f958d24
+[lower_bound] 4
+3fdcb27c661ddd0c bfa5cd5965e17fff
+3fdcb27c661ddd0c bfe8d5a175e8e862
+3fe1a6c1ccf1117a bfe8d5a175e8e862
+3fe1a6c1ccf1117a bfd9a732ac51bd24
+[upper_bound] 3
+3fdcb27c661ddd0c 3fa5cd5965e17fff
+3fe1a6c1ccf1117a 3fa5cd5965e17fff
+3fe1a6c1ccf1117a bfd433dc52d95d24
+[errors] 3
+3fe0000000000000 0000000000000000
+3fe0000000000000 0000000000000000
+3fe0000000000000 0000000000000000
+[figures]
+envelope funnel
+compared 3
+max_error 0000000000000000
+max_error_x none
+first_error_x none

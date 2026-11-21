@@ -462,7 +462,8 @@ impl ImportErrorKind { pub fn code(&self) -> &'static str }   // stable kebab-ca
 
 The out-of-subset kinds map one to one onto the authoring note's out-of-scope list, so the round-trip
 test's exclusion table matches on `kind`, not on a substring of a message. `Display` stays for
-humans; the CLI's JSON report (when an `oce import` command exists) carries `code` and `subject`.
+humans; the CLI's JSON report carries the code and the subject. *(Amended 2026-11-20, issue #514:
+`oce import` exists; the subject is the error's `at`, see [The `oce import` verb](#the-oce-import-verb).)*
 `ImportErrorKind` is `#[non_exhaustive]`, the crate's policy since GitHub #466; consumers branch on
 `code()`, and an in-crate test pins the full kebab-case code list, so a new kind still breaks a test
 (ruling 6).
@@ -692,7 +693,8 @@ the same content id; the report keeps the change visible. *(Landed in GitHub #49
   expression values and block-port attributes (decision 8).
 - `nominal`, `unbounded` and Enum-typed boundaries.
 - Importing CXF dialects other than the flat one, or the prototype's other graph JSON shapes.
-- An `oce import` command (the CLI PR or a follow-up wires it).
+- An `oce import` command (the CLI PR or a follow-up wires it). *(Amended 2026-11-20: issue
+  #514 added it; see [The `oce import` verb](#the-oce-import-verb).)*
 - Vocabulary v1 (descriptions, units) and M8 semantic records.
 
 ## Questions for review (ruled; see below)
@@ -797,3 +799,45 @@ choice open, or the implementation reads a rule more narrowly, the choice is rec
 - **Gate item 1's export comparison** runs for 30 of the 31 fixtures; the 31st,
   `multizone_vav_outdoor_airflow_sumzone` (#458), is compared on its canonical content id only,
   because its `@graph` block order differs from `containsBlock` order.
+
+## The `oce import` verb
+
+Issue #514 (2026-11-20) put `import_cxf` behind a verb, `oce import <FILE> [-o <OUT>] [--wire]`;
+the [`oce` README](../../crates/leverage/oce-cli/README.md#oce-import) is its contract. What the
+verb adds to this note, and the choices the issue left open:
+
+- **One input form.** The verb reads CXF only, so it has no `--from`, stdin needs none, and the
+  file's name is not consulted. `import_graph_v0` is not exposed: the v0 importer is scheduled
+  for deletion.
+- **No validation, so no exit 1.** The verb is the importer and a writer. A sequence it writes
+  may still be one `oce validate` refuses (decision 13 carries a reserved word for the validator
+  to name).
+- **Written only if it reads back.** `print_text` refuses what the text form cannot spell;
+  `to_wire_string` is infallible and can write a string or a list the wire reader refuses. The
+  verb runs the output form's reader over what its writer produced and refuses, as
+  `unspellable`, anything that does not read back equal to the imported sequence. The CXF
+  importer bounds a document only by its 8 MiB, so a sequence can pass every authoring bound:
+  this check is where that is caught.
+- **The report** carries `dropped` and `normalised` (`ImportReport`), in reading order, and a
+  refusal carries `ImportError::code()` with the subject as `at`. `truncated` is the v0
+  importer's list and is not written. The report is stdout under `-o` and on a refusal; without
+  `-o` stdout is the document.
+- **`derived_from` is not settable from the command line.** `ImportOptions::derived_from` stays
+  a library option (decision 15); the written sequence says `derived_from none`.
+- **The output guards** (owner rulings of 2026-11-21). The form written is chosen by `--wire`
+  alone, but an `-o` name `oce` would read as another form is refused (`output-form-mismatch`),
+  so that a file the verb writes is one the other verbs read by name in the form written. And
+  `-o` naming the input file itself, by path, link or (on Unix) hard link, is refused
+  (`output-is-input`), for `oce emit` as well.
+- **The round trip, measured.** `crates/leverage/oce-cli/tests/import_corpus.rs` runs import,
+  then `oce emit` and `oce id`, over every CXF fixture tracked under `crates/` and writes one
+  row each to `crates/leverage/oce-cli/tests/fixtures/import_corpus.tsv`, which is the record;
+  no count is restated here. Import, then `oce emit`, keeps the canonical content id wherever
+  `emit` accepts the sequence, except in two cases. The first is decision 14's re-stamp: a
+  name prefix on the root (`g36.source.`), each such document equal to the original with its
+  root re-stamped. The second this note did not know, and it is a gap, not a design: an
+  Integer literal on a Real parameter, which the importer keeps as written, the emitter writes
+  as a Real, and the engine's id tells apart (issue #683, ruled "normalise at load" on
+  2026-11-21 and built as its own core PR; when it lands the case is gone). One tracked
+  document has it, `crates/oce-cxf/tests/fixtures/pass_through_miniature.jsonld`; no G36
+  fixture and neither in-repo library rule does.

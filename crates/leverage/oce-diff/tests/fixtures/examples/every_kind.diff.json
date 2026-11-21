@@ -1,0 +1,292 @@
+{
+  "base": {
+    "derived_from": null,
+    "sequence": "every_kind_base"
+  },
+  "catalog": "catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892",
+  "graph": [
+    {
+      "kind": "reordered",
+      "list": "blocks",
+      "subject": "blocks"
+    },
+    {
+      "kind": "rewired",
+      "new": "uFirst",
+      "old": "uSecond",
+      "subject": "both.u2"
+    },
+    {
+      "kind": "reordered",
+      "list": "connections",
+      "subject": "connections"
+    },
+    {
+      "kind": "parameter-defaulted",
+      "side": "base",
+      "subject": "delay.delayOnInit",
+      "value": {
+        "boolean": false
+      }
+    },
+    {
+      "kind": "rewired",
+      "new": "uSecond",
+      "old": "uFirst",
+      "subject": "delay.u"
+    },
+    {
+      "class": "CDL.Reals.Sources.Constant",
+      "inputs": [],
+      "kind": "removed",
+      "params": [
+        {
+          "name": "k",
+          "value": {
+            "ref": "gone"
+          }
+        }
+      ],
+      "subject": "dropped"
+    },
+    {
+      "class": "CDL.Reals.Sources.Constant",
+      "inputs": [],
+      "kind": "added",
+      "params": [
+        {
+          "name": "k",
+          "value": {
+            "ref": "fresh"
+          }
+        }
+      ],
+      "subject": "fresher"
+    },
+    {
+      "kind": "reordered",
+      "list": "assignments",
+      "subject": "limit"
+    },
+    {
+      "kind": "reparameterized",
+      "new": {
+        "bits": "0x3fe0000000000000",
+        "real": "0.5"
+      },
+      "old": {
+        "bits": "0x0000000000000000",
+        "real": "0.0"
+      },
+      "subject": "limit.uMin"
+    },
+    {
+      "class": "CDL.Reals.Abs",
+      "confidence": "exact",
+      "from": "oldName",
+      "kind": "renamed",
+      "params": [],
+      "subject": "newName"
+    }
+  ],
+  "head": {
+    "derived_from": "cxf:fnv1a128:0123abcd",
+    "sequence": "every_kind_head"
+  },
+  "interface": [
+    {
+      "kind": "reordered",
+      "subject": "inputs"
+    },
+    {
+      "direction": "in",
+      "display_unit": null,
+      "kind": "removed",
+      "max": null,
+      "min": null,
+      "quantity": null,
+      "subject": "uGone",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "direction": "in",
+      "display_unit": null,
+      "kind": "added",
+      "max": null,
+      "min": null,
+      "quantity": null,
+      "subject": "uNew",
+      "type": "Real",
+      "unit": "K"
+    },
+    {
+      "direction": "in",
+      "kind": "type-changed",
+      "new": "Integer",
+      "old": "Real",
+      "subject": "uType"
+    },
+    {
+      "direction": "in",
+      "kind": "unit-changed",
+      "new": "degC",
+      "old": "K",
+      "subject": "uUnit"
+    },
+    {
+      "direction": "in",
+      "kind": "quantity-changed",
+      "new": "Temperature",
+      "old": "ThermodynamicTemperature",
+      "subject": "uUnit"
+    },
+    {
+      "direction": "in",
+      "kind": "display-unit-changed",
+      "new": "K",
+      "old": "degC",
+      "subject": "uUnit"
+    },
+    {
+      "direction": "in",
+      "kind": "min-changed",
+      "new": {
+        "integer": 1
+      },
+      "old": {
+        "integer": 0
+      },
+      "subject": "uUnit"
+    },
+    {
+      "direction": "in",
+      "kind": "max-changed",
+      "new": {
+        "integer": 11
+      },
+      "old": {
+        "integer": 10
+      },
+      "subject": "uUnit"
+    }
+  ],
+  "metadata": [
+    {
+      "kind": "literal-respelled",
+      "new": "60.0",
+      "old": "60",
+      "subject": "delay.delayTime"
+    },
+    {
+      "kind": "derived-from-changed",
+      "new": "cxf:fnv1a128:0123abcd",
+      "old": null,
+      "subject": "derived_from"
+    },
+    {
+      "kind": "literal-respelled",
+      "new": "1",
+      "old": "1.0",
+      "subject": "first"
+    },
+    {
+      "kind": "comment-changed",
+      "new": " The gain, after.",
+      "old": " The gain, before.",
+      "subject": "gain"
+    },
+    {
+      "kind": "sequence-renamed",
+      "new": "every_kind_head",
+      "old": "every_kind_base",
+      "subject": "sequence"
+    },
+    {
+      "kind": "comment-changed",
+      "new": " Every kind of change, head.",
+      "old": " Every kind of change, base.",
+      "subject": "sequence"
+    },
+    {
+      "kind": "semantic-changed",
+      "new": "Zone_Air_Temperature_Setpoint",
+      "old": "Zone_Air_Temperature_Sensor",
+      "subject": "uTags.brick"
+    }
+  ],
+  "notes": [],
+  "parameters": [
+    {
+      "affects": [
+        "fresher.k"
+      ],
+      "kind": "added",
+      "subject": "fresh",
+      "type": "Real",
+      "value": {
+        "bits": "0x4004000000000000",
+        "real": "2.5"
+      }
+    },
+    {
+      "affects": [
+        "dropped.k"
+      ],
+      "kind": "removed",
+      "subject": "gone",
+      "type": "Real",
+      "value": {
+        "bits": "0x3ff8000000000000",
+        "real": "1.5"
+      }
+    },
+    {
+      "kind": "reordered",
+      "subject": "params"
+    },
+    {
+      "affects": [],
+      "kind": "type-changed",
+      "new": {
+        "bits": "0x4008000000000000",
+        "real": "3.0"
+      },
+      "new_type": "Real",
+      "old": {
+        "integer": 3
+      },
+      "old_type": "Integer",
+      "subject": "retyped"
+    },
+    {
+      "affects": [
+        "gain.k"
+      ],
+      "kind": "changed",
+      "new": {
+        "integer": 21
+      },
+      "old": {
+        "integer": 20
+      },
+      "subject": "tuned",
+      "type": "Real"
+    }
+  ],
+  "schema": "oce-diff/1",
+  "source": "authoring",
+  "summary": {
+    "blocks": {
+      "base_only": 1,
+      "by_name": 4,
+      "head_only": 1,
+      "renamed": 1
+    },
+    "equal": false,
+    "graph_equal": false,
+    "interface_equal": false,
+    "metadata_equal": false,
+    "parameters_equal": false
+  }
+}

@@ -446,6 +446,214 @@ and a gate that accepted any text would restore exactly the false assurance desc
     (issue #632).
 ### Leverage
 
+- **Tolerance mode, part 1: the envelope arithmetic, a port of LBNL funnel proven against the
+  pinned `pyfunnel`, and the `aligned-grid` envelope beside it** (GitHub #687, issue #655;
+  commissioning note, "Envelope", decisions 1, 9, 12, 13 and 22). `oce-verify` gains the
+  arithmetic a tolerance comparison is made with, as a library surface. **No format this project
+  defines changes:** the vector format, its schema, the receipt and every golden receipt are
+  byte-identical, comparison in a run is still exact, `within`, `of` and `when` are still
+  `unknown-key`, and no CLI verb reaches the new functions (#656 and #663 do that).
+  - **`funnel(reference, test, &Tolerances, &CompareLimits)`** is funnel's C library at commit
+    `a12fa96` (`pyfunnel` 2.1.1; `FUNNEL_VERSION` is `"funnel@a12fa96"`), operation for
+    operation: rectangle half-sizes by the **maximum** of the absolute, range-relative and local
+    terms with the `rtol × magnitude` and `1e-10` fallbacks, `x` normalised by its magnitude
+    above `1e-5`, corners chosen by slope signs, loops cut at the intersection of the segments
+    around them, both bounds interpolated at the test's instants and held beyond their end, and
+    funnel's `equ` (`|a - b| <= 1e-10 × max(1, |a|, |b|)`) wherever it says "equal".
+  - **`aligned_grid(...)`** is `oce-conformance`'s `build_bounds` and `compare`, copied (that
+    crate is verification-only and never a dependency): summed tolerance terms, a grid of every
+    sample and rectangle edge, errors at the bounds' breakpoints as well.
+    `ALIGNED_GRID_VERSION` is `"aligned-grid@1"`. `Envelope` names the two, spelled `funnel` and
+    `aligned-grid`, and `Envelope::version` gives the matching version string, the one a receipt
+    will carry as `envelope_version`.
+  - **Types.** `Tolerances` (the six names vectors decision 9 fixes; no default), `Series<'a>`,
+    `Curve` (with `to_csv`, pyfunnel's file form), `FunnelResult` (the five curves, `compared`,
+    `max_error` and its `x`, `first_error_x`), `CompareLimits` (1,048,576 points for `funnel`,
+    32,768 for `aligned-grid`, 2^28 work units of loop removal; lowerable, never raisable) and
+    `CompareError` (`#[non_exhaustive]`, ten stable codes in `COMPARE_ERROR_CODES`).
+  - **`format_g16`** is C's `printf("%.16g")` as glibc writes it, from the exact decimal
+    expansion of the double and this crate's own rounding; no platform `printf` and no
+    standard-library float formatting decides a digit.
+  - **The proof is a differential fixture**, `crates/leverage/oce-verify/tests/fixtures/funnel/`:
+    funnel's own 17 test directories with its licence files, a hostile set of 49, and what
+    `pyfunnel==2.1.1` (wheel pinned by SHA-256, run once on x86_64 Linux by the committed capture
+    script) made of each. The port's five curves, printed with `format_g16`, equal pyfunnel's
+    five files **byte for byte** in all 60 cases pyfunnel writes curves for; the other six
+    (upstream's `fail2` and `fail6`, which funnel itself refuses, and four hostile ones) are
+    refused by the port at the same end. The claim is textual, because `%.16g` cannot round-trip
+    a double, so the port's bits are pinned too (66 hex-bit goldens, `OCE_BLESS_VERIFY`).
+    `format_g16` reproduces glibc's `snprintf` on 4,792 captured doubles. `aligned-grid` equals
+    goldens taken from `oce-conformance` bit for bit on 59 shared cases. No CI job runs Python or
+    reaches the network.
+  - **Where the port differs from funnel, funnel defines no result or would hide one.** A
+    non-finite sample, a decreasing `x` and a negative tolerance are refused with typed errors.
+    A local `x` tolerance above one can make funnel's loop removal read outside its arrays;
+    pyfunnel then writes curves computed from what it read, or crashes, and the port returns
+    `loop-removal-undefined`. A bound or an error that overflows is `non-finite-envelope`, because
+    a NaN bound compares as "inside". Loop removal runs under a work counter, never a clock: the
+    C copies both arrays for every loop it removes, the port edits a gap buffer, and a reference
+    whose searches are quadratic is refused with `work-limit-exceeded`.
+  - **Licence.** `src/funnel/` is a port of funnel's C and a derived work of it; funnel's
+    3-clause BSD licence with LBNL's enhancements clause and its copyright notice are reproduced
+    verbatim in `crates/leverage/oce-verify/LICENSE-funnel`, named in the module header and in the
+    root README's licence section. The crate's `license` field is unchanged (`publish = false`).
+  - **What a caller should know.** The work of loop removal grows with the `x` tolerance's width
+    in samples (9 units per point at one sample, 123 at 1,000 on a random walk), so a series near
+    the point cap under a tolerance thousands of samples wide is refused. On a tick grid from
+    `x = 0` a series is inside its own funnel for every `x` tolerance; funnel itself rejects an
+    identical series when several samples share an instant and there is no `x` tolerance, and
+    when `x` is more than about 1e10 times its step. pyfunnel's own output differs between its
+    x86_64 Linux and arm64 macOS libraries in 38 of the fixture's 306 files; the port pins the
+    x86_64 Linux result. The grid statements are tests.
+  - **Not here:** the Building 33 day of the differential set, captured with the same script in
+    #664 once the trends (#661) and an engine series (#663) exist.
+
+- **`oce import` turns a flat CXF document into the authoring form** (GitHub #688, issue #514).
+  `oce_author::import_cxf` had no command-line surface, and the library converts its corpus by
+  importing each committed rule. `oce import <FILE> [-o <OUT>] [--wire]` prints the sequence as
+  canonical text, or the canonical wire form with `--wire`, exit 0; with `-o` it writes the
+  document atomically and prints the `oce-report/1` report. `crates/leverage/oce-cli` only;
+  `oce-author` and the facade are unchanged. The prototype's v0 graph JSON is not exposed.
+  - **One input form, no judgement.** The verb reads CXF only: no `--from`, stdin needs none
+    and the file's name is not consulted. It validates nothing, so it never exits 1; a sequence
+    it writes may still be one `oce validate` or `oce emit` refuses.
+  - **The report** carries `output_form`, and, once the importer accepted the document, its
+    `dropped` and `normalised` lists in reading order; with `-o`, `output` and `bytes` once the
+    write succeeded. Never `stages`.
+  - **Refusals are exit 2.** An `ImportError` is reported under its own code
+    (`oce_author::IMPORT_ERROR_CODES`) with its subject as the error's `at`; the tool matches no
+    kind. `oce vocab` lists all thirty-one with their meanings as `import_codes` (a new key and
+    a new section of the text listing), and its meanings of exit 0 and exit 2 name the verb. An
+    over-size input is `input-too-large` (read at 8 MiB, `oce_api::MAX_CXF_BYTES`, from
+    metadata before a byte is read), and `unspellable` now also covers a sequence the output
+    form cannot spell.
+  - **A document is written only if `oce` reads it back.** The output form's reader runs over
+    what its writer produced, and anything that does not read back equal to the imported
+    sequence is `unspellable`, with nothing written. The wire writer is infallible and the CXF
+    importer bounds a document only by its size, so without this a 5,000-byte class path would
+    be written into a wire file the wire reader refuses.
+  - **An `-o` name that reads as another form is refused** (owner ruling of 2026-11-21): new
+    code `output-form-mismatch`, exit 2 before anything is read, nothing written. The form is
+    still chosen by `--wire` alone. The name is read by the rule `id` reads a file's name by
+    (`id::form_by_name`, now shared; no new copy of the rule, issue #678): `.oce` is text,
+    `.json` wire, `.jsonld` and `.cxf.json` CXF. So `-o rule.json` needs `--wire`,
+    `--wire -o rule.oce` is refused, a CXF name is refused for either form, and a name that
+    gives no form is accepted. With it, a file `import` writes under a form's name is read by
+    `validate`, `emit`, `fmt` and `id` by name in the form written.
+  - **The round trip, over every CXF fixture tracked under `crates/`.**
+    `tests/import_corpus.rs` runs `oce import`, then `oce emit` and `oce id`, over each
+    `.jsonld` and `.cxf.json` file and writes one row per document to
+    `tests/fixtures/import_corpus.tsv`, a blessed table: a new fixture is classified by one
+    `OCE_BLESS_CLI=1` run (owner ruling of 2026-11-21; `third_party/` is not walked, so a pin
+    advance does not touch the test). At this change, of 212 documents: 143 are refused under
+    a stable code (19 codes occur), and 69 import. Of those, 17 emit to the original's id; 37
+    to the id of the original with its root re-stamped (a name prefix such as `g36.source.`,
+    the importer note's decision 14), all 31 importable G36 fixtures among them; 1 to the id
+    of the original with its Integer literal on a Real parameter written as a Real (issue
+    #683, found here; ruled "normalise at load", after which that class goes); 2 load with a
+    warning, so `oce emit` answers no, and what the emitter alone writes has the original's
+    id; and 12 do not load in an engine and have no id to keep. The importer dropped 397
+    properties and normalised 1 over the 69. The test asserts one split by hand, the G36
+    catalog's (31 import, 15 refused), and fails on an id difference neither known cause
+    explains.
+  - **Tests.** `tests/import_refusals.rs` earns each of the 27 importer codes a CXF document
+    can earn, from a file and stdin and in both output forms, and names the 4 no run earns
+    (the v0 reader's three, and `too-large`, which the bounded read pre-empts).
+    `tests/import_files.rs` covers `-o`, the two forms against each other and against
+    `import_cxf`, the read-back refusals, the size bound, a Real's bits (`-0.0`, a subnormal)
+    through both forms and the Integer-literal case. `tests/output_guards.rs` holds the name
+    rule and feeds each written file back through `validate`, `fmt --check`, `emit` and `id`
+    by name. `tests/import_runs.rs` pins 21 transcripts (two in-repo fixtures and one refusal
+    per construct outside the authoring subset) and `tests/output_guards.rs` 3. Five existing
+    transcripts move: `help_oce` and `usage_no_arguments` list the command, `vocab_text` and
+    `vocab_json` gain the codes, and `help_emit` names the new `-o` rule.
+  - `input::read_named` is the one stdin-or-file bounded read, used by the authored loaders,
+    `id` and `import` (it replaces two inline copies).
+  - The CLI README has the verb's contract; the root README, the leverage README, the
+    architecture page, the importer note ("The `oce import` verb") and the authoring note's
+    CLI section name it, and `.agents/project-facts.md` says how a new fixture is classified.
+- **`oce emit -o` and `oce import -o` refuse to write over their own input** (GitHub #688;
+  owner ruling of 2026-11-21). `oce emit rule.oce -o rule.oce` replaced the authored sequence
+  with its CXF, atomically and without a word. An `-o` that is the input file is now
+  `output-is-input`, exit 2, decided before anything is read, with nothing written. One file
+  is file identity, not spelling: another spelling of the path, a symbolic link to it and, on
+  Unix, a hard link to it (one (device, inode), the rule the mutant reader already used, now
+  `commands/file_identity.rs` for both). On Windows one file is one canonical path, so a hard
+  link is not recognised there. An output that does not exist, a dangling link included, is no
+  file. `tests/output_guards.rs` covers both verbs; `oce vocab` lists the code.
+- **The rendering on stderr no longer writes a document's format, control or separator
+  characters to the terminal** (GitHub #688). `oce validate` and `oce emit` of a wire file
+  quote the file's own strings in a finding (`class-not-found` names the block's `class`), and
+  the wire reader refuses only control characters. So a class holding a right-to-left
+  override (U+202E), a zero-width space (U+200B) or a line separator (U+2028) reached the
+  terminal as it was under `--render`, where it can reorder, hide or split the line a person
+  reads. Every Unicode format (`Cf`) or control (`Cc`) character, and U+2028 and U+2029, in a
+  rendered line is now written as `\u{…}` with at least four upper-case hexadecimal digits
+  (`\u{202E}`), the spelling the engine's messages use, for every command; `import`, which
+  quotes a CXF node's `@id`, is covered by the same step. A backslash is written as it is, so
+  the rendering does not tell U+202E from the characters `\u{202E}` spelled out: the JSON
+  report is the exact form, and it is unchanged. No pinned rendering held such a character,
+  so no transcript moves. `tests/rendering.rs` is the regression test over `validate` and
+  `emit`; `tests/import_refusals.rs` covers a key and an `@id`.
+
+- **`oce-diff`, a structural diff of two authoring models** (GitHub #692, issue #665). A new
+  leverage crate, `crates/leverage/oce-diff` (design note `docs/design/diff.md`, part 1 of 4;
+  the CXF adapter, the blob comparison and the `oce diff` verb are #666 to #668). It depends on
+  `oce-api` and `oce-author` only, is `publish = false`, and is the workspace's 19th member and
+  ninth private one. The facade, `oce-author` and the CLI are unchanged.
+  - **`diff(base, head, options) -> Diff`.** Two `oce_author::Sequence` values in, plain serde
+    data out, tagged `oce-diff/1`: a summary (`equal`, `graph_equal`, `interface_equal`,
+    `parameters_equal`, `metadata_equal`, the block counts), closed-enum notes and four sections,
+    each sorted by subject, then kind, then the rest of the entry. Infallible, and it never
+    validates: a draft with a dangling connection or a repeated name is diffed as it stands.
+    It reads the catalog only for a parameter's literal default and type and loads no engine.
+  - **Identity.** The authored block name: the same name and class path is the same block, the
+    same name with another class path is `removed` plus `added`, and the blocks left over go
+    through the rename pass. `graph_equal` never depends on the pass.
+  - **The rename pass.** A candidate pair has the same class and the same assignments bit for
+    bit; a pair is accepted when its neighbourhood agrees through the current matching and each
+    side has exactly one candidate; `exact` or `high` confidence; at most 8 rounds, 2,048
+    unmatched blocks a side and 65,536 gated pairs (`MAX_RENAME_ROUNDS`,
+    `MAX_RENAME_CANDIDATES`, `MAX_RENAME_PAIRS`), past which the pass does not run and the diff
+    carries `rename-pass-skipped`. A round groups blocks by what they see, so its cost is the
+    links at the unmatched blocks, never the number of pairs.
+  - **Sections.** Graph: `added`, `removed`, `renamed`, `reparameterized`, `rewired`,
+    `reordered`, `parameter-defaulted`, every connection change once, at its target. Parameters:
+    `added`, `removed`, `changed`, `type-changed`, `reordered`, each with the assignments it
+    `affects`. Interface: `added`, `removed`, `type-changed`, `unit-changed`,
+    `quantity-changed`, `display-unit-changed`, `min-changed`, `max-changed`, `reordered`.
+    Metadata: `sequence-renamed`, `derived-from-changed`, `semantic-changed`, `comment-changed`,
+    `literal-respelled`.
+  - **Exact values.** A Real is its shortest round-trip spelling and its bits
+    (`{ "real": "0.6", "bits": "0x3fe3333333333333" }`), never a JSON number, so `-0.0` against
+    `0.0` and one NaN payload against another are differences.
+  - **Renderers.** `render_text` (one line per entry in the text form's syntax) and
+    `render_markdown` (a `Change | Subject | Was | Now` table), pure functions of the data.
+  - **The summary's flags.** A section flag (`graph_equal`, `parameters_equal`,
+    `interface_equal`) is true when its section holds no entry other than `reordered`, as the
+    note's decisions 5 and 16 have it: order is not semantic, and a script that wants "same
+    structure" reads `graph_equal`. `equal` is true only when every section is empty, so it is
+    not the four flags together.
+  - **Reading one back is strict.** Closed objects, every key required (`null` for a value that
+    may be absent), `schema` exactly `oce-diff/1`, a Real's spelling the spelling of its bits,
+    and the summary's flags what the sections give.
+  - **Where the note and the code met.** Six things followed from building it and are written
+    back to the note under "As landed": a boundary's `min` and `max` have kinds of their own
+    (the note predates them, and a bound on an input is inside the canonical content id);
+    `renamed` carries the block's assignments and a parameter `changed` its type, because the
+    text rendering the note shows needs both; a `reordered` graph entry names its list;
+    `derived_from` is `null`, not the word `none`; a comment is carried as the model holds it;
+    and the diff reads a parameter's type from the catalog as well as its literal default,
+    because an Integer literal against the equal Real is one value (`literal-respelled`) only
+    where a Real is expected.
+  - **Evidence.** The note's three worked examples and the literal variant as checked-in pairs
+    with golden JSON, text and Markdown; their expected entries typed by hand from the note; one
+    pair per kind of every section; both caps at their boundaries; every permutation of the
+    examples' blocks; a second implementation of the note's rename rules, pair by pair, agreeing
+    with the crate's on 135,168 enumerated pairs of small models; a single-field edit of every
+    field of the model reported in its section; and the cost at the text form's statement limits
+    and at the pair cap held in counted work.
+
 - **`oce id` prints the canonical content id of a CXF or authoring file** (GitHub #513). The
   id `Engine::content_id` mints (`oce:canon1:`, GitHub #474) had no command-line surface, and
   the library stamps every card with it and compares the stamp with the tool's output.

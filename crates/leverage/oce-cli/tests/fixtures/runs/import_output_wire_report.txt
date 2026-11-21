@@ -1,0 +1,17 @@
+exit: 0
+--- stdout
+{
+  "bytes": 2072,
+  "command": "import",
+  "dropped": [],
+  "errors": [],
+  "findings": [],
+  "input": "rule.cxf.jsonld",
+  "normalised": [],
+  "ok": true,
+  "output": "rule.json",
+  "output_form": "wire",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -14,6 +14,7 @@ Commands:
   vocab     Print the text-form vocabulary, the unit scale factors and every code oce reports
   verify    Replay a vector set against a subject and print the receipt
   id        Print the canonical content id of a CXF document or an authored sequence
+  import    Read a flat CXF document into the authoring form
   help      Print this message or the help of the given subcommand(s)
 
 Options:

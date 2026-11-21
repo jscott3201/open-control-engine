@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "emit",
+  "errors": [
+    {
+      "code": "output-is-input",
+      "detail": "the output is the input file; the sequence would be replaced by its CXF",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "econ.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [],
+  "tool": "oce"
+}
+--- stderr

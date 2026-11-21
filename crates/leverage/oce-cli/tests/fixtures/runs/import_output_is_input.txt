@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "import",
+  "errors": [
+    {
+      "code": "output-is-input",
+      "detail": "the output is the input file; the CXF document would be replaced by its import",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "doc",
+  "ok": false,
+  "output_form": "wire",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "import",
+  "errors": [
+    {
+      "at": "http://example.org#M.p",
+      "code": "array-sequence-parameter",
+      "detail": "an array sequence parameter is outside the subset",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "../../oce-cxf/tests/fixtures/composite_contract/rejected/array_parameter.jsonld",
+  "ok": false,
+  "output_form": "text",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -80,7 +80,8 @@ layout and `oce-api`-only dependency rule (`oce-bless` is allowed as a dev-depen
 golden switch; normal and build edges and dev edges are read separately), then fmt, clippy
 `-D warnings`, rustdoc `-D warnings`, nextest and cargo-machete per member
 (`scripts/ci/leverage-members.sh lane`; with no members it prints `no leverage crates yet`). The
-members are `oce-replay`, `oce-author`, `oce-cli` (the `oce` binary), `oce-vocab` and `oce-verify`.
+members are `oce-replay`, `oce-author`, `oce-cli` (the `oce` binary), `oce-vocab`, `oce-verify` and
+`oce-diff`.
 The lane's `oce-cli` suite holds the M3 **"In-repo rules replay"** evidence (vectors note decision
 19; GitHub #573). `crates/leverage/oce-cli/tests/replay_gate.rs` runs the built `oce verify` over
 both in-repo library rules, read in place under `crates/oce-api/tests/fixtures/library_rules/`. It
@@ -1017,9 +1018,9 @@ validator and a full
 `cargo publish --workspace --locked --dry-run` — with no token and no publish, so a tag can be
 re-cut safely (see [release.yml](../.github/workflows/release.yml), `verify` job). Publishing is a
 separate manual `workflow_dispatch` into the `release` GitHub Environment. Cargo's workspace
-selection includes the 10 publishable members and skips the eight members with `publish = false`:
+selection includes the 10 publishable members and skips the nine members with `publish = false`:
 `oce-bless`, `oce-conformance`, the firmware image `oce-firmware-link` and the leverage crates
-`oce-replay`, `oce-author`, `oce-cli`, `oce-vocab` and `oce-verify`.
+`oce-replay`, `oce-author`, `oce-cli`, `oce-vocab`, `oce-verify` and `oce-diff`.
 No checked-in record pins those sets any more: the guards are each crate's `publish` flag, the
 byte pin on `release.yml` (whose comment names the split) and review.
 

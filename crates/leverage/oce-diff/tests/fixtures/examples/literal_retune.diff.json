@@ -1,0 +1,63 @@
+{
+  "base": {
+    "derived_from": null,
+    "sequence": "ahu_dehum_override"
+  },
+  "catalog": "catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892",
+  "graph": [
+    {
+      "kind": "reparameterized",
+      "new": {
+        "bits": "0x3fe6666666666666",
+        "real": "0.7"
+      },
+      "old": {
+        "bits": "0x3fe3333333333333",
+        "real": "0.6"
+      },
+      "subject": "dehum.uHigh"
+    },
+    {
+      "kind": "reparameterized",
+      "new": {
+        "bits": "0x3fe4cccccccccccd",
+        "real": "0.65"
+      },
+      "old": {
+        "bits": "0x3fe199999999999a",
+        "real": "0.55"
+      },
+      "subject": "dehum.uLow"
+    }
+  ],
+  "head": {
+    "derived_from": null,
+    "sequence": "ahu_dehum_override"
+  },
+  "interface": [],
+  "metadata": [
+    {
+      "kind": "comment-changed",
+      "new": " Dehumidification override, sheet revision B.",
+      "old": " Dehumidification override, sheet revision A.",
+      "subject": "sequence"
+    }
+  ],
+  "notes": [],
+  "parameters": [],
+  "schema": "oce-diff/1",
+  "source": "authoring",
+  "summary": {
+    "blocks": {
+      "base_only": 0,
+      "by_name": 1,
+      "head_only": 0,
+      "renamed": 0
+    },
+    "equal": false,
+    "graph_equal": false,
+    "interface_equal": true,
+    "metadata_equal": false,
+    "parameters_equal": true
+  }
+}

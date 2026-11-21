@@ -1,0 +1,38 @@
+# oce diff every_kind_base -> every_kind_head
+# graph differs; parameters differ; interface differs; metadata differs
+# blocks: 4 by name, 1 renamed, 1 removed, 1 added
+# parameters
++ param fresh : Real = 2.5   # affects fresher.k
+- param gone : Real = 1.5   # affects dropped.k
+~ # params reordered
+~ param retyped : Real = 3.0   # was Integer = 3
+~ param tuned : Real = 21   # was 20; affects gain.k
+# interface
+~ # inputs reordered
+- in uGone : Real @unit K
++ in uNew : Real @unit K
+~ in uType : Integer   # was Real
+~ in uUnit @unit degC   # was K
+~ in uUnit @quantity Temperature   # was ThermodynamicTemperature
+~ in uUnit @displayUnit K   # was degC
+~ in uUnit @min 1   # was 0
+~ in uUnit @max 11   # was 10
+# graph
+~ # blocks reordered
+~ uFirst -> both.u2   # was uSecond
+~ # connections reordered
+~ delay.delayOnInit not assigned   # was false; the catalog default
+~ uSecond -> delay.u   # was uFirst
+- block dropped = CDL.Reals.Sources.Constant(k = gone)
++ block fresher = CDL.Reals.Sources.Constant(k = fresh)
+~ # assignments of limit reordered
+~ limit.uMin = 0.5   # was 0.0
+> block newName = CDL.Reals.Abs   # was oldName; renamed, exact
+# metadata
+~ # literal delay.delayTime respelled 60.0; was 60
+~ derived_from cxf:fnv1a128:0123abcd   # was none
+~ # literal first respelled 1; was 1.0
+~ # comment on gain changed
+~ sequence every_kind_head   # was every_kind_base
+~ # comment on sequence changed
+~ # semantic uTags.brick changed

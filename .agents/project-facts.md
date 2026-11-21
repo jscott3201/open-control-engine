@@ -441,6 +441,24 @@ or anything that moves an `oce-verify` golden receipt, moves them too. `tests/re
 compares the binary's stdout with `oce-verify`'s golden receipts in place, so it fails until those
 are re-blessed in `oce-verify`.
 
+Since issue #514 a new CXF fixture in any crate moves this crate too. `tests/import_corpus.rs`
+runs `oce import`, then `oce emit` and `oce id`, over every `.jsonld` and `.cxf.json` file git
+tracks under `crates/` and writes one row per document (its class, the class's detail, the
+importer's dropped and normalised counts, the path) to `tests/fixtures/import_corpus.tsv`. So
+adding, removing or renaming a tracked CXF fixture in a crate fails that test until the table is
+re-blessed: `git add` the fixture (the corpus is `git ls-files`), run
+`OCE_BLESS_CLI=1 cargo nextest run -p oce-cli --test import_corpus`, run it again without the
+switch, read the new row and say in the PR what class the fixture landed in. Nothing else is
+edited by hand: the test counts only the G36 catalog's split (31 import, 15 refused), which moves
+only when the importer's subset does. `third_party/` is not walked, so a pin advance does not
+touch this test. The run fails, and a bless does not help, when a round trip's content id
+differs for a reason other than the two the test knows (the root's name prefix, and issue #683's
+Integer literal on a Real parameter): that is a finding to report, not a row. A change to what
+the importer accepts, to the emitter or to the content id moves rows the same way; #683 itself
+will turn the `same-id-real-literals` rows into `same-id`. The `import_*` transcripts read G36
+corpus fixtures and `oce-cxf` contract fixtures in place, so an edit to one of those moves its
+transcript.
+
 ## The `oce-vocab` data files move with catalog names and the vendored CXF-Core
 
 `crates/leverage/oce-vocab/data/generated.json` is regenerated and compared byte for byte by the
@@ -469,8 +487,8 @@ keywords outside the strict profile; `tests/schema_conformance.rs` holds each cl
 to the keys the reader knows, so a key added to a shape needs its arm in `src/decode.rs` and its
 row in that test's `OBJECTS` table. A shape or a doc comment in `src/dto.rs` moves the schema.
 Regenerate with `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the
-switch, and say in the PR what moved and why. That switch rewrites the schema and the golden
-receipts, and nothing else.
+switch, and say in the PR what moved and why. That switch rewrites the schema, the golden
+receipts and the funnel port's bit goldens, and nothing else.
 
 `tests/fixtures/receipts/*.receipt.json` are the golden receipts (issue #520): the pass receipts of
 the two in-repo library rules (vector files and `rule.cxf.jsonld` subjects read in place from
@@ -506,6 +524,69 @@ byte, which is why `scripts/ci/classify-changes.sh` lists `docs/design/vectors.m
 test reads (an edit to the note runs the determinism lane); copy the block again when it changes. A new `VectorErrorKind`
 does not build until `VECTOR_ERROR_CODES` lists its code in order, and needs its case in
 `tests/error_codes.rs`.
+
+## The funnel port carries funnel's licence
+
+`crates/leverage/oce-verify/src/funnel/` is a statement-by-statement port of LBNL funnel's C, so
+it is a derived work under funnel's licence (3-clause BSD with LBNL's enhancements clause), not
+only under this repository's. `crates/leverage/oce-verify/LICENSE-funnel` is that licence and
+copyright notice, verbatim; the module header and the root README's licence section point to it.
+Keep the three together when the module moves. Nothing checks it mechanically: `cargo deny check
+licenses` reads each crate's `license` field, which stays `MIT OR Apache-2.0` for this
+unpublished crate, and the package policy has no licence rule.
+
+## The funnel fixture is captured, not blessed; only its bit goldens are
+
+`crates/leverage/oce-verify/tests/fixtures/funnel/` is the differential fixture of the funnel port
+(issue #655): funnel's own 17 test directories and a hostile set, with what the pinned
+`pyfunnel==2.1.1` wrote for each under `expected/`, and glibc's `%.16g` of 4,792 doubles under
+`printf/`. Those come from `capture/capture.sh`, run by hand on x86_64 Linux (the wheel's library
+there has no fused multiply-add), and are regenerated **only by an issue that says so**; no CI job
+runs Python or installs pyfunnel, and no switch rewrites them. The comparison is `%.16g` text
+equality, byte for byte, with no numeric tolerance: if the port stops matching, the port is wrong.
+
+`funnel/golden/*.txt` are different: the port's own five curves per case as hex bits, written by
+`OCE_BLESS_VERIFY` like the receipts. A change to the port's arithmetic moves them; bless them
+only after the differential test passes, and say in the PR which cases moved and why.
+
+`tests/fixtures/aligned_grid/conformance/*.txt` are the bounds `oce-conformance` builds for the
+smaller cases, as bits, taken once with `aligned_grid/capture/conformance_bounds.rs` (run as an
+example of that crate, by hand). `oce-verify` copies that envelope and may not depend on the
+crate, so these goldens are what holds the copy to the original; they are never blessed. Adding
+a hostile case moves three pinned counts (`tests/support/funnel_cases.rs`,
+`tests/funnel_differential.rs`, `tests/aligned_grid.rs`) and the fixture README's tables. Four of
+upstream's input files end their lines with CRLF, so the fixture has a `.gitattributes` that
+marks `upstream/` and `expected/` as bytes.
+
+## The `oce-diff` goldens move with the catalog and the diff's own surface
+
+`crates/leverage/oce-diff/tests/fixtures/examples/` holds five pairs of authoring text
+(`*.base.oce`, `*.head.oce`: the diff note's three worked examples, the literal variant of the
+first, and `every_kind`, whose diff holds every kind of every section) and three goldens for each:
+the diff as JSON, as text and as a Markdown table (`*.diff.json`, `*.diff.txt`, `*.diff.md`; issue
+#665). `tests/example_goldens.rs` compares them byte for byte. The pairs are written by hand and
+never blessed. The goldens move in three cases:
+
+- a catalog change of any kind: every diff records `oce_api::catalog_content_id`, so the
+  `catalog` line of all five JSON goldens moves, and nothing else does unless a literal default
+  or a parameter type the pairs rest on moved too;
+- a change to the diff's data (a field, a kind, the sort) or to what it reports;
+- a change to a renderer's template.
+
+Regenerate with `OCE_BLESS_DIFF=1 cargo nextest run -p oce-diff`, run it again without the switch,
+and say in the PR which files moved and why. The switch never touches the two oracles.
+`tests/note_examples.rs` holds the worked examples' expected JSON, text and table rows typed by
+hand from `docs/design/diff.md`. When the note's examples change, copy them there by hand; when
+that test fails, the note or the code is wrong, not the test. `tests/rename_oracle.rs` holds a
+second implementation of the note's rename rules, pair by pair, and pinned counts over its
+enumerated families; a change to the rules changes both implementations, and the counts are
+re-derived from the reference, never from the crate. No test reads the note, so editing
+it is a docs-only change. The format stays `oce-diff/1` until 1.0.0 (issue #509): it changes in
+place and the goldens are re-blessed.
+
+What a diff costs is pinned in counted work by the unit tests of `src/work.rs` (key comparisons
+and elements visited, compiled into the crate's own test build), as `oce-author` pins validation.
+A new index, group or sort over the models is keyed by `Counted`, or the bound cannot see it.
 
 ## The frame driver lives in `oce-graph`, and its run digests move with behaviour
 

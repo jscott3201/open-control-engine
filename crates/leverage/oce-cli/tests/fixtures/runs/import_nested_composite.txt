@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "import",
+  "errors": [
+    {
+      "at": "http://example.org#g36.source.cooling_only_controller.actAirSet",
+      "code": "nested-composite",
+      "detail": "a second composite (nested composites are outside the subset)",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "../../oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld",
+  "ok": false,
+  "output_form": "text",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

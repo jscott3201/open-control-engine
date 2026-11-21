@@ -1,0 +1,20 @@
+# oce-verify funnel golden: hostile/single_point
+# Hex IEEE-754 bits, `x y` per point. Written by OCE_BLESS_VERIFY, never by hand.
+[reference] 1
+4008000000000000 4000000000000000
+[test] 1
+4008000000000000 4000666666666666
+[lower_bound] 2
+4007333333333333 3ffe666666666666
+4008ccccccccccce 3ffe666666666666
+[upper_bound] 2
+4007333333333333 4000cccccccccccd
+4008ccccccccccce 4000cccccccccccd
+[errors] 1
+4008000000000000 0000000000000000
+[figures]
+envelope funnel
+compared 1
+max_error 0000000000000000
+max_error_x none
+first_error_x none

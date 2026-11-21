@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "import",
+  "errors": [
+    {
+      "code": "not-found",
+      "detail": "no such file",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "missing.jsonld",
+  "ok": false,
+  "output_form": "text",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

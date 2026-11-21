@@ -1,0 +1,31 @@
+exit: 0
+--- stdout
+Read a flat CXF document into the authoring form.
+
+Stdout is the sequence as canonical text (the wire form with --wire), exit 0. With -o it is written to a file and stdout is the JSON report, which lists what the importer read and did not carry. A document the importer refuses is exit 2 with the report. The sequence is not validated: run validate or emit on the result.
+
+Usage: oce import [OPTIONS] <FILE>
+
+Arguments:
+  <FILE>
+          The flat CXF document, or `-` for stdin
+
+Options:
+  -o, --output <OUTPUT>
+          Write the sequence here (atomically) and print the report on stdout; `-` is stdout. The name must not read as another form (.oce is text, .json is wire, .jsonld and .cxf.json are CXF) and must not be the input file
+
+      --render <RENDER>
+          When to write a human-readable rendering of the report to stderr
+          
+          [default: auto]
+          [possible values: auto, always, never]
+
+      --wire
+          Write the wire form (strict JSON) instead of the text form
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+--- stderr
