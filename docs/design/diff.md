@@ -732,6 +732,21 @@ difference is resolved here or in the code.
   candidates of one another and the work is the links at the unmatched blocks. The pair cap is
   still counted and enforced.
 
+What starting the CXF adapter (issue #666) showed about the facade, ruled by the owner on
+2026-11-21 (issue #701, GitHub #702):
+
+- **`Topology` carries the boundary and the root.** The view held no type, `quantity`, `unit`,
+  `displayUnit` or bound of a boundary, so two documents with different content ids could have
+  equal topologies and the adapter could not have reported `interface_equal`; and it held no
+  root id, which the block paths of a one-block document do not give. `oce_api::Topology` now
+  has exactly the boundary facts the content id encodes: `boundary_inputs` (path, type, the
+  three labels, the effective bounds), the type and labels on each `DeclaredOutput`, and
+  `model_id`, the root. `diff_topology` keeps its two-topology signature.
+- **Two consequences for #666.** No public load path produces an unnamed block, so that case
+  of the adapter is tested below the public entry. And the claim across levels runs one way:
+  equal content ids never coexist with a non-empty graph or interface section; an
+  interface-only change moves the id while the graph section stays empty.
+
 ## Review rulings
 
 The architect pass on the draft (orchestrator, 2026-11-08) ruled:

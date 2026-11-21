@@ -450,11 +450,28 @@ is matched after the same expansion, on every node that carries one:
   `http://qudt.org/schema/qudt#`, as the modelica-json translations bind `qudt`, and
   `http://qudt.org/schema/qudt/`, as QUDT and CXF-Core do. The compact key `qudt:hasUnit` is that
   property only through a `qudt` prefix bound to one of the two.
-  **A known gap, not a guarantee:** where the document leaves `qudt` unbound, or binds it to any
-  other namespace but the S231 one, the key names no modeled property, stays in the pass-through
-  map and is not read, and the load reports nothing. The node then has no unit, or the unit
-  another key gives it. Whether such a key should be refused is open (issue #675). Bind `qudt` to
-  one of the two namespaces, as every modelica-json translation does, or write `S231:unit`.
+  **A `hasUnit` key that reading does not reach is refused, never left unread** (issue #675, owner
+  ruling of 2026-11-20). It is matched on the expanded IRI, on every `@graph` node, whether the
+  document writes a compact key, a full IRI or a `@context` term:
+  - `qudt:hasUnit` in a document that binds no `qudt` prefix is `malformed-document`;
+  - `hasUnit` in a near miss of either schema namespace is `vocabulary-namespace-mismatch`: the
+    `https:` spelling, the scheme or the host in another letter case, a default or empty port,
+    and a missing, repeated or wrong separator (`https://qudt.org/schema/qudt#hasUnit`,
+    `http://QUDT.org/…`, `http://qudt.org:80/…`, `http://qudt.org/schema/qudthasUnit`,
+    `http://qudt.org/schema/qudt/#hasUnit`);
+  - `hasUnit` in the QUDT unit vocabulary (`http://qudt.org/vocab/unit#` or `…/unit/`), or a near
+    miss of it, is `vocabulary-namespace-mismatch` too: `qudt` bound to the `unit:` IRI, or the
+    key written `unit:hasUnit`.
+
+  The message names the key and the namespace as written, each in at most 64 bytes with format
+  and control characters escaped, and the two namespaces the property is read in. Bind `qudt` to
+  one of them, as every modelica-json translation does, or write `S231:unit`. Under a prefix
+  bound to a namespace that is no QUDT one and no near miss of one, `hasUnit` is that
+  vocabulary's property and passes through unread, as any other vocabulary's key does:
+  `http://example.org/qudt#`, and also another host (`http://www.qudt.org/schema/qudt#`), a path
+  in another letter case and a versioned IRI (`http://qudt.org/2.1/schema/qudt#`), none of which
+  RFC 3986 reads as the same namespace. So does a key that differs in its prefix, its local name
+  or its letter case (`QUDT:hasUnit` with no such binding, `qudt:HasUnit`).
 - **`displayUnit`** is also `S231:hasDisplayUnit`.
 - **`quantity` has no other spelling.** `qudt:hasQuantityKind` is not read: modelica-json writes
   `PressureDifference` as the kind `Pressure`, so reading it would report the wrong quantity. The
@@ -571,9 +588,8 @@ one). Another prefix bound to the published IRI is the same namespace under anot
 accepted. A node that writes one property in two spellings
 (an explicit `null` or `[]` compact key counts; `S231:unit` beside `qudt:hasUnit` is two
 spellings of `unit`, and is refused even when the two values agree) and a key that names a modeled
-property only after trimming surrounding whitespace (`"S231:hasUnit "`; `"qudt:hasUnit "` too
-where `qudt` is bound to a QUDT schema namespace, since only then does the trimmed key name the
-property) are refused as
+property only after trimming surrounding whitespace (`"S231:hasUnit "`, `"qudt:hasUnit "`), or
+is a refused `hasUnit` key only then (`"qudt:hasUnit "` with no `qudt` binding), are refused as
 `malformed-document`, as is any key — modeled or
 not — written more than once on one `@graph` node, since JSON parsing would silently keep only one
 of the values. None of these is silently
@@ -611,7 +627,14 @@ above, and a token with both is this refusal, once.
 The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
 identity space: each resolves on `get_output` and `watch` as an alias for
 its driving internal connector's slot, and `Topology.boundary_outputs` enumerates the
-`(path, driver_path)` pairs. Declared names stay out of `point_list` and `IoSummary`; committed
+`(path, driver_path)` pairs, each with the output's exact type and its `quantity`, `unit` and
+`displayUnit` after that unification. `Topology.boundary_inputs` lists the executable boundary
+inputs in the order and with the type and effective bounds of `Engine::input_definitions`, each
+with its declaration's three labels, and `Topology.model_id` is the root identity
+`LoadReport::model_id` reports. Together these are the boundary facts the
+[canonical content id](design/content-id.md) encodes, so two loaded models with equal topologies
+have equal ids (the converse does not hold: a topology also carries the namespace and the
+loader's order). Declared names stay out of `point_list` and `IoSummary`; committed
 frames enumerate only the executable boundary. Their unit, quantity, and bounds are one §7.10 contract:
 conflicts refuse at load and one-sided values propagate to the unset peer. Frame preparation never accepts
 a declared output name. Because the driver's connector supplies host point metadata, a declared

@@ -128,7 +128,8 @@ MUTATIONS=(
 expected=()
 for mutation in "${MUTATIONS[@]}"; do
   IFS='|' read -r file before after method <<< "$mutation"
-  line="$(grep -nF "$before" "$COPY/$file" | head -1 | cut -d: -f1)"
+  line="$(grep -nF "$before" "$COPY/$file" || true)"
+  line="$(head -n 1 <<< "$line" | cut -d: -f1)"
   if [ -z "$line" ]; then
     fail "mutation: $file no longer contains '$before'; update this control"
     continue

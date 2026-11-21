@@ -258,7 +258,7 @@ with a documented JSON report on stdout for agents and the exit rule 0 yes / 1 n
 ```sh
 # econ_enable.oce is crates/leverage/oce-author/tests/fixtures/text/econ_enable.oce; copy it here first
 cargo run -p oce-cli -- validate econ_enable.oce        # findings as JSON; exit 0, 1 or 2
-cargo run -p oce-cli -- emit econ_enable.oce -o out.json # validate, then write flat CXF
+cargo run -p oce-cli -- emit econ_enable.oce -o out.cxf.json # validate, then write flat CXF
 cargo run -p oce-cli -- fmt --check econ_enable.oce     # exit 1 when not canonical
 cargo run -p oce-cli -- catalog CDL.Reals.MultiSum --param nin=3
 cargo run -p oce-cli -- catalog CDL.Reals.PID           # what each port and parameter means
@@ -323,8 +323,10 @@ or `oce emit` judges the result. Import then `emit` keeps the content id whereve
 accepts the sequence, except for a name prefix on the root (every imported G36 fixture,
 re-stamped) and, until #683 lands, an Integer literal on a Real parameter; the
 [per-fixture table](crates/leverage/oce-cli/tests/fixtures/import_corpus.tsv) records what
-every CXF fixture under `crates/` does. Neither `import -o` nor `emit -o` will replace its own
-input, and `import -o` refuses a name `oce` would read as another form.
+every CXF fixture under `crates/` does. Neither `import -o` nor `emit -o` will replace
+the input file named on the command line, nor, on Unix, a regular file redirected as stdin
+(`< doc`); a pipe (`cat doc | oce emit - -o doc`) and, on Windows, stdin are not checked. Each
+refuses a name `oce` would read as another form.
 
 Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457) and checking a
 sequence parameter's unit suffix against the block parameter it feeds (#590); `oce check` (#574)
@@ -340,7 +342,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
 | **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Released as v0.5.0: `oce-author`'s model, builder, wire form and pinned schema, two-stage validator, emitter, text form and importer; the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`); vocabulary v1 (`oce-vocab`), served through `oce catalog` and read by the text form for time-unit suffixes. The agent-usable gate row moves to the milestone that lands the benchmark harness (owner decision, 2026-11-09) |
-| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in, shipped in v0.5.0; the `oce id` verb, which prints the content id of a file, the `oce import` verb, which turns a flat CXF document into the authoring form, and the first part of the structural diff (`oce-diff`: the authoring diff, the rename pass and the renderers) are in since. Of the tolerance mode, the envelope arithmetic is in on `development`: `oce_verify::funnel`, a port of LBNL funnel whose curves print as the pinned `pyfunnel==2.1.1`'s do, byte for byte, on funnel's own test set and a hostile set, and the `aligned-grid` envelope beside it. The vector keys that ask for a tolerance and the commissioning verifier are next |
+| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in, shipped in v0.5.0; the `oce id` verb, which prints the content id of a file, the `oce import` verb, which turns a flat CXF document into the authoring form, and the first part of the structural diff (`oce-diff`: the authoring diff, the rename pass and the renderers) are in since. Of the tolerance mode, the envelope arithmetic is in on `development`: `oce_verify::funnel`, a port of LBNL funnel whose curves print as the pinned `pyfunnel==2.1.1`'s do, byte for byte, on funnel's own test set and a hostile set, and the `aligned-grid` envelope beside it. Of the commissioning verifier (OBC §12), the first of seven parts is in on `development`: `oce-verify` reads the test spec (`oce/commissioning-spec/v1`: OBC §12.7 Listing 12.1 as published, comments removed before the strict reader) and the point mapping, as typed values or typed refusals. The vector keys that ask for a tolerance and the rest of the commissioning verifier are next |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
 | **M6** Reference host | `oce-host`: cadence, staleness limits, the non-finite policy, degraded mode and safe-state outputs as tested code; BOPTEST client and a Docker runtime | Planned, in parallel with M7 |
@@ -516,7 +518,10 @@ funnel's own licence: a 3-clause BSD licence with one added clause on enhancemen
 2020 The Regents of the University of California through Lawrence Berkeley National Laboratory.
 Its licence and copyright notice are reproduced verbatim in
 [`LICENSE-funnel`](crates/leverage/oce-verify/LICENSE-funnel) at that crate's root, so the notice
-ships with the port wherever the crate does. funnel's own test inputs, vendored as test data under
+ships with the port wherever the crate does. `oce-verify`'s `license` field says so,
+`(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`: it is the one crate here that is not under the dual
+licence alone, and `deny.toml` allows that identifier for it and for no other crate. funnel's own
+test inputs, vendored as test data under
 `crates/leverage/oce-verify/tests/fixtures/funnel/upstream/`, carry the same two files beside them.
 
 `crates/oce-cxf/tests/fixtures/unicode/` holds a verbatim excerpt of the Unicode Character

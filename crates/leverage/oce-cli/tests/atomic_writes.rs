@@ -85,10 +85,14 @@ mod unix {
     fn emit_output_to_a_new_file_is_owner_only() {
         let dir = scratch("new_file_mode");
         fs::write(dir.join("econ.oce"), clean()).expect("input");
-        let run = oce_in(&dir, &["emit", "econ.oce", "-o", "out.json"], b"");
+        let run = oce_in(&dir, &["emit", "econ.oce", "-o", "out.cxf.json"], b"");
         assert_eq!(run.code, 0, "{}", run.transcript());
-        assert_eq!(mode(&dir.join("out.json")), 0o600);
-        assert_eq!(names(&dir), ["econ.oce", "out.json"], "no temporary file");
+        assert_eq!(mode(&dir.join("out.cxf.json")), 0o600);
+        assert_eq!(
+            names(&dir),
+            ["econ.oce", "out.cxf.json"],
+            "no temporary file"
+        );
     }
 
     #[test]
@@ -108,12 +112,16 @@ mod unix {
             );
 
             fs::write(dir.join("econ.oce"), clean()).expect("input");
-            fs::write(dir.join("out.json"), b"old").expect("output");
-            fs::set_permissions(dir.join("out.json"), fs::Permissions::from_mode(wanted))
+            fs::write(dir.join("out.cxf.json"), b"old").expect("output");
+            fs::set_permissions(dir.join("out.cxf.json"), fs::Permissions::from_mode(wanted))
                 .expect("chmod");
-            let run = oce_in(&dir, &["emit", "econ.oce", "-o", "out.json"], b"");
+            let run = oce_in(&dir, &["emit", "econ.oce", "-o", "out.cxf.json"], b"");
             assert_eq!(run.code, 0, "{}", run.transcript());
-            assert_eq!(mode(&dir.join("out.json")), wanted, "emit -o at {wanted:o}");
+            assert_eq!(
+                mode(&dir.join("out.cxf.json")),
+                wanted,
+                "emit -o at {wanted:o}"
+            );
         }
     }
 
@@ -137,11 +145,11 @@ mod unix {
     fn emit_output_through_a_dangling_link_fails_typed() {
         let dir = scratch("dangling_link");
         fs::write(dir.join("econ.oce"), clean()).expect("input");
-        symlink("missing/out.json", dir.join("out.json")).expect("link");
-        let run = oce_in(&dir, &["emit", "econ.oce", "-o", "out.json"], b"");
+        symlink("missing/out.cxf.json", dir.join("out.cxf.json")).expect("link");
+        let run = oce_in(&dir, &["emit", "econ.oce", "-o", "out.cxf.json"], b"");
         assert_eq!(run.code, 2, "{}", run.transcript());
         assert_eq!(run.report()["errors"][0]["code"], "write-failed");
-        assert_eq!(names(&dir), ["econ.oce", "out.json"]);
+        assert_eq!(names(&dir), ["econ.oce", "out.cxf.json"]);
     }
 
     #[test]

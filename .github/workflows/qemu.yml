@@ -59,8 +59,10 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends qemu-system-arm qemu-system-misc
           dpkg-query -W -f '${Package} ${Version}\n' qemu-system-arm qemu-system-misc
-          qemu-system-arm --version | head -n 1
-          qemu-system-riscv32 --version | head -n 1
+          version="$(qemu-system-arm --version)"
+          head -n 1 <<< "$version"
+          version="$(qemu-system-riscv32 --version)"
+          head -n 1 <<< "$version"
       - name: Run the images under QEMU and diff them against the host reference
         run: bash scripts/ci/emulate-firmware.sh
       - name: Upload the runs' output

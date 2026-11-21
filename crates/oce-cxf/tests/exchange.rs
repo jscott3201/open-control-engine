@@ -34,7 +34,8 @@ mod binary_layout;
 // Helpers that several modules share, declared once for the whole binary.
 mod bless;
 mod render;
-// The composite the unit-spelling tests share (`resolve_unit_spellings`, `resolve_unit_iris`).
+// The composite the unit-spelling tests share (`resolve_unit_spellings`, `resolve_unit_iris`,
+// `resolve_unread_qudt_has_unit`).
 mod unit_documents;
 
 mod export_cascade_naming;
@@ -113,6 +114,7 @@ mod resolve_type_near_miss;
 mod resolve_typing_controls;
 mod resolve_unit_iris;
 mod resolve_unit_spellings;
+mod resolve_unread_qudt_has_unit;
 mod resolve_unused_boundary_input;
 mod resolve_vocabulary_namespace;
 mod resolve_vocabulary_terms;

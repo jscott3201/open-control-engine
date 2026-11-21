@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "emit",
+  "errors": [
+    {
+      "code": "output-form-mismatch",
+      "detail": "the output is CXF and its name reads as wire: a name ending in .oce is read as text and in .json as wire; name it .jsonld or .cxf.json, or give it no such extension",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "econ.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [],
+  "tool": "oce"
+}
+--- stderr

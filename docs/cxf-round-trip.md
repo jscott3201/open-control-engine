@@ -97,6 +97,8 @@ modelica-json and `CXF-Core.jsonld` do not write a unit under `S231:unit`. They 
 | `S231:displayUnit`, `S231:hasDisplayUnit` | `displayUnit` |
 | `S231:quantity` | `quantity` |
 | `qudt:hasQuantityKind` | not read: it stays in the pass-through map |
+| `qudt:hasUnit` where the document binds no `qudt` prefix | refused, `malformed-document` (issue #675) |
+| `hasUnit` in a near miss of a QUDT schema namespace (`https:`, the scheme or host in another case, a default port, a missing, repeated or wrong separator) or in the QUDT unit vocabulary | refused, `vocabulary-namespace-mismatch` (issue #675) |
 
 The value's shape decides how it is read, not its key:
 

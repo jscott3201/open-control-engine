@@ -1,0 +1,201 @@
+{
+  "controller": {
+    "deviceId": 9007199254740993,
+    "nested": [
+      1,
+      2.5,
+      {
+        "a": [
+          true,
+          false,
+          "caf\u00e9 \ud83d\ude00"
+        ],
+        "b": null
+      }
+    ],
+    "networkAddress": "192.0.2.0/24"
+  },
+  "modelJsonDirectory": [
+    "any",
+    "strict",
+    "JSON",
+    -0.0,
+    1e16,
+    {}
+  ],
+  "references": [
+    {
+      "controllerOutput": "trends/out.csv",
+      "cxf": "cxf/a b/s\u00e9quence.json",
+      "envelope": "aligned-grid",
+      "expected": [],
+      "funnelReference": "trend",
+      "generateJson": null,
+      "indicatorSources": [
+        {
+          "columns": {},
+          "format": "csv",
+          "path": "trends/indicator.csv",
+          "timeColumn": "time"
+        }
+      ],
+      "indicators": {
+        "ahu.1.TSup": [
+          "occupied"
+        ],
+        "ahu.1.y*": [
+          "ahu.1.uFan",
+          "fanSta.y",
+          "ahu.1.uFan"
+        ],
+        "ahu.1.z": []
+      },
+      "inputs": [
+        {
+          "columns": {
+            "Occ": "occ_sensor_bni_1",
+            "Supply Air Temp (\u00b0F)": "Supply Air Temp"
+          },
+          "format": "csv",
+          "hold": {
+            "maxAge": 15.0
+          },
+          "path": "trends/in puts.csv",
+          "timeColumn": "Time Stamp"
+        },
+        {
+          "columns": {
+            "10": "b",
+            "2": "a",
+            "3": "c"
+          },
+          "format": "combiTimeTable",
+          "hold": {
+            "maxAge": -0.0
+          },
+          "path": "trends/more.mos",
+          "table": "tab1",
+          "timeColumn": 1
+        }
+      ],
+      "model": "Buildings./*not a comment*/ \u00c9cole // nor this \ud83c\udf21",
+      "outputs": {
+        "ahu.1.?Dam": {},
+        "ahu.1.TSup": {
+          "atolx": 5,
+          "atoly": 1,
+          "ltolx": 0,
+          "ltoly": 0.001,
+          "rtolx": 0.0,
+          "rtoly": 0.02
+        },
+        "ahu.1.y*": {
+          "atoly": 0.5,
+          "rtoly": 0
+        },
+        "ahu.1.yFan": {
+          "atoly": 0.25
+        }
+      },
+      "parameters": {
+        "alpha.Ti": 30.0,
+        "alpha.k": -0.25,
+        "mid.enabled": true,
+        "zeta.k": 1,
+        "\u00e9t\u00e9.n": -7
+      },
+      "pointNameMapping": [
+        {
+          "cdl": {
+            "name": "TSup",
+            "type": "float",
+            "unit": "K"
+          },
+          "device": {
+            "name": "Supply Air Temp",
+            "type": "float",
+            "unit": "degF"
+          }
+        },
+        {
+          "cdl": {
+            "name": "uOccSen",
+            "type": "int"
+          },
+          "device": {
+            "name": "occ_sensor_bni_1",
+            "type": "bool"
+          }
+        },
+        {
+          "cdl": {
+            "name": "yFan",
+            "type": "float",
+            "unit": "1"
+          },
+          "device": {
+            "name": "VFD \u00b0 Cmd",
+            "type": "float",
+            "unit": "%"
+          }
+        }
+      ],
+      "runController": {
+        "retries": [
+          0,
+          -1
+        ],
+        "when": "never"
+      },
+      "sampling": 0.5,
+      "sequence": "ahu.1",
+      "window": {
+        "start": -0.0,
+        "stop": 86400.0
+      }
+    },
+    {
+      "model": "M",
+      "sequence": "s"
+    },
+    {
+      "envelope": "funnel",
+      "funnelReference": "engine",
+      "generateJson": [
+        [
+          [
+            [
+              [
+                "deep"
+              ]
+            ]
+          ]
+        ]
+      ],
+      "indicators": {},
+      "inputs": [],
+      "model": "N",
+      "outputs": {},
+      "parameters": {},
+      "pointNameMapping": "maps/points.json",
+      "sequence": "t",
+      "window": {
+        "start": 1e-7,
+        "stop": 1e-7
+      }
+    }
+  ],
+  "sampling": 120.0,
+  "schema": "oce/commissioning-spec/v1",
+  "time": {
+    "origin": "2018-06-07T00:00:00.250-07:00"
+  },
+  "tolerances": {
+    "atolx": 10.0,
+    "atoly": 0,
+    "ltolx": 1e-5,
+    "ltoly": 0.0001,
+    "rtolx": -0.0,
+    "rtoly": 0.002
+  }
+}

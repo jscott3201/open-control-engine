@@ -1,6 +1,7 @@
-//! The two guards on `-o` (owner rulings of 2026-11-21, GitHub #688): `emit -o` and `import -o`
-//! refuse an output that is the input file, and `import -o` refuses a name `oce` would read as
-//! another form than the one written. Each is a usage error decided before anything is read:
+//! The two guards on `-o` (owner rulings of 2026-11-21, GitHub #688, #697): `emit -o` and
+//! `import -o` refuse an output that is the input file (on Unix, standard input opened on a
+//! regular file included), and refuse a name `oce` would read as another form than the one
+//! written (for `emit`, the CXF form: `.oce` and `.json` are refused). Each is a usage error decided before anything is read:
 //! exit 2 with the report, and nothing written, replaced or left beside the target.
 //!
 //! "The input file" is file identity (`file_identity::same_file`): the same path in another
@@ -12,7 +13,7 @@ mod support;
 use std::fs;
 use std::path::Path;
 
-use support::{Run, author_fixture, case_in, crate_dir, oce_in, scratch};
+use support::{Run, author_fixture, case_in, crate_dir, oce_in, oce_in_with_stdin_file, scratch};
 
 fn fixture(relative: &str) -> Vec<u8> {
     fs::read(crate_dir().join(author_fixture(relative))).expect("fixture")
@@ -129,7 +130,7 @@ fn a_different_file_and_stdin_are_not_the_input() {
     let text = fixture("text/econ_enable.oce");
     let run = oce_in(
         &dir,
-        &["emit", "-", "--from", "text", "-o", "econ.oce"],
+        &["emit", "-", "--from", "text", "-o", "stdin.cxf.json"],
         &text,
     );
     assert_eq!(run.code, 0, "{}", run.transcript());
@@ -146,9 +147,9 @@ fn a_missing_input_is_reported_as_missing_not_as_the_output() {
     let dir = workspace("guard_missing");
     let import = oce_in(&dir, &["import", "nope", "-o", "nope"], b"");
     assert_eq!(refusal(&import), "not-found");
-    let emit = oce_in(&dir, &["emit", "nope.oce", "-o", "nope.oce"], b"");
+    let emit = oce_in(&dir, &["emit", "nope", "--from", "text", "-o", "nope"], b"");
     assert_eq!(refusal(&emit), "not-found");
-    assert!(!dir.join("nope").exists() && !dir.join("nope.oce").exists());
+    assert!(!dir.join("nope").exists());
 }
 
 #[cfg(unix)]
@@ -204,6 +205,78 @@ mod unix {
     }
 
     #[test]
+    fn a_file_opened_as_stdin_is_the_input_for_both_verbs_under_any_name_of_it() {
+        let dir = workspace("guard_stdin_file");
+        fs::copy(dir.join("econ.cxf.json"), dir.join("doc")).expect("copy");
+        fs::copy(dir.join("econ.oce"), dir.join("text-doc")).expect("copy");
+        symlink("doc", dir.join("link")).expect("link");
+        fs::hard_link(dir.join("doc"), dir.join("twin")).expect("hard link");
+        symlink("text-doc", dir.join("text-link")).expect("link");
+        fs::hard_link(dir.join("text-doc"), dir.join("text-twin")).expect("hard link");
+        let before = snapshot(&dir);
+        for output in ["doc", "./doc", "sub/../doc", "link", "twin"] {
+            for flags in [&[][..], &["--wire"][..]] {
+                let args = [&["import", "-", "-o", output], flags].concat();
+                let run = oce_in_with_stdin_file(&dir, &args, &dir.join("doc"));
+                assert_eq!(refusal(&run), "output-is-input", "{output} {flags:?}");
+                assert_eq!(snapshot(&dir), before, "{output}: something was written");
+            }
+        }
+        for output in [
+            "text-doc",
+            "./text-doc",
+            "sub/../text-doc",
+            "text-link",
+            "text-twin",
+        ] {
+            let args = ["emit", "-", "--from", "text", "-o", output];
+            let run = oce_in_with_stdin_file(&dir, &args, &dir.join("text-doc"));
+            assert_eq!(refusal(&run), "output-is-input", "{output}");
+            // No stage ran: the guard is decided before the read.
+            assert_eq!(run.report()["stages"], serde_json::json!([]));
+            assert_eq!(snapshot(&dir), before, "{output}: something was written");
+        }
+    }
+
+    #[test]
+    fn a_file_opened_as_stdin_is_not_the_input_of_another_output() {
+        let dir = workspace("guard_stdin_other_file");
+        // The same bytes under another name are another file; so is a file that is not there yet.
+        let args = ["emit", "-", "--from", "text", "-o", "out.cxf.json"];
+        let run = oce_in_with_stdin_file(&dir, &args, &dir.join("econ.oce"));
+        assert_eq!(run.code, 0, "{}", run.transcript());
+        fs::write(dir.join("doc"), b"stale").expect("doc");
+        let args = ["emit", "-", "--from", "text", "-o", "doc"];
+        let run = oce_in_with_stdin_file(&dir, &args, &dir.join("econ.oce"));
+        assert_eq!(run.code, 0, "{}", run.transcript());
+        let run = oce_in_with_stdin_file(
+            &dir,
+            &["import", "-", "-o", "imported"],
+            &dir.join("econ.cxf.json"),
+        );
+        assert_eq!(run.code, 0, "{}", run.transcript());
+        // `-o -` is stdout, whatever stdin is.
+        let args = ["emit", "-", "--from", "text", "-o", "-"];
+        let run = oce_in_with_stdin_file(&dir, &args, &dir.join("econ.oce"));
+        assert_eq!(run.code, 0, "{}", run.transcript());
+    }
+
+    #[test]
+    fn a_stdin_that_is_a_device_is_never_the_input() {
+        // `oce emit - -o /dev/null < /dev/null`: the same device node, but no file to replace.
+        let dir = workspace("guard_stdin_device");
+        let null = Path::new("/dev/null");
+        for args in [
+            &["emit", "-", "--from", "text", "-o", "/dev/null"][..],
+            &["import", "-", "-o", "/dev/null"][..],
+        ] {
+            let run = oce_in_with_stdin_file(&dir, args, null);
+            let code = &run.report()["errors"][0]["code"];
+            assert_ne!(code, "output-is-input", "{args:?}: {}", run.transcript());
+        }
+    }
+
+    #[test]
     fn a_dangling_link_is_not_the_input_and_fails_as_a_write() {
         let dir = workspace("guard_dangling");
         symlink("missing/out", dir.join("dangling")).expect("link");
@@ -211,6 +284,36 @@ mod unix {
         assert_eq!(run.code, 2, "{}", run.transcript());
         assert_eq!(run.report()["errors"][0]["code"], "write-failed");
     }
+}
+
+#[test]
+fn a_pipe_carrying_the_bytes_of_the_output_is_not_checked_and_the_output_is_replaced() {
+    // The documented limit: only a regular file as stdin is the input; a pipe is no file.
+    let dir = workspace("guard_stdin_pipe");
+    fs::copy(dir.join("econ.cxf.json"), dir.join("doc")).expect("copy");
+    let run = oce_in(
+        &dir,
+        &["import", "-", "-o", "doc"],
+        &fixture("emit/econ_enable.cxf.json"),
+    );
+    assert_eq!(run.code, 0, "{}", run.transcript());
+    assert!(
+        fs::read(dir.join("doc"))
+            .expect("doc")
+            .starts_with(b"sequence ")
+    );
+    fs::copy(dir.join("econ.oce"), dir.join("text-doc")).expect("copy");
+    let run = oce_in(
+        &dir,
+        &["emit", "-", "--from", "text", "-o", "text-doc"],
+        &fixture("text/econ_enable.oce"),
+    );
+    assert_eq!(run.code, 0, "{}", run.transcript());
+    assert!(
+        fs::read(dir.join("text-doc"))
+            .expect("doc")
+            .starts_with(b"{")
+    );
 }
 
 // --- the output's name against the form written ---
@@ -307,6 +410,109 @@ fn every_file_import_writes_under_a_form_name_is_read_back_by_name_in_that_form(
     }
 }
 
+/// The names `emit -o` refuses: CXF written under a name `oce` reads as text or as wire.
+const EMIT_REFUSED_NAMES: [&str; 6] = [
+    "out.oce",
+    "out.json",
+    "sub/out.oce",
+    "sub/out.json",
+    "./out.json",
+    "sub/../out.oce",
+];
+
+/// The names `emit -o` accepts: CXF names, and names that give no form (the rule is
+/// case-sensitive).
+const EMIT_ACCEPTED_NAMES: [&str; 9] = [
+    "out.jsonld",
+    "out.cxf.json",
+    "sub/out.cxf.json",
+    "out",
+    "out.txt",
+    "out.OCE",
+    "out.JSON",
+    "out.wire",
+    ".hidden",
+];
+
+#[test]
+fn emit_refuses_an_output_name_that_reads_as_text_or_wire_and_writes_nothing() {
+    let dir = workspace("guard_emit_name");
+    let before = snapshot(&dir);
+    for name in EMIT_REFUSED_NAMES {
+        for input in ["econ.oce", "econ.json"] {
+            let run = oce_in(&dir, &["emit", input, "-o", name], b"");
+            assert_eq!(refusal(&run), "output-form-mismatch", "{input} {name}");
+            assert_eq!(run.report()["stages"], serde_json::json!([]));
+            assert_eq!(snapshot(&dir), before, "{name}: something was written");
+            assert!(
+                snapshot(&dir.join("sub")).is_empty(),
+                "{name}: something was left in sub"
+            );
+        }
+        // Decided before the input is looked at: stdin, a missing file, an unreadable document
+        // and a sequence with an error finding all answer the same.
+        let stdin = oce_in(&dir, &["emit", "-", "--from", "text", "-o", name], b"junk");
+        assert_eq!(refusal(&stdin), "output-form-mismatch", "{name}");
+        let no_form = oce_in(&dir, &["emit", "-", "-o", name], b"junk");
+        assert_eq!(refusal(&no_form), "output-form-mismatch", "{name}");
+        let missing = oce_in(&dir, &["emit", "nope.oce", "-o", name], b"");
+        assert_eq!(refusal(&missing), "output-form-mismatch", "{name}");
+        let namespace = oce_in(
+            &dir,
+            &["emit", "econ.oce", "--namespace", "bad", "-o", name],
+            b"",
+        );
+        assert_eq!(refusal(&namespace), "output-form-mismatch", "{name}");
+        assert_eq!(snapshot(&dir), before, "{name}: something was written");
+    }
+}
+
+#[test]
+fn emit_refuses_a_contradicting_name_for_an_input_with_an_error_finding() {
+    let dir = workspace("guard_emit_name_findings");
+    let stage_one = crate_dir().join("tests/fixtures/inputs/stage_one.oce");
+    fs::copy(stage_one, dir.join("stage_one.oce")).expect("copy");
+    let before = snapshot(&dir);
+    let run = oce_in(&dir, &["emit", "stage_one.oce", "-o", "out.json"], b"");
+    assert_eq!(refusal(&run), "output-form-mismatch");
+    assert_eq!(snapshot(&dir), before);
+}
+
+#[test]
+fn emit_accepts_the_cxf_names_and_the_names_that_give_no_form() {
+    let dir = workspace("guard_emit_accepted");
+    let stdout = oce_in(&dir, &["emit", "econ.oce"], b"");
+    assert_eq!(stdout.code, 0, "{}", stdout.transcript());
+    for name in EMIT_ACCEPTED_NAMES {
+        let run = oce_in(&dir, &["emit", "econ.oce", "-o", name], b"");
+        assert_eq!(run.code, 0, "{name}: {}", run.transcript());
+        assert_eq!(run.report()["output"], name);
+        assert_eq!(fs::read(dir.join(name)).expect("the output"), stdout.stdout);
+    }
+    let dash = oce_in(&dir, &["emit", "econ.json", "-o", "-"], b"");
+    assert_eq!(dash.stdout, stdout.stdout, "-o - is stdout");
+}
+
+#[test]
+fn every_file_emit_writes_under_a_cxf_name_is_read_back_by_name_as_cxf() {
+    let dir = workspace("guard_emit_read_back");
+    let expected = oce_in(&dir, &["id", "econ.oce"], b"");
+    assert_eq!(expected.code, 0, "{}", expected.transcript());
+    for name in ["out.jsonld", "out.cxf.json"] {
+        let run = oce_in(&dir, &["emit", "econ.oce", "-o", name], b"");
+        assert_eq!(run.code, 0, "{name}: {}", run.transcript());
+        let id = oce_in(&dir, &["id", name], b"");
+        assert_eq!(id.stdout, expected.stdout, "{name}: {}", id.transcript());
+        // `validate` reads authored forms only, so by name a CXF file is `id`'s to read.
+        let from_stdin = oce_in(
+            &dir,
+            &["id", "-", "--from", "cxf"],
+            &fs::read(dir.join(name)).expect("read"),
+        );
+        assert_eq!(from_stdin.stdout, expected.stdout, "{name}");
+    }
+}
+
 // --- the transcripts ---
 
 #[test]
@@ -330,5 +536,11 @@ fn the_refusals_are_pinned() {
         "emit_output_is_input",
         2,
         &["emit", "econ.oce", "-o", "econ.oce"],
+    );
+    case_in(
+        &dir,
+        "emit_output_form_mismatch",
+        2,
+        &["emit", "econ.oce", "-o", "out.json"],
     );
 }

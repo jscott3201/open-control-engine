@@ -213,8 +213,9 @@ enum Command {
         /// The instance namespace every IRI starts with; must end in `#`, `/` or `:`.
         #[arg(long)]
         namespace: Option<String>,
-        /// Write the CXF here (atomically) and print the report on stdout; `-` is stdout. It
-        /// must not be the input file.
+        /// Write the CXF here (atomically) and print the report on stdout; `-` is stdout. The
+        /// name must not read as text or wire (.oce, .json) and the file must not be the input
+        /// (on Unix, nor the file stdin was opened from).
         #[arg(short = 'o', long = "output")]
         output: Option<OsString>,
     },
@@ -283,7 +284,8 @@ enum Command {
 
 /// The streams one run reads and writes, and whether stderr is a terminal.
 pub struct Streams<'a> {
-    /// Standard input (`-`).
+    /// Standard input (`-`). The overwrite guard of `-o` compares the process's own file
+    /// descriptor 0 (Unix), so a reader that is not the process's stdin is never checked.
     pub stdin: &'a mut dyn Read,
     /// Standard output: exactly one document per run.
     pub stdout: &'a mut dyn Write,

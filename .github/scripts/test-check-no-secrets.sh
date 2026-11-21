@@ -292,9 +292,24 @@ run_scan() {
   out="$(cd "$dir" && env "$@" bash "$scan" 2>&1 < /dev/null)" || out_status=$?
 }
 
-has_line() { printf '%s\n' "$out" | grep -Fxq -- "$1"; }
-has_text() { printf '%s\n' "$out" | grep -Fq -- "$1"; }
+has_line() { grep -Fxq -- "$1" <<< "$out"; }
+has_text() { grep -Fq -- "$1" <<< "$out"; }
 count_lines() { printf '%s\n' "$out" | grep -c -- "$1" || true; }
+# The two readers' own control (issue #693). They used to pipe `printf '%s\n' "$out"` into a quiet
+# grep, which exits at its first match: a printf still writing then failed on the broken pipe, and
+# under pipefail a line that was there read as absent. With the match first and more after it
+# than a pipe holds, that writer could never finish, so both must find it here. Both must still
+# read their argument literally, and has_line must still want the whole line.
+out="$(
+  echo 'planted first line'
+  awk 'BEGIN { for (i = 0; i < 20000; i++) print "filler line " i " of a planted scan output, to overfill a pipe" }'
+)"
+if ! has_line 'planted first line' || ! has_text 'first line' ||
+  has_line 'planted first' || has_text 'planted.first' || has_text 'absent line'; then
+  echo "FAIL: has_line or has_text misread an output with its match on the first of 20001 lines"
+  exit 1
+fi
+out=""
 # Every match the last scan reported, as `label<TAB>path`, sorted.
 reported() {
   printf '%s\n' "$out" | awk '
@@ -335,7 +350,10 @@ suite() {
   suite_failures=0
   root="$tmp/run"
   only_label=""
-  [ -z "$suite_only" ] || only_label="$(label_of_check "$suite_only" | head -n 1)"
+  if [ -n "$suite_only" ]; then
+    only_label="$(label_of_check "$suite_only")"
+    only_label="$(head -n 1 <<< "$only_label")"
+  fi
 
   # The labels planted here, and those of the near misses, are exactly the scan's, each scan line
   # in the one shape read here.

@@ -8,7 +8,14 @@
 //! errors (exit `2`), and so is an `-o` that is the input file (`output-is-input`, decided before
 //! anything is read: the same file by `file_identity::same_file`, so another spelling of the
 //! path, a symbolic link to it and, on Unix, a hard link to it), which would replace the authored
-//! sequence with its CXF.
+//! sequence with its CXF. On Unix the same holds for stdin (`-`) when the shell made file
+//! descriptor 0 a regular file (`emit - --from text -o doc < doc`, `file_identity::stdin_is_file`);
+//! on Windows stdin is not checked.
+//!
+//! The output's name must not contradict the CXF written (`output-form-mismatch`, also decided
+//! before anything is read): a name `id::form_by_name` reads as text (`.oce`) or wire (`.json`)
+//! is refused, so a file this verb writes is never one the other verbs misread. `.jsonld` and
+//! `.cxf.json` are CXF and accepted; a name that rule reads no form from is accepted.
 
 use std::ffi::OsStr;
 use std::path::Path;
@@ -16,11 +23,12 @@ use std::path::Path;
 use oce_author::{DOCUMENT_TOO_LARGE, EmitError, EmitOptions, Severity, emit, validate};
 use serde_json::Value;
 
+use super::id::{form_by_name, form_name};
 use super::validate::record;
-use super::{Outcome, report_for, same_file, write_atomically};
+use super::{Outcome, report_for, same_file, stdin_is_file, write_atomically};
 use crate::input::{self, Parsed};
 use crate::report::Report;
-use crate::{Exit, Source, Streams, codes};
+use crate::{Exit, IdForm, Source, Streams, codes};
 
 /// Run `emit`.
 pub(crate) fn run(
@@ -32,14 +40,9 @@ pub(crate) fn run(
     let mut report = report_for("emit", &source.file);
     let output = output.filter(|path| !input::is_stdin(path));
     if let Some(path) = output
-        && !input::is_stdin(&source.file)
-        && same_file(Path::new(&source.file), Path::new(path))
+        && let Err((code, detail)) = output_accepted(&source.file, path)
     {
-        report.error(
-            codes::OUTPUT_IS_INPUT,
-            "the output is the input file; the sequence would be replaced by its CXF",
-            None,
-        );
+        report.error(code, detail, None);
         return refused(report);
     }
     let Some(loaded) = input::load(source, streams.stdin, &mut report) else {
@@ -92,6 +95,34 @@ pub(crate) fn run(
             }
         }
     }
+}
+
+/// Whether `-o output` may be written for the input `input`: it must not be the input file (for
+/// stdin, the file descriptor 0 points at), and its name must not read as text or wire.
+fn output_accepted(input: &OsStr, output: &OsStr) -> Result<(), (&'static str, String)> {
+    let is_input = if input::is_stdin(input) {
+        stdin_is_file(Path::new(output))
+    } else {
+        same_file(Path::new(input), Path::new(output))
+    };
+    if is_input {
+        return Err((
+            codes::OUTPUT_IS_INPUT,
+            "the output is the input file; the sequence would be replaced by its CXF".to_owned(),
+        ));
+    }
+    if let Some(named @ (IdForm::Text | IdForm::Wire)) = form_by_name(output) {
+        return Err((
+            codes::OUTPUT_FORM_MISMATCH,
+            format!(
+                "the output is CXF and its name reads as {}: a name ending in .oce is read as \
+                 text and in .json as wire; name it .jsonld or .cxf.json, or give it no such \
+                 extension",
+                form_name(named),
+            ),
+        ));
+    }
+    Ok(())
 }
 
 /// The emitter refused: stage-1 findings (exit 1), an over-size document (exit 1) or a malformed

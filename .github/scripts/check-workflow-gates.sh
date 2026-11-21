@@ -25,6 +25,7 @@ CRATES_DIR="${OCE_CRATES_DIR:-crates}"
 FIRMWARE_DIR="${OCE_FIRMWARE_DIR:-firmware}"
 GATE_SCRIPT="${OCE_GATE_SCRIPT:-.agents/gate.sh}"
 NEXTEST_CONFIG="${OCE_NEXTEST_CONFIG:-.config/nextest.toml}"
+SHELL_SCRIPT_DIRS="${OCE_SHELL_SCRIPT_DIRS:-.github/scripts scripts}"
 
 require_file() {
   path="$1"
@@ -86,8 +87,10 @@ require_job_order() {
     found && /^  [^ ]/ { exit }
     found && !/^[[:space:]]*#/ { print }
   ' "$path")"
-  first_line="$(grep -nF -- "$first" <<< "$job_body" | head -n 1 | cut -d: -f1 || true)"
-  second_line="$(grep -nF -- "$second" <<< "$job_body" | head -n 1 | cut -d: -f1 || true)"
+  first_line="$(grep -nF -- "$first" <<< "$job_body" || true)"
+  first_line="$(head -n 1 <<< "$first_line" | cut -d: -f1)"
+  second_line="$(grep -nF -- "$second" <<< "$job_body" || true)"
+  second_line="$(head -n 1 <<< "$second_line" | cut -d: -f1)"
   if [ -z "$first_line" ] || [ -z "$second_line" ] || [ "$first_line" -ge "$second_line" ]; then
     echo "FAIL: $path job $job is missing required gate pattern: $label"
     exit 1
@@ -570,7 +573,8 @@ require_job_needs() {
   path="$1"
   job="$2"
   need="$3"
-  if ! job_needs "$path" "$job" | grep -qx -- "$need"; then
+  local needs
+  if ! needs="$(job_needs "$path" "$job")" || ! grep -qx -- "$need" <<< "$needs"; then
     echo "FAIL: $path job $job does not need $need"
     exit 1
   fi
@@ -658,12 +662,13 @@ require_identical_job() {
   first="$1"
   second="$2"
   job="$3"
-  local one two
+  local one two delta
   one="$(job_definition "$first" "$job")"
   two="$(job_definition "$second" "$job")"
   if [ -z "$one" ] || [ "$one" != "$two" ]; then
     echo "FAIL: job $job is not defined identically in $first and $second"
-    diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") | head -n 20 | sed 's/^/  /' || true
+    delta="$(diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") || true)"
+    [ -z "$delta" ] || head -n 20 <<< "$delta" | sed 's/^/  /' || true
     exit 1
   fi
 }
@@ -695,12 +700,13 @@ require_same_job_commands() {
   first="$1"
   second="$2"
   job="$3"
-  local one two
+  local one two delta
   one="$(job_commands "$first" "$job" per-pr)"
   two="$(job_commands "$second" "$job" release)"
   if [ -z "$one" ] || [ "$one" != "$two" ]; then
     echo "FAIL: job $job does not run the same steps in $first and $second"
-    diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") | head -n 20 | sed 's/^/  /' || true
+    delta="$(diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") || true)"
+    [ -z "$delta" ] || head -n 20 <<< "$delta" | sed 's/^/  /' || true
     exit 1
   fi
 }
@@ -723,14 +729,15 @@ workflow_env() {
 require_same_workflow_env() {
   first="$1"
   second="$2"
-  local one two
+  local one two delta
   one="$(workflow_env "$first")"
   two="$(workflow_env "$second")"
   case " $3 " in *" first "*) one="$(grep -v '^  CHECKOUT_REF:' <<< "$one" || true)" ;; esac
   case " $3 " in *" second "*) two="$(grep -v '^  CHECKOUT_REF:' <<< "$two" || true)" ;; esac
   if [ "$one" != "$two" ]; then
     echo "FAIL: $first and $second do not set the same workflow-level env"
-    diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") | head -n 20 | sed 's/^/  /' || true
+    delta="$(diff <(printf '%s\n' "$one") <(printf '%s\n' "$two") || true)"
+    [ -z "$delta" ] || head -n 20 <<< "$delta" | sed 's/^/  /' || true
     exit 1
   fi
 }
@@ -764,20 +771,20 @@ refuse_failure_masks() {
   bad="$(grep -Eo '\$\{\{[^}]*\}\}' <<< "$lines" | grep -Eo "'[^']*'|\"[^\"]*\"" | grep -E '[|&;+]' || true)"
   if [ -n "$bad" ]; then
     echo "FAIL: $path contains a refused gate pattern: a masked failure (an expression literal that spells a shell operator or option)"
-    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    head -n 5 <<< "$bad" | sed 's/^/  /'
     exit 1
   fi
   code="$(sed -E 's/\$\{\{[^}]*\}\}//g' <<< "$lines")"
   bad="$(grep -En '\|\||\|[[:space:]]*\\$|^[[:space:]]*\||;[[:space:]]*(true|:|exit[[:space:]]+0+)[[:space:]]*$|(^|[^&])&[[:space:]]*$|(^|[^[:alnum:]_-])set([[:space:]]+[^;&|#]*)?[[:space:]]\+|(^|[^[:alnum:]_-])shopt[[:space:]]+([^;&|#]*[[:space:]])?-[[:alnum:]]*u' <<< "$code" || true)"
   if [ -n "$bad" ]; then
     echo "FAIL: $path contains a refused gate pattern: a masked failure (||, a split |, a trailing ; true, ; exit 0 or &, set with a + option, or shopt -u), which lets a failing command read as green"
-    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    head -n 5 <<< "$bad" | sed 's/^/  /'
     exit 1
   fi
   bad="$(grep -E "(^|[[:space:]{,\"'-])[\"']?shell[\"']?[[:space:]]*:" <<< "$code" | grep -Ev '^[[:space:]]*(- )?shell: bash[[:space:]]*$' || true)"
   if [ -n "$bad" ]; then
     echo "FAIL: $path sets a shell other than exactly \`shell: bash\`, which can drop errexit and pipefail"
-    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    head -n 5 <<< "$bad" | sed 's/^/  /'
     exit 1
   fi
 }
@@ -1048,7 +1055,7 @@ require_build_env_untouched() {
   ' "$path")"
   if [ -n "$bad" ]; then
     echo "FAIL: $path sets build or shell environment below the workflow level:"
-    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    head -n 5 <<< "$bad" | sed 's/^/  /'
     echo "  The rule is require_build_env_untouched in .github/scripts/check-workflow-gates.sh. Set such a variable in the workflow-level env: instead (pinned there as pinned_workflow_env, alike in all three gating workflows), or drop it. Another \$GITHUB_PATH line needs the rule's one allowed line changed."
     exit 1
   fi
@@ -1184,7 +1191,7 @@ refuse_masked_step_status() {
   ' "$path")"
   if [ -n "$bad" ]; then
     echo "FAIL: $path contains a refused gate pattern: a masked step status (an exit with no or a zero status, a trap that exits so, an exec or a && list before the last command, or a background &), which lets a failing command read as green"
-    printf '%s\n' "$bad" | head -n 5 | sed 's/^/  /'
+    head -n 5 <<< "$bad" | sed 's/^/  /'
     echo "  The rule is refuse_masked_step_status in .github/scripts/check-workflow-gates.sh. Make a && chain the step's last command or split it into lines (a mid-script \`cd x && cmd\` becomes \`cd x\` and \`cmd\` on lines of their own), remove the exit, the trap or the exec, and run a background command in the foreground."
     exit 1
   fi
@@ -1204,7 +1211,7 @@ refuse_masked_step_status() {
 # or lose their JOB_LANES entry (where ci_ok.py would read their skip as a failure).
 require_lane_filter() {
   path="$1"
-  local conditions expected actual job condition lane want got
+  local conditions expected actual job condition lane want got job_ids
   conditions="$(job_conditions "$path")"
   expected=""
   while IFS=$'\t' read -r job condition; do
@@ -1246,7 +1253,7 @@ require_lane_filter() {
     gate-fixtures=always package-publication-contract=always; do
     job="${want%%=*}"
     lane="${want#*=}"
-    if ! workflow_jobs "$path" | grep -qx -- "$job"; then
+    if ! job_ids="$(workflow_jobs "$path")" || ! grep -qx -- "$job" <<< "$job_ids"; then
       echo "FAIL: $path is missing the $job job"
       exit 1
     fi
@@ -1505,8 +1512,10 @@ require_mdbook_cache() {
     echo "FAIL: $path job $job sets restore-keys on the mdBook cache; a prefix restore could serve a stale binary"
     exit 1
   fi
-  cache_line="$(grep -En 'uses:[[:space:]]*actions/cache@' <<< "$body" | head -n1 | cut -d: -f1)"
-  install_line="$(grep -En 'run: bash scripts/docs/install-mdbook\.sh target/mdbook-bin$' <<< "$body" | head -n1 | cut -d: -f1)"
+  cache_line="$(grep -En 'uses:[[:space:]]*actions/cache@' <<< "$body")"
+  cache_line="$(head -n 1 <<< "$cache_line" | cut -d: -f1)"
+  install_line="$(grep -En 'run: bash scripts/docs/install-mdbook\.sh target/mdbook-bin$' <<< "$body")"
+  install_line="$(head -n 1 <<< "$install_line" | cut -d: -f1)"
   if [ -z "$cache_line" ] || [ -z "$install_line" ] || [ "$cache_line" -ge "$install_line" ]; then
     echo "FAIL: $path job $job must restore the mdBook cache before the install step"
     exit 1
@@ -1658,6 +1667,74 @@ require_gate_script_prefetch() {
     echo "FAIL: $GATE_SCRIPT must run \`$step_line\`, the whole line, before its first oce-cxf or workspace test step (issue #610)"
     exit 1
   fi
+}
+
+# No gate script, CI script or workflow step pipes into a reader that stops before the end of its
+# input (issue #693). Under `pipefail` a pipeline's status is that of its last command to fail. A
+# quiet grep exits at its first match and `head` after its last line; a writer still writing then
+# gets EPIPE or SIGPIPE and fails, so the pipeline fails although the reader found what it was
+# asked for. bash writes one line at a time, so `printf '%s\n' "$text"` piped into a quiet grep
+# lost that race whenever the match was not on the last line and the reader won: a fixture
+# harness reported a correct result as a failure three times in two days.
+#
+# The spelling every script here uses instead is a here-string, which bash writes whole before
+# the reader starts, so no writer is left to fail: `grep -q -- "$needle" <<< "$text"` and
+# `head -n 5 <<< "$text"`, with the output of a command captured into a variable first.
+#
+# A line scan, and a tripwire like refuse_failure_masks: on every non-comment line it refuses a
+# single `|` (or `|&`) followed by `grep`, `egrep` or `fgrep` whose leading options include `-q`
+# (alone, in a cluster such as `-Fq`, or as `--quiet` or `--silent`; the options end at `--` or
+# at the first word that is not one), or by `head`, on one line or over a line that ends in `|`.
+# It does not see a reader behind a variable, a function or `xargs`, a `-q` after an option's
+# argument or after the pattern, or the other readers that can stop early (`grep -m`, `sed q`,
+# `awk` with `exit`, `read`).
+refuse_piped_early_exit_reader() {
+  path="$1"
+  local bad
+  bad="$(awk '
+    function trim(s) { sub(/^[[:space:]]+/, "", s); sub(/[[:space:]]+$/, "", s); return s }
+    /^[[:space:]]*#/ { next }
+    {
+      reader = "(head|[ef]?grep([[:space:]]+(-[^-[:space:]][^[:space:]]*|--[^[:space:]]+))*[[:space:]]+(-[[:alnum:]]*q[[:alnum:]]*|--quiet|--silent))([[:space:];)&|]|$)"
+      if ($0 ~ ("(^|[^|])[|]&?[[:space:]]*" reader) || (piped && $0 ~ ("^[[:space:]]*" reader)))
+        print NR ": " trim($0)
+      piped = ($0 ~ /(^|[^|])[|]&?[[:space:]]*(\\[[:space:]]*)?$/)
+    }
+  ' "$path")"
+  if [ -n "$bad" ]; then
+    echo "FAIL: $path pipes into a reader that stops before the end of its input (a quiet grep or head), so under pipefail a writer cut off by the broken pipe fails the pipeline after the reader succeeded (issue #693):"
+    head -n 5 <<< "$bad" | sed 's/^/  /'
+    echo "  The rule is refuse_piped_early_exit_reader in .github/scripts/check-workflow-gates.sh. Give the reader a here-string: capture the text in a variable, then \`grep -q -- \"\$needle\" <<< \"\$text\"\` or \`head -n 1 <<< \"\$text\"\`."
+    exit 1
+  fi
+}
+
+# Every shell script under the script directories, the gate script, and every workflow but three:
+# the frozen ci.yml, and the two OpenModelica evidence workflows, whose bytes are bound into
+# recorded evidence and whose steps run under GitHub's default shell, without pipefail.
+refuse_piped_early_exit_readers() {
+  local dir script workflow count=0
+  for dir in $SHELL_SCRIPT_DIRS; do
+    if [ ! -d "$dir" ]; then
+      echo "FAIL: the script directory $dir, read for pipes into early-exiting readers, is missing"
+      exit 1
+    fi
+    while IFS= read -r script; do
+      count=$((count + 1))
+      refuse_piped_early_exit_reader "$script"
+    done < <(find "$dir" -type f -name '*.sh' | LC_ALL=C sort)
+  done
+  if [ "$count" -eq 0 ]; then
+    echo "FAIL: no shell script found under $SHELL_SCRIPT_DIRS to read for pipes into early-exiting readers"
+    exit 1
+  fi
+  refuse_piped_early_exit_reader "$GATE_SCRIPT"
+  for workflow in "$WORKFLOW_DIR"/*.yml; do
+    case "$(basename "$workflow")" in
+      ci.yml | openmodelica-line-evidence.yml | openmodelica-reliefs-evidence.yml) continue ;;
+    esac
+    refuse_piped_early_exit_reader "$workflow"
+  done
 }
 
 ci="$WORKFLOW_DIR/pr-gate.yml"
@@ -2191,5 +2268,8 @@ for workflow in "$WORKFLOW_DIR"/*.yml; do
   require_offline_tool_prefetch "$workflow"
 done
 require_gate_script_prefetch
+
+# Pipes into early-exiting readers (issue #693), after every rule about what the gate runs.
+refuse_piped_early_exit_readers
 
 echo "OK: workflow gate smoke passed."

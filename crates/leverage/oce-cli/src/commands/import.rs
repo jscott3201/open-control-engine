@@ -14,7 +14,9 @@
 //!
 //! 1. the output must not be the input (`output-is-input`): the same file by
 //!    `file_identity::same_file`, so another spelling of its path, a symbolic link to it and, on
-//!    Unix, a hard link to it are all refused, and nothing is replaced;
+//!    Unix, a hard link to it are all refused, and nothing is replaced. For stdin (`-`) on Unix
+//!    the input is file descriptor 0 when the shell made it a regular file
+//!    (`file_identity::stdin_is_file`, `import - -o doc < doc`); on Windows stdin is not checked;
 //! 2. the output's name, which must not contradict the form written (`output-form-mismatch`).
 //!    The form is `--wire` or text and is never chosen by the name; but a name that `oce` would
 //!    read as another form is refused, so a file this verb writes is never one the other verbs
@@ -48,7 +50,7 @@ use oce_author::{
 use serde_json::{Value, json};
 
 use super::id::{form_by_name, form_name};
-use super::{Outcome, report_for, same_file, write_atomically};
+use super::{Outcome, report_for, same_file, stdin_is_file, write_atomically};
 use crate::report::{Facts, Report};
 use crate::{Exit, IdForm, ImportArgs, Streams, codes, input};
 
@@ -137,7 +139,12 @@ fn output_accepted(
     output: &std::ffi::OsStr,
     asked: IdForm,
 ) -> Result<(), (&'static str, String)> {
-    if !input::is_stdin(input) && same_file(Path::new(input), Path::new(output)) {
+    let is_input = if input::is_stdin(input) {
+        stdin_is_file(Path::new(output))
+    } else {
+        same_file(Path::new(input), Path::new(output))
+    };
+    if is_input {
         return Err((
             codes::OUTPUT_IS_INPUT,
             "the output is the input file; the CXF document would be replaced by its import"

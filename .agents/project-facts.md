@@ -525,15 +525,39 @@ test reads (an edit to the note runs the determinism lane); copy the block again
 does not build until `VECTOR_ERROR_CODES` lists its code in order, and needs its case in
 `tests/error_codes.rs`.
 
+`tests/fixtures/commissioning/` holds the commissioning readers' fixtures (issue #658), and none
+of them is blessed either. `listing_12_1.json` and `listing_12_2.json` are OBC §12.7 Listings
+12.1 and 12.2 verbatim (the directory's README records the page and the day it was read), and
+`tests/commissioning/listings.rs` pins their bytes: never edit them. `building_33.json` is the
+JSON block of the commissioning note's worked spec, copied by hand, as `oce-author`'s
+`wire_example.json` is: no test reads that note, so it is not on the classifier's test-read list,
+and when the block changes the fixture is copied again. `canonical/*.json` and the `spec_id`
+literals in `tests/commissioning/canonical_form.rs` come from
+`tests/fixtures/commissioning/derive_canonical.py`, a second implementation run by hand; the
+canonical writer, the number spelling, the comment rule or a fixture moves them. A new
+`SpecErrorKind` does not build until `SPEC_ERROR_CODES` lists its code in order, and needs its
+case in `tests/commissioning/error_codes.rs`. `tests/commissioning/` is one test binary: a new
+file there is a `mod` line in its `main.rs`, in name order, and a test fails on a file that is
+not declared.
+
 ## The funnel port carries funnel's licence
 
 `crates/leverage/oce-verify/src/funnel/` is a statement-by-statement port of LBNL funnel's C, so
 it is a derived work under funnel's licence (3-clause BSD with LBNL's enhancements clause), not
 only under this repository's. `crates/leverage/oce-verify/LICENSE-funnel` is that licence and
 copyright notice, verbatim; the module header and the root README's licence section point to it.
-Keep the three together when the module moves. Nothing checks it mechanically: `cargo deny check
-licenses` reads each crate's `license` field, which stays `MIT OR Apache-2.0` for this
-unpublished crate, and the package policy has no licence rule.
+Keep the three together when the module moves, and the fourth with them: `oce-verify`'s `license`
+field is `(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`, stated in the manifest rather than inherited
+from the workspace (issue #703), with no `license-file` beside it, since the expression is
+standard SPDX and Cargo wants one of the two. `BSD-3-Clause-LBNL` is the SPDX identifier of
+funnel's licence: `LICENSE-funnel` from "Redistribution and use" to its end is the SPDX text, with
+the sections numbered. `deny.toml` allows the identifier through `[licenses] exceptions` for the
+crate `oce-verify` alone, never in `allow`, so `cargo deny check licenses` (the `cargo-deny` job)
+fails if another crate, a registry dependency included, declares it, and fails if the exception
+is dropped while the field stays. That check reads each crate's own field and nothing transitive:
+`oce-cli`, which depends on `oce-verify`, keeps the workspace's `MIT OR Apache-2.0`. Nothing checks
+that the field matches the sources: the package policy has no licence rule, so a module that moves
+to another crate takes the field and the exception's crate name with it by hand.
 
 ## The funnel fixture is captured, not blessed; only its bit goldens are
 
@@ -712,6 +736,17 @@ are assembled at run time from fragments, so the fixture file itself holds no ma
 new one the same way, and keep `sk-` out of case names (a name such as `…-sk-after-a-word-…` is
 itself a match). A new pattern needs planted values and near misses there, or the fixture fails,
 and a change to a pattern's meaning moves the values, near misses and weakened copies that pin it.
+
+## Test text with a here-string, never a pipe into `grep -q`
+
+In a gate script, a CI script or a workflow step, write `grep -q -- "$needle" <<< "$text"`, and
+capture a command's output into a variable first. Do not write
+`printf '%s\n' "$text" | grep -q …` or `some-command | head -n 1`. `grep -q` and `head` stop
+reading early, the writer then fails on the broken pipe, and under `pipefail` a match reads as no
+match: issue #693, three false reds in two days. `check-workflow-gates.sh` refuses the piped
+spelling (`refuse_piped_early_exit_reader`) in `.github/scripts/`, `scripts/`, `.agents/gate.sh`
+and the workflows; [CI and the gate](../docs/ci-and-the-gate.md#every-pull-request-runs-the-gate) has what it reads
+and what it does not.
 
 ## Working directories are gitignored
 

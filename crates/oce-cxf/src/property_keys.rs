@@ -30,12 +30,17 @@
 //!   ([`S231_SPELLINGS`], [`QUDT_HAS_UNIT`]): `hasUnit` in the S231 namespace or in either QUDT
 //!   schema namespace ([`QUDT_SCHEMA_NAMESPACES`]: `#` as the translations bind `qudt`, `/` as
 //!   QUDT and CXF-Core do) moves into `unit`, and `S231:hasDisplayUnit` into `displayUnit`. The
-//!   QUDT key is matched by its expanded IRI alone: under a `qudt:` prefix the document binds
-//!   nowhere, or to a namespace that is neither QUDT schema namespace nor the S231 one, the key
-//!   names no modeled property and stays in the pass-through map. (Bound to the S231 namespace,
-//!   `qudt:hasUnit` is `S231:hasUnit` under another prefix, and is read as that.)
-//!   `qudt:hasQuantityKind` is not read under any binding (decision 1: modelica-json's quantity
-//!   table is lossy at `PressureDifference`).
+//!   QUDT key is matched by its expanded IRI alone. (Bound to the S231 namespace, `qudt:hasUnit`
+//!   is `S231:hasUnit` under another prefix, and is read as that.) `qudt:hasQuantityKind` is not
+//!   read under any binding (decision 1: modelica-json's quantity table is lossy at
+//!   `PressureDifference`).
+//! - **A `hasUnit` key that reading does not reach is refused** (issue #675,
+//!   [`super::unread_qudt_has_unit`]): `qudt:hasUnit` under a `qudt` prefix the document binds
+//!   nowhere (`malformed-document`), and `hasUnit` in a near miss of a QUDT schema namespace or
+//!   in the QUDT unit vocabulary (`vocabulary-namespace-mismatch`). Either would leave a declared
+//!   unit unread. Under a prefix bound to an unrelated namespace the key is that vocabulary's
+//!   property and stays in the pass-through map. A node with a `@context` of its own is refused
+//!   for that scoped context alone.
 //! - **Two spellings of one property on one node** — compact plus expanded, two expanded, or
 //!   `S231:unit` beside `qudt:hasUnit` — are refused (`malformed-document`) rather than one being
 //!   chosen, even when their values agree. A compact key the DTO cannot represent (an explicit
@@ -44,8 +49,8 @@
 //!   pass-through key — is refused (`malformed-document`): JSON parsing keeps one of the values
 //!   silently. (A repeated compact modeled key is already a parse error.)
 //! - **Whitespace near misses** — a key that names a modeled property only after trimming
-//!   surrounding whitespace (`"S231:min "`; `"qudt:hasUnit "` where `qudt` is bound to a QUDT
-//!   schema namespace, since the trimmed key is matched like any other) — are refused
+//!   surrounding whitespace (`"S231:min "`, `"qudt:hasUnit "`), or is a refused `hasUnit` key
+//!   only then, since the trimmed key is matched like any other — are refused
 //!   (`malformed-document`).
 //! - A value that does not fit the modeled field's shape is refused (`malformed-document`), the
 //!   resolver-side twin of the parse error the compact spelling raises.
@@ -63,6 +68,7 @@ use serde::de::{IgnoredAny, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value as Json};
 
+use super::unread_qudt_has_unit::{UnreadHasUnit, unread_has_unit};
 use super::vocabulary_namespace::{FOREIGN_NAMESPACES, foreign_key};
 use super::{Expansion, PrefixTable, expand_token};
 use crate::dto::{CxfDocument, Node};
@@ -107,7 +113,8 @@ pub(super) const S231_SPELLINGS: [(&str, &str); 2] =
     [("hasUnit", "unit"), ("hasDisplayUnit", "displayUnit")];
 
 /// The QUDT schema property read as the modeled term `unit` (issue #631): modelica-json writes a
-/// declared unit as `qudt:hasUnit`. It is matched in [`QUDT_SCHEMA_NAMESPACES`] only.
+/// declared unit as `qudt:hasUnit`. It is read in [`QUDT_SCHEMA_NAMESPACES`] only, and refused
+/// where it would otherwise go unread ([`super::unread_qudt_has_unit`]).
 pub(super) const QUDT_HAS_UNIT: &str = "hasUnit";
 
 /// One pass-through key that names a modeled property: the authored key and the modeled term.
@@ -255,6 +262,9 @@ enum KeyMeaning {
     Own(&'static str),
     /// A modeled term in a foreign namespace.
     Foreign(&'static str, &'static str),
+    /// `hasUnit` where the QUDT schema reading does not reach it: under an unbound `qudt`
+    /// prefix, or in a near miss of a QUDT namespace.
+    Unread(UnreadHasUnit),
     /// Anything else.
     Unrelated,
 }
@@ -276,21 +286,24 @@ impl KeyScope<'_> {
         FOREIGN_NAMESPACES
             .iter()
             .find_map(|ns| modeled_term(&iri, ns).map(|term| KeyMeaning::Foreign(term, ns)))
+            .or_else(|| unread_has_unit(&iri).map(KeyMeaning::Unread))
             .unwrap_or(KeyMeaning::Unrelated)
     }
 
     /// Collect the pass-through keys of `node` that name a modeled property, in the S231
     /// namespace or as the QUDT schema's `hasUnit`, refusing foreign-namespace and whitespace
-    /// near-miss spellings.
+    /// near-miss spellings and a `hasUnit` key that would go unread. On a node that carries a
+    /// `@context` of its own, which is refused as a scoped context, an unread `hasUnit` key is
+    /// not refused as well: the document-level bindings are not what that node meant its keys by.
     fn aliases_of(&self, node: &Node, diags: &mut Vec<Diagnostic>) -> Vec<Alias> {
         let subject = self.subject;
+        let scoped = node.other.contains_key("@context");
         let mut aliases = Vec::new();
         for key in node.other.keys().filter(|key| !key.starts_with('@')) {
             let trimmed = key.trim();
             if trimmed != key {
-                if let KeyMeaning::Own(term) | KeyMeaning::Foreign(term, _) = self.meaning(trimmed)
-                {
-                    diags.push(malformed(
+                match self.meaning(trimmed) {
+                    KeyMeaning::Own(term) | KeyMeaning::Foreign(term, _) => diags.push(malformed(
                         subject,
                         format!(
                             "property key {:?} on node `{subject}` carries surrounding \
@@ -298,7 +311,11 @@ impl KeyScope<'_> {
                              it as `S231:{term}`",
                             excerpt(key)
                         ),
-                    ));
+                    )),
+                    KeyMeaning::Unread(unread) if !scoped => {
+                        diags.push(unread.whitespace_refusal(key, subject));
+                    }
+                    KeyMeaning::Unread(_) | KeyMeaning::Unrelated => {}
                 }
                 continue;
             }
@@ -310,7 +327,10 @@ impl KeyScope<'_> {
                 KeyMeaning::Foreign(term, namespace) => {
                     diags.push(foreign_key(key, subject, term, namespace));
                 }
-                KeyMeaning::Unrelated => {}
+                KeyMeaning::Unread(unread) if !scoped => {
+                    diags.push(unread.refusal(key, subject));
+                }
+                KeyMeaning::Unread(_) | KeyMeaning::Unrelated => {}
             }
         }
         aliases

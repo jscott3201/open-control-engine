@@ -47,13 +47,13 @@ tree() {
 
 # Controls: the matcher must fire on a closure that does link std and the host-side crates.
 control_std="$(tree -p oce-graph | violations | sort -u)"
-if ! printf '%s\n' "$control_std" | grep -q -F 'crate oce-graph has its std feature enabled'; then
+if ! grep -q -F 'crate oce-graph has its std feature enabled' <<< "$control_std"; then
   echo "FAIL: control: the default oce-graph build did not trip the std-feature check" >&2
   exit 1
 fi
 control_crates="$(tree -p oce-api | violations | sort -u)"
 for crate in oce-cxf serde_json; do
-  if ! printf '%s\n' "$control_crates" | grep -q -F "crate $crate is in the closure"; then
+  if ! grep -q -F "crate $crate is in the closure" <<< "$control_crates"; then
     echo "FAIL: control: oce-api's closure did not trip the $crate check" >&2
     exit 1
   fi

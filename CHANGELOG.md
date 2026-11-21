@@ -88,6 +88,52 @@ and a gate that accepted any text would restore exactly the false assurance desc
     build's and is `None` for every one of them, is asserted beside the comparison instead of
     being written into them. Documented in
     [inspecting a blob](docs/compiled-schedule-blob.md#whether-this-build-accepts-the-blob).
+- **`Topology` carries the boundary facts the content id encodes, and the root id** (GitHub
+  #702, issue #701). Two loaded documents that differed only in a boundary's unit, quantity,
+  display unit, type or an input's bound had different canonical content ids and equal
+  `Engine::topology()` snapshots, so nothing built on the view (`oce-diff`'s CXF adapter, issue
+  #666) could report a changed interface. Owner ruling of 2026-11-21: the view gains exactly
+  those facts, additively on its `#[non_exhaustive]` structs.
+  - **`Topology::boundary_inputs`**, a list of the new `DeclaredInput`: one per executable
+    boundary input, in UTF-8 path order, with `path`, `value_type`, `min` and `max` exactly as
+    the `InputDefinition` of the same input has them (the exact type; the effective acceptance
+    domain, not the declaration's bounds) and the declaration's `quantity`, `unit` and
+    `display_unit`, named as on `PointInfo`. An input that feeds only a pass-through is listed;
+    a declared input nothing reads is not, as in `Engine::input_definitions`.
+  - **`DeclaredOutput`** gains `value_type` (the driving connector's exact type, the one
+    `FrameSlots::output_types` reports) and `quantity`, `unit` and `display_unit` (the
+    declaration's after §7.10 unification; for a pass-through, the declared node's own). An
+    output's bounds are not carried: the engine enforces neither and the id leaves both out.
+  - **`Topology::model_id`** is the root identity, equal to `LoadReport::model_id` and empty
+    before a load. It cannot be derived from the block paths: in the 12 one-block documents of
+    the corpus the longest prefix the blocks share is the block's own path. That every IRI is
+    written under the root is the modelica-json convention, not something the loader checks:
+    a document may name a block anywhere, an engine export carries the exporter's fixed root,
+    and a model with no root `@id` has a synthetic key.
+  - **Equality.** `Topology`'s `==` now reads `model_id` and `boundary_inputs` too, and a
+    `DeclaredInput`'s bounds compare by bits like a block's Real parameters (`-0.0` is not
+    `0.0`, as in the id). No derive changed and nothing is serialised: the view stays plain
+    owned data with `Debug`, `Clone` and `PartialEq`. The view reads a boundary's labels
+    through the id's own extraction (`content_id::graph::labels`), so the two cannot drift.
+  - **What it proves.** Equal topologies now imply equal content ids, for the whole id. The
+    converse does not hold: a topology also carries the instance namespace, the root id and the
+    loader's order. `tests/topology_content_bytes.rs` holds the claim itself: a second
+    implementation of the `OCECANON` encoding rebuilds the id's bytes from a `Topology` alone
+    (names and collisions, fan-out, drivers, blocks, sorted parameters, class signature hashes,
+    connections) and must equal `Engine::canonical_content_bytes` for every loadable CXF
+    document under `crates/` (116 in the engine crates' fixtures, a pinned count beside the 74
+    the loader refuses; 20 more in the leverage crates', held to a floor), for a constructed
+    nested-composite fan-out and for two blocks whose names collide across namespaces.
+    `src/content_id/topology_agreement_tests.rs` compares every boundary record of the id with
+    the view, destructured exhaustively so a new id field does not compile until the view
+    carries it, over the 47 corpus documents and the four content-id examples (188 inputs, 137
+    outputs); `tests/topology_boundary.rs` moves the topology with each named boundary edit
+    that moves the id, Real and Integer bounds alike; `tests/topology_boundary_corpus.rs` does
+    it over the corpus (449 loading variants) and holds the root id to the load report's.
+  - **Unchanged.** A read-only view: no content id, blob, golden, export byte or format moves,
+    and the workspace version stays. One case no document reaches changed: a declared output
+    whose driving connector is out of range, which the load gate refuses, is now absent from
+    `boundary_outputs` (it has no type to report) where it was listed with a `conn#` path.
 
 - **`oce_api::inspect_blob` reads what a compiled-schedule blob records about itself** (GitHub
   #672, issue #448). It is the accessor a blob comparison needs (`oce-diff`, design note
@@ -494,7 +540,139 @@ and a gate that accepted any text would restore exactly the false assurance desc
     given graph. The 46 fixture goldens and 422 provenance goldens are byte-identical.
   - **Not in this change:** a root input's declared unit still does not meet the ports it drives
     (issue #632).
+- **A `hasUnit` key the QUDT schema reading does not reach is refused, where it was left
+  unread** (GitHub #696, issue #675; owner ruling of 2026-11-20). `qudt:hasUnit` is read as
+  `unit` by its expanded IRI in the two QUDT schema namespaces. One edit from that, the key fell
+  into the pass-through map and the load reported nothing: the §7.10 unit gate, the point list,
+  the content id and the export went without the unit. With `qudt` unbound, `"S231:unit": "K"`
+  beside `"qudt:hasUnit": {"@id": "unit:DEG_C"}` loaded as `K`, with the content id of `K` alone.
+  - **Refused, matched on the expanded IRI,** on every `@graph` node, whether the document
+    writes a compact key, a full IRI or a `@context` term:
+    - `qudt:hasUnit` where the document binds no `qudt` prefix: `malformed-document`;
+    - `hasUnit` in a near miss of either schema namespace: `vocabulary-namespace-mismatch`. The
+      near misses are the `https:` spelling, the scheme or the host in another letter case, a
+      default or empty port (`:80` under `http`, `:443` under `https`), and a missing, repeated
+      or wrong separator (`https://qudt.org/schema/qudt#hasUnit`, `HTTP://qudt.org/…`,
+      `http://QUDT.org/…`, `http://qudt.org:80/…`, `http://qudt.org/schema/qudthasUnit`,
+      `http://qudt.org/schema/qudt/#hasUnit`);
+    - `hasUnit` in the QUDT unit vocabulary (`http://qudt.org/vocab/unit#`, `…/unit/`) or a near
+      miss of it, which is `qudt` bound to the `unit:` IRI or the key `unit:hasUnit`:
+      `vocabulary-namespace-mismatch`;
+    - any of those only once the key's surrounding whitespace is trimmed (`"qudt:hasUnit "` with
+      no `qudt` binding, which passed through before): `malformed-document`.
+  - **Which classes the owner named.** The ruling names the unbound prefix, `https`, scheme and
+    host case, the default port, a missing separator and the unit vocabulary's namespace. An
+    empty port, `:443` under `https`, a repeated or reversed separator (`#/`, `##`, `//`) and a
+    near miss of the unit vocabulary's namespace are this change's reading of "near-miss QUDT
+    namespace", each an RFC 3986 equivalence or a combination of named classes, accepted at
+    review on 2026-11-21.
+  - **Still a pass-through key:** `hasUnit` under a prefix bound to a namespace that is no QUDT
+    one and no near miss of one, which is that vocabulary's property: `http://example.org/qudt#`,
+    another host (`http://www.qudt.org/…`), a path in another letter case, a versioned IRI
+    (`http://qudt.org/2.1/schema/qudt#`), a path that only begins like a QUDT one
+    (`…/schema/qudt-extra#`). Also a key that differs in its prefix, its local name or its
+    letter case (`QUDT:hasUnit` unbound, `qudt:HasUnit`, issue #691), and `qudt:hasQuantityKind`
+    under any binding. A node that carries a `@context` of its own is refused for that scoped
+    context alone.
+  - **Codes and messages.** No new code. The description of `vocabulary-namespace-mismatch` in
+    `oce-diag` now names this case. Each message quotes the key and the namespace as written in
+    at most 64 bytes, with format and control characters written as escapes, names the two
+    namespaces the property is read in, and holds no other text of the document's: the node is
+    the subject and is not repeated in the message. Each refusal is pinned as the complete
+    diagnostic list.
+  - **One recogniser.** `namespace_near_miss(iri, namespace)`, internal to `oce-cxf`
+    (`crates/oce-cxf/src/namespace_near_miss.rs`), decides whether an IRI is a near miss of a
+    namespace and where its local name begins. It knows no vocabulary and refuses nothing; the
+    caller holds the local name to its own closed list. With no separator, what follows the
+    namespace's path must be one name, so a path that only begins like the namespace's
+    (`…/S231P#unit` against `…/S231#`) is no near miss. It is the piece the same rule for every
+    modeled key (#691), a typing token (#636) and a term (#647) attaches to. No public surface
+    is added.
+  - **Cost.** Every key of every `@graph` node passes the check. A key that does not end in
+    `hasUnit` is ruled out by that one comparison: no near-miss check (counted in `oce-cxf`'s
+    tests on a node of 50,000 keys) and no allocation (a load of that node is held to its
+    measured allocation count in `oce-api`'s).
+  - **Both readers.** `oce-author`'s importer already refused every one of these documents as
+    `unknown-key`, since its `@context` is closed and it reads compact keys only; its source is
+    unchanged, and each probe is now put to both readers.
+  - **Breaking, in place:** such a document is refused where it loaded without the unit. No
+    tracked or library document is one. Measured before building and after: the 257 tracked
+    documents that hold an `@graph` write 484 `hasUnit` keys, all `qudt:hasUnit` under a read
+    binding (36 documents bind `qudt`, each to a read namespace; the other 221 bind none and
+    write no `qudt:` key), and the 140 CXF documents of `open-control-library` (`development` at
+    `fe7060a`) bind no `qudt`. Loaded through `oce id` built before and after, all of them, and
+    each library document with its retired namespace rewritten, give the same outcome, content
+    id, warnings and refusal codes.
+  - **Nothing a format defines changes, and the workspace version is not bumped:** tightening
+    accepted input is not a format change (unit-spellings ruling 7; the ruling on #647). No
+    content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
 ### Leverage
+
+- **`oce-verify` reads the commissioning test spec and the point mapping** (GitHub #704, issue
+  #658). Part 1 of 7 of the commissioning verifier (OBC §12; design note
+  `docs/design/commissioning.md`, "Test-spec file" and "Point mapping"): the two files a
+  commissioning run reads, as typed values or typed refusals. No engine, no file access, no
+  comparison; `oce-cli`, `oce-api` and the vector format are untouched, and no version moves.
+  - **`CommissioningSpec`**, `oce/commissioning-spec/v1` (`COMMISSIONING_SPEC_SCHEMA`), a
+    strict-JSON superset of OBC §12.7 Listing 12.1: `from_json_bytes` and `from_json_str`. A
+    document with no `schema` is an LBL spec and is read as this format; any other tag is
+    `unknown-schema`. `//` and `/* */` comments outside strings are removed first, in one pass
+    that keeps every other byte in place, so a refusal's line and column are those of the text
+    as written; an open `/*` is `unterminated-comment`. Listing 12.1 loads as published, and so
+    does a copy with comments added.
+  - **Fields.** The LBL fields load unchanged. `generateJson`, `modelJsonDirectory`,
+    `runController` and `controller` take any strict JSON value, are never interpreted, and are
+    reported by `findings()` and `findings_for(reference)` as `lbl-field-ignored` (`Finding`:
+    `code`, `at`), top-level fields sorted by name and then each reference's, whatever the
+    file's key order. A `controllerOutput` beside an `expected` is reported the same way.
+    Added: `time.origin` (`oce_replay::TimeOrigin`), `ltolx` and `ltoly`, and per reference
+    `cxf`, `parameters`, `inputs`, `expected` and `indicatorSources`
+    (`TrendSource`: `path`, `format`, `table`, `timeColumn`, `columns`, `hold.maxAge`), `window`,
+    `envelope` (read as `oce_verify::Envelope`, the comparison's own type) and
+    `funnelReference` (`FunnelReference`, default `engine`). `window` and `cxf` are optional to
+    load and required to run, which is bind's refusal (#662).
+  - **Keys and precedence.** An `outputs` or `indicators` key is its reference's `sequence`, a
+    `.`, and a glob (`*` any run, `?` one character, anchored at both ends, nothing else
+    special, matched against the last `.`-segment of an output's canonical path) or an exact
+    name (resolved by `oce_replay::resolve_path`). Which override applies never depends on the
+    order of the file (owner's ruling, 2026-11-21): an exact key beats a glob field by field;
+    two keys of one kind that give one output's field different values are refused,
+    `conflicting-override`; the same value, or different fields, combine. Every indicator rule
+    that selects an output applies, each name once. The selection (`unmatched-key`,
+    `ambiguous-output`, `conflicting-override`, and a work bound checked before anything is
+    allocated, `work-limit-exceeded`) is in the crate and private until bind calls it (#662);
+    `PartialTolerances::overlaid` and `resolved` (the comparison's `Tolerances`) are public.
+  - **The canonical form** (`to_canonical_json`) always carries `schema`, and `spec_id` is
+    `spec:fnv1a128:` over it. Every object's keys are sorted, `outputs` and `indicators`
+    included, so a tool that reorders a spec changes neither its meaning nor its id.
+  - **`PointMapping`**: Listing 12.2's shape, from a file's bytes or inline, names kept as
+    written with no sequence prefix, `float`, `int` and `bool`, `duplicate-point` for a name
+    twice on one side, and no empty unit.
+  - **Bounds and codes.** `SpecLimits` (lowerable, never raised): 4 MiB, 256 parameters per
+    reference, 4,096 keys per `outputs`, `indicators` or `columns` map, 2^28 work units per key
+    selection; with the strict profile's nesting 8, strings 4,096 bytes and lists 65,536, which
+    the design note now records as landed. A load holds at most 32 bytes per document byte.
+    `SpecError` and `SpecErrorKind` with 31 kebab-case codes (`SPEC_ERROR_CODES`), the
+    strict-JSON ones spelled as the vector reader spells them and the last four found only at
+    bind; every sentence is at most 512 bytes of printable ASCII.
+  - **Inside the crate.** The strict cursor is generic over the kind it reports
+    (`strict::StrictKind`), so the two readers share one profile and each keeps its own codes;
+    no vector code, sentence or place moves. The path rule a mutant path is held to is one
+    function both readers call.
+- **`oce-verify` declares the funnel port's licence in its package metadata** (GitHub #706,
+  issue #703). The crate's `license` field is now `(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`
+  and no longer inherits the workspace's `MIT OR Apache-2.0`: `src/funnel/`, the port of LBNL
+  funnel that GitHub #687 added, is a derived work under funnel's licence, whose text has shipped
+  as `crates/leverage/oce-verify/LICENSE-funnel` since then. `BSD-3-Clause-LBNL` is that
+  licence's SPDX identifier: from "Redistribution and use" to the end, `LICENSE-funnel` is the
+  SPDX text word for word once case, line breaks and the section numbers are set aside; what
+  precedes it is funnel's copyright notice with the U.S. Government rights notice LBNL attaches.
+  `deny.toml` allows the identifier through a `[licenses]` exception for the crate `oce-verify`
+  only, not in the allow-list, so any other crate that declares it is still refused. No source,
+  fixture or licence file changes, `Cargo.lock` is unchanged, and `oce-cli`, which depends on
+  `oce-verify`, keeps `MIT OR Apache-2.0` for its own sources; the package policy reads no
+  licence and needed nothing. This supersedes the last sentence of the "Licence" item of the
+  entry below.
 
 - **Tolerance mode, part 1: the envelope arithmetic, a port of LBNL funnel proven against the
   pinned `pyfunnel`, and the `aligned-grid` envelope beside it** (GitHub #687, issue #655;
@@ -631,6 +809,17 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `commands/file_identity.rs` for both). On Windows one file is one canonical path, so a hard
   link is not recognised there. An output that does not exist, a dangling link included, is no
   file. `tests/output_guards.rs` covers both verbs; `oce vocab` lists the code.
+- **`oce emit -o` refuses a `.oce` or `.json` output name, and both `-o` guards check stdin**
+  (GitHub #712, issue #697). `oce emit e.oce -o y.oce` exited 0 and wrote CXF into `y.oce`,
+  which `oce validate y.oce` then failed to read. `emit -o` now refuses, before anything is
+  read, a name `id::form_by_name` reads as text or wire, under the existing
+  `output-form-mismatch` (exit 2, nothing written); `.jsonld`, `.cxf.json` and a name with no
+  known extension are accepted. On Unix `oce import - -o doc < doc` and
+  `oce emit - --from text -o doc < doc` are `output-is-input` too: file descriptor 0, when it is
+  a regular file, is compared by (device, inode) with the output (safe std, no new
+  dependency); on Windows stdin is not checked. A script that wrote `emit -o x.json` must name
+  the output `x.cxf.json` (the READMEs' examples did). `oce vocab` and `help_emit` name the new
+  rules.
 - **The rendering on stderr no longer writes a document's format, control or separator
   characters to the terminal** (GitHub #688). `oce validate` and `oce emit` of a wire file
   quote the file's own strings in a finding (`class-not-found` names the block's `class`), and
@@ -864,6 +1053,38 @@ and a gate that accepted any text would restore exactly the false assurance desc
     other count there is unchanged.
 
 ### Verification
+
+- **A gate fixture no longer reports a correct result as a failure when `grep -q` finishes before
+  `printf`** (GitHub #698, issue #693; #689 was the same defect).
+  The fixture harnesses tested a checker's output with `printf '%s\n' "$output" | grep -q …` under
+  `set -o pipefail`. `grep -q` exits at its first match. bash writes one line at a time, so a
+  `printf` with lines still to write then got a broken pipe and failed, the pipeline's status was
+  `printf`'s, and the match read as no match. It turned `CI OK` or a local gate red three times in
+  two days (on GitHub #676, #682 and #692), each time green on a re-run.
+  - **The fix:** every reader that can stop early now takes a here-string, which bash writes whole
+    before the reader starts, so no writer is left to fail: `grep -q … <<< "$output"`, with a
+    command's output captured into a variable first. The reader gets the same bytes, so `-F`, `-x`
+    and every anchor read as before, and no check tests anything else than it did.
+  - **The sites, 43:** 16 in five fixture harnesses (the verdict of `test-workflow-gates.sh`,
+    `test-check-default-no-db.sh`, `test-check-stale-crate-status.sh` and
+    `test-check-golden-gen-anti-tautology.sh`, and `has_line`, `has_text` and one `head` in
+    `test-check-no-secrets.sh`); 22 in five checkers (`check-workflow-gates.sh`,
+    `check-default-no-db.sh`, `check-golden-gen-anti-tautology.sh`,
+    `check-gate-script-coverage.sh`, `scripts/ci/check-no-std-entry-closure.sh`); the
+    `wasm32-wasip1` target test in `.agents/gate.sh`; and four `head -n 1` in `test-math-lint.sh`,
+    `emulate-firmware.sh` and `qemu.yml`. In `check-workflow-gates.sh` a refusal that listed more
+    than five lines could also lose the line naming its rule.
+  - **So it cannot return:** `check-workflow-gates.sh` refuses a pipe into a quiet grep or `head`
+    (`refuse_piped_early_exit_reader`) in every shell script under `.github/scripts/` and
+    `scripts/`, in the gate script and in every workflow but the frozen `ci.yml` and the two
+    OpenModelica evidence workflows, whose bytes are bound into recorded evidence and whose steps
+    run without `pipefail`. 21 new cases in `test-workflow-gates.sh` (402 → 423) hold it.
+    `test-workflow-gates.sh` and `test-check-no-secrets.sh` also check their own readers first,
+    on a planted output with the match on its first line and more after it than a pipe holds:
+    there the piped spelling fails on every run, not now and then.
+  - **Not changed:** the same pipe in `tools/openmodelica-line-reference/line/regenerate.sh` and
+    `tools/openmodelica-reliefs-reference/reliefs/regenerate.sh`, which are bound into that
+    evidence too. Their writer prints one short line, so nothing is left to cut off.
 
 - **Each run of the OpenModelica Line or Reliefs tool in the `oce-cxf` tests starts an executable
   of its own, so those tests no longer fail now and then with `could not execute process …

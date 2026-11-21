@@ -7,7 +7,7 @@
 //! keeps its id, while any parameter bit, name, wiring, class or boundary I/O change moves it.
 
 mod encode;
-mod graph;
+pub(crate) mod graph;
 mod hash;
 
 pub use hash::{ContentId, ContentIdParseError};
@@ -94,3 +94,6 @@ impl Engine {
         Ok(encode::encode(&graph)?)
     }
 }
+
+#[cfg(test)]
+mod topology_agreement_tests;
