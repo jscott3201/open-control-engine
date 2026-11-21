@@ -10,7 +10,7 @@
 //! by editing its `@context` or one node, with the expected result stated by hand.
 
 use oce_cxf::{
-    Context, CxfError, ResolveOptions, export, import_cxf, parse_document, write_document,
+    Context, CxfError, CxfValue, ResolveOptions, export, import_cxf, parse_document, write_document,
 };
 use oce_diag::{DiagCode, Diagnostic};
 use serde_json::{Map, Value as Json, json};
@@ -91,7 +91,8 @@ fn a_release_0_4_0_export_is_refused_by_its_namespace_and_nothing_else() {
 }
 
 #[test]
-fn the_previous_layout_differs_from_the_current_export_only_in_the_namespace_and_the_label() {
+fn the_previous_layout_differs_from_the_current_export_in_the_namespace_the_label_and_one_literal()
+{
     // The fixture is a well-formed document: only its binding stands between it and a load.
     let previous = parse_document(PREVIOUS_LAYOUT).expect("the 0.4.0 export parses");
     let Context::Map(context) = &previous.context else {
@@ -100,8 +101,11 @@ fn the_previous_layout_differs_from_the_current_export_only_in_the_namespace_and
     assert_eq!(context.len(), 1);
     assert_eq!(context["S231"], json!(RETIRED));
 
-    // Today's export of the same model, with the two label members removed and the binding
-    // spelled the old way, is the 0.4.0 export byte for byte.
+    // Today's export of the same model, with the two label members removed, the binding spelled
+    // the old way and one parameter literal written as release 0.4.0 held it, is the 0.4.0 export
+    // byte for byte. The literal is `del.y_start`: the source writes `0` on a Real parameter,
+    // which 0.4.0 kept and exported as an Integer and this build holds and exports as a Real
+    // (issue #683).
     let (graph, _) = import_cxf(MINIMAL_LOOP.as_bytes(), &ResolveOptions::default())
         .expect("the current fixture imports");
     let mut current = parse_document(&export(&graph).expect("exports")).expect("export parses");
@@ -113,6 +117,15 @@ fn the_previous_layout_differs_from_the_current_export_only_in_the_namespace_and
     assert_eq!(
         root.other.remove("S231:translationSoftwareVersion"),
         Some(json!(env!("CARGO_PKG_VERSION")))
+    );
+    let y_start = current
+        .graph
+        .iter_mut()
+        .find(|node| node.id == "http://example.org#MinLoop.del.y_start")
+        .expect("the export carries del.y_start");
+    assert_eq!(
+        y_start.value.replace(CxfValue::Int(0)),
+        Some(CxfValue::Float(0.0))
     );
     let Context::Map(context) = &mut current.context else {
         panic!("the export carries an inline context map");

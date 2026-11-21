@@ -210,12 +210,11 @@ fn param_plumbing_oracle_via_oce_blocks() {
 }
 
 #[test]
-fn unit_delay_bare_int_grounds_to_integer_not_real() {
-    // del.y_start is a bare Int 0 with no isOfDataType, so the resolver grounds it literal-natural
-    // to Value::Integer(0) (NOT re-typed to Real — that is the block constructor's job). A non-zero
-    // bare-Int y_start is then correctly promoted to Real by `oce-blocks` `real_param` (Modelica
-    // Int→Real); the promotion is covered by `real_param_promotes_integer_to_real` in oce-blocks,
-    // so there is no longer a silent-default hole here.
+fn unit_delay_bare_integer_on_a_real_parameter_is_held_as_a_real() {
+    // del.y_start is a bare JSON `0` with no isOfDataType, and `UnitDelay.y_start` is a Real
+    // parameter. The value grounds literal-natural to an Integer and the resolver then holds it
+    // as the Real of the same value (issue #683), so the resolved model, the parameter table, the
+    // blob and the content id are those of the document that writes `0.0`.
     let g = import_ok(FIXTURE);
     let del_params = &g.blocks[2].params.values;
     let y_start = del_params
@@ -223,8 +222,8 @@ fn unit_delay_bare_int_grounds_to_integer_not_real() {
         .find(|(name, _)| name.as_ref() == "y_start")
         .expect("UnitDelay y_start parameter");
     assert!(
-        y_start.1.bit_eq(&Value::Integer(0)),
-        "bare-Int param grounds to Integer, not Real: got {:?}",
+        y_start.1.bit_eq(&Value::Real(0.0)),
+        "an Integer literal on a Real parameter is held as a Real: got {:?}",
         y_start.1
     );
     let sample_period = del_params

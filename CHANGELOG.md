@@ -37,6 +37,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+`development` carries **0.6.0** from GitHub #PRNUM (issue #683) on: the entries below are 0.6.0's
+so far, and no tag is cut by the bump.
+
 ### Facade
 
 - **`BlobSummary` says whether this build accepts the blob: `decode_refusal`** (GitHub #699,
@@ -282,6 +285,73 @@ and a gate that accepted any text would restore exactly the false assurance desc
     diagnostic for each missing cell, up to 2^20 (#649).
 
 ### CXF import and export
+
+- **Breaking in place: a Real parameter written as an Integer loads as a Real, and the workspace
+  moves to 0.6.0** (GitHub #PRNUM, issue #683). A CXF document may write a Real parameter's number
+  as an Integer: a bare JSON integer, a typed `xsd:integer`, an Integer expression, or a reference
+  to an Integer sequence parameter (G36 `TrimAndRespond` binds `numIgnReq` to a Real `Constant.k`).
+  Grounding is literal-natural, so the resolved model held `Value::Integer` there. Every block
+  constructor widened it, so the run was the same for both spellings, and everything else told
+  them apart: the parameter table declared the parameter Integer (a host's Real `set_param` was
+  `ParamType`, and `oce verify` with `params: {"hys.uLow": -0.5}` failed at bind), the
+  compiled-schedule blob carried an Integer, and the canonical content id differed, so
+  `oce import` then `oce emit` moved the id of such a document. The owner ruled "normalise at
+  load" (2026-11-21).
+  - **The rule.** Once an instance's parameters are grounded and before anything else reads
+    them, the resolver holds an Integer bound to a parameter the block catalog types Real as the
+    Real of the same value: scalars and flattened array elements (`k_2`, `table_1_2`) alike,
+    whatever the literal's spelling and whatever a sequence parameter it came through is
+    declared as. The catalog type is `oce_blocks::parameter_value_type(class_path, name)`, new,
+    which reads the same evidence as `class_parameters` by the name a model binds. An Integer on
+    an Integer, enumeration or undeclared parameter is untouched. A Real is untouched bit for
+    bit, so `-0.0` and `0.0` stay two documents; a typed `xsd:integer` of `-0` is the Integer
+    zero and so `+0.0`. The sibling scope a later binding of the same block reads keeps the
+    grounded value, so an expression still evaluates over what the document wrote.
+  - **Newly refused.** An Integer above 2^53 in magnitude bound to a Real parameter, which the
+    engine loaded until now and rounded when a block read it: `parameter-out-of-range`, an error
+    on the parameter node that bound it (the array's node for an element), naming the block, the
+    parameter, the value and the class. The authoring layer's stage 1 already refused it under
+    that code. The bound is the magnitude: 2^53 and -2^53 load, 2^53 + 1 does not, and
+    `i64::MIN`, though a power of two, does not either. A bare JSON number with no fraction that
+    does not fit an `i64` is not an Integer to the JSON reader and is read as a Real, as before
+    (issue #719 asks whether it should be).
+  - **What moves for a document that loaded before.** One whose Real parameters are all written
+    as Reals: nothing. One that writes an Integer on a Real parameter: its parameter table (the
+    value and `ParamAttrs::value_type` are Real, so a Real edit is accepted and an Integer edit
+    is `ParamType`), its exported CXF (the value is written with a fractional part), its blob
+    (that parameter's record) and its canonical content id, which becomes the id the same
+    document written with a Real always had. Its outputs, state trajectory and run digests do
+    not move. In this repository that is 4 of the 47 pinned corpus documents
+    (`cooling_only_controller`, `multizone_vav_supply_fan`, `multizone_vav_supply_temperature`,
+    `trim_and_respond_have_hol_false`), `minimal_loop.jsonld` with its compact twin,
+    `pass_through_miniature.jsonld`, and 6 of the 7 vendored modelica-json translations that
+    load; every document that loaded still loads.
+  - **The version.** The `oce:canon1:` tag and every format revision stay at 1 (standing rule
+    9), so this is the first change of a format's meaning after the `v0.5.0` tag and the
+    workspace version moves to **0.6.0** with it (standing rule 10), with no release. A blob
+    and a state snapshot written by 0.5.0 are refused with `EngineVersionMismatch`:
+    `crates/oce-api/tests/engine_0_5_0_artefacts.rs` holds the `trim_and_respond_have_hol_false`
+    blob from tag `v0.5.0` (it differs from 0.6.0's in exactly that one parameter record and
+    the content id, and would decode if only its version bytes and CRC were rewritten) and a
+    snapshot captured on that tag (equal to 0.6.0's capture restamped by hand), both unblessed.
+    Nothing reads either: no importer, mapping table or dual-read path.
+  - **Re-blessed.** For the meaning: the content-id pin (4 ids), the 4 blobs and blob summaries
+    of those documents, 5 `modelgraph` goldens, `fixture_corpus_import.txt` (13 documents), the
+    `minimal_loop` and `pass_through_miniature` export goldens, the `minimal_loop` resolved-model
+    golden, the inline ids of `minimal_loop` and of 6 vendored translations, and
+    `import_corpus.tsv`, where `pass_through_miniature` moves from `same-id-real-literals` to
+    `same-id` and that class is retired. For the version alone: the other 42 blobs and
+    summaries, the two compatibility descriptors, the pin's version line, the other 7 export
+    goldens, the three inline state pins, the 6 `oce-author` emit goldens, the 5 `oce-verify`
+    receipts and 14 `oce` transcripts. For both: the two 47-record export expectations and the
+    three inline export digests (each is a digest of exported bytes, which carry the version
+    label and, for a document above, the respelled value). The 46 fixture goldens and 422 provenance goldens under
+    `tools/golden-gen/goldens`, the Tier-2 traces and `blob_frame_digests.tsv` are byte-identical.
+  - **Checked, as the ruling asked.** By reading, an Integer edit skipped `set_param`'s inclusive
+    bound check, which reads the value with `as_real`. It did, and it made no difference: the
+    class rules that run next widen an Integer and refused the edit as `ParamRange` (confirmed
+    on the `v0.5.0` tree). With the table declaring Real, an Integer edit of a Real parameter no
+    longer reaches a bound at all (`crates/oce-api/tests/real_parameter_literals.rs`).
 
 - **A `@context` term spelled as an IRI must bind its own expansion** (GitHub #613, issue #591).
   A whole-token term match wins over every other reading of a token, and the expansion pass took

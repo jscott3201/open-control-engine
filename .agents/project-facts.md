@@ -325,7 +325,9 @@ their meanings too. So the first PR after a
 release tag that changes a format's bytes or meaning does three things: it bumps
 `workspace.package.version` on `development` to the next milestone's version, if it is not bumped
 already; it re-blesses; and it includes a test that an artefact of the previous layout is refused
-with a typed error (`tests/blob_old_layout.rs` and `tests/state_old_layout.rs` are the pattern).
+with a typed error (`tests/blob_old_layout.rs` and `tests/state_old_layout.rs` are the pattern;
+`tests/engine_0_5_0_artefacts.rs` is the one for a change of meaning with no change of layout,
+issue #683, with a 0.5.0 blob and a 0.5.0 snapshot).
 A version bump is not a release: it cuts no tag
 and leaves `CHANGELOG.md`'s unreleased section open. It moves `Cargo.toml`
 (`workspace.package.version` and the `version` of each of the 11 workspace crates under
@@ -341,8 +343,12 @@ and trailer carry the version: the empty-model bytes and fingerprint in `state_t
 portable-vector checksum in `state_format_golden_tests.rs`. Each failing assertion prints the new
 value; the vectors beside the checksum are built there without the codec, so copy the values in
 and run the tests again. The snapshot fixtures under `crates/oce-api/tests/fixtures/`
-(`state_unstamped.hex`, `state_revision_two.hex`, `state_legacy.hex`) are artefacts of earlier
-layouts and never move. It also moves the five golden receipts under
+(`state_unstamped.hex`, `state_revision_two.hex`, `state_legacy.hex`, `state_engine_0_5_0.hex`)
+and the two blobs beside them (`blob_legacy.oceb`, `blob_engine_0_5_0.oceb`) are artefacts of
+earlier layouts or versions and never move. A bump also moves the "another version" literals so
+they stay different from the current one (`compatibility_tests.rs` names the next minor), and
+the version-field arithmetic in `state_old_layout.rs` and `docs/state-compatibility.md` (the body
+length whose low six bytes spell the version: 393,216 for 0.6.0). It also moves the five golden receipts under
 `crates/leverage/oce-verify/tests/fixtures/receipts/`, whose `engine_version` is inside the hashed
 part of every `receipt_id` (vectors note decision 33):
 `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, then again without the switch.
@@ -452,10 +458,11 @@ switch, read the new row and say in the PR what class the fixture landed in. Not
 edited by hand: the test counts only the G36 catalog's split (31 import, 15 refused), which moves
 only when the importer's subset does. `third_party/` is not walked, so a pin advance does not
 touch this test. The run fails, and a bless does not help, when a round trip's content id
-differs for a reason other than the two the test knows (the root's name prefix, and issue #683's
-Integer literal on a Real parameter): that is a finding to report, not a row. A change to what
-the importer accepts, to the emitter or to the content id moves rows the same way; #683 itself
-will turn the `same-id-real-literals` rows into `same-id`. The `import_*` transcripts read G36
+differs for a reason other than the one the test knows (the root's name prefix): that is a
+finding to report, not a row. A change to what the importer accepts, to the emitter or to the
+content id moves rows the same way. (Until issue #683 an Integer literal on a Real parameter was
+a second known reason, with a class of its own; the engine holds such a literal as a Real since
+0.6.0, so both spellings have one id.) The `import_*` transcripts read G36
 corpus fixtures and `oce-cxf` contract fixtures in place, so an edit to one of those moves its
 transcript.
 

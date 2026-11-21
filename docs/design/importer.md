@@ -841,6 +841,9 @@ verb adds to this note, and the choices the issue left open:
   root re-stamped. The second this note did not know, and it is a gap, not a design: an
   Integer literal on a Real parameter, which the importer keeps as written, the emitter writes
   as a Real, and the engine's id tells apart (issue #683, ruled "normalise at load" on
-  2026-11-21 and built as its own core PR; when it lands the case is gone). One tracked
+  2026-11-21 and built as its own core PR). One tracked
   document has it, `crates/oce-cxf/tests/fixtures/pass_through_miniature.jsonld`; no G36
-  fixture and neither in-repo library rule does.
+  fixture the importer accepts and neither in-repo library rule does. *Closed 2026-11-21,
+  issue #683, engine 0.6.0:* the engine holds an Integer bound to a Real parameter as that
+  Real, so the second case is gone, that document's round trip keeps its id, and only the
+  re-stamp remains.

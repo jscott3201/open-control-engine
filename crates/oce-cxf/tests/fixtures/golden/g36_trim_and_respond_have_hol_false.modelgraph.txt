@@ -45,7 +45,7 @@ blocks: 44
     param k=Real(0x4024000000000000)
   B18 decl=18 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReqCon")
     inputs=[] outputs=[47]
-    param k=Integer(2)
+    param k=Real(0x4000000000000000)
   B19 decl=19 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.trim_and_respond_have_hol_false.triAmoCon")
     inputs=[] outputs=[48]
     param k=Real(0x3fb999999999999a)

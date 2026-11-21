@@ -56,7 +56,7 @@ impl fmt::Display for CatalogContentId {
 /// let receipt = oce_api::CompatibilityDescriptor::current(None);
 /// let bytes = receipt.to_string();
 /// assert!(bytes.starts_with("oce-compatibility:1\ncatalog-schema:1\n"));
-/// assert!(bytes.ends_with("oce-api-version:0.5.0\ncontent:none\n"));
+/// assert!(bytes.ends_with("oce-api-version:0.6.0\ncontent:none\n"));
 /// receipt.check_compatible(&receipt)?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```

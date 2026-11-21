@@ -2,9 +2,9 @@
 //! stdin, a file and `-o`; the text and the wire output are one sequence, each canonical in its
 //! form and read back by `oce`'s own readers; the verb reads and writes and judges nothing, so
 //! what the validator would refuse is carried and a sequence a form cannot spell is refused; the
-//! read is bounded at the engine's CXF limit; and a number's bits survive both forms. The known
-//! gap in the round trip is pinned here too: an Integer literal on a Real parameter moves the
-//! content id (issue #683). `import_corpus.rs` runs the round trip over every CXF fixture
+//! read is bounded at the engine's CXF limit; and a number's bits survive both forms. An Integer
+//! literal on a Real parameter is imported as written, emitted as a Real, and keeps the content
+//! id, because the engine holds both as one Real (issue #683). `import_corpus.rs` runs the round trip over every CXF fixture
 //! tracked under `crates/`, `import_refusals.rs` holds one refusal per importer code, and
 //! `output_guards.rs` the two `-o` guards.
 
@@ -422,13 +422,12 @@ fn a_reals_bits_survive_both_forms() {
 }
 
 #[test]
-fn an_integer_literal_on_a_real_parameter_is_imported_as_written_and_emitted_as_a_real() {
-    // The known gap in the round trip (issue #683). The importer keeps the literal as the
-    // document wrote it (`uLow = 0`); the emitter writes a Real parameter's value as a Real;
-    // and the engine's id tells an Integer literal from a Real one, even on a Real parameter.
-    // So the round trip has the id of the document with the literal written as a Real, and
-    // not the original's. #683 is ruled "normalise at load": when it lands the two ids are
-    // one, the `assert_ne` below fails, and this test becomes the plain equality.
+fn an_integer_literal_on_a_real_parameter_is_imported_as_written_and_keeps_its_content_id() {
+    // The importer keeps the literal as the document wrote it (`uLow = 0`) and the emitter
+    // writes a Real parameter's value as a Real. The engine holds an Integer bound to a Real
+    // parameter as that Real (issue #683), so the original, the document with the literal
+    // written as a Real and the round trip through either form have one id. (Until 0.6.0 the
+    // id told the two spellings apart and this round trip moved it.)
     let cases: [(&str, Value, &str, &str); 4] = [
         (".hys.uLow", json!(0), "uLow = 0,", "0.0"),
         (
@@ -445,6 +444,7 @@ fn an_integer_literal_on_a_real_parameter_is_imported_as_written_and_emitted_as_
             "1.0",
         ),
     ];
+    let fixture_id = engine_id(&econ());
     for (suffix, integer, spelled, as_real) in cases {
         let original = edited(|document| node(document, suffix)["S231:value"] = integer.clone());
         let written_as_real =
@@ -455,11 +455,26 @@ fn an_integer_literal_on_a_real_parameter_is_imported_as_written_and_emitted_as_
             "{suffix}: {}",
             text.transcript()
         );
+        let original_id = engine_id(&original);
+        assert_eq!(original_id, engine_id(&written_as_real), "{suffix}");
         for form in ["text", "wire"] {
-            let round_trip = round_trip_id(&original, form);
-            assert_eq!(round_trip, engine_id(&written_as_real), "{suffix} {form}");
-            assert_ne!(round_trip, engine_id(&original), "{suffix} {form}");
+            assert_eq!(
+                round_trip_id(&original, form),
+                original_id,
+                "{suffix} {form}"
+            );
         }
+        // The fixture writes these two values as `0.0` and `1.0`: respelling one as an Integer
+        // is not a change to the document at all.
+        assert_eq!(original_id, fixture_id, "{suffix}");
+    }
+    // Not vacuous: another Integer is another document, and still the one its Real spelling is.
+    let other = edited(|document| node(document, ".hys.uLow")["S231:value"] = json!(-1));
+    let other_as_real = edited(|document| node(document, ".hys.uLow")["S231:value"] = real("-1.0"));
+    assert_ne!(engine_id(&other), fixture_id);
+    assert_eq!(engine_id(&other), engine_id(&other_as_real));
+    for form in ["text", "wire"] {
+        assert_eq!(round_trip_id(&other, form), engine_id(&other), "{form}");
     }
 }
 

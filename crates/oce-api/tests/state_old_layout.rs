@@ -58,7 +58,7 @@
 //! build's capture.
 
 #[path = "support/snapshot_bytes.rs"]
-mod snapshot_bytes;
+pub(crate) mod snapshot_bytes;
 
 use oce_api::{EngineStateError, EngineStateSnapshot, EngineVersion, OcError};
 use oce_graph::blob::ENGINE_VERSION;
@@ -229,7 +229,7 @@ fn unstamped_snapshot_given_a_version_field_fails_its_trailer_then_its_fingerpri
 #[test]
 fn unstamped_header_whose_length_spells_this_version_is_refused_at_the_length_field() {
     // The one unstamped header the version check cannot refuse: a body whose length, in its low
-    // six bytes, is this build's version field (327680 bytes for 0.5.0). The top two bytes of that
+    // six bytes, is this build's version field (393216 bytes for 0.6.0). The top two bytes of that
     // length and the first six of the fingerprint are then read as the body length, which cannot
     // be the true one. When the spelled length is past the 64 MiB cap (any patch above zero), no
     // such snapshot can exist and the size check refuses a buffer that long.

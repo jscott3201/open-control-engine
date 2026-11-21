@@ -272,8 +272,8 @@ fn source_verified_g36_trim_and_respond_have_hol_false_imports_as_explicit_compo
         "UnitDelay.y_start must inherit iniSet"
     );
     assert!(
-        block_param(&graph, ".numIgnReqCon", "k").bit_eq(&Value::Integer(2)),
-        "source Integer numIgnReq feeds the Real constant parameter and is promoted by the block"
+        block_param(&graph, ".numIgnReqCon", "k").bit_eq(&Value::Real(2.0)),
+        "source Integer numIgnReq feeds the Real constant parameter and is held as a Real"
     );
 
     let counts = connector_iri_counts(&graph);

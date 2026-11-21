@@ -134,7 +134,13 @@ yields well-formed bytes, which is what the host envelope is for.
 
 Snapshots of earlier layouts, kept unblessed (`tests/state_old_layout.rs`). None of the three has
 a version field: its body length sits at bytes 16..24, so this build reads the low six bytes of
-that length as a version and refuses it.
+that length as a version and refuses it. A fourth fixture is in this build's layout and names
+another version: `state_engine_0_5_0.hex`, captured on tag `v0.5.0`
+(`tests/engine_0_5_0_artefacts.rs`). It is refused with `EngineVersionMismatch` (found 0.5.0),
+and differs from this build's capture of the same state only in the version field, the
+fingerprint and the trailer. The workspace moved to 0.6.0 for a change of meaning with no change
+of snapshot layout (issue #683: a Real parameter written as an Integer is held as a Real), and
+the version field is what keeps the two apart.
 
 - `state_unstamped.hex`: revision 1 without the version field, as `development` wrote it between
   the format reset and issue #530; no release did. Refused with `EngineVersionMismatch` (found
@@ -147,7 +153,7 @@ that length as a version and refuses it.
   today's two numbers. Refused with `EngineVersionMismatch` (found 114.0.0).
 
 One unstamped header passes the version check: a body whose length, in its low six bytes, spells
-this build's version (327,680 bytes for 0.5.0, and none under the byte cap once the patch is above
+this build's version (393,216 bytes for 0.6.0, and none under the byte cap once the patch is above
 zero). The body-length field then reads bytes that cannot be the true length, and the decoder
 refuses it there (`MalformedSnapshot` at offset 22).
 
@@ -275,6 +281,10 @@ or a host `NO_EVAL` window, is host frame policy.
 - `tests/state_old_layout.rs`: three snapshots earlier layouts wrote, none with a version field,
   refused at that field or by format revision; the repeatable capture recipe of the two
   populated ones, and the connector values and state words it leaves, read out of both.
+- `tests/engine_0_5_0_artefacts.rs`: the snapshot release 0.5.0 wrote of the same recipe state,
+  sound in every respect and refused by its version field, from `from_bytes` and on the host's
+  restore path; equal to this build's capture restamped 0.5.0 by hand; and refused by its
+  trailer, then its fingerprint, when only the version bytes are edited.
 - `src/tests/state_manifest_refusal_tests.rs`: rechecksummed field mutation corpus, repeat typed
   diagnostics, full snapshot/checkpoint before/after images and retained lifecycle fences; capture refuses a deliberately injected noncanonical producer image.
 - `src/tests/state_format_golden_tests.rs`, `state_tests.rs`, `state_io.rs`: independent full

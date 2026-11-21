@@ -1180,7 +1180,10 @@ artefact carrying engine version 0.5.0 is refused by 0.6.0 with `EngineVersionMi
 second of the two PRs, and the closeout (#671), bump nothing. Neither tag changes: the keys and
 the mode arrive in place, and nothing reads an older shape. An 0.5.0 `oce verify` refuses a
 file that uses the keys as `unknown-key`, and the receipt's `engine_version` tells the two
-readings of the one tag apart.
+readings of the one tag apart. *(2026-11-21: the bump has landed, ahead of all of these, with
+issue #683. An Integer bound to a Real parameter is held as a Real from 0.6.0 on, which moves
+content ids and blob bytes; `crates/oce-api/tests/engine_0_5_0_artefacts.rs` is the test that a
+0.5.0 blob and a 0.5.0 snapshot are refused. So none of the PRs named here bumps.)*
 
 ## Where the tree overrules the outline
 

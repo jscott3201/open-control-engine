@@ -1,7 +1,7 @@
 {
   "format_version": 1,
-  "engine_version": "0.5.0",
-  "content_id": "oce:canon1:7211058f2932a92a6b0e3387634fc0b7ff5bd13c645c83024a087f9724516369",
+  "engine_version": "0.6.0",
+  "content_id": "oce:canon1:ac30b7b4eb713bb6c79448edf6381df1453f3c11aa8a2721312b2841b46f446b",
   "target_bound": false,
   "classes": [
     {"class_path": "CDL.Conversions.IntegerToReal", "signature_hash": "b1e0f5e45f4b4450"},

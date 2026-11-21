@@ -125,20 +125,19 @@ fn whole_number_reals_emit_with_a_fractional_part_and_reground_to_real() {
 }
 
 #[test]
-fn integer_params_emit_bare_and_reground_to_integer_not_real() {
-    // The reverse type-flip guard: del.y_start is Integer(0) (pinned by the resolver test
-    // `unit_delay_bare_int_grounds_to_integer_not_real`). It must emit BARE (`0`, never `0.0`)
-    // and come back as Integer.
+fn integer_literal_on_a_real_parameter_exports_as_a_real_and_regrounds_bit_identically() {
+    // del.y_start is written `0` on the Real parameter `UnitDelay.y_start`, and the resolver
+    // holds it as Real(0.0) (issue #683; pinned by the resolver test
+    // `unit_delay_bare_integer_on_a_real_parameter_is_held_as_a_real`). So it exports with a
+    // fractional part and comes back as the same Real: the round trip no longer depends on how
+    // the source spelled the number. An Integer parameter still exports bare and re-grounds as
+    // an Integer (`real_parameter_literals.rs`).
     let g1 = import_ok(FIXTURE.as_bytes());
     let bytes = export_ok(&g1);
     let text = std::str::from_utf8(&bytes).expect("export emits UTF-8 JSON");
     assert!(
-        text.contains(r#"{"@id":"http://example.org#MinLoop.del.y_start","S231:value":0}"#),
-        "del.y_start = Integer(0) must emit as the bare literal 0"
-    );
-    assert!(
-        !text.contains(r#""@id":"http://example.org#MinLoop.del.y_start","S231:value":0.0"#),
-        "del.y_start must never grow a fractional part"
+        text.contains(r#"{"@id":"http://example.org#MinLoop.del.y_start","S231:value":0.0}"#),
+        "del.y_start = Real(0.0) must emit with a fractional part"
     );
 
     let g2 = import_ok(&bytes);
@@ -149,8 +148,8 @@ fn integer_params_emit_bare_and_reground_to_integer_not_real() {
         .find(|(n, _)| n.as_ref() == "y_start")
         .expect("UnitDelay y_start");
     assert!(
-        y_start.1.bit_eq(&Value::Integer(0)),
-        "y_start must re-ground to Integer(0), got {:?}",
+        y_start.1.bit_eq(&Value::Real(0.0)),
+        "y_start must re-ground to Real(0.0), got {:?}",
         y_start.1
     );
 }

@@ -54,6 +54,7 @@ mod g36_single_driver_sweep;
 mod g36_specialization;
 mod ingest_totality;
 mod open_modelica_reliefs_windows_boundary;
+mod real_parameter_literals;
 mod resolve_array_nodes;
 mod resolve_boundary_multiplicity;
 mod resolve_composite;

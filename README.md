@@ -246,8 +246,12 @@ no hash collections, compiled a loaded executable to an `OCEB` blob that runs on
 through the facade's own frame driver, and replays one recorded run of the 46 fixtures' blobs bit
 for bit on x86_64, arm64 and `wasm32-wasip1` on every engine PR; v0.3.0 (M1a) made the engine pure
 and moved the per-PR gate to native x86_64 and arm64 cells under one required `CI OK` status.
-`development` carries 0.5.0 until the first change after the tag that moves a format's bytes or
-meaning, which bumps it to the next milestone's version.
+`development` carries 0.6.0. The first change after the v0.5.0 tag that moved a format's meaning
+bumped it (issue #683): a Real parameter written as an Integer is held as a Real from load on, so
+the parameter table, the blob and the canonical content id are those of the document that writes
+it as a Real, and an Integer above 2^53 in magnitude on a Real parameter is refused
+(`parameter-out-of-range`). A blob or a snapshot release 0.5.0 wrote is refused with
+`EngineVersionMismatch`.
 
 M2's `oce` command-line tool
 (`crates/leverage/oce-cli`, the first binary above the facade) puts the authoring loop at a shell
@@ -321,7 +325,7 @@ wire form, and reports what the importer read and did not carry; a document outs
 authoring subset is refused under the importer's own code. It validates nothing: `oce validate`
 or `oce emit` judges the result. Import then `emit` keeps the content id wherever `emit`
 accepts the sequence, except for a name prefix on the root (every imported G36 fixture,
-re-stamped) and, until #683 lands, an Integer literal on a Real parameter; the
+re-stamped); the
 [per-fixture table](crates/leverage/oce-cli/tests/fixtures/import_corpus.tsv) records what
 every CXF fixture under `crates/` does. Neither `import -o` nor `emit -o` will replace
 the input file named on the command line, nor, on Unix, a regular file redirected as stdin

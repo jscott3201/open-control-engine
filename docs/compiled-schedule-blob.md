@@ -260,7 +260,12 @@ change of that kind after a release tag also moves the workspace version. A blob
 release 0.4.0 shows why: it carries this same format number, valid sections, class hashes and
 CRC, and the retired `cxf:fnv1a128:` export tag where today's layout carries the canonical content
 id's digest. It is refused with `EngineVersionMismatch` and never becomes an executable
-(`tests/blob_old_layout.rs`).
+(`tests/blob_old_layout.rs`). A blob encoded by release 0.5.0 shows the other half, a change of
+meaning with no change of layout (issue #683): that release encoded a Real parameter written as
+an Integer as an Integer, and this build holds and encodes it as a Real, so the same document's
+blob differs in that one parameter record and in the content id that covers it. With only its
+version bytes and CRC rewritten the 0.5.0 blob would decode, so the version field is what
+refuses it (`tests/engine_0_5_0_artefacts.rs`).
 
 Each class carries an FNV-1a-64 **class signature hash** over a canonical record of the class: the
 default instance's kind, state length and state-contract revision, its port kinds and names, the
@@ -439,6 +444,7 @@ without a panic, and a missing, foreign, swapped or oversized file.
 | Raw state words restore all or nothing | `crates/oce-graph/tests/blob_state_words.rs` |
 | Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
 | A blob of an earlier layout under the same format number is refused | `blob_old_layout.rs`: the release-0.4.0 encoding of one fixture, kept unblessed, is refused with `EngineVersionMismatch` by `decode` and by `Executable::from_blob` |
+| A blob of the same layout and an earlier meaning is refused | `engine_0_5_0_artefacts.rs`: the release-0.5.0 encoding of `trim_and_respond_have_hol_false`, kept unblessed, differs from this build's in one parameter record (an Integer where a Real parameter now holds a Real) and the content id, and is refused with `EngineVersionMismatch` by `decode`, `Executable::from_blob` and `inspect_blob`; restamped with this version it would decode |
 | Which refusal wins is one rule for the blob and the snapshot | `blob_refusal_precedence.rs` and `oce-api`'s `src/tests/state_codec_tests.rs`: every pair of defects in each artefact reports the earlier check, every truncation of another version's blob below a header is `Truncated` and above it `EngineVersionMismatch`, and every flipped version bit is a version refusal; `blob_old_layout.rs`: the release-0.4.0 blob stays a version refusal with its length, trailer, profile or body damaged |
 | `SemanticPoint` payloads are non-computational | `blob_semantic_seam.rs` fills and mutates every payload byte and requires an identical executable and identical outputs |
 | A summary states what the blob holds, identically on every cell | `blob_goldens.rs`: the summary of each of the 46 blobs equals its checked-in JSON under `crates/oce-api/tests/fixtures/blob_summary/` byte for byte, in every determinism cell and both platform cells, and an independent JSON reader finds the same facts in it; `blob_summary.rs`: each summary equals what the test-side writer derives from the decoded executable (class per block, this build's hashes, the CRC of the words the decoder allocated) and the content id the engine minted and the content-id pin records; `oce-graph`'s `tests/blob_summary.rs` holds the core reader to the decoder over the same goldens |

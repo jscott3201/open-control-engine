@@ -386,9 +386,10 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for OneOrMany<T> {
 /// load-bearing (serde tries top-down): `false`→`Bool`, `0`→`Int`, `1.5`→`Float`, a
 /// `{@value,@type}` object→`Typed`, and any remaining string→`Expr`. (A JSON integer matches
 /// `Int` before `Float`.) The resolver grounds each variant **literal-natural** (a bare `Int`
-/// becomes `Value::Integer`); it does **not** re-type against the parameter's declared type — the
-/// block constructor performs Modelica `Int→Real` promotion (`oce-blocks` `real_param`) when a
-/// `Real` parameter receives an integer literal.
+/// becomes `Value::Integer`) and does not re-type against a declared `isOfDataType`. Once an
+/// instance's parameters are grounded, an Integer bound to a parameter the block catalog types
+/// Real is held as the Real of the same value, and refused above 2^53 in magnitude (issue #683,
+/// `resolve::real_parameters`), so a resolved model never carries an Integer on a Real parameter.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum CxfValue {

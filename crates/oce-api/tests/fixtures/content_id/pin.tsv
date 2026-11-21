@@ -1,12 +1,12 @@
 # Canonical content id pin: <content id> TAB <source path>, sorted by path.
 # The id is Engine::content_id (oce:canon1, SHA-256) of the loaded document.
-# Engine version: 0.5.0
+# Engine version: 0.6.0
 # Owner test: crates/oce-api/tests/content_id_pin.rs (regenerate with OCE_BLESS=1).
 oce:canon1:24a5b85676ff08f35ede152e6f795a6ba0da8289d7d668580f61a7eeeea0a56f	crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld
 oce:canon1:8abbfc5c1ed1ba9cdbb68105de5554acb331986ce924e7882ab59e24cf23b0b1	crates/oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld
 oce:canon1:913f05335f3f184916ba33e5a86bf32bb00c27d15cbbc7584a2f597659437559	crates/oce-cxf/tests/fixtures/g36/cooling_only_active_air_flow.jsonld
 oce:canon1:e98f0deaf611c785017384e89cf13e649c0befeab763bf66ce114611d3465b3e	crates/oce-cxf/tests/fixtures/g36/cooling_only_alarms.jsonld
-oce:canon1:f4d9c78866444a22a06bf06f8be6f8d8bd94496d2887b3c07bdfc7278e4e9b23	crates/oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld
+oce:canon1:4de404a60a2cc1e795a47767e79145fa14d4adcd2031c3a062b6197bacb42840	crates/oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld
 oce:canon1:316e3a3b1e5ed46d69af92033e0e84bc8ce01b65acb4b32c36e453ce5bdafb6d	crates/oce-cxf/tests/fixtures/g36/cooling_only_dampers.jsonld
 oce:canon1:e49fcf0b3ef7add67edd00c872c6e6276afa35f2c3b793a6bc028798e08e9ccf	crates/oce-cxf/tests/fixtures/g36/cooling_only_system_requests.jsonld
 oce:canon1:22d010e1298d0a1392a8bcc0475d9e201c2b41406bd90593c5207b60aa015a51	crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_differential.jsonld
@@ -40,12 +40,12 @@ oce:canon1:545d6f7c6f9d3b7cee74884fb3be207d257840bf9402828fca021fa2e3d28e28	crat
 oce:canon1:d9981ee0fa959de2410e446303ad4f3dd64d45d350c273c20e3a41a2bb68247a	crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld
 oce:canon1:142dc0385dc292b69b8859d91584e611ebc1037b5ca941fc5a525b9a85549e4e	crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld
 oce:canon1:9c50bcf3b9b96399a492c3873da1cb98be6f57a1356a32dbcb7669734c549a2f	crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld
-oce:canon1:917fd41a43c2d1c782818cd5f645c298a770779b71109042e63ebc682d3d1cd2	crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld
+oce:canon1:6d8c1c2062d9b534e5d7465e92b0c64a1774c703b6dd6c9d2e06200c78a6033a	crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld
 oce:canon1:fe6cb14dd9d07c2bea67965887ad5f0ffc0f85a8cde9e532d5319e5da9370501	crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld
-oce:canon1:a699fd927c5e1b43d17a0cd222578e055555fe0227ed2d4731850c04a73ecbb7	crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld
+oce:canon1:965d5c52d917a52e8315ce7a5f61026e668b7a670f75803cb88f5e64d7a4e028	crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld
 oce:canon1:53a54c531820b09175e0bfcb231614c4360299af96300d830bbcd5337dc1cd3f	crates/oce-cxf/tests/fixtures/g36/reheat_overrides.jsonld
 oce:canon1:102123c4a1edcdc496c0f74d045ba33b858df588ad572400c1c77841245130f9	crates/oce-cxf/tests/fixtures/g36/thermal_zones_control_loops.jsonld
 oce:canon1:33fc73c5f193c50fd3596052520df520c13a031cabc4b65ce3f36c0d35e136ca	crates/oce-cxf/tests/fixtures/g36/thermal_zones_zone_states.jsonld
-oce:canon1:7211058f2932a92a6b0e3387634fc0b7ff5bd13c645c83024a087f9724516369	crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld
+oce:canon1:ac30b7b4eb713bb6c79448edf6381df1453f3c11aa8a2721312b2841b46f446b	crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld
 oce:canon1:b7075019f095e5c669a469b69e4324a5db8240c4a0c3a7b9aeaa1b7da76c3699	crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld
 oce:canon1:f3638b5fe81e38b836e951416fb987ddc237294b84a75e608860da35c4ac1282	crates/oce-cxf/tests/fixtures/g36/ventilation_zones_ashrae62_1_setpoints.jsonld

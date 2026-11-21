@@ -68,6 +68,9 @@ mod pass_through;
 mod port_binding;
 #[cfg(test)]
 mod port_binding_tests;
+mod real_parameters;
+#[cfg(test)]
+mod real_parameters_tests;
 mod reference_keys;
 mod report;
 mod single_assignment;

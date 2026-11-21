@@ -219,14 +219,14 @@ fn malformed_descriptor_fields_refuse_instead_of_becoming_ignored_extensions() {
         DESCRIPTOR.replace("io-schema:1", "io-schema:4294967296"),
         DESCRIPTOR.replace("96724061", "9672406A"),
         DESCRIPTOR.replace("HostTick-v1", "arbitrary"),
-        DESCRIPTOR.replace("0.5.0", "05.5.0"),
-        DESCRIPTOR.replace("0.5.0", "0.5.0-01"),
-        DESCRIPTOR.replace("0.5.0", "0.5.0+"),
+        DESCRIPTOR.replace("0.6.0", "06.6.0"),
+        DESCRIPTOR.replace("0.6.0", "0.6.0-01"),
+        DESCRIPTOR.replace("0.6.0", "0.6.0+"),
         DESCRIPTOR.replace("content:none", "content:"),
         // The descriptor release 0.4.0 wrote under this same revision number (its last three
         // lines differ): the `export` line is refused by the grammar, never read as content.
         DESCRIPTOR.replace(
-            "execution-profile-schema:1\noce-api-version:0.5.0\ncontent:none",
+            "execution-profile-schema:1\noce-api-version:0.6.0\ncontent:none",
             "execution-profile-schema:2\noce-api-version:0.4.0\nexport:none",
         ),
         DESCRIPTOR.replace("content:none", "export:none"),
@@ -307,8 +307,8 @@ fn every_public_fact_has_an_ordered_typed_eligibility_refusal() {
             CompatibilityMismatch::ExecutionProfile,
         ),
         (
-            "0.5.0",
-            "0.5.0-next.1+build.01",
+            "0.6.0",
+            "0.6.0-next.1+build.01",
             CompatibilityMismatch::Build,
         ),
         (

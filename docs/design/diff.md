@@ -703,8 +703,9 @@ difference is resolved here or in the code.
   equal Real is `literal-respelled` on a `Real` sequence parameter, on a block parameter the
   catalog types Real and on a bound of a boundary both sides type `Real`, exactly up to 2^53, and
   a change of value anywhere else. So the diff reads a parameter's type from the catalog as well
-  as its literal default. The engine is to normalise that spelling at load (owner ruling on
-  #683), which makes the loaded graph agree with this level.
+  as its literal default. The engine normalises that spelling at load since 0.6.0 (owner ruling
+  on #683: an Integer bound to a catalog-Real parameter is held as the Real, and refused above
+  2^53), so the loaded graph agrees with this level for block parameters.
 - **A value and its unit suffix that both change are both reported**: the value in its section,
   the two spellings as `literal-respelled`. A scaled suffix kept across a change (`1 h` to `2 h`)
   is not a respelling.

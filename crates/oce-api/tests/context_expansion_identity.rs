@@ -8,7 +8,7 @@ use oce_api::{Engine, PointDirection, PointInfo};
 
 /// The canonical content id of `minimal_loop.jsonld`, pinned in `export_cxf.rs` too.
 const MINIMAL_LOOP_CONTENT_ID: &str =
-    "oce:canon1:0cef94f71eddaea00a23797d1e5844ed2e6ca41a0be9a2e938fc587c5d31e6c8";
+    "oce:canon1:9cc5f3e2e97c2af2cda6a67fe223022fdecf53fb0e0bf445889f11bc22db21d3";
 const ORIGINAL: &[u8] = include_bytes!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 const COMPACT_TWIN: &[u8] =
     include_bytes!("../../oce-cxf/tests/fixtures/minimal_loop_compact.jsonld");

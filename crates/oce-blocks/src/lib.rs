@@ -89,7 +89,9 @@ pub use catalog::{
     CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming,
 };
 #[cfg(feature = "std")]
-pub use class_metadata::{ClassParameter, class_description, class_parameters};
+pub use class_metadata::{
+    ClassParameter, class_description, class_parameters, parameter_value_type,
+};
 #[cfg(feature = "std")]
 pub use param_templates::{
     PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, ParamNameTemplate,
