@@ -200,7 +200,9 @@ pub(super) fn check_typing_whitespace(
     // of such tokens through a prefix bound to an IRI of any length (GitHub issue #709).
     // What the `@context` binds holds no whitespace and neither does what is joined to it, so
     // only a term the document wrote out is read for whitespace below: reading a bound one would
-    // cost the binding again for every token.
+    // cost the binding again for every token. (What follows a literal `S231:` is the document's
+    // text whatever the token expands to, so it is never taken for bound; no table the
+    // `@context` pass admits holds a term that makes the difference.)
     let (iri, bound) = match expand_token(trimmed, table) {
         Expansion::Expanded(iri) => (iri, !trimmed.starts_with("S231:")),
         Expansion::Verbatim | Expansion::Relative => (Iri::whole(trimmed), false),
