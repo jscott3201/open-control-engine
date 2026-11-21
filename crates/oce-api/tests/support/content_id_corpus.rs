@@ -1,9 +1,10 @@
 //! The canonical content id corpus shared by the `content_id_*` test binaries: the 46 G36 catalog
 //! fixtures and the resolver-contract document `member_list_interface.jsonld`, loaders, and the
 //! enumerated JSON-LD rewrites the permutation classes apply (`docs/design/content-id.md`,
-//! "Permutation classes"), and the node accessors the one-change tests edit a document through.
-//! Every rewrite is a pure function of the document; nothing is random. The topology boundary
-//! tests share it.
+//! "Permutation classes"), and the node accessors the topology boundary tests edit a document
+//! through. Every rewrite is a pure function of the document; nothing is random.
+//! `content_id_changes.rs` keeps accessors of its own: the product contract cites that file by
+//! line range, so it does not move for a helper.
 
 #![allow(dead_code)]
 
