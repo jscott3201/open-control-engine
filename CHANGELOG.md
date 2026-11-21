@@ -851,6 +851,14 @@ so far, and no tag is cut by the bump.
     each byte of a document, so a document at the 8 MiB admission limit would have to more than
     double under expansion to be refused. A document that fills the bound exactly loads (17.3 MB
     at its peak, for 137 KB), and one byte more is refused.
+  - **One pinned document is such a document.** The edge GitHub #713 measured for "warnings
+    alone can refuse a load", 127 unused boundary inputs under a 64 KiB namespace, wrote each
+    input's `@id` twice through the prefix, so its expansion added 16 MiB: it loaded with 127
+    warnings and is now refused for what expansion adds. The edge is pinned on the reader
+    instead (`oce_cxf::import_cxf`, `@id`s written out, a 16.7 MB document: 127 warnings load,
+    128 are refused, as before). Through the facade, 8 MiB of warnings about distinct nodes is
+    no longer reachable this way: it takes 16 MiB of `@id`s, over the admission limit written
+    out and over this bound through a prefix.
   - **Measured through `Engine::load_cxf`** (`crates/oce-api/tests/cxf_context_expansion_cost.rs`,
     requested bytes, debug build). The issue's document is refused holding 8.6 MB at its peak
     (8,649,348 bytes; 201,749,795 before) and the 807 MB one holding 9.4 MB. Fourteen routes

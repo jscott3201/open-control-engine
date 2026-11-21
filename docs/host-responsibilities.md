@@ -717,8 +717,13 @@ of a load, to 8 MiB of text (issue #695). What you can rely on:
 - **It is always a refusal, for warnings too.** The closing error is an error whatever was
   left out, so a document that raises nothing but warnings is refused once they pass the
   bound: the bound is the one reason a document with no error of its own does not load. A load
-  never succeeds with warnings missing. Measured at the edge: 127 unused boundary inputs under
-  a 64 KiB namespace load with 127 warnings, and 128 are refused.
+  never succeeds with warnings missing. Measured at the edge on the reader
+  (`oce_cxf::import_cxf`, which has no admission limit): 127 unused boundary inputs with 64 KiB
+  `@id`s written out, a document of 16.7 MB, load with 127 warnings, and 128 are refused.
+  Through the facade that document is over the admission limit, and the same inputs written
+  through a prefix are refused first for what expansion adds
+  ([below](#expansion-adds-a-bounded-amount-to-a-document)): 8 MiB of warnings about distinct
+  nodes takes 16 MiB of `@id`s, each written on its node and in a reference.
 - **A list within the bound is whole.** Every diagnostic the reader raises is listed, with its
   message and subject as they are: nothing is shortened, cut, merged or dropped. Every tracked
   document and every document of `open-control-library` is far inside the bound (the largest

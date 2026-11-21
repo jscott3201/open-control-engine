@@ -9,6 +9,10 @@
 //!
 //! - **Warnings alone can refuse a load.** A document whose warnings fit the budget loads with
 //!   every one of them; one more warning is a refusal, never a load with a warning left out.
+//!   This one is pinned on the reader, `oce_cxf::import_cxf`: 8 MiB of warnings about distinct
+//!   inputs takes 16 MiB of `@id`s, each written on its node and in a reference, which is over
+//!   the facade's admission limit written out and over what `@context` expansion may add to a
+//!   document written through a prefix (issue #709).
 //! - **One diagnostic larger than the whole budget** leaves the closing error alone, which still
 //!   says what was refused and where.
 //! - **Where the closing error is.** It is the last diagnostic of the error's list, and the first
@@ -70,19 +74,20 @@ fn long_namespace() -> String {
     format!("{stem}{}#", "x".repeat(64 * 1024 - stem.len() - 1))
 }
 
-/// [`MODEL`] with `count` more root boundary inputs `p:u<i>` that no connection reads, `p` bound
-/// to [`long_namespace`]: each one raises an `unused-boundary-input` warning on its expanded
-/// `@id`, 64 KiB and four characters long.
-fn unused_inputs(count: usize) -> Vec<u8> {
+/// [`MODEL`] with `count` more root boundary inputs `<prefix>u<i>` that no connection reads: each
+/// one raises an `unused-boundary-input` warning on its `@id`. With `prefix` the
+/// [`long_namespace`] itself the `@id`s are written out, 64 KiB and four characters long; with
+/// `p:` they are read through `p`, which is bound to it.
+fn unused_inputs(prefix: &str, count: usize) -> Vec<u8> {
     let root = "\"S231:hasInput\": { \"@id\": \"http://example.org#MinLoop.uSet\" },";
     assert_eq!(MODEL.matches(root).count(), 1);
     let references: String = (0..count)
-        .map(|i| format!(", {{ \"@id\": \"p:u{i:03}\" }}"))
+        .map(|i| format!(", {{ \"@id\": \"{prefix}u{i:03}\" }}"))
         .collect();
     let nodes: String = (0..count)
         .map(|i| {
             format!(
-                ",\n    {{ \"@id\": \"p:u{i:03}\", \"@type\": \"S231:RealInput\", \
+                ",\n    {{ \"@id\": \"{prefix}u{i:03}\", \"@type\": \"S231:RealInput\", \
                  \"S231:isOfDataType\": {{ \"@id\": \"S231:Real\" }} }}"
             )
         })
@@ -119,17 +124,21 @@ fn warnings_that_fill_the_budget_load_whole_and_one_more_warning_refuses_the_loa
     let every_warning =
         |count: usize| -> Vec<Diagnostic> { (0..count).map(unused_input_warning).collect() };
 
-    let (report, _) = Engine::new()
-        .load_cxf(&unused_inputs(fit))
+    // The `@id`s are written out, so nothing is expanded; the document is 16.7 MB, which the
+    // reader takes and the facade's admission limit does not.
+    let namespace = long_namespace();
+    let options = oce_cxf::ResolveOptions::default();
+    let (_, report) = oce_cxf::import_cxf(&unused_inputs(&namespace, fit), &options)
         .expect("warnings within the budget do not refuse a load");
-    assert_eq!(report.warnings, every_warning(fit));
+    assert_eq!(report.diagnostics, every_warning(fit));
 
     // One more unused input: the load is refused. The 127 warnings that fit are listed as they
     // are for the document that loads, and the closing error counts the one left out.
-    let error = Engine::new()
-        .load_cxf(&unused_inputs(fit + 1))
+    let error = oce_cxf::import_cxf(&unused_inputs(&namespace, fit + 1), &options)
         .expect_err("a load never succeeds with a warning left out");
-    let diagnostics = error.diagnostics();
+    let oce_cxf::CxfError::Validation(diagnostics) = error else {
+        panic!("a refusal list: {error}");
+    };
     assert_eq!(diagnostics.len(), fit + 1);
     assert_eq!(&diagnostics[..fit], &every_warning(fit)[..]);
     let subject = format!("urn:long:{}…", "x".repeat(55));
@@ -139,6 +148,27 @@ fn warnings_that_fill_the_budget_load_whole_and_one_more_warning_refuses_the_loa
         &closing(1, &format!("`unused-boundary-input` on `{subject}`"))
     );
     assert_eq!(last.severity, Severity::Error);
+}
+
+#[test]
+fn the_same_inputs_through_a_prefix_are_refused_for_what_expansion_adds() {
+    // Each input's `@id` is written twice, on its node and in the root's reference, and each
+    // spelling `p:u<i>` adds 64 KiB less two bytes, so the 254 of them add 16 MiB. The first
+    // that does not fit is refused, before any input is found unused. Until issue #709 this
+    // document loaded with 127 warnings.
+    let error = Engine::new()
+        .load_cxf(&unused_inputs("p:", 127))
+        .expect_err("expansion adds 16 MiB to this document");
+    let diagnostics = error.diagnostics();
+    assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+    assert_eq!(diagnostics[0].code, DiagCode::ResourceLimitExceeded);
+    assert!(
+        diagnostics[0]
+            .message
+            .ends_with("and may add at most 8388608 to one document"),
+        "{}",
+        diagnostics[0].message
+    );
 }
 
 /// [`MODEL`] with the value of the constant's parameter `k` replaced by a typed literal whose
