@@ -788,7 +788,7 @@ exit: 0
     },
     {
       "code": 2,
-      "meaning": "error: a usage, read, parse, size or I/O failure, or a run with no verdict; the question was not answered"
+      "meaning": "error: a usage, read, parse, size or I/O failure, a run with no verdict, or an input with no content id (id); the question was not answered"
     }
   ],
   "finding_codes": [

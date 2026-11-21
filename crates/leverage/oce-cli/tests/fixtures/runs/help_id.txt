@@ -23,7 +23,7 @@ Options:
           [possible values: auto, always, never]
 
       --namespace <NAMESPACE>
-          The instance namespace a text or wire file is emitted under, as for emit; the id is the same under every namespace
+          The instance namespace a text or wire file is emitted under, as for emit. A namespace never moves the id; one whose IRIs the engine refuses leaves the document with none
 
       --json
           Print the JSON report, with content_id, instead of the id line

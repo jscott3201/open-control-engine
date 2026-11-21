@@ -173,8 +173,8 @@ pub(crate) struct IdArgs {
     /// The input form; overrides the name, and is required for stdin.
     #[arg(long, value_enum)]
     pub(crate) from: Option<IdForm>,
-    /// The instance namespace a text or wire file is emitted under, as for emit; the id is the
-    /// same under every namespace.
+    /// The instance namespace a text or wire file is emitted under, as for emit. A namespace
+    /// never moves the id; one whose IRIs the engine refuses leaves the document with none.
     #[arg(long)]
     pub(crate) namespace: Option<String>,
     /// Print the JSON report, with content_id, instead of the id line.

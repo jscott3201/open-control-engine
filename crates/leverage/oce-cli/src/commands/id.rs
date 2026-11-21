@@ -17,18 +17,24 @@
 //!    form's own limit, a file's size from its metadata before a byte is read;
 //! 4. for a text or wire file, what `oce emit` does: the parse, the emitter under the
 //!    `--namespace` rule, then both validation stages. An error finding is `not-loadable` with
-//!    the findings in the report; a malformed namespace is `invalid-namespace`;
+//!    the findings in the report, an emitted document larger than an engine loads included
+//!    (`document-too-large`, the finding `emit` reports); a malformed namespace is
+//!    `invalid-namespace`;
 //! 5. a fresh engine loads the CXF bytes (`not-loadable`, with the engine's diagnostic codes)
 //!    and names the loaded model.
 //!
-//! The id leaves the instance namespace out, so `--namespace` never moves it; the flag is here
-//! so that the verb accepts exactly the invocations `oce emit` accepts.
+//! The report's `stages` is written only once a validation stage ran: never after a read, parse
+//! or namespace refusal, and never for a CXF document.
+//!
+//! The id leaves the instance namespace out, so a namespace never moves it. One whose IRIs the
+//! engine refuses (`#` alone, which makes every IRI relative) leaves the document with no id:
+//! step 5 loads the bytes written under that namespace, and its refusal is `not-loadable`.
 
 use std::ffi::OsStr;
 use std::path::Path;
 
 use oce_api::Engine;
-use oce_author::{EmitError, EmitOptions, Severity, emit, validate};
+use oce_author::{DOCUMENT_TOO_LARGE, EmitError, EmitOptions, Severity, emit, validate};
 use serde_json::Value;
 
 use super::Outcome;
@@ -157,8 +163,23 @@ fn document(
             );
             return None;
         }
+        Err(EmitError::TooLarge { bytes, limit }) => {
+            // The finding `oce emit` reports for the same file, so the two reports agree.
+            report.set("stages", Value::Array(vec![Value::from("author")]));
+            report.finding_raw(
+                DOCUMENT_TOO_LARGE,
+                "sequence",
+                &format!("the document is {bytes} bytes; an engine loads at most {limit}"),
+                "author",
+            );
+            report.error(
+                codes::NOT_LOADABLE,
+                "the sequence has error findings; it was not emitted",
+                None,
+            );
+            return None;
+        }
         Err(EmitError::InvalidNamespace { namespace, problem }) => {
-            report.set("stages", Value::Array(Vec::new()));
             report.error(
                 codes::INVALID_NAMESPACE,
                 format!("namespace `{namespace}` {problem}"),
@@ -167,7 +188,6 @@ fn document(
             return None;
         }
         Err(other) => {
-            report.set("stages", Value::Array(vec![Value::from("author")]));
             report.error(
                 codes::NOT_LOADABLE,
                 format!("the sequence could not be emitted: {other}"),

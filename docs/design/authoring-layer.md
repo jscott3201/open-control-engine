@@ -509,6 +509,9 @@ defines no load report. What binding needs (inputs with types and bounds, output
 what `oce check` should print, so it is cut as its own follow-up, #574. *(Amended 2026-11-20,
 issue #513:)* M3 also adds `id`, which prints the canonical content id `oce check` would have
 reported, and nothing else ([content-id note](content-id.md), "Mapping table for the library re-stamp").
+`id` is a stated exception to the exit rule above, as a `verify` subject is ([vectors
+note](vectors.md), "CLI", "Forms"): an authored file with an error finding is exit **2**, not 1,
+because the verb asks for an id and such a file has none; it never exits 1.
 
 **Binaries above the facade.** The architecture page says the engine is library-only, with no binary
 target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage

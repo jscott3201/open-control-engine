@@ -14,7 +14,6 @@ exit: 2
   "input": "../oce-author/tests/fixtures/text/econ_enable.oce",
   "ok": false,
   "schema": "oce-report/1",
-  "stages": [],
   "tool": "oce"
 }
 --- stderr

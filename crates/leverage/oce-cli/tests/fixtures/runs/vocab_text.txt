@@ -196,7 +196,7 @@ bind and run codes (verify, exit 2):
 exit codes:
   0  yes: clean, canonical, resolved, every scenario passed
   1  no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict
-  2  error: a usage, read, parse, size or I/O failure, or a run with no verdict; the question was not answered
+  2  error: a usage, read, parse, size or I/O failure, a run with no verdict, or an input with no content id (id); the question was not answered
 
 enumerations (Type.Member values; a constant package's members are Integers):
   CDL.Types.SimpleController (enumeration): P=1 PI=2 PD=3 PID=4

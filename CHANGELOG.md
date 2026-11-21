@@ -350,7 +350,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
     finding, with the findings in the report), `namespace-needs-authored` (`--namespace` beside
     a CXF document, which is never rewritten) and `no-content-id` (the facade could not name a
     loaded model; never expected). A malformed `--namespace` is `invalid-namespace`, as for
-    `emit`; a well-formed one never moves the id.
+    `emit`. A namespace never moves the id; one whose IRIs the engine refuses (`#` alone) leaves
+    the document with none, `not-loadable`. An emitted document larger than an engine loads is
+    `not-loadable` with the `document-too-large` finding `emit` reports. `oce vocab`'s meaning
+    of exit 2 names an input with no content id.
   - **`--json`** prints the report in place of the id line, with `content_id` and `form`
     (`stages` too after an authored file's validation). The report schema is still
     `oce-report/1`: one more `command` value and its keys.
@@ -358,8 +361,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
     `unknown-form`. Four transcripts move with the verb (`help_oce`, `usage_no_arguments`,
     `vocab_text`, `vocab_json`); 25 are new.
   - **Tests.** `tests/id_files.rs` holds every printed id to `Engine::content_id`: the 47
-    documents of the tracked pin file, both in-repo library rules, and each `oce-author` text
-    fixture against its committed CXF, the CXF `oce emit` writes and its wire form. It covers
+    documents of the tracked pin file, both in-repo library rules, and each of the six
+    `oce-author` text fixtures against its committed CXF and the CXF `oce emit` writes, the two
+    that have a wire form against it as well. Over all 38 tracked authored fixtures `oce emit`
+    and `oce id` agree, with the counts pinned: 9 clean with equal ids, 14 where `emit` exits 1
+    and `id` 2 with the same findings, 13 refused by both under one code, and 2 `.cxf.json`
+    files the two verbs read in different forms by their name rules. It covers
     stdin against a file, the name rule, the namespace, both size bounds from metadata and on
     stdin, and hostile CXF. `tests/id_runs.rs` pins one transcript per input form and refusal.
   - The CLI README has the verb's contract; the root README, the leverage README, the

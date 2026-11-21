@@ -392,7 +392,7 @@ pub(crate) const EXIT_MEANINGS: &[(u8, &str)] = &[
     ),
     (
         2,
-        "error: a usage, read, parse, size or I/O failure, or a run with no verdict; the question was not answered",
+        "error: a usage, read, parse, size or I/O failure, a run with no verdict, or an input with no content id (id); the question was not answered",
     ),
 ];
 

@@ -179,6 +179,193 @@ fn the_namespace_never_moves_the_id() {
 }
 
 #[test]
+fn a_namespace_the_engine_refuses_leaves_the_document_with_no_id() {
+    // `#` passes the emitter's namespace rule and makes every IRI relative: the bytes written
+    // under it do not load, so they have no id. The refusal is the engine's, with its codes.
+    // (That `oce emit` writes such a document is issue #677.)
+    let text = author_fixture("text/econ_enable.oce");
+    let run = oce(&["id", &text, "--namespace", "#"], b"");
+    assert_eq!(refusal(&run), "not-loadable");
+    let report = run.report();
+    assert_eq!(report["errors"][0]["at"], "input");
+    assert!(
+        report["errors"][0]["diagnostic_codes"]
+            .as_array()
+            .expect("the engine's codes")
+            .iter()
+            .any(|code| code == "relative-iri"),
+        "{}",
+        run.transcript()
+    );
+    // Both validation stages ran on the sequence and found nothing.
+    assert_eq!(report["stages"], serde_json::json!(["author", "engine"]));
+    assert_eq!(report["findings"], serde_json::json!([]));
+}
+
+#[test]
+fn stages_is_written_only_once_a_validation_stage_ran() {
+    let text = author_fixture("text/econ_enable.oce");
+    let cxf = author_fixture("emit/econ_enable.cxf.json");
+    let absent: [&[&str]; 6] = [
+        // A malformed namespace, a parse refusal, a read refusal, an unknown form.
+        &["id", &text, "--namespace", "urn:plant"],
+        &["id", "tests/fixtures/inputs/malformed.oce"],
+        &["id", "tests/fixtures/inputs/malformed.json"],
+        &["id", "missing.oce"],
+        &["id", "tests/fixtures/inputs/plain.txt"],
+        // A CXF document, refused or not.
+        &["id", "tests/fixtures/inputs/verify/unknown_class.cxf.json"],
+    ];
+    for args in absent {
+        let run = oce(args, b"");
+        assert_eq!(run.code, 2, "{args:?}");
+        assert!(run.report().get("stages").is_none(), "{args:?}");
+    }
+    let clean_cxf = oce(&["id", &cxf, "--json"], b"").report();
+    assert!(clean_cxf.get("stages").is_none());
+    let stage = |args: &[&str]| oce(args, b"").report()["stages"].clone();
+    assert_eq!(
+        stage(&["id", &text, "--json"]),
+        serde_json::json!(["author", "engine"])
+    );
+    assert_eq!(
+        stage(&["id", "tests/fixtures/inputs/unused_input.oce"]),
+        serde_json::json!(["author", "engine"])
+    );
+    assert_eq!(
+        stage(&["id", "tests/fixtures/inputs/stage_one.oce"]),
+        serde_json::json!(["author"])
+    );
+}
+
+#[test]
+fn a_sequence_that_emits_more_than_an_engine_loads_is_refused_with_emits_finding() {
+    // 20,000 blocks: under the text form's limit as written, about 24 MB as CXF.
+    let dir = scratch("id_document_too_large");
+    let mut text = String::from("sequence big\nderived_from none\nin u : Real\nout y : Real\n");
+    for i in 0..20_000 {
+        text.push_str(&format!(
+            "block g{i} = CDL.Reals.MultiplyByParameter(k = 1.0)\n"
+        ));
+    }
+    text.push_str("u -> g0.u\n");
+    for i in 1..20_000 {
+        text.push_str(&format!("g{}.y -> g{i}.u\n", i - 1));
+    }
+    text.push_str("g19999.y -> y\n");
+    assert!(text.len() < MAX_TEXT_BYTES);
+    fs::write(dir.join("big.oce"), &text).expect("write");
+    let id = oce_in(&dir, &["id", "big.oce"], b"");
+    assert_eq!(refusal(&id), "not-loadable");
+    let emit = oce_in(&dir, &["emit", "big.oce"], b"");
+    assert_eq!(emit.code, 1, "emit answers no");
+    let (id, emit) = (id.report(), emit.report());
+    assert_eq!(id["findings"][0]["code"], "document-too-large");
+    assert_eq!(id["findings"], emit["findings"]);
+    assert_eq!(id["stages"], emit["stages"]);
+    assert_eq!(id["stages"], serde_json::json!(["author"]));
+}
+
+// --- `oce emit` and `oce id` over every tracked authored fixture ---
+
+/// Every file under `dir` (relative to the crate directory), sorted.
+fn files_under(dir: &str, found: &mut Vec<String>) {
+    let mut entries: Vec<_> = fs::read_dir(crate_dir().join(dir))
+        .unwrap_or_else(|_| panic!("directory {dir}"))
+        .map(|entry| entry.expect("entry"))
+        .collect();
+    entries.sort_by_key(std::fs::DirEntry::file_name);
+    for entry in entries {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let path = format!("{dir}/{name}");
+        if entry.file_type().expect("file type").is_dir() {
+            files_under(&path, found);
+        } else if !name.starts_with('.') {
+            found.push(path);
+        }
+    }
+}
+
+#[test]
+fn emit_and_id_agree_over_every_tracked_authored_fixture() {
+    // `oce-author`'s text, wire and note fixtures and this crate's inputs, vector files and
+    // plain text included: whatever `emit` makes of a file, `id` makes the same of it.
+    let mut fixtures = Vec::new();
+    for dir in [
+        "../oce-author/tests/fixtures/text",
+        "../oce-author/tests/fixtures/wire",
+        "../oce-author/tests/fixtures/note",
+        "tests/fixtures/inputs",
+    ] {
+        files_under(dir, &mut fixtures);
+    }
+    // The one difference between the two verbs' name rules: `emit` reads every `.json` as the
+    // wire form, `id` reads `.cxf.json` as CXF. Both such fixtures are CXF documents, so `emit`
+    // refuses them with a wire code; `id` names the one that loads and refuses the other as
+    // `not-loadable`.
+    let name_rule = [
+        (
+            "tests/fixtures/inputs/verify/identical_mutant/copy.cxf.json",
+            0,
+        ),
+        ("tests/fixtures/inputs/verify/unknown_class.cxf.json", 2),
+    ];
+    let (mut clean, mut answered_no, mut refused, mut by_name) = (0, 0, 0, 0);
+    for path in &fixtures {
+        let emit = oce(&["emit", path], b"");
+        let id = oce(&["id", path], b"");
+        if let Some((_, id_exit)) = name_rule.iter().find(|(named, _)| named == path) {
+            assert_eq!((emit.code, id.code), (2, *id_exit), "{path}");
+            let wire = emit.report()["errors"][0]["code"]
+                .as_str()
+                .expect("code")
+                .to_owned();
+            assert!(
+                oce_author::WIRE_CODES.contains(&wire.as_str()),
+                "{path}: {wire}"
+            );
+            if *id_exit == 0 {
+                assert_eq!(printed_id(&id), engine_id(&bytes_of(path)), "{path}");
+            } else {
+                assert_eq!(refusal(&id), "not-loadable", "{path}");
+            }
+            by_name += 1;
+            continue;
+        }
+        match (emit.code, id.code) {
+            (0, 0) => {
+                assert_eq!(printed_id(&id), engine_id(&emit.stdout), "{path}");
+                clean += 1;
+            }
+            (1, 2) => {
+                // The same findings and stages; `id` adds the one error that says why 2.
+                assert_eq!(refusal(&id), "not-loadable", "{path}");
+                let (emit, id) = (emit.report(), id.report());
+                assert_eq!(emit["findings"], id["findings"], "{path}");
+                assert_eq!(emit["stages"], id["stages"], "{path}");
+                assert_eq!(emit["errors"], serde_json::json!([]), "{path}");
+                answered_no += 1;
+            }
+            (2, 2) => {
+                // One refusal each, under one code and at one span.
+                let code = refusal(&id);
+                let (emit, id) = (emit.report(), id.report());
+                assert_eq!(emit["errors"][0]["code"], code.as_str(), "{path}");
+                assert_eq!(emit["errors"][0]["span"], id["errors"][0]["span"], "{path}");
+                assert_eq!(emit["errors"].as_array().map(Vec::len), Some(1), "{path}");
+                refused += 1;
+            }
+            other => panic!("{path}: emit and id disagree: {other:?}"),
+        }
+    }
+    // Pinned, so that a fixture added later is classified here.
+    assert_eq!(
+        (clean, answered_no, refused, by_name, fixtures.len()),
+        (9, 14, 13, 2, 38)
+    );
+}
+
+#[test]
 fn stdin_and_a_file_print_the_same_bytes_in_every_form() {
     for (path, form) in [
         (author_fixture("emit/econ_enable.cxf.json"), "cxf"),

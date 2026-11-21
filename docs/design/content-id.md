@@ -668,7 +668,11 @@ CLI verb printing `Engine::content_id`, cut with the core PR or after it). *Amen
 (issue #513):* the verb is in: `oce id <FILE> [--from cxf|text|wire] [--namespace <NS>] [--json]`
 prints the id and one line feed for a CXF document, or for the CXF a text or wire file emits
 (exit 0), and the `oce-report/1` report when the input has no id (exit 2); the
-[`oce` README](../../crates/leverage/oce-cli/README.md#oce-id) is its contract. The re-stamp replaces a
+[`oce` README](../../crates/leverage/oce-cli/README.md#oce-id) is its contract. An authored file
+whose only findings are engine warnings has no id, because the emitter's validator counts every
+engine warning as an error finding ([authoring note](authoring-layer.md), decision 14), while the
+same graph as a CXF document loads and has one; `oce verify` has the same asymmetry between an
+authored and a CXF subject ([vectors note](vectors.md), "Binding and running", step 1). The re-stamp replaces a
 card's id only where the card's stored id equals the table's old id for that source; a card with
 no row, or whose stored id disagrees, is reported and left alone, never guessed. M3's gate row "ids
 agree" then checks every re-stamped id against the id of the emitter's output for the same

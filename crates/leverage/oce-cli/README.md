@@ -152,11 +152,15 @@ oce id rule.cxf.jsonld --json     # the report, with content_id
   warnings has an id: warnings are not in the output.
 - **A text or wire file** is emitted first, exactly as `oce emit` would: the parse, the emitter,
   then both validation stages. A file `oce emit` would refuse has no id: `not-loadable` (exit
-  `2`, not `emit`'s `1`), with the findings and `stages` in the report. So `oce id FILE` is
-  always the id of what `oce emit FILE` writes.
-- **`--namespace`** follows `emit`'s rule (a malformed one is `invalid-namespace`) and never
-  changes the output, because the id leaves the instance namespace out. Beside a CXF document it
-  is `namespace-needs-authored`: a CXF document is never rewritten.
+  `2`, not `emit`'s `1`), with the findings and `stages` in the report, a document too large for
+  an engine included (`document-too-large`). So `oce id FILE` is always the id of what
+  `oce emit FILE` writes. `tests/id_files.rs` holds the two verbs to each other over every
+  tracked authored fixture.
+- **`--namespace`** follows `emit`'s rule (a malformed one is `invalid-namespace`). A namespace
+  never moves the id, because the id leaves the instance namespace out; one whose IRIs the
+  engine refuses (`#` alone, which makes every IRI relative) leaves the document with none:
+  `not-loadable`, with the engine's codes. Beside a CXF document the flag is
+  `namespace-needs-authored`: a CXF document is never rewritten.
 - **Reads** are bounded by the form: a CXF document at 8 MiB (`oce_api::MAX_CXF_BYTES`), a text
   or wire file at 4 MiB, a file's size from its metadata before a byte is read, stdin one byte
   past the limit.
@@ -236,7 +240,7 @@ Command keys:
 | `fmt` | `form` (`text`, `wire`, or `null` before the form is known); with `--check`, `canonical` (whether the input is already canonical **in its own form**: text against `fmt`, wire against the canonical wire writer); with `--write`, only once the file is known canonical on disk (unchanged, or rewritten), `changed` and `output` (absent from a failed write's report) |
 | `catalog` | without a class, `classes`; with one, `class` (`null` when the class is unknown or a `--param` is malformed) and `params` (the `--param` strings as given). A class is one closed object, the same in both ([below](#a-catalog-class)) |
 | `vocab` | `keywords`, `types`, `tags`, `base_units`, `scale_factors` ([below](#scale-factors)), `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `error_codes`, `vector_codes` and `verify_codes` (`oce-verify`'s load, bind and run codes, pinned to its lists), `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
-| `id` | `form` (`cxf`, `text`, `wire`, or `null` before the form is known); `content_id`, only when the input has one (so only with `--json`, exit `0`); after a text or wire file's validation, `stages` as for `validate` |
+| `id` | `form` (`cxf`, `text`, `wire`, or `null` before the form is known); `content_id`, only when the input has one (so only with `--json`, exit `0`); `stages` as for `validate`, only once a validation stage of a text or wire file ran (absent after a read, parse or namespace refusal, and for a CXF document) |
 | `verify` | `subject` (the subject's path as given); with `--out`, only once the receipt is written, `passed`, `status` (`pass`, `fail`, `no_data`), `receipt_id` and `output` (`DIR/receipt.json`, with `/`); after a text or wire subject's validation, `stages` as for `validate` |
 
 The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-file`,
@@ -385,7 +389,8 @@ For `id`:
   tracked pin file (`crates/oce-api/tests/fixtures/content_id/pin.tsv`, read in place), both
   in-repo library rules, and each `oce-author` text fixture against its committed and its
   emitted CXF. It also covers stdin against a file, the name rule, the namespace, both size
-  bounds and hostile CXF.
+  bounds, hostile CXF, and the agreement of `oce emit` and `oce id` over every tracked authored
+  fixture, with their counts pinned.
 
 The transcripts regenerate only with `OCE_BLESS_CLI=1 cargo nextest run -p oce-cli` (see
 `.agents/project-facts.md`). The `verify` transcripts embed receipts, which carry the engine
