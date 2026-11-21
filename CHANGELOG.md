@@ -1594,7 +1594,7 @@ so far, and no tag is cut by the bump.
 ### Documentation
 
 - **The gate script's row is batched, and one PR may close several related issues** (owner
-  decision of 2026-11-21; process text only, no behaviour, surface or published claim).
+  decision of 2026-11-21; process text only, no behaviour, surface or published claim; GitHub #737).
   `AGENTS.md`, `CONTRIBUTING.md`, `.agents/project-facts.md`, `docs/ci-and-the-gate.md` and the PR
   template now say that the per-PR proof is fmt, clippy and rustdoc on the changed crates, their
   nextest suites and doctests and the evidence the issue asks for, with `CI OK` on the head as the
