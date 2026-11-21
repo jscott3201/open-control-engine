@@ -10,7 +10,7 @@
 //!
 //! Then every cell is converted exactly once: an infinity is refused (`non-finite-number`; the
 //! owner's ruling of 2026-11-21), the point's [`CellRule`] gives a value of its CDL type, and
-//! for a Real the point's [`UnitConversion`] puts it in the CDL unit. A missing cell stays
+//! for a Real the point's [`UnitConversion`](super::units::UnitConversion) puts it in the CDL unit. A missing cell stays
 //! missing. Each refusal names the file, the data row and the column.
 //!
 //! **Time.** A `combiTimeTable`'s time column is seconds. A `csv` time column is seconds or RFC
