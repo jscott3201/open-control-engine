@@ -363,7 +363,7 @@ vector file's rules, and arrays keep the order each row states.
 | `warnings`, `warnings_total` | array, integer | always | run-time warnings as `{ "t", "block", "message" }`, in row then emission order, at most 16; the count before the cap |
 | `outputs` | array | always | one object per compared output (decision 40), sorted by canonical path bytes. Complete, at most 4,096 |
 | `unverified_outputs`, `unverified_outputs_total` | array of string, integer | always | canonical paths of the boundary outputs no `expected` source supplies, sorted, at most 64; the count before the cap |
-| `findings`, `findings_total` | array, integer | always | `{ "code", "at" }` per finding of the spec loader that concerns the top level or this reference, in the loader's order, at most 64; the count before the cap. The one code is `lbl-field-ignored`, and `at` is the field (`references[1].runController`) |
+| `findings`, `findings_total` | array, integer | always | `{ "code", "at" }` per finding of the spec loader that concerns the top level or this reference, in the loader's order (the top-level fields sorted by name, then the reference's sorted by name, whatever the file's key order), at most 64; the count before the cap. The one code is `lbl-field-ignored`, and `at` is the field (`references[1].runController`) |
 
 There is no mutant score and no gate (decision 7).
 
