@@ -614,7 +614,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
 ### Leverage
 
-- **`oce-diff` compares two loaded CXF documents** (GitHub #GITHUB_PR_NUMBER, issue #666;
+- **`oce-diff` compares two loaded CXF documents** (GitHub #715, issue #666;
   design note `docs/design/diff.md`, part 2 of 4). `diff_topology(base, head, options)` takes the
   facade's `Topology` views of two documents the caller loaded and returns the same `Diff` data
   as the authoring diff, with `source: cxf`; it loads nothing and reads no CXF bytes.
