@@ -56,11 +56,17 @@ fn long_id(bytes: usize) -> String {
 
 /// [`MODEL`] with `terms` added to its `@context` and `node` appended to its `@graph`.
 fn with_node(terms: &str, node: &str) -> String {
+    with_node_in(MODEL, terms, node)
+}
+
+/// `model`, an edit of [`MODEL`], with `terms` added to its `@context` and `node` appended to
+/// its `@graph`.
+fn with_node_in(model: &str, terms: &str, node: &str) -> String {
     let context = "\"base\": \"http://example.org#\"";
     let last = "\"S231:isOfDataType\": { \"@id\": \"S231:Boolean\" } }\n  ]";
-    assert_eq!(MODEL.matches(context).count(), 1);
-    assert_eq!(MODEL.matches(last).count(), 1);
-    MODEL
+    assert_eq!(model.matches(context).count(), 1);
+    assert_eq!(model.matches(last).count(), 1);
+    model
         .replacen(context, &format!("{context}{terms}"), 1)
         .replacen(
             last,
@@ -262,6 +268,40 @@ const ROUTES: &[Route] = &[
                 1,
             );
             redeclarations(&conditional, id, items)
+        },
+        raised: every_item,
+    },
+    Route {
+        // A composite pruned by its guard is never read by lowering, so what the specialization
+        // pass withheld for it is released: each finding is built at its release.
+        name: "the same in a composite its guard prunes",
+        code: DiagCode::MalformedDocument,
+        document: |id, items| {
+            let root = "\"S231:label\": \"MinLoop\",";
+            let child = "{ \"@id\": \"http://example.org#MinLoop.con\" },";
+            assert_eq!(MODEL.matches(root).count(), 1);
+            assert_eq!(MODEL.matches(child).count(), 1);
+            let again = list(items, |i| format!("{{ \"@id\": \"urn:d{i}.k\" }}"));
+            let model = MODEL
+                .replacen(
+                    root,
+                    &format!("{root} \"S231:hasParameter\": {{ \"@id\": \"urn:m.have_sub\" }},"),
+                    1,
+                )
+                .replacen(child, &format!("{child} {{ \"@id\": \"urn:m.sub\" }},"), 1);
+            let nodes = format!(
+                "{{ \"@id\": \"urn:m.have_sub\", \"S231:value\": false }},
+    {{ \"@id\": \"urn:m.sub\", \"@type\": \"http://example.org#Vendor.Sequences.Inner\",
+      \"S231:isConditionalComponent\": true, \"S231:conditionalExpression\": \"have_sub\",
+      \"S231:hasParameter\": [ {{ \"@id\": \"{id}.k\" }}, {again},
+                             {{ \"@id\": \"urn:m.sub.have_inner\" }} ],
+      \"S231:containsBlock\": [ {{ \"@id\": \"urn:m.sub.inner\" }} ] }},
+    {{ \"@id\": \"urn:m.sub.have_inner\", \"S231:value\": false }},
+    {{ \"@id\": \"urn:m.sub.inner\",
+      \"@type\": \"http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant\",
+      \"S231:isConditionalComponent\": true, \"S231:conditionalExpression\": \"have_inner\" }}"
+            );
+            with_node_in(&model, "", &nodes).into_bytes()
         },
         raised: every_item,
     },
