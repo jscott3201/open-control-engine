@@ -124,7 +124,10 @@ does). It is a read-only verification view, not a continuation format: continue 
 the blob (`decode_refusal`, issue #680). It is what a comparison of two blobs needs: the
 [structural diff](design/diff.md) compares blobs as same or different by content id, by class
 path and class signature hash, and by each instance's initial-state CRC, and a leverage crate may
-not call `oce_graph::blob`. No `Engine` is involved. `oce_graph::blob::inspect` is the same reader
+not call `oce_graph::blob`. That comparison is `oce_diff::compare_blobs`
+([the blob comparison](../crates/leverage/oce-diff/README.md#the-blob-comparison), issue #667),
+which reads both sides through `inspect_blob` and carries each side's `decode_refusal`, so it
+costs two summaries ([what a summary costs](#what-a-summary-costs)). No `Engine` is involved. `oce_graph::blob::inspect` is the same reader
 in the `no_std + alloc` core, returning a `Summary` whose paths borrow from the bytes.
 
 ```rust,ignore

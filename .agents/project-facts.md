@@ -612,6 +612,16 @@ What a diff costs is pinned in counted work by the unit tests of `src/work.rs` (
 and elements visited, compiled into the crate's own test build), as `oce-author` pins validation.
 A new index, group or sort over the models is keyed by `Counted`, or the bound cannot see it.
 
+The blob comparison's three goldens, `tests/fixtures/blobs/*.comparison.json` (issue #667), are
+rewritten by the same switch. They record content ids and class signature hashes, so an engine
+change moves them: the content id's encoding, a class signature of `ahu_economizer` or of
+`CDL.Reals.AddParameter`, or what the authoring pair beside them compiles to. No engine version
+is written in them, so a workspace version bump does not. Its tests read the facade's blob
+goldens, blob summaries and `blob_legacy.oceb` in place under `crates/oce-api/tests/fixtures/`
+and pin three counts over them: the aligned and the class-changing ordered pairs of the 46 blobs
+(`tests/blob_axes.rs`), which a new G36 fixture or a change to a blob's class table moves, and
+the resealed bit flips of one blob that still have a summary (`tests/blob_refusals.rs`).
+
 ## The frame driver lives in `oce-graph`, and its run digests move with behaviour
 
 The HostTick v1 frame driver (time checks, per-slot input checks, the non-finite policy, the
