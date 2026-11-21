@@ -1,0 +1,59 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:58f543338090b2534512d5c7af4126bd9d1a514c1b99ef12ca70f4462929000b",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Discrete.Sampler", "signature_hash": "171ee8597d966075"},
+    {"class_path": "CDL.Discrete.TriggeredSampler", "signature_hash": "e4c436dcbd010856"},
+    {"class_path": "CDL.Discrete.UnitDelay", "signature_hash": "00875c1cead64441"},
+    {"class_path": "CDL.Logical.Edge", "signature_hash": "0f38dfa723d8891f"},
+    {"class_path": "CDL.Logical.Latch", "signature_hash": "25cb05da1e69944a"},
+    {"class_path": "CDL.Logical.Pre", "signature_hash": "854cd378efcc1606"},
+    {"class_path": "CDL.Logical.Sources.Constant", "signature_hash": "980566b789e5ad6f"},
+    {"class_path": "CDL.Logical.Switch", "signature_hash": "b139f370439fb99a"},
+    {"class_path": "CDL.Logical.Timer", "signature_hash": "6386103370c5b0ad"},
+    {"class_path": "CDL.Logical.TrueDelay", "signature_hash": "d321114ffed6027d"},
+    {"class_path": "CDL.Reals.Abs", "signature_hash": "986478b84bc974f0"},
+    {"class_path": "CDL.Reals.Greater", "signature_hash": "7fd967b589192483"},
+    {"class_path": "CDL.Reals.GreaterThreshold", "signature_hash": "ff7f20680e44a176"},
+    {"class_path": "CDL.Reals.Min", "signature_hash": "8a4d845a687da5ab"},
+    {"class_path": "CDL.Reals.MultiplyByParameter", "signature_hash": "52a68375673aa264"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"},
+    {"class_path": "CDL.Reals.Subtract", "signature_hash": "6978225f22e68ba8"},
+    {"class_path": "CDL.Reals.Switch", "signature_hash": "7c9e0945494c71ac"}
+  ],
+  "instances": [
+    {"block": 0, "class": 13, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 0, "stateful": true, "state_words": 4, "initial_state_crc": "e381191d"},
+    {"block": 2, "class": 2, "stateful": true, "state_words": 5, "initial_state_crc": "304f986a"},
+    {"block": 3, "class": 10, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 1, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 5, "class": 3, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 6, "class": 4, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 7, "class": 4, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 8, "class": 8, "stateful": true, "state_words": 4, "initial_state_crc": "fb93f15d"},
+    {"block": 9, "class": 12, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 10, "class": 14, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 11, "class": 16, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 12, "class": 15, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 13, "class": 15, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 14, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 15, "class": 17, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 16, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 17, "class": 7, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 18, "class": 11, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 19, "class": 16, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 20, "class": 1, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 21, "class": 10, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 22, "class": 9, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 23, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.generic_time_suppression.TSet",
+    "http://example.org#g36.source.generic_time_suppression.TZon"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.generic_time_suppression.yAftSup"
+  ]
+}

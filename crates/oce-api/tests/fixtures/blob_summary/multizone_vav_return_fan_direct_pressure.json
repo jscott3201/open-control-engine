@@ -1,0 +1,52 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:9c50bcf3b9b96399a492c3873da1cb98be6f57a1356a32dbcb7669734c549a2f",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Logical.And", "signature_hash": "fba4488a9b2e9af8"},
+    {"class_path": "CDL.Reals.Divide", "signature_hash": "5ad12a2a9d7991a3"},
+    {"class_path": "CDL.Reals.Line", "signature_hash": "58b76f20df1446c7"},
+    {"class_path": "CDL.Reals.MovingAverage", "signature_hash": "63a93f78876e8589"},
+    {"class_path": "CDL.Reals.PID", "signature_hash": "b4b36229c49f1f48"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"},
+    {"class_path": "CDL.Reals.Switch", "signature_hash": "7c9e0945494c71ac"},
+    {"class_path": "urn:oce:lowering#PassThrough.Boolean", "signature_hash": "08af7fe1126e3eb8"}
+  ],
+  "instances": [
+    {"block": 0, "class": 3, "stateful": true, "state_words": 4110, "initial_state_crc": "0a5e7b75"},
+    {"block": 1, "class": 4, "stateful": true, "state_words": 2, "initial_state_crc": "863f63a7"},
+    {"block": 2, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 6, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 7, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 8, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 9, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 10, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 11, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 12, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 13, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 14, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 15, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 16, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 17, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 18, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 19, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 20, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 21, "class": 7, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBui",
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1MinOutAirDam",
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1SupFan"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpDisSet",
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan",
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yDpBui",
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yRelDam",
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yRetFan"
+  ]
+}

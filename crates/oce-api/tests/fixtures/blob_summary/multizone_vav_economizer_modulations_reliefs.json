@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:0c66fea2361740d9cfb1fbe4553b1f2562a9368c979542e028cd72282c58f8c7",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.Line", "signature_hash": "58b76f20df1446c7"},
+    {"class_path": "CDL.Reals.Max", "signature_hash": "3cd368964852c20d"},
+    {"class_path": "CDL.Reals.Min", "signature_hash": "8a4d845a687da5ab"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"}
+  ],
+  "instances": [
+    {"block": 0, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 6, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 7, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_max",
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_min",
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_max",
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_min",
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uTSup"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yOutDam",
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yRetDam"
+  ]
+}

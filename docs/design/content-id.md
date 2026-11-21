@@ -796,7 +796,8 @@ which is all that survives of the decision.
 
 - **#448 (facade blob accessor).** The accessor reports the blob's content id as an
   `Option<ContentId>`. Built after this PR, it reads the digest directly; built before, it changes
-  with this PR.
+  with this PR. (It was built after: `oce_api::inspect_blob` reads the header's 32 digest bytes
+  back as the id and never recomputes it.)
 - **`oce-diff` (decision 8 of its note).** Equal canonical ids prove the two **loaded graphs** are
   equal, so the CXF adapter and the blob comparison can return graph-empty without matching, and
   the authoring diff can skip its rename pass. They do not prove an empty authoring diff: a

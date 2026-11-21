@@ -164,7 +164,10 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   `oce-api` encodes it, `oce_graph::blob::decode` in `oce-graph` (built `no_std`) decodes it into a
   ready-to-tick schedule and run state, checking each class against a per-class signature hash. The
   46 blob goldens are byte-identical across x86_64 and arm64, the decoded executable matches the
-  facade bit for bit after every tick, and hostile bytes are refused with typed errors. A decoded
+  facade bit for bit after every tick, and hostile bytes are refused with typed errors.
+  `oce_api::inspect_blob` reads what a blob records about itself (content id, class table,
+  per-instance initial-state CRCs, I/O paths) without building it, so two blobs can be compared;
+  it is not an acceptance check. A decoded
   blob executes through the same HostTick frame driver as the facade (`oce_graph::blob::Executable`,
   inputs and outputs by slot, zero allocations per frame), and every pull request that changes the
   engine runs the blob round trip: blobs encoded on x86_64 are decoded and run natively on arm64 and

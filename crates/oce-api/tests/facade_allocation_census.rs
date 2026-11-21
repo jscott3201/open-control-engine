@@ -11,6 +11,8 @@
 // Helpers that several modules share, declared once for the whole binary.
 #[path = "support/blob_corpus.rs"]
 mod blob_corpus;
+#[path = "support/blob_image.rs"]
+mod blob_image;
 #[path = "support/dual_entry.rs"]
 mod dual_entry;
 #[path = "../../oce-graph/tests/support/frame_schedule.rs"]
@@ -21,6 +23,7 @@ mod replay_oracle;
 mod array_extent_cost;
 mod blob_allocations;
 mod blob_peak_allocation;
+mod blob_summary_allocations;
 mod cxf_admission;
 mod hostile_load_bounds;
 mod prepare_frame;

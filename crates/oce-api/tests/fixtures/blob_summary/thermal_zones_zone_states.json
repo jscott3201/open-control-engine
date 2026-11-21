@@ -1,0 +1,37 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:33fc73c5f193c50fd3596052520df520c13a031cabc4b65ce3f36c0d35e136ca",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Conversions.BooleanToInteger", "signature_hash": "5e08715184cb20ce"},
+    {"class_path": "CDL.Integers.Add", "signature_hash": "d6a36f0057e364e2"},
+    {"class_path": "CDL.Logical.And", "signature_hash": "fba4488a9b2e9af8"},
+    {"class_path": "CDL.Logical.Nor", "signature_hash": "f1bbeebb300d46ba"},
+    {"class_path": "CDL.Logical.Not", "signature_hash": "46cdc733b196cd9b"},
+    {"class_path": "CDL.Reals.Hysteresis", "signature_hash": "ae23b2e14307f99e"},
+    {"class_path": "CDL.Reals.Subtract", "signature_hash": "6978225f22e68ba8"}
+  ],
+  "instances": [
+    {"block": 0, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 6, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 7, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 8, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 9, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 10, "class": 4, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 11, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 12, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.thermal_zones_zone_states.uCoo",
+    "http://example.org#g36.source.thermal_zones_zone_states.uHea"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.thermal_zones_zone_states.yZonSta"
+  ]
+}

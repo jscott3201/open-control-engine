@@ -1,0 +1,51 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:545d6f7c6f9d3b7cee74884fb3be207d257840bf9402828fca021fa2e3d28e28",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Conversions.BooleanToReal", "signature_hash": "a9c29c427fe3c4da"},
+    {"class_path": "CDL.Logical.And", "signature_hash": "fba4488a9b2e9af8"},
+    {"class_path": "CDL.Logical.Latch", "signature_hash": "25cb05da1e69944a"},
+    {"class_path": "CDL.Logical.Or", "signature_hash": "01258b3f89b466d5"},
+    {"class_path": "CDL.Logical.Timer", "signature_hash": "6386103370c5b0ad"},
+    {"class_path": "CDL.Reals.Divide", "signature_hash": "5ad12a2a9d7991a3"},
+    {"class_path": "CDL.Reals.GreaterThreshold", "signature_hash": "ff7f20680e44a176"},
+    {"class_path": "CDL.Reals.LessThreshold", "signature_hash": "ee896ae2191cc492"},
+    {"class_path": "CDL.Reals.MovingAverage", "signature_hash": "63a93f78876e8589"},
+    {"class_path": "CDL.Reals.Multiply", "signature_hash": "70d2724a506843ec"},
+    {"class_path": "CDL.Reals.PID", "signature_hash": "b4b36229c49f1f48"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"}
+  ],
+  "instances": [
+    {"block": 0, "class": 8, "stateful": true, "state_words": 4110, "initial_state_crc": "0a5e7b75"},
+    {"block": 1, "class": 11, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 11, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 10, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 6, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 6, "class": 7, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 7, "class": 4, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 8, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 9, "class": 2, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 10, "class": 6, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 11, "class": 4, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 12, "class": 7, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 13, "class": 4, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 14, "class": 2, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 15, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 16, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 17, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 18, "class": 9, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.multizone_vav_relief_fan.dpBui",
+    "http://example.org#g36.source.multizone_vav_relief_fan.u1SupFan"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.multizone_vav_relief_fan.y1RelDam",
+    "http://example.org#g36.source.multizone_vav_relief_fan.y1RelFan",
+    "http://example.org#g36.source.multizone_vav_relief_fan.yDpBui",
+    "http://example.org#g36.source.multizone_vav_relief_fan.yRelFan"
+  ]
+}

@@ -13,6 +13,10 @@
 //! `no_std` execution entry: construct from bytes, pass one value per input slot, execute one
 //! frame, read outputs by slot and the state as raw words.
 //!
+//! [`inspect()`] reads what a blob records about itself (its header facts, class table,
+//! per-instance initial-state CRCs and I/O paths) through the same framing and structural pass,
+//! without building it: a [`Summary`] is for comparing blobs and is not acceptance.
+//!
 //! This one module owns the format in both directions (the tag tables, the section layout, the
 //! checks), so the encoder and decoder cannot drift. The user-facing contract is
 //! `docs/compiled-schedule-blob.md`.
@@ -80,6 +84,7 @@ mod encode;
 mod error;
 mod executable;
 mod sections;
+mod summary;
 mod wire;
 
 pub use decode::decode;
@@ -89,6 +94,7 @@ pub use error::{
     MalformedFault, OutputFault, ScheduleFault,
 };
 pub use executable::{Executable, StateWordsRefusal};
+pub use summary::{Summary, SummaryClass, SummaryInstance, inspect};
 pub use wire::crc32c;
 
 /// The four magic bytes every blob starts with: ASCII `OCEB`.

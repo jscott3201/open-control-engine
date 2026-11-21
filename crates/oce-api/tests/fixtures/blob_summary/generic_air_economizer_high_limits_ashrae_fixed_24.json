@@ -1,0 +1,16 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:88d0b0af55ff9b9d2748eea0b47e5bf8a945916228db920d104c238499059cef",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"}
+  ],
+  "instances": [
+    {"block": 0, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [],
+  "outputs": [
+    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.TCut"
+  ]
+}

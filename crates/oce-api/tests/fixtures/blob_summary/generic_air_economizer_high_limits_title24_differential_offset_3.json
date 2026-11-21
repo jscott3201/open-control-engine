@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:00c7b3346038a142804d2debaecaa59d95117e94170691e88f2482040265e00b",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.AddParameter", "signature_hash": "e71fcfa5e45fc30d"}
+  ],
+  "instances": [
+    {"block": 0, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TRet"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TCut"
+  ]
+}

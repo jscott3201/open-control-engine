@@ -25,6 +25,8 @@ mod blob_corpus;
 mod blob_image;
 #[path = "support/blob_models.rs"]
 mod blob_models;
+#[path = "support/blob_summary_facts.rs"]
+mod blob_summary_facts;
 #[path = "support/content_id_corpus.rs"]
 mod content_id_corpus;
 #[path = "support/frame_trace.rs"]
@@ -39,6 +41,9 @@ mod blob_hostile_model;
 mod blob_old_layout;
 mod blob_refusal_precedence;
 mod blob_semantic_seam;
+mod blob_summary;
+mod blob_summary_acceptance;
+mod blob_summary_hostile;
 mod boundary_output_attrs;
 mod boundary_output_enumeration;
 mod catalog_contract;

@@ -1,0 +1,16 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:c09e9b15cd8b0c35bad031d456db9414eb0c9f5586d15972e8103fb838a3fe73",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"}
+  ],
+  "instances": [
+    {"block": 0, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [],
+  "outputs": [
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22.TCut"
+  ]
+}

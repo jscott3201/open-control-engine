@@ -16,22 +16,22 @@ use blob_corpus::{FIXTURES, golden};
 use blob_image::rechecksum;
 use oce_graph::blob::{BlobError, HEADER_BYTES, decode, encode};
 
-struct XorShift(u64);
+pub(crate) struct XorShift(pub(crate) u64);
 
 impl XorShift {
-    fn next(&mut self) -> u64 {
+    pub(crate) fn next(&mut self) -> u64 {
         self.0 ^= self.0 >> 12;
         self.0 ^= self.0 << 25;
         self.0 ^= self.0 >> 27;
         self.0.wrapping_mul(0x2545_F491_4F6C_DD1D)
     }
 
-    fn below(&mut self, bound: usize) -> usize {
+    pub(crate) fn below(&mut self, bound: usize) -> usize {
         (self.next() % bound as u64) as usize
     }
 }
 
-fn env_u64(name: &str, default: u64) -> u64 {
+pub(crate) fn env_u64(name: &str, default: u64) -> u64 {
     std::env::var(name)
         .ok()
         .and_then(|value| value.parse().ok())

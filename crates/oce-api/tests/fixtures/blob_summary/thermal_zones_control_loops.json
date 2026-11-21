@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:102123c4a1edcdc496c0f74d045ba33b858df588ad572400c1c77841245130f9",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Conversions.BooleanToReal", "signature_hash": "a9c29c427fe3c4da"},
+    {"class_path": "CDL.Logical.And", "signature_hash": "fba4488a9b2e9af8"},
+    {"class_path": "CDL.Logical.Not", "signature_hash": "46cdc733b196cd9b"},
+    {"class_path": "CDL.Logical.TrueDelay", "signature_hash": "d321114ffed6027d"},
+    {"class_path": "CDL.Reals.Less", "signature_hash": "5d7bb4e59af4f73f"},
+    {"class_path": "CDL.Reals.LessThreshold", "signature_hash": "ee896ae2191cc492"},
+    {"class_path": "CDL.Reals.Multiply", "signature_hash": "70d2724a506843ec"},
+    {"class_path": "CDL.Reals.PIDWithReset", "signature_hash": "ee6f0f9fd5282ed6"}
+  ],
+  "instances": [
+    {"block": 0, "class": 7, "stateful": true, "state_words": 3, "initial_state_crc": "edebc359"},
+    {"block": 1, "class": 7, "stateful": true, "state_words": 3, "initial_state_crc": "edebc359"},
+    {"block": 2, "class": 4, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 3, "class": 4, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 4, "class": 3, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 5, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 6, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 7, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 8, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 9, "class": 3, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 10, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 11, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 12, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 13, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 14, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 15, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.thermal_zones_control_loops.TCooSet",
+    "http://example.org#g36.source.thermal_zones_control_loops.THeaSet",
+    "http://example.org#g36.source.thermal_zones_control_loops.TZon"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.thermal_zones_control_loops.yCoo",
+    "http://example.org#g36.source.thermal_zones_control_loops.yHea"
+  ]
+}

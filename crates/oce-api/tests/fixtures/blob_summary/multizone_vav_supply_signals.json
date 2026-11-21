@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:fe6cb14dd9d07c2bea67965887ad5f0ffc0f85a8cde9e532d5319e5da9370501",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.Line", "signature_hash": "58b76f20df1446c7"},
+    {"class_path": "CDL.Reals.PIDWithReset", "signature_hash": "ee6f0f9fd5282ed6"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"},
+    {"class_path": "CDL.Reals.Switch", "signature_hash": "7c9e0945494c71ac"}
+  ],
+  "instances": [
+    {"block": 0, "class": 1, "stateful": true, "state_words": 3, "initial_state_crc": "edebc359"},
+    {"block": 1, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 6, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 7, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 8, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.multizone_vav_supply_signals.TAirSup",
+    "http://example.org#g36.source.multizone_vav_supply_signals.TAirSupSet",
+    "http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.multizone_vav_supply_signals.uTSup",
+    "http://example.org#g36.source.multizone_vav_supply_signals.yCooCoi",
+    "http://example.org#g36.source.multizone_vav_supply_signals.yHeaCoi"
+  ]
+}

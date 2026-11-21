@@ -43,6 +43,7 @@
 
 mod admission;
 mod blob;
+mod blob_summary;
 mod catalog;
 mod catalog_adapter;
 mod catalog_json;
@@ -88,6 +89,7 @@ mod watch;
 
 pub use admission::MAX_CXF_BYTES;
 pub use blob::CompiledBlob;
+pub use blob_summary::{BlobClass, BlobInstance, BlobSummary, inspect_blob};
 pub use catalog::{
     CATALOG_JSON, CATALOG_SCHEMA_REVISION, CatalogDefault, CatalogEntry, CatalogParamDefault,
     CatalogPort, CatalogPortKind, CatalogPortNaming, CatalogValueKind, catalog, catalog_content_id,

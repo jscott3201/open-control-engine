@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:9020f0710a73be0b45a83bcbe13299914df18135d5f0654061f6d07f180e94cc",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.Line", "signature_hash": "58b76f20df1446c7"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"}
+  ],
+  "instances": [
+    {"block": 0, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uRetDam_max",
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uRetDam_min",
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uTSup"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.yOutDam",
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.yRetDam"
+  ]
+}

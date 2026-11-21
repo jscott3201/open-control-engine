@@ -581,6 +581,6 @@ pub(super) fn bounds_are_valid(min: Option<&Value>, max: Option<&Value>) -> bool
 }
 
 /// An index into a list whose length the structural pass bounded by a 64 MiB input.
-fn index_u32(index: usize) -> u32 {
+pub(super) fn index_u32(index: usize) -> u32 {
     u32::try_from(index).unwrap_or(u32::MAX)
 }

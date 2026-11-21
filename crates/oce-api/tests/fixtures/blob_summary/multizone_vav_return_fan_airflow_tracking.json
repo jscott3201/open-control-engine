@@ -1,0 +1,30 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:142dc0385dc292b69b8859d91584e611ebc1037b5ca941fc5a525b9a85549e4e",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.PID", "signature_hash": "b4b36229c49f1f48"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"},
+    {"class_path": "CDL.Reals.Subtract", "signature_hash": "6978225f22e68ba8"},
+    {"class_path": "CDL.Reals.Switch", "signature_hash": "7c9e0945494c71ac"},
+    {"class_path": "urn:oce:lowering#PassThrough.Boolean", "signature_hash": "08af7fe1126e3eb8"}
+  ],
+  "instances": [
+    {"block": 0, "class": 0, "stateful": true, "state_words": 2, "initial_state_crc": "863f63a7"},
+    {"block": 1, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 4, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.VAirRet_flow",
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.VAirSup_flow",
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan",
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.yRetFan"
+  ]
+}

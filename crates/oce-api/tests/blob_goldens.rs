@@ -187,3 +187,86 @@ fn the_per_class_signature_hash_table_matches_its_golden() {
         "class signature hashes changed; review the diff and bless with OCE_BLESS_BLOB=1"
     );
 }
+
+// Blob summaries (GitHub #448). The helpers are declared here, after every test above, so that
+// the line anchors `docs/product-contract.md` holds for those tests do not move.
+#[path = "support/blob_image.rs"]
+mod blob_image;
+#[path = "support/blob_summary_facts.rs"]
+mod blob_summary_facts;
+
+fn summary_golden_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/blob_summary")
+}
+
+/// One `<fixture>.json` per blob golden: everything `oce_api::inspect_blob` reports for the
+/// fixture's blob, in the fixed spelling of `blob_summary_facts::Facts::to_json`. Every
+/// determinism cell (x86_64 and aarch64, debug and release codegen) and both platform cells
+/// compare against these same bytes, so a summary that differed on one of them fails there.
+#[test]
+fn every_fixture_blob_summary_matches_its_checked_in_json_byte_for_byte() {
+    use blob_summary_facts::Facts;
+
+    let mut mismatches = Vec::new();
+    for name in FIXTURES {
+        let compiled = compile(name);
+        let summary = oce_api::inspect_blob(&compiled.bytes)
+            .unwrap_or_else(|err| panic!("{name}: inspect: {err}"));
+        let again = oce_api::inspect_blob(&compiled.bytes).unwrap();
+        assert_eq!(summary, again, "{name}: two summaries of one blob differ");
+        let json = Facts::of_summary(&summary).to_json();
+        assert_eq!(
+            json,
+            Facts::of_summary(&again).to_json(),
+            "{name}: two renderings differ"
+        );
+        let path = summary_golden_dir().join(format!("{name}.json"));
+        if bless() {
+            std::fs::create_dir_all(summary_golden_dir()).unwrap();
+            std::fs::write(&path, &json).unwrap();
+            continue;
+        }
+        let golden = std::fs::read_to_string(&path)
+            .unwrap_or_else(|err| panic!("{name}: read {}: {err}", path.display()));
+        if golden != json {
+            let line = golden
+                .lines()
+                .zip(json.lines())
+                .position(|(a, b)| a != b)
+                .unwrap_or(golden.lines().count().min(json.lines().count()));
+            mismatches.push(format!("{name}: first difference at line {}", line + 1));
+            continue;
+        }
+        // The checked-in blob golden summarises to the same bytes as the fresh encoding.
+        let checked_in = oce_api::inspect_blob(&blob_corpus::golden(name))
+            .unwrap_or_else(|err| panic!("{name}: inspect the golden: {err}"));
+        assert_eq!(checked_in, summary, "{name}: the golden blob's summary");
+        // An independent JSON reader finds every fact the summary holds in the golden text.
+        assert_eq!(
+            Facts::from_json(&golden),
+            Facts::of_summary(&summary),
+            "{name}: the golden read back"
+        );
+    }
+    assert!(
+        mismatches.is_empty(),
+        "blob summaries differ from the goldens:\n{}\nbless deliberately with OCE_BLESS_BLOB=1",
+        mismatches.join("\n")
+    );
+}
+
+#[test]
+fn the_summary_goldens_are_exactly_one_per_fixture() {
+    if bless() {
+        // The test above is writing the directory; the run without the switch checks it.
+        return;
+    }
+    let mut on_disk: Vec<String> = std::fs::read_dir(summary_golden_dir())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect();
+    on_disk.sort_unstable();
+    let mut expected: Vec<String> = FIXTURES.iter().map(|name| format!("{name}.json")).collect();
+    expected.sort_unstable();
+    assert_eq!(on_disk, expected);
+}

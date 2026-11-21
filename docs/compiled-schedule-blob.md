@@ -35,7 +35,8 @@ pending, and with `OcError::Blob` when the executable cannot be encoded. It deco
 before returning, so every success is a blob the same build accepts. Executed frames do not change
 the bytes; a resumed parameter edit does. `oce_graph::blob::decode` alone returns the decoded parts
 (model arena, schedule, blocks, run state, I/O table); `Executable` wraps them with the HostTick v1
-frame driver ([executing a blob](#executing-a-blob)).
+frame driver ([executing a blob](#executing-a-blob)). `oce_api::inspect_blob` reads what a blob
+records about itself without building it ([inspecting a blob](#inspecting-a-blob)).
 
 ## What travels
 
@@ -114,6 +115,66 @@ On the host, `Engine::state_words` borrows the facade's words in the same layout
 compare the two paths word for word after the same frames (the [round trip](#the-blob-round-trip)
 does). It is a read-only verification view, not a continuation format: continue state with
 `state_snapshot` or `checkpoint`.
+
+## Inspecting a blob
+
+`oce_api::inspect_blob(&bytes)` reads what a blob records about itself and returns a
+`BlobSummary`, without building or running it (issue #448). It is what a comparison of two blobs
+needs: the [structural diff](design/diff.md) compares blobs as same or different by content id, by
+class path and class signature hash, and by each instance's initial-state CRC, and a leverage
+crate may not call `oce_graph::blob`. No `Engine` is involved. `oce_graph::blob::inspect` is the
+same reader in the `no_std + alloc` core, returning a `Summary` whose paths borrow from the bytes.
+
+```rust,ignore
+let summary = oce_api::inspect_blob(&blob.bytes)?;           // BlobSummary, owned
+assert_eq!(summary.engine_version, oce_api::ENGINE_VERSION); // any other version is refused
+assert_eq!(summary.content_id, blob.content_id);             // Option<ContentId>
+for instance in &summary.instances {
+    let class = &summary.classes[instance.class as usize];   // the index is always in range
+    let (hash, crc) = (class.signature_hash, instance.initial_state_crc);
+    println!("{} {} {hash:016x} {crc:08x}", instance.block, class.class_path);
+}
+```
+
+| Field | What it holds |
+| --- | --- |
+| `format_version` | The header's format version: 1 |
+| `engine_version` | The encoder's `major.minor.patch`: this build's, because any other is refused |
+| `content_id` | The header's 32 digest bytes read back as the canonical content id (`oce:canon1:`), `None` when they are all zero (a hand-built model with no id). Read, never recomputed or checked against the body |
+| `classes` | The class table in blob order (strictly increasing by path bytes): `class_path` and the `signature_hash` the encoder recorded |
+| `instances` | One record per block, in block id order: `block`, `class` (an index into `classes`), `stateful`, `state_words` and `initial_state_crc` (CRC-32C of the initial state words, each as eight little-endian bytes; 0 for a block without state) |
+| `inputs`, `outputs` | The boundary I/O paths in slot order |
+| `target_bound` | Whether any class in the table is target-bound in this build's registry |
+
+**A summary is not acceptance.** The reader runs the decoder's own checks up to the end of its
+structural pass, by the same code and in the same order: in [Refusals](#refusals), everything from
+the size limit through "structure". Those refusals are the decoder's, the same variant at the same
+offset, and a blob another engine version wrote has no summary: `EngineVersionMismatch`
+([which refusal wins](#which-refusal-wins)). Two checks follow, because the summary's own fields
+need them: every class path is registered in this build (`UnknownClass`; `target_bound` is read
+from this build's registry and cannot be answered for a class it does not hold), and every
+instance's class index is inside the class table (`InstanceMismatch` with `ClassIndex`).
+
+Nothing else is checked. The reader does not compare a signature hash with this build's, read a
+parameter as a value, construct a block, check a connector, a connection or the schedule, or
+allocate state. So a blob that has a summary may still be refused by `decode`, and that is the
+point: a comparison can show the class whose hash changed between two builds of one engine
+version, or the instance whose initial state changed, in blobs one of the two builds would not
+run. After the structural pass the two readers can also report different first refusals: given a
+wrong hash in class 0 and an unregistered class 1, the decoder stops at class 0 and the summary at
+class 1. Only `decode` (or `Executable::from_blob`) says whether this build runs a blob.
+
+Read the fields as the blob's own statement. Two initial-state CRCs compare only when their
+`state_words` are equal. A repeated output path can appear in a summary, because the decoder
+refuses it after the structural pass. The CRC-32C trailer is not tamper evidence
+([trust model](#trust-model)), so a summary authenticates nothing: authenticate the bytes first,
+as for a decode.
+
+The core reader allocates the four lists it returns, each sized once by a count the structural
+pass proved against the bytes: four allocations at most, none for a refusal up to the end of that
+pass, and at most 2 bytes held per blob byte (measured: 1.6× for the longest class table its bytes
+allow, 1.33× for the longest output list, 0.8× for the longest instance list). The facade's owned
+summary holds at most 4× while it is built (3.33× for the longest output list).
 
 ## Versioning
 
@@ -309,6 +370,10 @@ without a panic, and a missing, foreign, swapped or oversized file.
 | A blob of an earlier layout under the same format number is refused | `blob_old_layout.rs`: the release-0.4.0 encoding of one fixture, kept unblessed, is refused with `EngineVersionMismatch` by `decode` and by `Executable::from_blob` |
 | Which refusal wins is one rule for the blob and the snapshot | `blob_refusal_precedence.rs` and `oce-api`'s `src/tests/state_codec_tests.rs`: every pair of defects in each artefact reports the earlier check, every truncation of another version's blob below a header is `Truncated` and above it `EngineVersionMismatch`, and every flipped version bit is a version refusal; `blob_old_layout.rs`: the release-0.4.0 blob stays a version refusal with its length, trailer, profile or body damaged |
 | `SemanticPoint` payloads are non-computational | `blob_semantic_seam.rs` fills and mutates every payload byte and requires an identical executable and identical outputs |
+| A summary states what the blob holds, identically on every cell | `blob_goldens.rs`: the summary of each of the 46 blobs equals its checked-in JSON under `crates/oce-api/tests/fixtures/blob_summary/` byte for byte, in every determinism cell and both platform cells, and an independent JSON reader finds the same facts in it; `blob_summary.rs`: each summary equals what the test-side writer derives from the decoded executable (class per block, this build's hashes, the CRC of the words the decoder allocated) and the content id the engine minted and the content-id pin records; `oce-graph`'s `tests/blob_summary.rs` holds the core reader to the decoder over the same goldens |
+| A changed class hash or initial-state CRC shows in the summary, and nowhere else | `blob_summary.rs`: every bit of every class hash and of every instance's CRC of one golden, then state length, kind, content id and I/O paths: the decoder refuses each changed blob with its named error and the summary differs from the original in exactly that field |
+| A summary is not acceptance | `blob_summary_acceptance.rs`: nine blobs the decoder refuses after its structural pass (schedule, undriven input, duplicate output path, non-finite and duplicated parameters, connector out of range, unused class, another initial state) summarise as written; an unregistered class and a class index outside the table are refused by index |
+| The summary reader refuses hostile bytes as the decoder does, never a panic | `blob_summary_hostile.rs`: every prefix and resealed truncation, every header defect in the decoder's order, `u32::MAX` in every count and length at its own offset, misframed sections, trailing bytes, invalid UTF-8, tags outside their tables and every list out of canonical order give the decoder's identical error, and 10,000 seeded byte mutations never part from the decoder's verdict; `blob_summary_allocations.rs` pins the allocation count for every golden and the peak against blob length for the longest lists |
 
 On a bare-metal target the blob runs in the firmware image (`firmware/link`, GitHub #449, issue
 #402): it embeds the `multizone_vav_supply_fan` golden, decodes it with `Executable` and runs the

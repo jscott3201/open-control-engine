@@ -37,6 +37,49 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
+### Facade
+
+- **`oce_api::inspect_blob` reads what a compiled-schedule blob records about itself** (GitHub
+  #PRNUM, issue #448). It is the accessor a blob comparison needs (`oce-diff`, design note
+  decision 15): a leverage crate may not call `oce_graph::blob`, and the facade exposed only
+  `Engine::compile_blob`.
+  - **What it returns.** A `BlobSummary`, owned and `#[non_exhaustive]`: `format_version`,
+    `engine_version` (an `EngineVersion`), `content_id` (the header's 32 digest bytes read back
+    as an `Option<ContentId>`; `None` when they are all zero, which only a hand-built model
+    records), `classes` (`BlobClass`: class path and the recorded signature hash, in blob order),
+    `instances` (`BlobInstance` per block: `block`, `class` as an index into `classes`,
+    `stateful`, `state_words` and `initial_state_crc`), the boundary `inputs` and `outputs` paths
+    in slot order, and `target_bound`.
+  - **A summary is not acceptance.** The reader is the decoder's own framing and structural pass
+    (its refusal steps 1 to 6), by the same code, so those refusals are identical; a blob of
+    another engine version is `EngineVersionMismatch`. After them it refuses only a class this
+    build does not register (`UnknownClass`: `target_bound` is read from this build's registry)
+    and a class index outside the class table (`InstanceMismatch` with `ClassIndex`). It compares
+    no signature hash, constructs no block, allocates no state and executes nothing. So a blob
+    whose class hash or initial-state CRC is not this build's has a summary that shows it, where
+    `decode` refuses the blob. Refusals are the existing `BlobError`, wrapped as `OcError::Blob`.
+  - **In the core.** `oce_graph::blob::inspect` returns a `Summary` (`SummaryClass`,
+    `SummaryInstance`) whose paths borrow from the bytes and whose content id is the raw
+    `Option<[u8; 32]>`; it builds `no_std + alloc`. It allocates the four lists it returns and at
+    most 2 bytes per blob byte, nothing for a refusal up to the end of the structural pass; the
+    facade's owned copy holds at most 4.
+  - **Evidence.** 46 new goldens, `crates/oce-api/tests/fixtures/blob_summary/*.json`, one
+    summary per blob golden, compared byte for byte in every determinism and platform cell and
+    re-blessed by `OCE_BLESS_BLOB=1`; they carry the engine version, so a version bump moves
+    them with the blobs. `tests/blob_summary.rs` holds each summary to what the test-side writer
+    derives from the decoded executable, to the engine's content id and to the content-id pin,
+    and flips every bit of every class hash and initial-state CRC of one golden and requires
+    exactly that field to move. `tests/blob_summary_acceptance.rs` summarises nine blobs the
+    decoder refuses after its structural pass and pins the two refusals the reader adds.
+    `tests/blob_summary_hostile.rs` feeds the hostile-bytes defects and 10,000 seeded mutations
+    through both readers and requires the decoder's identical error for every structural
+    refusal. `tests/blob_summary_allocations.rs` pins the allocation count and the peak ratios.
+    `oce-graph`'s `tests/blob_summary.rs` checks the core reader against `decode`, and passes
+    against the `no_std + alloc` build. The facade-contract check's positive control compiles a
+    host-side use.
+  - No blob byte, existing golden, content id or refusal changes. Documented in
+    [inspecting a blob](docs/compiled-schedule-blob.md#inspecting-a-blob).
+
 ### Execution core
 
 - **The load gate refuses a vector parameter element past its resolved length** (GitHub #635,

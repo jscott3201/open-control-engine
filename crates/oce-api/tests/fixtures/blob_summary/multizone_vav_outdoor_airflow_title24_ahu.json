@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:b01ab85bdc83ae83a6d8b2f7b463fef08ab4381e56d681741d336e69e14f583b",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.Divide", "signature_hash": "5ad12a2a9d7991a3"},
+    {"class_path": "CDL.Reals.Line", "signature_hash": "58b76f20df1446c7"},
+    {"class_path": "CDL.Reals.Max", "signature_hash": "3cd368964852c20d"},
+    {"class_path": "CDL.Reals.Min", "signature_hash": "8a4d845a687da5ab"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"}
+  ],
+  "instances": [
+    {"block": 0, "class": 4, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 4, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 6, "class": 4, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 7, "class": 4, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 8, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 9, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 10, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 11, "class": 4, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 12, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 13, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VAirOut_flow",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VSumZonAbsMin_flow",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VSumZonDesMin_flow",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.uCO2Loo_max"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VEffAbsOutAir_flow",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VEffDesOutAir_flow",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.effAbsOutAir_normalized",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.effDesOutAir_normalized",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.effOutAir_normalized",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.outAir_normalized"
+  ]
+}

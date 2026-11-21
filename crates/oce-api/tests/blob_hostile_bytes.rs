@@ -200,7 +200,7 @@ fn header_defects_refuse_in_the_documented_order() {
 }
 
 /// The worked example's count and length fields, at the offsets the design note's dump shows.
-const WORKED_COUNTS: &[(usize, &str, MalformedFault)] = &[
+pub(crate) const WORKED_COUNTS: &[(usize, &str, MalformedFault)] = &[
     (
         0x38,
         "classes section length",
