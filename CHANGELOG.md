@@ -709,6 +709,17 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `commands/file_identity.rs` for both). On Windows one file is one canonical path, so a hard
   link is not recognised there. An output that does not exist, a dangling link included, is no
   file. `tests/output_guards.rs` covers both verbs; `oce vocab` lists the code.
+- **`oce emit -o` refuses a `.oce` or `.json` output name, and both `-o` guards check stdin**
+  (GitHub #PRNUM, issue #697). `oce emit e.oce -o y.oce` exited 0 and wrote CXF into `y.oce`,
+  which `oce validate y.oce` then failed to read. `emit -o` now refuses, before anything is
+  read, a name `id::form_by_name` reads as text or wire, under the existing
+  `output-form-mismatch` (exit 2, nothing written); `.jsonld`, `.cxf.json` and a name with no
+  known extension are accepted. On Unix `oce import - -o doc < doc` and
+  `oce emit - --from text -o doc < doc` are `output-is-input` too: file descriptor 0, when it is
+  a regular file, is compared by (device, inode) with the output (safe std, no new
+  dependency); on Windows stdin is not checked. A script that wrote `emit -o x.json` must name
+  the output `x.cxf.json` (the READMEs' examples did). `oce vocab` and `help_emit` name the new
+  rules.
 - **The rendering on stderr no longer writes a document's format, control or separator
   characters to the terminal** (GitHub #688). `oce validate` and `oce emit` of a wire file
   quote the file's own strings in a finding (`class-not-found` names the block's `class`), and

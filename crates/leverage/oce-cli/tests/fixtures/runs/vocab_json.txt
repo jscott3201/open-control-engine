@@ -777,11 +777,11 @@ exit: 0
     },
     {
       "code": "output-form-mismatch",
-      "meaning": "import -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)"
+      "meaning": "import -o or emit -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)"
     },
     {
       "code": "output-is-input",
-      "meaning": "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link; nothing is written"
+      "meaning": "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; nothing is written"
     }
   ],
   "errors": [],

@@ -156,8 +156,8 @@ error codes (exit 2):
   namespace-needs-authored  id --namespace was given beside a CXF document; only a text or wire file is emitted
   not-loadable              id: the engine refused the document, or the sequence has error findings; it has no content id
   no-content-id             the facade could not name a model it loaded
-  output-form-mismatch      import -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)
-  output-is-input           emit -o or import -o names the input file itself, by path, link or (on Unix) hard link; nothing is written
+  output-form-mismatch      import -o or emit -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)
+  output-is-input           emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; nothing is written
 
 vector file codes (verify, exit 2):
   not-utf8                   the vector file is not UTF-8

@@ -43,3 +43,35 @@ pub(crate) fn same_file(first: &Path, second: &Path) -> bool {
     };
     matches!((of(first), of(second)), (Some(first), Some(second)) if first == second)
 }
+
+/// Whether standard input is a regular file that is the file at `output`, so that writing
+/// `output` replaces what the input is read from (`oce import - -o doc < doc`).
+///
+/// Unix only: the answer is the identity of file descriptor 0 against the identity of `output`
+/// (module header). Not a regular file (a pipe, a terminal, a closed descriptor) or an `output`
+/// that does not resolve is no. On other platforms the answer is always no: standard input is
+/// not checked there.
+#[cfg(unix)]
+pub(crate) fn stdin_is_file(output: &Path) -> bool {
+    use std::os::fd::AsFd;
+    let Ok(duplicate) = std::io::stdin().as_fd().try_clone_to_owned() else {
+        return false;
+    };
+    let Ok(metadata) = std::fs::File::from(duplicate).metadata() else {
+        return false;
+    };
+    if !metadata.is_file() {
+        return false;
+    }
+    let Ok(canonical) = std::fs::canonicalize(output) else {
+        return false;
+    };
+    std::fs::metadata(&canonical)
+        .is_ok_and(|target| identity(&canonical, &target) == identity(&canonical, &metadata))
+}
+
+/// Whether standard input is the file at `output`: never, off Unix (module header).
+#[cfg(not(unix))]
+pub(crate) fn stdin_is_file(_output: &Path) -> bool {
+    false
+}

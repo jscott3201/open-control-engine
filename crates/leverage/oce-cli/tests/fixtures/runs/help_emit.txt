@@ -26,7 +26,7 @@ Options:
           The instance namespace every IRI starts with; must end in `#`, `/` or `:`
 
   -o, --output <OUTPUT>
-          Write the CXF here (atomically) and print the report on stdout; `-` is stdout. It must not be the input file
+          Write the CXF here (atomically) and print the report on stdout; `-` is stdout. The name must not read as text or wire (.oce, .json) and the file must not be the input (on Unix, nor the file stdin was opened from)
 
   -h, --help
           Print help (see a summary with '-h')

@@ -128,11 +128,11 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     (NO_CONTENT_ID, "the facade could not name a model it loaded"),
     (
         OUTPUT_FORM_MISMATCH,
-        "import -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)",
+        "import -o or emit -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)",
     ),
     (
         OUTPUT_IS_INPUT,
-        "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link; nothing is written",
+        "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; nothing is written",
     ),
 ];
 

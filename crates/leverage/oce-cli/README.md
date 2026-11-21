@@ -45,7 +45,7 @@ without `--json`.
 
 ```sh
 oce validate econ_enable.oce                 # report on stdout, exit 0 / 1 / 2
-oce emit econ_enable.oce -o econ_enable.json # writes the CXF atomically, report on stdout
+oce emit econ_enable.oce -o econ_enable.cxf.json # writes the CXF atomically, report on stdout
 oce fmt --check econ_enable.oce              # exit 1 when not canonical
 oce fmt econ_enable.json > econ_enable.oce   # wire to text
 oce catalog CDL.Reals.MultiSum --param nin=3 # ports u1, u2, u3
@@ -202,7 +202,11 @@ oce import rule.cxf.jsonld | oce emit - --from text | oce id - --from cxf
   (`./rule`, `dir/../rule`), a symbolic link to it and, on Unix, a hard link to it, where one
   file is one (device, inode). On Windows one file is one canonical path, so a hard link is
   not recognised there. An output that does not exist yet, a dangling link included, is no
-  file and replaces nothing; stdin is no file.
+  file and replaces nothing. Stdin (`-`) is the input when, on Unix, the shell made it a
+  regular file (`oce import - -o doc < doc`, `oce emit - --from text -o doc < doc`): file
+  descriptor 0 is compared by (device, inode), and a pipe, a terminal or a closed descriptor is
+  no file. **On Windows stdin is not checked** (std has no stable file index); the check also
+  reads the process's own descriptor 0, never a reader a host passes in.
 - **Nothing is judged.** The importer decodes; whether a class is in the catalog, a name is a
   reserved word or the graph has a loop is `oce validate`'s answer on the result. So `import`
   never exits `1`, and a sequence it writes may still be one `oce emit` refuses.
@@ -500,8 +504,12 @@ replace is atomic, but the directory itself is not fsynced. A target that is a s
 link stays a link (a dangling link is `write-failed`). **The file is replaced, not rewritten in
 place: a hard link to the old inode keeps the old bytes.** `fmt --write` rewrites only when the
 text changes. `emit -o` and `import -o` refuse an output that is their own input file before
-anything is read (`output-is-input`; [above](#oce-import) says what one file is), so neither
-can replace an authored sequence with its CXF or a CXF document with its import.
+anything is read (`output-is-input`; [above](#oce-import) says what one file is, and that on
+Unix it includes the file stdin was opened from), so neither can replace an authored sequence
+with its CXF or a CXF document with its import. `emit -o` also refuses a name that reads as text
+or wire (`output-form-mismatch`): the CXF it writes goes to `.jsonld`, `.cxf.json` or a name
+with no known extension, never to `.oce` or `.json`, which `oce validate`, `fmt` and `id` would
+read as another form.
 
 ## Tests and goldens
 
@@ -554,7 +562,9 @@ For `import`:
 - `tests/output_guards.rs` holds the two `-o` guards, for `import` and for `emit`: the input
   under another spelling of its path, through a symbolic link and (Unix) a hard link, with
   nothing written or left behind; every contradicting name; and each file `import` writes read
-  back by name through `validate`, `fmt --check`, `emit` and `id`;
+  back by name through `validate`, `fmt --check`, `emit` and `id`; for `emit`, every accepted
+  and refused `-o` name (nothing written when refused, each CXF name read back by `id`), and a
+  file opened as stdin (Unix) under every name of it;
 - `tests/rendering.rs` is the regression test of the escaped rendering over `validate` and
   `emit` of a wire file whose class carries format and separator characters;
 - `tests/import_files.rs` covers `-o`, the two output forms against each other and against
