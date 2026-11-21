@@ -441,6 +441,18 @@ or anything that moves an `oce-verify` golden receipt, moves them too. `tests/re
 compares the binary's stdout with `oce-verify`'s golden receipts in place, so it fails until those
 are re-blessed in `oce-verify`.
 
+Since issue #514 a new CXF fixture anywhere moves this crate too. `tests/import_corpus.rs` runs
+`oce import`, then `oce emit` and `oce id`, over every `.jsonld` and `.cxf.json` file git tracks
+under `crates/` and `third_party/` (257), writes one row per document to
+`tests/fixtures/import_corpus.tsv` and pins the count of each outcome class and of each refusal
+code. So adding, removing or renaming a tracked CXF document, in an engine crate or a pin advance
+included, fails that test until the table is re-blessed (the same `OCE_BLESS_CLI` switch) **and**
+the pinned counts in the test are edited by hand, which is the point: the new document has to be
+classified. The corpus is `git ls-files`, so `git add` the fixture before running the test. A
+change to what the importer accepts, to the emitter or to the content id moves rows the same way.
+The `import_*` transcripts read G36 corpus fixtures and `oce-cxf` contract fixtures in place, so
+an edit to one of those moves its transcript.
+
 ## The `oce-vocab` data files move with catalog names and the vendored CXF-Core
 
 `crates/leverage/oce-vocab/data/generated.json` is regenerated and compared byte for byte by the

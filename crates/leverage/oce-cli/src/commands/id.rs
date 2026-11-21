@@ -219,12 +219,7 @@ fn read(
     streams: &mut Streams<'_>,
     report: &mut Report,
 ) -> Option<Vec<u8>> {
-    let read = if input::is_stdin(&args.file) {
-        input::read_bounded(&mut *streams.stdin, bound)
-    } else {
-        input::read_file(Path::new(&args.file), bound)
-    };
-    match read {
+    match input::read_named(&args.file, bound, streams.stdin) {
         Ok(bytes) => Some(bytes),
         Err((code, detail)) => {
             report.error(code, detail, None);

@@ -56,13 +56,7 @@ pub(crate) fn load(source: &Source, stdin: &mut dyn Read, report: &mut Report) -
             return None;
         }
     };
-    let bound = limit(form);
-    let read = if is_stdin(&source.file) {
-        read_bounded(stdin, bound)
-    } else {
-        read_file(Path::new(&source.file), bound)
-    };
-    match read {
+    match read_named(&source.file, limit(form), stdin) {
         Ok(bytes) => Some(Loaded { form, bytes }),
         Err((code, detail)) => {
             report.error(code, detail, None);
@@ -91,6 +85,19 @@ fn form_of(source: &Source) -> Result<Form, (&'static str, String)> {
              --from wire"
                 .to_owned(),
         )),
+    }
+}
+
+/// Read the input `file` names, stdin for `-` and a file otherwise, at most `bound` bytes.
+pub(crate) fn read_named(
+    file: &OsStr,
+    bound: usize,
+    stdin: &mut dyn Read,
+) -> Result<Vec<u8>, (&'static str, String)> {
+    if is_stdin(file) {
+        read_bounded(stdin, bound)
+    } else {
+        read_file(Path::new(file), bound)
     }
 }
 

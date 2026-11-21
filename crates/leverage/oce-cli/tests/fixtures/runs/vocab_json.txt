@@ -717,7 +717,7 @@ exit: 0
     },
     {
       "code": "unspellable",
-      "meaning": "the model cannot be written as text"
+      "meaning": "the model cannot be written as text, or (import --wire) in the wire form so that it reads back"
     },
     {
       "code": "write-failed",
@@ -780,7 +780,7 @@ exit: 0
   "exit_codes": [
     {
       "code": 0,
-      "meaning": "yes: clean, canonical, resolved, every scenario passed"
+      "meaning": "yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported"
     },
     {
       "code": 1,
@@ -788,7 +788,7 @@ exit: 0
     },
     {
       "code": 2,
-      "meaning": "error: a usage, read, parse, size or I/O failure, a run with no verdict, or an input with no content id (id); the question was not answered"
+      "meaning": "error: a usage, read, parse, size or I/O failure, a run with no verdict, an input with no content id (id), or a document the importer refuses or the output form cannot spell (import); the question was not answered"
     }
   ],
   "finding_codes": [
@@ -934,6 +934,128 @@ exit: 0
     }
   ],
   "findings": [],
+  "import_codes": [
+    {
+      "code": "too-large",
+      "meaning": "the document is over the importer's size limit (the tool's bounded read refuses an over-size input first, as input-too-large)"
+    },
+    {
+      "code": "not-strict-json",
+      "meaning": "the bytes are not UTF-8 or not JSON, an object repeats a key, or an integer is outside the 64-bit signed range"
+    },
+    {
+      "code": "limit-exceeded",
+      "meaning": "v0 graph JSON: nesting, a list or a string over a read bound"
+    },
+    {
+      "code": "unknown-key",
+      "meaning": "a property, top-level key or @context term the flat CXF subset does not define"
+    },
+    {
+      "code": "namespace-mismatch",
+      "meaning": "the @context binds the S231 vocabulary in a namespace the engine does not read"
+    },
+    {
+      "code": "missing-key",
+      "meaning": "a required key is absent: a node without @id, a parameter without a type or a value"
+    },
+    {
+      "code": "wrong-shape",
+      "meaning": "a value of the wrong JSON shape: a relation that is not references, a label or term that is not a string"
+    },
+    {
+      "code": "no-root",
+      "meaning": "no node contains blocks"
+    },
+    {
+      "code": "duplicate-id",
+      "meaning": "a node @id is declared twice"
+    },
+    {
+      "code": "unresolved-reference",
+      "meaning": "a reference to no node, or to a node outside the root's IRI"
+    },
+    {
+      "code": "stray-node",
+      "meaning": "a node no root relation reaches, or one reached twice"
+    },
+    {
+      "code": "invalid-name",
+      "meaning": "a root @id or local name that breaks the identifier syntax, or a path deeper than block.member"
+    },
+    {
+      "code": "nested-composite",
+      "meaning": "a second node that contains blocks (outside the subset)"
+    },
+    {
+      "code": "instance-member",
+      "meaning": "hasInstance (outside the subset)"
+    },
+    {
+      "code": "constant-member",
+      "meaning": "hasConstant (outside the subset)"
+    },
+    {
+      "code": "conditional-component",
+      "meaning": "a conditional component (outside the subset)"
+    },
+    {
+      "code": "array-connector",
+      "meaning": "an array boundary or port (outside the subset)"
+    },
+    {
+      "code": "array-sequence-parameter",
+      "meaning": "an array sequence parameter (outside the subset)"
+    },
+    {
+      "code": "expression-value",
+      "meaning": "a value that is an expression, or a name that is no sequence parameter (outside the subset)"
+    },
+    {
+      "code": "port-attribute",
+      "meaning": "unit, quantity, displayUnit, min, max or nominal on a block port (not authorable)"
+    },
+    {
+      "code": "connector-attribute",
+      "meaning": "nominal or unbounded on a boundary (not carried)"
+    },
+    {
+      "code": "driving-sink",
+      "meaning": "a boundary output or a block input drives a connection"
+    },
+    {
+      "code": "class-outside-obc",
+      "meaning": "a block class outside Buildings.Controls.OBC"
+    },
+    {
+      "code": "datatype-mismatch",
+      "meaning": "a value, bound or connector that disagrees with its declared type"
+    },
+    {
+      "code": "unknown-datatype",
+      "meaning": "a declared type that is no supported scalar and no named type"
+    },
+    {
+      "code": "unknown-member-type",
+      "meaning": "a member path whose enumeration or constant package the engine does not know"
+    },
+    {
+      "code": "malformed-literal",
+      "meaning": "a non-finite or unparsable number, an unknown XSD datatype or a bad string escape"
+    },
+    {
+      "code": "array-shape",
+      "meaning": "an array's sizes, rank or catalog template disagree with its value"
+    },
+    {
+      "code": "string-value",
+      "meaning": "v0 graph JSON: a string parameter value"
+    },
+    {
+      "code": "malformed-connection",
+      "meaning": "v0 graph JSON: a connection that is not `source -> target` with exactly one ->"
+    }
+  ],
   "input": null,
   "keywords": [
     "sequence",

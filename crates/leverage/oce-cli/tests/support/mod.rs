@@ -7,6 +7,8 @@
 
 #![allow(dead_code)]
 
+pub mod cxf_edit;
+
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};

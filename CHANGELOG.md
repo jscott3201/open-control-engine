@@ -446,6 +446,62 @@ and a gate that accepted any text would restore exactly the false assurance desc
     (issue #632).
 ### Leverage
 
+- **`oce import` turns a flat CXF document into the authoring form** (GitHub #514).
+  `oce_author::import_cxf` had no command-line surface, and the library converts its corpus by
+  importing each committed rule. `oce import <FILE> [-o <OUT>] [--wire]` prints the sequence as
+  canonical text, or the canonical wire form with `--wire`, exit 0; with `-o` it writes the
+  document atomically and prints the `oce-report/1` report. `crates/leverage/oce-cli` only;
+  `oce-author` and the facade are unchanged. The prototype's v0 graph JSON is not exposed.
+  - **One input form, no judgement.** The verb reads CXF only: no `--from`, stdin needs none
+    and the file's name is not consulted. It validates nothing, so it never exits 1; a sequence
+    it writes may still be one `oce validate` or `oce emit` refuses.
+  - **The report** carries `output_form`, and, once the importer accepted the document, its
+    `dropped` and `normalised` lists in reading order; with `-o`, `output` and `bytes` once the
+    write succeeded. Never `stages`.
+  - **Refusals are exit 2.** An `ImportError` is reported under its own code
+    (`oce_author::IMPORT_ERROR_CODES`) with its subject as the error's `at`; the tool matches no
+    kind. `oce vocab` lists all thirty with their meanings as `import_codes` (a new key and a
+    new section of the text listing), and its meanings of exit 0 and exit 2 name the verb. No
+    tool code is added: an over-size input is `input-too-large` (read at 8 MiB,
+    `oce_api::MAX_CXF_BYTES`, from metadata before a byte is read), and `unspellable` now also
+    covers a sequence the output form cannot spell.
+  - **A document is written only if `oce` reads it back.** The output form's reader runs over
+    what its writer produced, and anything that does not read back equal to the imported
+    sequence is `unspellable`, with nothing written. The wire writer is infallible and the CXF
+    importer bounds a document only by its size, so without this a 5,000-byte class path would
+    be written into a wire file the wire reader refuses.
+  - **The rendering on stderr escapes format and control characters.** An `import` report
+    quotes a document's own strings (a node `@id`, a key), the first document-controlled text
+    to reach `--render`. Every Unicode format or control character in a rendered line, and every
+    line or paragraph separator, is now written as `\u{…}`, for every command; no existing rendering had one, and no transcript
+    moves for it.
+  - **The round trip, over every tracked CXF document.** `tests/import_corpus.rs` runs
+    `oce import`, then `oce emit` and `oce id`, over the 257 `.jsonld` and `.cxf.json` files
+    git tracks under `crates/` and `third_party/`, writes one row each to
+    `tests/fixtures/import_corpus.tsv` and pins the counts: 188 refused under a stable code (19
+    codes occur), and 69 imported. Of those, 17 emit to the original's id; 37 to the id of the
+    original with its root re-stamped (a name prefix such as `g36.source.`, the importer
+    note's decision 14), all 31 importable G36 fixtures among them; 1 to the id of the original
+    with its Integer literal on a Real parameter written as a Real (issue #683, found here); 2
+    load with a warning, so `oce emit` answers no, and what the emitter alone writes has the
+    original's id; and 12 do not load in an engine and have no id to keep. A CXF fixture added
+    anywhere in the repository now fails that test until it is classified.
+  - **Tests.** `tests/import_refusals.rs` earns each of the 26 importer codes a CXF document
+    can earn, from a file and stdin and in both output forms, and names the 4 no run earns
+    (the v0 reader's three, and `too-large`, which the bounded read pre-empts).
+    `tests/import_files.rs` covers `-o`, the two forms against each other and against
+    `import_cxf`, the read-back refusals, the size bound, a Real's bits (`-0.0`, a subnormal)
+    through both forms and the Integer-literal case. `tests/import_runs.rs` pins 21
+    transcripts: two in-repo fixtures and one refusal per construct outside the authoring
+    subset. Four transcripts move with the verb (`help_oce`, `usage_no_arguments`,
+    `vocab_text`, `vocab_json`).
+  - `input::read_named` is the one stdin-or-file bounded read, used by the authored loaders,
+    `id` and `import` (it replaces two inline copies; the form rules of issue #678 are
+    untouched, and `import` adds none).
+  - The CLI README has the verb's contract and the corpus table; the root README, the leverage
+    README, the architecture page, the importer note ("The `oce import` verb") and the
+    authoring note's CLI section name it, and `.agents/project-facts.md` says what moves the
+    corpus table.
 - **`oce id` prints the canonical content id of a CXF or authoring file** (GitHub #513). The
   id `Engine::content_id` mints (`oce:canon1:`, GitHub #474) had no command-line surface, and
   the library stamps every card with it and compares the stamp with the tool's output.

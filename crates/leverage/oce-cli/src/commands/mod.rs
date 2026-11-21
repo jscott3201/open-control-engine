@@ -1,7 +1,7 @@
-//! The seven commands, and how one run's outcome reaches the streams.
+//! The eight commands, and how one run's outcome reaches the streams.
 //!
 //! Every command returns an [`Outcome`]: its exit status, its report, and optionally a document
-//! (CXF, canonical text, a text listing, a receipt, a content id) that stdout carries instead of the report's
+//! (CXF, canonical text, a wire document, a text listing, a receipt, a content id) that stdout carries instead of the report's
 //! JSON. Exactly one of the two is written to stdout; the human-readable rendering of the report
 //! goes to stderr when asked for. A document comes with exit `0`, except a `verify` receipt,
 //! which is also stdout for a verdict of exit `1` (vectors note, "CLI").
@@ -12,6 +12,7 @@ mod catalog_params;
 pub(crate) mod emit;
 pub(crate) mod fmt;
 pub(crate) mod id;
+pub(crate) mod import;
 pub(crate) mod validate;
 pub(crate) mod verify;
 mod verify_mutants;

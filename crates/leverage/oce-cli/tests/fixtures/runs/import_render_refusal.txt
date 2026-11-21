@@ -1,0 +1,22 @@
+exit: 2
+--- stdout
+{
+  "command": "import",
+  "errors": [
+    {
+      "at": "http://example.org#g36.ahu_economizer.modeToReal.y",
+      "code": "port-attribute",
+      "detail": "`S231:min` on a block port is not authorable (outside the subset)",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "../../oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld",
+  "ok": false,
+  "output_form": "text",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr
+../../oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld: error[port-attribute] `S231:min` on a block port is not authorable (outside the subset)
+oce import ../../oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld: refused at http://example.org#g36.ahu_economizer.modeToReal.y: nothing imported

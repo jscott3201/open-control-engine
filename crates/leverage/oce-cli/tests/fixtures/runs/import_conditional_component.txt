@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "import",
+  "errors": [
+    {
+      "at": "http://example.org#g36.source.multizone_vav_plant_requests.uCooCoiSet",
+      "code": "conditional-component",
+      "detail": "a conditional component is outside the subset",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "../../oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld",
+  "ok": false,
+  "output_form": "text",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

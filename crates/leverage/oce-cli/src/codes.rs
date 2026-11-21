@@ -1,6 +1,7 @@
 //! Every code the tool reports, with a one-line meaning: the tool's own error codes, and the
-//! meaning tables `vocab` prints for `oce_author::WIRE_CODES`, `oce_author::PARSE_CODES` and
-//! `oce_author::STAGE_ONE_CODES` (pinned to those lists, in order, by the unit tests below).
+//! meaning tables `vocab` prints for `oce_author::WIRE_CODES`, `oce_author::PARSE_CODES`,
+//! `oce_author::STAGE_ONE_CODES` and `oce_author::IMPORT_ERROR_CODES` (pinned to those lists, in
+//! order, by the unit tests below).
 
 // --- The tool's own error codes (`errors[].code`, exit 2). ---
 
@@ -20,7 +21,8 @@ pub(crate) const READ_FAILED: &str = "read-failed";
 pub(crate) const INPUT_TOO_LARGE: &str = "input-too-large";
 /// `--namespace` (`emit`, `id`) is malformed.
 pub(crate) const INVALID_NAMESPACE: &str = "invalid-namespace";
-/// The model cannot be spelled as text (`fmt` of a wire file).
+/// The model cannot be spelled in the form asked for: as text (`fmt` of a wire file, `import`),
+/// or in the wire form so that its reader reads it back (`import --wire`).
 pub(crate) const UNSPELLABLE: &str = "unspellable";
 /// The output could not be written or renamed into place.
 pub(crate) const WRITE_FAILED: &str = "write-failed";
@@ -74,7 +76,10 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
         INVALID_NAMESPACE,
         "--namespace is empty, too long, not printable ASCII or does not end in #, / or :",
     ),
-    (UNSPELLABLE, "the model cannot be written as text"),
+    (
+        UNSPELLABLE,
+        "the model cannot be written as text, or (import --wire) in the wire form so that it reads back",
+    ),
     (
         WRITE_FAILED,
         "the output could not be written or renamed into place",
@@ -161,6 +166,119 @@ pub(crate) const WIRE_MEANINGS: &[(&str, &str)] = &[
     (
         "malformed-connection",
         "a connection is not `source -> target` with exactly one ->",
+    ),
+];
+
+/// The importer's refusal codes (`oce_author::IMPORT_ERROR_CODES`, in order) and their meanings.
+/// The code of a refusal comes from `oce_author::ImportError::code`; this table only says what
+/// each means. The list is the importer's whole list, so that no refusal can carry a code
+/// `vocab` does not print: it holds the three codes of the v0 graph JSON reader, which `import`
+/// does not expose, and `too-large`, which the tool's own bounded read pre-empts.
+pub(crate) const IMPORT_MEANINGS: &[(&str, &str)] = &[
+    (
+        "too-large",
+        "the document is over the importer's size limit (the tool's bounded read refuses an over-size input first, as input-too-large)",
+    ),
+    (
+        "not-strict-json",
+        "the bytes are not UTF-8 or not JSON, an object repeats a key, or an integer is outside the 64-bit signed range",
+    ),
+    (
+        "limit-exceeded",
+        "v0 graph JSON: nesting, a list or a string over a read bound",
+    ),
+    (
+        "unknown-key",
+        "a property, top-level key or @context term the flat CXF subset does not define",
+    ),
+    (
+        "namespace-mismatch",
+        "the @context binds the S231 vocabulary in a namespace the engine does not read",
+    ),
+    (
+        "missing-key",
+        "a required key is absent: a node without @id, a parameter without a type or a value",
+    ),
+    (
+        "wrong-shape",
+        "a value of the wrong JSON shape: a relation that is not references, a label or term that is not a string",
+    ),
+    ("no-root", "no node contains blocks"),
+    ("duplicate-id", "a node @id is declared twice"),
+    (
+        "unresolved-reference",
+        "a reference to no node, or to a node outside the root's IRI",
+    ),
+    (
+        "stray-node",
+        "a node no root relation reaches, or one reached twice",
+    ),
+    (
+        "invalid-name",
+        "a root @id or local name that breaks the identifier syntax, or a path deeper than block.member",
+    ),
+    (
+        "nested-composite",
+        "a second node that contains blocks (outside the subset)",
+    ),
+    ("instance-member", "hasInstance (outside the subset)"),
+    ("constant-member", "hasConstant (outside the subset)"),
+    (
+        "conditional-component",
+        "a conditional component (outside the subset)",
+    ),
+    (
+        "array-connector",
+        "an array boundary or port (outside the subset)",
+    ),
+    (
+        "array-sequence-parameter",
+        "an array sequence parameter (outside the subset)",
+    ),
+    (
+        "expression-value",
+        "a value that is an expression, or a name that is no sequence parameter (outside the subset)",
+    ),
+    (
+        "port-attribute",
+        "unit, quantity, displayUnit, min, max or nominal on a block port (not authorable)",
+    ),
+    (
+        "connector-attribute",
+        "nominal or unbounded on a boundary (not carried)",
+    ),
+    (
+        "driving-sink",
+        "a boundary output or a block input drives a connection",
+    ),
+    (
+        "class-outside-obc",
+        "a block class outside Buildings.Controls.OBC",
+    ),
+    (
+        "datatype-mismatch",
+        "a value, bound or connector that disagrees with its declared type",
+    ),
+    (
+        "unknown-datatype",
+        "a declared type that is no supported scalar and no named type",
+    ),
+    (
+        "unknown-member-type",
+        "a member path whose enumeration or constant package the engine does not know",
+    ),
+    (
+        "malformed-literal",
+        "a non-finite or unparsable number, an unknown XSD datatype or a bad string escape",
+    ),
+    (
+        "array-shape",
+        "an array's sizes, rank or catalog template disagree with its value",
+    ),
+    ("string-value", "v0 graph JSON: a string parameter value"),
+    (
+        "malformed-connection",
+        "v0 graph JSON: a connection that is not `source -> target` with exactly one ->",
     ),
 ];
 
@@ -385,14 +503,17 @@ pub(crate) const TEXT_FORM_TAGS: &[&str] = &[
 
 /// The exit statuses and their meanings.
 pub(crate) const EXIT_MEANINGS: &[(u8, &str)] = &[
-    (0, "yes: clean, canonical, resolved, every scenario passed"),
+    (
+        0,
+        "yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported",
+    ),
     (
         1,
         "no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict",
     ),
     (
         2,
-        "error: a usage, read, parse, size or I/O failure, a run with no verdict, or an input with no content id (id); the question was not answered",
+        "error: a usage, read, parse, size or I/O failure, a run with no verdict, an input with no content id (id), or a document the importer refuses or the output form cannot spell (import); the question was not answered",
     ),
 ];
 
@@ -418,6 +539,11 @@ mod tests {
     }
 
     #[test]
+    fn import_meanings_cover_import_codes_in_order() {
+        assert_eq!(codes(IMPORT_MEANINGS), oce_author::IMPORT_ERROR_CODES);
+    }
+
+    #[test]
     fn parse_meanings_cover_parse_codes_in_order() {
         assert_eq!(codes(PARSE_MEANINGS), oce_author::PARSE_CODES);
     }
@@ -440,6 +566,7 @@ mod tests {
         for table in [
             TOOL_CODES,
             WIRE_MEANINGS,
+            IMPORT_MEANINGS,
             PARSE_MEANINGS,
             STAGE_ONE_MEANINGS,
             STAGE_TWO_MEANINGS,
