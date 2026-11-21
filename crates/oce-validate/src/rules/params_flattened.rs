@@ -1,12 +1,13 @@
 //! Validation helpers for flattened CDL array and matrix parameters.
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use oce_blocks::{MAX_RESOLVED_PORT_WIDTH, TimeTableValues};
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{BlockInstance, ParamTable, Value};
 
 use super::block_subject_of;
+use super::params_absent::absent_in;
 use super::params_element_names::is_canonical_index;
 
 pub(super) struct RealMatrixRule {
@@ -27,7 +28,7 @@ pub(super) struct TimeTableRule {
 
 pub(super) fn check_real_matrix_elements(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     rule: RealMatrixRule,
 ) {
     let (Some(n_row), Some(n_col)) = (
@@ -90,11 +91,13 @@ pub(super) fn check_real_matrix_elements(
 
 pub(super) fn check_time_table_matrix(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     rule: TimeTableRule,
 ) {
     let prefix = format!("{}_", rule.base);
-    let mut cells = HashMap::<(usize, usize), &Value>::new();
+    // The bound cells by (row, column): row-major order, the order every finding about them is
+    // raised in. A repeated name keeps its last binding (a repeat is refused on its own).
+    let mut cells = BTreeMap::<(usize, usize), &Value>::new();
     let mut n_row = 0_usize;
     let mut n_col = 0_usize;
     for (name, value) in &blk.params.values {
@@ -168,46 +171,69 @@ pub(super) fn check_time_table_matrix(
         return;
     }
 
-    let mut times = Vec::with_capacity(n_row);
-    for row in 1..=n_row {
-        for col in 1..=n_col {
-            let Some(value) = cells.get(&(row, col)).copied() else {
+    // Every bound cell is inside the shape, which its largest row and column set, so the absent
+    // cells are found from the bound ones: one finding for all of them (issue #726).
+    let linear = |(row, col): (usize, usize)| (row - 1) * n_col + col;
+    let absent = absent_in(cells.keys().map(|&cell| linear(cell)), 1, n_row * n_col);
+    let cell_name = |position: usize| {
+        let (row, col) = ((position - 1) / n_col + 1, (position - 1) % n_col + 1);
+        format!("{}_{row}_{col}", rule.base)
+    };
+    match absent.count {
+        0 => {}
+        1 => push_range_error(
+            blk,
+            diags,
+            format!(
+                "table `{}` on block `{}` is missing required cell {}",
+                rule.base,
+                blk.class_iri,
+                absent.named(cell_name)
+            ),
+        ),
+        count => push_range_error(
+            blk,
+            diags,
+            format!(
+                "table `{}` on block `{}` is missing {count} required cells of its \
+                 {n_row}x{n_col} shape: {}",
+                rule.base,
+                blk.class_iri,
+                absent.named(cell_name)
+            ),
+        ),
+    }
+
+    // The time column as bound, in row order. Its checks below run when every row has a numeric
+    // time, whether or not an output cell is absent, as they did when the shape was walked. It
+    // grows with the time cells bound, never with a shape no cell fills.
+    let mut times = Vec::new();
+    for (&(row, col), &value) in &cells {
+        let Some(value) = real_value(value) else {
+            push_range_error(
+                blk,
+                diags,
+                format!(
+                    "parameter `{}_{}_{}` on block `{}` must be numeric",
+                    rule.base, row, col, blk.class_iri
+                ),
+            );
+            continue;
+        };
+        if col == 1 {
+            if !value.is_finite() {
                 push_range_error(
                     blk,
                     diags,
                     format!(
-                        "table `{}` on block `{}` is missing required cell {}_{}_{}",
-                        rule.base, blk.class_iri, rule.base, row, col
+                        "time cell `{}_{}_1` on block `{}` must be finite; got {value}",
+                        rule.base, row, blk.class_iri
                     ),
                 );
-                continue;
-            };
-            let Some(value) = real_value(value) else {
-                push_range_error(
-                    blk,
-                    diags,
-                    format!(
-                        "parameter `{}_{}_{}` on block `{}` must be numeric",
-                        rule.base, row, col, blk.class_iri
-                    ),
-                );
-                continue;
-            };
-            if col == 1 {
-                if !value.is_finite() {
-                    push_range_error(
-                        blk,
-                        diags,
-                        format!(
-                            "time cell `{}_{}_1` on block `{}` must be finite; got {value}",
-                            rule.base, row, blk.class_iri
-                        ),
-                    );
-                }
-                times.push(value);
-            } else {
-                check_table_output_value(blk, diags, rule.base, row, col, value, rule.values);
             }
+            times.push(value);
+        } else {
+            check_table_output_value(blk, diags, rule.base, row, col, value, rule.values);
         }
     }
     if times.len() != n_row {
@@ -261,7 +287,7 @@ pub(super) fn check_time_table_matrix(
 
 pub(super) fn check_time_table_offset(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     base: &str,
     table: &str,
 ) {
@@ -316,7 +342,7 @@ pub(super) fn check_time_table_offset(
 
 pub(super) fn check_boolean_array_true_count_equals(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     base: &str,
     len: &str,
     count: &str,
@@ -336,39 +362,32 @@ pub(super) fn check_boolean_array_true_count_equals(
     if n > MAX_RESOLVED_PORT_WIDTH {
         return;
     }
-    // The members `base_1` to `base_n`, each its first binding, read in one pass over the
-    // parameters (GitHub #634): the rule used to build each name and scan the table for it,
-    // `n` times. In index order, a present member that is not Boolean ends the rule (the element
-    // rule refuses it), and an absent one is `default`.
-    let mut members: Vec<Option<&Value>> = vec![None; n];
+    // The members `base_1` to `base_n` the block binds, each its first binding, read in one pass
+    // over the parameters (GitHub #634). A bound member that is not Boolean ends the rule (the
+    // element rule refuses it), and each member not bound is `default`, counted rather than
+    // walked, so the work is the parameters' and never `n`'s (issue #726).
+    let mut members = BTreeMap::<usize, &Value>::new();
     for (name, value) in &blk.params.values {
         let index = name
             .strip_prefix(base)
             .and_then(|rest| rest.strip_prefix('_'))
             .filter(|index| is_canonical_index(index))
-            .and_then(|index| index.parse::<usize>().ok());
-        if let Some(slot) = index
-            .and_then(|index| index.checked_sub(1))
-            .and_then(|slot| members.get_mut(slot))
-            && slot.is_none()
-        {
-            *slot = Some(value);
+            .and_then(|index| index.parse::<usize>().ok())
+            .filter(|index| (1..=n).contains(index));
+        if let Some(index) = index {
+            members.entry(index).or_insert(value);
         }
     }
     let mut true_count = 0_i64;
-    for member in members {
-        let value = match member {
-            Some(value) => {
-                let Some(value) = boolean_value(value) else {
-                    return;
-                };
-                value
-            }
-            None => default,
+    for value in members.values() {
+        let Some(value) = boolean_value(value) else {
+            return;
         };
-        if value {
-            true_count += 1;
-        }
+        true_count += i64::from(value);
+    }
+    if default {
+        // At most `n <= MAX_RESOLVED_PORT_WIDTH` members, so the count fits an `i64`.
+        true_count += (n - members.len()) as i64;
     }
     if true_count != expected {
         push_range_error(
@@ -448,7 +467,7 @@ fn parse_array_element_suffix(suffix: &str) -> Option<usize> {
 
 fn check_table_output_value(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     base: &str,
     row: usize,
     col: usize,
@@ -490,7 +509,7 @@ fn integer_encoded(value: f64) -> bool {
 
 fn validate_periodic_step_table(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     base: &str,
     period_name: &str,
     unscaled_times: &[f64],
@@ -550,7 +569,7 @@ pub(super) fn boolean_value(value: &Value) -> Option<bool> {
     }
 }
 
-pub(super) fn push_range_error(blk: &BlockInstance, diags: &mut Vec<Diagnostic>, message: String) {
+pub(super) fn push_range_error(blk: &BlockInstance, diags: &mut DiagnosticList, message: String) {
     diags.push(
         Diagnostic::error(DiagCode::ParameterOutOfRange, message)
             .with_subject(block_subject_of(blk)),

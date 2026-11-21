@@ -31,7 +31,7 @@
 //! to the same IRI is each expansion's to hold.
 
 use crate::export::S231_CONTEXT_IRI;
-use crate::format_controls::is_format_or_control;
+use oce_diag::is_format_or_control;
 
 /// The two namespaces a QUDT unit IRI is read in: the one modelica-json binds `unit` to in the
 /// documents it writes, and the one QUDT publishes.

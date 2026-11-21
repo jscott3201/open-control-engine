@@ -84,7 +84,7 @@ prefix was read as no S231 type at all. A `unit`, `quantity` or `displayUnit` te
 one is refused the same way, in both readers (GitHub #646, issue #629;
 [host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids) has
 the precedence). `Cc` is what `char::is_control` reports; `Cf` is the 170
-code points Unicode 17.0.0 assigns to the category, held in a table (`crates/oce-cxf/src/format_controls.rs`)
+code points Unicode 17.0.0 assigns to the category, held in a table (`crates/oce-diag/src/quoting.rs`)
 that a test checks, code point by code point, against a verbatim excerpt of Unicode's
 `DerivedGeneralCategory.txt` checked in under `crates/oce-cxf/tests/fixtures/unicode/`.
 

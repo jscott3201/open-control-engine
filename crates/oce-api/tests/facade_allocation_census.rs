@@ -47,3 +47,4 @@ mod slot_frame_refusals;
 mod slot_frames;
 mod slot_output_types;
 mod state_engine_version;
+mod validate_sparse_table_cost;

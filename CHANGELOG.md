@@ -819,6 +819,71 @@ so far, and no tag is cut by the bump.
     `ValidationReport::diagnostics` are the types they were; the list type is internal to
     `oce-cxf`. No format, content id, blob or golden moves, and the workspace version is not
     bumped.
+- **A sparse flattened table is one validation finding, and each validator pass's diagnostics
+  hold at most 8 MiB of text** (GitHub #732, issue #726).
+  A `CDL.Reals.Sources.TimeTable` takes its shape from the largest `table_<row>_<col>` it
+  carries, so one parameter `table_524288_2` declares 1,048,576 cells and binds one. The
+  validator raised a `parameter-out-of-range` for every absent cell and walked the whole shape to
+  find them: 3 such blocks, 1.6 KB of CXF, were 3,145,725 diagnostics, a 579 MB peak and
+  3,147,126 allocations, and 50 blocks, 26 KB, held 9.5 GB for 198 s. The 3-block document is now
+  refused with 3 diagnostics at an 8.5 MB peak (one constructor probe's 8.4 MB of it, issue #722)
+  and 1,425 allocations; 50 blocks peak at 9.2 MB.
+  - **One finding a table.** The absent cells of a table are one `parameter-out-of-range` error
+    on the block, with their count, the table's shape and the first four in row order, then how
+    many more. Was, one per cell: `table `table` on block `CDL.Reals.Sources.TimeTable` is
+    missing required cell table_1_1`, and so on for each. Now:
+    `table `table` on block `CDL.Reals.Sources.TimeTable` is missing 1048575 required cells of
+    its 524288x2 shape: table_1_1, table_1_2, table_2_1, table_2_2 and 1048571 more`. A table
+    short exactly one cell keeps the message it had, which names that cell. Every other finding
+    is raised as before: each bound cell is still judged, and the time-column checks (finite,
+    nondecreasing, periodic range, period) still run whenever every row has a numeric time, an
+    output cell absent or not.
+  - **Found, not walked.** The absent cells are counted from the cells the block binds and the
+    first four found between them, so the rule's work is the block's parameters, not its shape.
+    The same holds for an `ExtractSignal`'s omitted selectors, whose default is their index:
+    `nin` 1 and `nout` 2^20 raised 1,048,575 findings, and two or more out of range are now one,
+    `parameter `extract` on block `…` omits 5 elements whose default, the element's index, is
+    outside range 1..=1: extract_2, extract_3, extract_4, extract_5 and 1 more` (one keeps its
+    message); and for a `VectorFilter`'s omitted mask members, which are counted as `true`
+    rather than walked (one finding at most, as before). The audit of every other rule over a
+    parameter-declared shape (a matrix's `K_r_c`, a table's offsets, the vector element rules,
+    the finiteness and spelling rules) found each one per bound parameter already.
+  - **The validator's lists are held to the reader's budget.** `unify_attributes`, `validate` and
+    `validate_block_parameters` each collect their diagnostics in the list the CXF reader holds
+    (GitHub #713): at most 8,388,608 bytes of message and subject text, a subject counted for
+    every diagnostic; the first diagnostic that does not fit ends the list and one
+    `resource-limit-exceeded` error, after the pass's sorted diagnostics, counts it and every
+    later one and names the first. A duplicate parameter past the budget is counted and not
+    built. `unify_and_validate` returns its two passes' warnings together. The list type,
+    `DiagnosticList`, moved from `oce-cxf` to `oce-diag` and is public there, with the quoting
+    its closing error uses (`excerpt`, `visible`, `is_format_or_control` and the `Cf` table
+    `FORMAT_RANGES`, the last and `is_format` hidden from the documentation: they are public only
+    for `oce-cxf`'s Unicode-data test); `oce_cxf::is_format_or_control` and `oce_api::is_format_or_control` are
+    re-exports of it, so no caller changes.
+  - **Breaking, in place: warnings alone can refuse a model at validation,** as they can at the
+    reader since GitHub #713 (the owner's ruling there, mirrored): a pass whose warnings pass the
+    bound is refused, never passed with warnings missing. A document refused before is refused
+    still, and nothing that loaded before is refused by the one-finding change.
+  - **What is left on the issue's shape** is the constructor probes of the resolve and
+    validation passes (issue #722): 5,000 such blocks, a 2.6 MB document, are refused by
+    validation with 5,000 findings at a 75 MB peak but request 84 GB in total; the constructed
+    budget of GitHub #721 is charged only at instantiation, which validation's refusal comes
+    before.
+  - **Only a sparse table's or a vector's defaulted findings change.** Every diagnostic of the
+    257 tracked documents that hold an `@graph` and of the 139 CXF documents of
+    `open-control-library` (`main` at `d90f63b`), as written and with the retired namespace
+    rewritten, is byte-identical before and after (535 loads, 282 load and 253 are refused), and
+    so is `oce id --json` over the same 535; none of them has a sparse table. No format, content
+    id, blob or golden moves, and the workspace version is not bumped.
+  - **Tests:** `crates/oce-api/tests/validate_sparse_table_cost.rs` (the issue's three
+    documents: refusal, peak, allocations and requested bytes a block),
+    `crates/oce-api/tests/validate_diagnostic_list_bound.rs` (a validator list past the budget
+    through `Engine::load_cxf`, the closing error last), `crates/oce-validate/src/tests/`
+    `diagnostic_budget.rs` (both edges of the budget, warnings, errors, sorted order, one finding
+    larger than the budget, a block's parameters), `source_timetable_absent_cells.rs` and
+    `routing_defaulted_selectors.rs`, `rules/params_absent_tests.rs` (counting against walking
+    every range of a small shape) and one case in `rules/params_arrays_tests.rs` (a selector
+    range that is empty).
 - **An array parameter's element paths are held to 64 MiB a document, and its names are built
   one at a time** (GitHub #724, issue #710). Every element of `k[n]` on an instance `c` is minted
   under a name of its own, `k_1` to `k_n`, and `Engine::params()` keys each by its path, `c.k_1`

@@ -48,11 +48,12 @@
 use oce_diag::{DiagCode, Diagnostic};
 
 use super::{Expansion, PrefixTable, expand_token};
-use crate::diagnostic_list::DiagnosticList;
-use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
-use crate::format_controls::{describe, first_format_or_control, visible};
+use crate::format_controls::{describe, first_format_or_control};
 use crate::resolve::extension_blocks::EXTENSION_BLOCK_TERM;
+use oce_diag::DiagnosticList;
+use oce_diag::excerpt;
+use oce_diag::visible;
 
 /// The namespace IRI this engine bound through release 0.4.0. Kept only to refuse it.
 pub(super) const RETIRED_NAMESPACE: &str = "http://data.ashrae.org/S231P#";
@@ -149,7 +150,7 @@ pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Dia
 /// token with surrounding whitespace and such a character inside is this refusal, and surrounding
 /// whitespace alone, a tab or a line break included, is left to [`check_typing_whitespace`]. The
 /// message names the first such code point and quotes the token as an excerpt with each such
-/// character escaped ([`crate::format_controls::visible`]).
+/// character escaped ([`oce_diag::visible`]).
 pub(super) fn check_typing_controls(
     token: &str,
     slot: &str,

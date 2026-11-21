@@ -6,8 +6,8 @@ use std::sync::Arc;
 use serde_json::json;
 
 use super::derive_boundary_types;
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::CxfDocument;
+use oce_diag::DiagnosticList;
 
 /// A top input wired to a long String-typed top output, so the output's type is derived only
 /// when the pass-through edge is seen.

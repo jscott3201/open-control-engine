@@ -6,8 +6,8 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ParamTable, ValueType};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
+use oce_diag::DiagnosticList;
 
 use super::attrs::connector_attrs;
 use super::value_types::{first_type, term_of, try_derive_value_type};

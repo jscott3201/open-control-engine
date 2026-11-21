@@ -8,11 +8,11 @@ use oce_model::{
     Attrs, BoundaryInput, Connection, Connector, ConnectorId, Dir, ModelGraph, NoAttrs, ValueType,
 };
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 use crate::export::EXPORT_ROOT_IRI;
 use crate::export_defer::deferral_set;
 use crate::export_pass_through::is_pass_through_class;
+use oce_diag::DiagnosticList;
 
 use super::attrs::connector_attrs;
 use super::connection_endpoints::EndpointId;

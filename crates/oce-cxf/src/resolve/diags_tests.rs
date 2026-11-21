@@ -7,7 +7,7 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_model::ConnectorId;
 
 use super::finalize_diags;
-use crate::diagnostic_list::DiagnosticList;
+use oce_diag::DiagnosticList;
 
 /// Diagnostics whose subjects are drawn from `subjects` in a fixed interleaving.
 fn diagnostics(subjects: &[Arc<str>]) -> Vec<Diagnostic> {
