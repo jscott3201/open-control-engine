@@ -6,6 +6,7 @@ use std::sync::Arc;
 use oce_model::{ConnectorId, Dir, ValueType};
 
 use super::{EndpointId, EndpointLookups, EndpointTable};
+use crate::diagnostic_list::DiagnosticList;
 use crate::resolve::specialize::Specialization;
 
 struct Fixture<'a> {
@@ -142,7 +143,7 @@ fn collect_rendered(fixture: &Fixture<'_>, edges: &[(&str, &str)]) -> String {
         ValueType::Real,
         0,
     )];
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let collected = crate::resolve::connections::collect(
         edges.iter().copied(),
         lookups,

@@ -4,6 +4,7 @@ use oce_diag::DiagCode;
 use oce_model::{BlockId, Connection, Connector, ConnectorId, Dir, ValueType};
 
 use super::check;
+use crate::diagnostic_list::DiagnosticList;
 
 /// Two outputs (0, 1) then two inputs (2, 3), all on one block.
 fn connectors() -> Vec<Connector> {
@@ -23,7 +24,7 @@ fn wire(from: u32, to: u32) -> Connection {
 }
 
 fn messages(connections: &[Connection], external: &[ConnectorId]) -> Vec<(String, String)> {
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     check(&connectors(), connections, external, &mut diags);
     diags
         .into_iter()

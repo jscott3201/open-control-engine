@@ -4,6 +4,7 @@ use oce_diag::DiagCode;
 use oce_model::{BlockId, Connection, Connector, ConnectorId, Dir, ValueType};
 
 use super::AssignmentTracker;
+use crate::diagnostic_list::DiagnosticList;
 use crate::resolve::connection_endpoints::EndpointId;
 
 #[test]
@@ -15,7 +16,7 @@ fn reassigned_child_inputs_are_refused_in_connector_order() {
         assert!(tracker.record(ConnectorId(id), EndpointId(0), &target));
         assert!(!tracker.record(ConnectorId(id), EndpointId(0), &target));
     }
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     tracker.emit_diagnostics(&[], &[], &mut diags);
 
     let subjects: Vec<&str> = diags
@@ -38,7 +39,7 @@ fn single_assignments_pass_and_distinct_sources_are_named() {
     assert!(tracker.record(ConnectorId(9), EndpointId(1), "urn:child:p"));
     assert!(!tracker.record(ConnectorId(9), EndpointId(2), "urn:child:p"));
     assert!(tracker.record(ConnectorId(2), EndpointId(1), "urn:child:q"));
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     tracker.emit_diagnostics(&[], &[], &mut diags);
     assert_eq!(diags.len(), 1);
     assert_eq!(diags[0].subject.as_deref(), Some("urn:child:p"));
@@ -70,7 +71,7 @@ fn a_boundary_reached_input_with_a_wire_from_an_output_is_refused_as_mixed() {
     let mut tracker = AssignmentTracker::default();
     assert!(tracker.record(ConnectorId(2), EndpointId(3), "urn:child:p"));
     assert!(tracker.record(ConnectorId(3), EndpointId(3), "urn:child:q"));
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     tracker.emit_diagnostics(&[wire(0, 2)], &wiring_table(), &mut diags);
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::SingleAssignment);
@@ -87,7 +88,7 @@ fn the_mixed_refusal_takes_precedence_over_the_boundary_count() {
     let mut tracker = AssignmentTracker::default();
     assert!(tracker.record(ConnectorId(2), EndpointId(3), "urn:child:p"));
     assert!(!tracker.record(ConnectorId(2), EndpointId(4), "urn:child:p"));
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     tracker.emit_diagnostics(&[wire(0, 2)], &wiring_table(), &mut diags);
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(
@@ -101,7 +102,7 @@ fn a_wire_from_an_input_is_not_counted_as_a_driver() {
     // An input→input edge is Step 10's direction refusal, not a second driver.
     let mut tracker = AssignmentTracker::default();
     assert!(tracker.record(ConnectorId(2), EndpointId(3), "urn:child:p"));
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     tracker.emit_diagnostics(&[wire(1, 2)], &wiring_table(), &mut diags);
     assert!(diags.is_empty(), "{diags:?}");
 }
@@ -110,7 +111,7 @@ fn a_wire_from_an_input_is_not_counted_as_a_driver() {
 fn a_wire_into_an_input_no_boundary_reaches_is_not_this_pass() {
     let mut tracker = AssignmentTracker::default();
     assert!(tracker.record(ConnectorId(2), EndpointId(3), "urn:child:p"));
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     tracker.emit_diagnostics(&[wire(0, 3)], &wiring_table(), &mut diags);
     assert!(diags.is_empty(), "{diags:?}");
 }
@@ -119,7 +120,7 @@ fn a_wire_into_an_input_no_boundary_reaches_is_not_this_pass() {
 fn a_wire_whose_source_is_out_of_range_is_not_counted() {
     let mut tracker = AssignmentTracker::default();
     assert!(tracker.record(ConnectorId(2), EndpointId(3), "urn:child:p"));
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     tracker.emit_diagnostics(&[wire(99, 2)], &wiring_table(), &mut diags);
     assert!(diags.is_empty(), "{diags:?}");
 }

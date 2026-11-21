@@ -48,6 +48,7 @@
 use oce_diag::{DiagCode, Diagnostic};
 
 use super::{Expansion, PrefixTable, expand_token};
+use crate::diagnostic_list::DiagnosticList;
 use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
 use crate::format_controls::{describe, first_format_or_control, visible};
@@ -71,7 +72,7 @@ pub(super) const FOREIGN_NAMESPACES: [&str; 3] =
 
 /// Refuse every `@context` binding that spells the S231 vocabulary in another namespace, in term
 /// order (the table is sorted, so the refusal list is deterministic).
-pub(super) fn check_bindings(table: &PrefixTable, diags: &mut Vec<Diagnostic>) {
+pub(super) fn check_bindings(table: &PrefixTable, diags: &mut DiagnosticList) {
     for (term, iri) in table {
         let refused = if term == "S231" {
             iri != S231_CONTEXT_IRI
@@ -98,45 +99,44 @@ pub(super) fn check_bindings(table: &PrefixTable, diags: &mut Vec<Diagnostic>) {
 /// in any namespace, so without this a full IRI in one of them would be read through it as if it
 /// were the S231 vocabulary's (GitHub #527, #582; every `https:` term since GitHub #620). The class
 /// `ExtensionBlock` keeps its own message. `owner` is the node's expanded `@id`.
-pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut Vec<Diagnostic>) {
-    let quoted = excerpt(token);
-    let subject = if owner.is_empty() { &quoted } else { owner };
-    if token.starts_with(RETIRED_NAMESPACE) {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::VocabularyNamespaceMismatch,
-                format!(
-                    "{slot} `{quoted}` on node `{owner}` is in `{RETIRED_NAMESPACE}`; the S231 \
-                     vocabulary is read only in `{S231_CONTEXT_IRI}`"
-                ),
-            )
-            .with_subject(subject.to_owned()),
-        );
-        return;
-    }
-    let Some((namespace, term)) = [HTTPS_NEAR_MISS, HTTPS_RETIRED_NEAR_MISS]
-        .into_iter()
-        .find_map(|namespace| Some((namespace, token.strip_prefix(namespace)?)))
-    else {
-        return;
-    };
-    let message = if slot == "@type" && term == EXTENSION_BLOCK_TERM {
-        format!(
-            "{slot} `{token}` on node `{owner}` names the class `{EXTENSION_BLOCK_TERM}` in \
-             `{namespace}`; the S231 vocabulary is read only in `{S231_CONTEXT_IRI}`; write it as \
-             `S231:{EXTENSION_BLOCK_TERM}`"
-        )
+pub(super) fn check_typing(token: &str, slot: &str, owner: &str, diags: &mut DiagnosticList) {
+    // The namespace the token is in, and for an `https:` spelling the term it names there.
+    let found = if token.starts_with(RETIRED_NAMESPACE) {
+        Some((RETIRED_NAMESPACE, None))
     } else {
-        let named = excerpt(term);
-        format!(
-            "{slot} `{quoted}` on node `{owner}` is in `{namespace}`; the S231 vocabulary is read \
-             only in `{S231_CONTEXT_IRI}`; write it as `S231:{named}`"
-        )
+        [HTTPS_NEAR_MISS, HTTPS_RETIRED_NEAR_MISS]
+            .into_iter()
+            .find_map(|namespace| Some((namespace, Some(token.strip_prefix(namespace)?))))
     };
-    diags.push(
+    let Some((namespace, term)) = found else {
+        return;
+    };
+    // One node may carry any number of typing tokens, each refused about the same `@id`, so the
+    // refusal is built only while the list has room for it (GitHub issue #695).
+    diags.raise(|| {
+        let quoted = excerpt(token);
+        let subject = if owner.is_empty() { &quoted } else { owner };
+        let message = match term {
+            None => format!(
+                "{slot} `{quoted}` on node `{owner}` is in `{namespace}`; the S231 vocabulary is \
+                 read only in `{S231_CONTEXT_IRI}`"
+            ),
+            Some(term) if slot == "@type" && term == EXTENSION_BLOCK_TERM => format!(
+                "{slot} `{token}` on node `{owner}` names the class `{EXTENSION_BLOCK_TERM}` in \
+                 `{namespace}`; the S231 vocabulary is read only in `{S231_CONTEXT_IRI}`; write \
+                 it as `S231:{EXTENSION_BLOCK_TERM}`"
+            ),
+            Some(term) => {
+                let named = excerpt(term);
+                format!(
+                    "{slot} `{quoted}` on node `{owner}` is in `{namespace}`; the S231 vocabulary \
+                     is read only in `{S231_CONTEXT_IRI}`; write it as `S231:{named}`"
+                )
+            }
+        };
         Diagnostic::error(DiagCode::VocabularyNamespaceMismatch, message)
-            .with_subject(subject.to_owned()),
-    );
+            .with_subject(subject.to_owned())
+    });
 }
 
 /// Refuse a typing token (`@type` value or `isOfDataType` reference, as written, in any
@@ -154,14 +154,14 @@ pub(super) fn check_typing_controls(
     token: &str,
     slot: &str,
     owner: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     let Some(invisible) = first_format_or_control(token.trim()) else {
         return false;
     };
-    let quoted = visible(&excerpt(token)).into_owned();
-    let subject = if owner.is_empty() { &quoted } else { owner };
-    diags.push(
+    diags.raise(|| {
+        let quoted = visible(&excerpt(token)).into_owned();
+        let subject = if owner.is_empty() { &quoted } else { owner };
         Diagnostic::error(
             DiagCode::MalformedDocument,
             format!(
@@ -170,8 +170,8 @@ pub(super) fn check_typing_controls(
                 describe(invisible)
             ),
         )
-        .with_subject(subject.to_owned()),
-    );
+        .with_subject(subject.to_owned())
+    });
     true
 }
 
@@ -190,7 +190,7 @@ pub(super) fn check_typing_whitespace(
     slot: &str,
     owner: &str,
     table: &PrefixTable,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     let trimmed = token.trim();
     if trimmed == token {
@@ -209,24 +209,25 @@ pub(super) fn check_typing_whitespace(
     let Some((namespace, term)) = named.filter(|(_, term)| !term.is_empty()) else {
         return false;
     };
-    let (quoted, named) = (excerpt(token), excerpt(term));
-    let subject = if owner.is_empty() { &quoted } else { owner };
-    let message = if term.contains(char::is_whitespace) {
-        // No spelling of it without the surrounding whitespace names a term, so none is offered.
-        format!(
-            "{slot} {quoted:?} on node `{owner}` carries surrounding whitespace, and whitespace \
-             inside it too, so it names no term in `{namespace}` as written; write the S231 term \
-             with no whitespace"
-        )
-    } else {
-        format!(
-            "{slot} {quoted:?} on node `{owner}` carries surrounding whitespace; without it, it \
-             names `{named}` in `{namespace}`; write it as `S231:{named}`"
-        )
-    };
-    diags.push(
-        Diagnostic::error(DiagCode::MalformedDocument, message).with_subject(subject.to_owned()),
-    );
+    diags.raise(|| {
+        let (quoted, named) = (excerpt(token), excerpt(term));
+        let subject = if owner.is_empty() { &quoted } else { owner };
+        let message = if term.contains(char::is_whitespace) {
+            // No spelling of it without the surrounding whitespace names a term, so none is
+            // offered.
+            format!(
+                "{slot} {quoted:?} on node `{owner}` carries surrounding whitespace, and \
+                 whitespace inside it too, so it names no term in `{namespace}` as written; write \
+                 the S231 term with no whitespace"
+            )
+        } else {
+            format!(
+                "{slot} {quoted:?} on node `{owner}` carries surrounding whitespace; without it, \
+                 it names `{named}` in `{namespace}`; write it as `S231:{named}`"
+            )
+        };
+        Diagnostic::error(DiagCode::MalformedDocument, message).with_subject(subject.to_owned())
+    });
     true
 }
 
@@ -255,7 +256,7 @@ mod tests {
     }
 
     fn refusals(bindings: &[(&str, &str)]) -> Vec<(String, String)> {
-        let mut diags = Vec::new();
+        let mut diags = DiagnosticList::new();
         check_bindings(&table(bindings), &mut diags);
         diags
             .into_iter()

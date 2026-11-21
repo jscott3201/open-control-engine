@@ -7,6 +7,7 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_model::ConnectorId;
 
 use super::finalize_diags;
+use crate::diagnostic_list::DiagnosticList;
 
 /// Diagnostics whose subjects are drawn from `subjects` in a fixed interleaving.
 fn diagnostics(subjects: &[Arc<str>]) -> Vec<Diagnostic> {
@@ -40,8 +41,8 @@ fn shared_and_separate_subject_allocations_sort_identically() {
         ("urn:leaf:u", ConnectorId(1)),
     ]);
     let subjects: Vec<Arc<str>> = names.iter().map(|name| Arc::from(*name)).collect();
-    let shared = finalize_diags(diagnostics(&subjects), &conn_of_iri);
-    let separate: Vec<Diagnostic> = diagnostics(&subjects)
+    let shared = finalize_diags(diagnostics(&subjects).into_iter().collect(), &conn_of_iri);
+    let separate: DiagnosticList = diagnostics(&subjects)
         .into_iter()
         .map(|mut diagnostic| {
             diagnostic.subject = diagnostic

@@ -24,6 +24,7 @@ use oce_expr::EvalResult;
 use oce_model::{BlockId, BlockInstance, ParamTable, Value};
 
 use crate::arrays::{ArrayElementBudget, expand_array_param};
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
 use crate::ground::ground_param_value;
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
@@ -59,7 +60,7 @@ pub(super) fn ground_instance_params(
     by_id: &HashMap<&str, &Node>,
     blocks: &mut [BlockInstance],
     checked: &mut CheckedParameters,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let mut array_budget = ArrayElementBudget::per_document();
     for inst in insts {

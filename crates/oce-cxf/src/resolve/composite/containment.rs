@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
 use crate::scope_chain::ScopeFrame;
 
@@ -36,7 +37,7 @@ pub(super) const MAX_COMPOSITE_NESTING_DEPTH: usize = 64;
 pub(super) struct Containment<'a, 'd> {
     by_id: &'a HashMap<&'a str, &'a Node>,
     specialization: &'a Specialization,
-    diags: &'d mut Vec<Diagnostic>,
+    diags: &'d mut DiagnosticList,
     /// The parameter nodes already shape-checked in this resolve (issue #559).
     checked: &'d mut CheckedParameters,
     /// O(1) membership for the current traversal spine (cycle detection).
@@ -58,7 +59,7 @@ impl<'a, 'd> Containment<'a, 'd> {
     pub(super) fn new(
         by_id: &'a HashMap<&'a str, &'a Node>,
         specialization: &'a Specialization,
-        diags: &'d mut Vec<Diagnostic>,
+        diags: &'d mut DiagnosticList,
         checked: &'d mut CheckedParameters,
     ) -> Self {
         Self {
@@ -198,7 +199,7 @@ impl<'a, 'd> Containment<'a, 'd> {
     /// listing reached it again (the top of the spine).
     fn report_shared(&mut self, child: &str) {
         let parent = self.path.last().map_or("", String::as_str);
-        self.diags.push(
+        self.diags.raise(|| {
             Diagnostic::error(
                 DiagCode::SharedInstance,
                 format!(
@@ -207,7 +208,7 @@ impl<'a, 'd> Containment<'a, 'd> {
                      reach is refused rather than expanded again"
                 ),
             )
-            .with_subject(child.to_owned()),
-        );
+            .with_subject(child.to_owned())
+        });
     }
 }

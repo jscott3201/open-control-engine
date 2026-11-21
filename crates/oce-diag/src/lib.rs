@@ -252,6 +252,16 @@ pub enum DiagCode {
     /// input-derived memory: the per-document array-parameter element budget (`oce-cxf`) or the
     /// per-model `[S]` state-word budget (`oce-graph`). The refusal is typed and happens before
     /// the over-budget allocation; the message names the budget and the requested amount.
+    ///
+    /// The same code closes a diagnostic list of the `oce-cxf` reader that reached its budget of
+    /// text (GitHub issue #695): 8 MiB of messages and subjects, a subject counted for every
+    /// diagnostic that carries it. The first diagnostic that does not fit ends the list, and this
+    /// error states how many diagnostics were raised and are not listed and names the first of
+    /// them, by its code and an excerpt of its subject. It has no subject of its own. It is the
+    /// last diagnostic of the reader's list (`CxfError::Validation`, and `OcError::diagnostics`
+    /// in the facade); a facade receipt sorts its records by key, where a record with no subject
+    /// comes first, so there it is the first import-stage record. It is an error whatever was
+    /// left out, so a load is never accepted with warnings missing.
     ResourceLimitExceeded,
     /// One `S231:containsBlock` child — a composite or a leaf block — is listed by more than one
     /// active composite, or more than once by one composite. A CDL component instance has exactly

@@ -10,6 +10,7 @@ use oce_model::{
     g36_integer_constant, is_g36_integer_constant_package, is_g36_type_path,
 };
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfValue, IriRef, Node};
 use crate::scope_chain::ScopeFrame;
 
@@ -46,11 +47,11 @@ impl Specialization {
 ///   shared declaration chain ([`complete_scope`]);
 /// - a **pruned** derivation-shaped instance's members are marked inactive in a second pass
 ///   after the propagation loop completes ([`mark_pruned_instance_members`]).
-pub(super) fn specialize(
-    doc: &crate::dto::CxfDocument,
-    by_id: &HashMap<&str, &Node>,
-    diags: &mut Vec<Diagnostic>,
-) -> (Specialization, WithheldFindings) {
+pub(super) fn specialize<'a>(
+    doc: &'a crate::dto::CxfDocument,
+    by_id: &HashMap<&str, &'a Node>,
+    diags: &mut DiagnosticList,
+) -> (Specialization, WithheldFindings<'a>) {
     let mut specialization = Specialization::default();
     let mut withheld = WithheldFindings::default();
     let mut decisions: HashMap<&str, bool> = HashMap::new();
@@ -204,11 +205,11 @@ fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashS
 /// (`ConditionalGuardUnknownParameter` et al.) are unaffected — they emit from guard
 /// evaluation, not from scope construction. `members` is a derivation-shaped parent's
 /// value-carrying member appendix (R19-15 site 3), empty everywhere else.
-fn complete_scope(
-    parent: &Node,
-    members: &[&str],
-    by_id: &HashMap<&str, &Node>,
-    withheld: &mut WithheldFindings,
+fn complete_scope<'a>(
+    parent: &'a Node,
+    members: &[&'a str],
+    by_id: &HashMap<&str, &'a Node>,
+    withheld: &mut WithheldFindings<'a>,
 ) -> CompleteScope {
     let evaluation = evaluate_declarations(
         parent,
@@ -230,7 +231,7 @@ pub(super) fn validate_g36_parameter_value(
     node: &Node,
     value: &CxfValue,
     scope: &dyn Scope,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let Some(type_iri) = node.is_of_data_type.as_ref().map(|iri| iri.id.as_str()) else {
         return;
@@ -254,7 +255,7 @@ fn validate_g36_enum_value(
     declared: EnumClassId,
     value: &CxfValue,
     scope: &dyn Scope,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     match value {
         CxfValue::Expr(text) => {
@@ -283,7 +284,7 @@ fn validate_g36_enum_expr(
     declared: EnumClassId,
     text: &str,
     scope: &dyn Scope,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     if g36_integer_constant(text).is_some() {
         diags.push(
@@ -353,7 +354,7 @@ fn validate_g36_enum_expr(
     }
 }
 
-fn evaluate_guard(node: &Node, scope: &CompleteScope, diags: &mut Vec<Diagnostic>) -> Option<bool> {
+fn evaluate_guard(node: &Node, scope: &CompleteScope, diags: &mut DiagnosticList) -> Option<bool> {
     let Some(expr) = node.cond_expr.as_deref() else {
         diags.push(
             Diagnostic::error(
@@ -428,7 +429,7 @@ fn validate_guard_ast(
     ast: &ExprAst,
     scope: &CompleteScope,
     node: &Node,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     match ast {
         ExprAst::Ident(name) => validate_boolean_param(name, scope, node, diags),
@@ -466,7 +467,7 @@ fn validate_boolean_param(
     name: &str,
     scope: &CompleteScope,
     node: &Node,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     match scope.value(name) {
         Some(Value::Boolean(_)) => true,
@@ -480,7 +481,7 @@ fn validate_enum_comparison(
     right: &ExprAst,
     scope: &CompleteScope,
     node: &Node,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     let ExprAst::Ident(param) = left else {
         return unsupported(
@@ -543,7 +544,7 @@ fn validate_enum_comparison(
     true
 }
 
-fn unknown_param(node: &Node, name: &str, diags: &mut Vec<Diagnostic>) -> bool {
+fn unknown_param(node: &Node, name: &str, diags: &mut DiagnosticList) -> bool {
     diags.push(
         Diagnostic::error(
             DiagCode::ConditionalGuardUnknownParameter,
@@ -554,7 +555,7 @@ fn unknown_param(node: &Node, name: &str, diags: &mut Vec<Diagnostic>) -> bool {
     false
 }
 
-fn unsupported(node: &Node, message: &str, diags: &mut Vec<Diagnostic>) -> bool {
+fn unsupported(node: &Node, message: &str, diags: &mut DiagnosticList) -> bool {
     diags.push(
         Diagnostic::error(DiagCode::ConditionalGuardUnsupported, message)
             .with_subject(node.id.clone()),

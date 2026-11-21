@@ -162,11 +162,21 @@ impl DiagnosticRecord {
     }
 }
 
-/// Immutable complete diagnostic stream from one load/export attempt, sorted by machine key.
+/// Immutable diagnostic stream from one load/export attempt, sorted by machine key: every
+/// diagnostic each stage returned.
 ///
 /// Equal machine records keep multiplicity and producer-relative tie order, without using prose
-/// as a tie-breaker. There is no truncation, deduplication, or host-target remapping. An empty
-/// failure receipt is valid: inspect [`OperationFailure::stage`] and its error/source context.
+/// as a tie-breaker. The receipt itself drops, merges and remaps nothing. An empty failure
+/// receipt is valid: inspect [`OperationFailure::stage`] and its error/source context.
+///
+/// One stage returns a bounded list. The CXF reader lists its diagnostics while their messages
+/// and subjects fit 8 MiB (8,388,608 bytes), a subject counted for every diagnostic that carries
+/// it, and ends a longer list with one `resource-limit-exceeded` error that counts the
+/// diagnostics it left out (GitHub issue #695). So the [`DiagnosticStage::Import`] records of a
+/// receipt hold at most that much text beside that one record, and are complete exactly when it
+/// is absent. It has no subject, and [`DiagnosticSubject::Absent`] sorts before every present
+/// subject, so in a receipt it is the first `Import` record, where in
+/// [`OcError::diagnostics`] it is the last diagnostic.
 #[derive(Clone, Debug)]
 pub struct DiagnosticReceipt {
     records: Vec<DiagnosticRecord>,

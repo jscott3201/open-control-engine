@@ -47,7 +47,12 @@ Enumerate the input domain and hit every boundary and degenerate case:
   array parameters beyond 1,048,576 elements per document and run state beyond
   `oce_graph::MAX_STATE_WORDS` are `ResourceLimitExceeded`, and an evaluation beyond
   `oce_expr::MAX_EVAL_FUEL` work units (or a document's bindings beyond
-  `oce_cxf::MAX_DOCUMENT_EVAL_FUEL` together) is `ExpressionTooExpensive`. Pin each such limit
+  `oce_cxf::MAX_DOCUMENT_EVAL_FUEL` together) is `ExpressionTooExpensive`. The CXF reader's
+  diagnostics themselves are held to 8 MiB of message and subject text (issue #695): the first
+  one that does not fit ends the list, and a closing `ResourceLimitExceeded` counts the rest.
+  A new loop that can raise many diagnostics about one long string raises them through
+  `DiagnosticList::raise` and gets a case in `crates/oce-api/tests/cxf_diagnostic_list_cost.rs`.
+  Pin each such limit
   at its boundary (the limit accepted, one past it refused) and assert cost with deterministic
   measures — allocation counts and peak bytes, fuel units — never wall-clock time. Assert the
   *specific* `DiagCode` / error variant, not merely "an error occurred." Fuzz-grade hostility is

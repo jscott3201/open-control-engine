@@ -5,6 +5,7 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Attrs, IntAttrs, RealAttrs, Value, ValueType};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfValue, Node};
 use crate::ground::ground_value;
 use crate::scope_chain::ParamScope;
@@ -21,7 +22,7 @@ use crate::scope_chain::ParamScope;
 /// `nominal` grounds like a bound (issue #379): it reaches the deep gate, which refuses a
 /// non-finite one (`non-finite-bound`), and export round-trips it. It is still excluded from
 /// §7.10 unification (R13.4) and never read on the tick. `unbounded` is not parsed.
-pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Vec<Diagnostic>) -> Attrs {
+pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut DiagnosticList) -> Attrs {
     let subject = node.id.as_str();
     match vt {
         ValueType::Real => Attrs::Real(RealAttrs {
@@ -81,7 +82,7 @@ pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Vec<Diagno
 
 /// Refuse a declared `S231:nominal` on a non-Real connector: CDL gives only Real a nominal
 /// (§7.4.1), so it is a `malformed-document` error rather than an attribute silently dropped.
-fn refuse_nominal(node: &Node, kind: &str, subject: &str, diags: &mut Vec<Diagnostic>) {
+fn refuse_nominal(node: &Node, kind: &str, subject: &str, diags: &mut DiagnosticList) {
     if node.nominal.is_some() {
         diags.push(
             Diagnostic::error(
@@ -98,7 +99,7 @@ fn term_attr(
     t: Option<&crate::dto::TermAttr>,
     which: &str,
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Option<Arc<str>> {
     let term = t?;
     if refuse_term(term, which, subject, diags) {
@@ -115,7 +116,7 @@ fn unit_attr(
     t: Option<&crate::dto::TermAttr>,
     which: &str,
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Option<Arc<str>> {
     let term = t?;
     if refuse_term(term, which, subject, diags) {
@@ -139,7 +140,7 @@ fn refuse_term(
     term: &crate::dto::TermAttr,
     which: &str,
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     let Some(found) = super::term_shape::problem(term) else {
         return false;
@@ -161,7 +162,7 @@ fn real_connector_number(
     v: Option<&CxfValue>,
     which: &str,
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Option<f64> {
     let v = v?;
     let role = if which == "nominal" {
@@ -199,7 +200,7 @@ fn int_connector_bound(
     v: Option<&CxfValue>,
     which: &str,
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Option<i64> {
     let v = v?;
     match ground_value(v, &ParamScope::empty()) {

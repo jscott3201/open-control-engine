@@ -4,9 +4,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use oce_diag::{DiagCode, Diagnostic};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, CxfValue, TermAttr};
 
-pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
+pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut DiagnosticList) {
     let mut subjects = HashMap::<&str, Arc<str>>::new();
     for (index, node) in doc.graph.iter().enumerate() {
         let mut subject = None;

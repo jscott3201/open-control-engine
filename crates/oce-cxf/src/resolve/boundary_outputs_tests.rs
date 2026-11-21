@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use oce_diag::DiagCode;
 
 use super::refuse_multiply_driven;
+use crate::diagnostic_list::DiagnosticList;
 
 fn drivers(outputs: &[(&str, &[&str])]) -> HashMap<String, HashSet<String>> {
     outputs
@@ -26,7 +27,7 @@ fn multiply_driven_outputs_are_refused_in_iri_order_not_hash_order() {
         .map(|name| (name.as_str(), &["urn:a", "urn:b"][..]))
         .collect();
     table.push(("urn:top:single", &["urn:a"][..]));
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     refuse_multiply_driven(&drivers(&table), &mut diags);
 
     let subjects: Vec<&str> = diags
@@ -46,7 +47,7 @@ fn multiply_driven_outputs_are_refused_in_iri_order_not_hash_order() {
 
 #[test]
 fn distinct_driver_count_is_reported_and_single_drivers_are_not_refused() {
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     refuse_multiply_driven(
         &drivers(&[
             ("urn:top:b", &["urn:x", "urn:y", "urn:z"]),
