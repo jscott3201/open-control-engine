@@ -188,7 +188,7 @@ fn the_per_class_signature_hash_table_matches_its_golden() {
     );
 }
 
-// Blob summaries (GitHub #448). The helpers are declared here, after every test above, so that
+// Blob summaries (issue #448). The helpers are declared here, after every test above, so that
 // the line anchors `docs/product-contract.md` holds for those tests do not move.
 #[path = "support/blob_image.rs"]
 mod blob_image;

@@ -1,5 +1,5 @@
 //! What `oce_api::inspect_blob` and `oce_graph::blob::inspect` report about a compiled-schedule
-//! blob (GitHub #448): the summary of every golden states what the decoded executable holds, and
+//! blob (issue #448): the summary of every golden states what the decoded executable holds, and
 //! a changed class signature hash, initial-state CRC, state length, kind, content id or I/O path
 //! shows in the summary and nowhere else.
 //!

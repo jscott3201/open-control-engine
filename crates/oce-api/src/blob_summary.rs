@@ -1,4 +1,4 @@
-//! Reading what an `OCEB` compiled-schedule blob records about itself (GitHub #448).
+//! Reading what an `OCEB` compiled-schedule blob records about itself (issue #448).
 //!
 //! The reader is `oce_graph::blob::inspect`, the decoder's own framing and structural pass; this
 //! module owns the plain-data result a host or a leverage crate holds, so a blob comparison
@@ -80,13 +80,13 @@ pub struct BlobInstance {
     pub class: u32,
     /// Whether the blob records the block as stateful.
     pub stateful: bool,
-    /// The number of 64-bit state words the blob records for the block; 0 for a block without
-    /// state.
+    /// The number of 64-bit state words the blob records for the block. In a blob the decoder
+    /// accepts it is 0 for a block without state.
     pub state_words: u32,
     /// The CRC-32C (Castagnoli) the blob records for the block's initial state words, each word
-    /// as its eight little-endian bytes; 0 for a block without state. Two instances compare by it
-    /// only when their `state_words` are equal. It is not compared with the state this build
-    /// would allocate.
+    /// as its eight little-endian bytes. In a blob the decoder accepts it is 0 for a block
+    /// without state. Two instances compare by it only when their `state_words` are equal. It is
+    /// not compared with the state this build would allocate.
     pub initial_state_crc: u32,
 }
 

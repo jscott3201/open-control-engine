@@ -1,4 +1,4 @@
-//! A blob summary as plain comparable facts, for the blob-summary tests (GitHub #448).
+//! A blob summary as plain comparable facts, for the blob-summary tests (issue #448).
 //!
 //! `oce_api::BlobSummary` is `#[non_exhaustive]`, so a test cannot build the value it expects.
 //! [`Facts`] holds the same fields as plain data and is built three ways: from the facade's

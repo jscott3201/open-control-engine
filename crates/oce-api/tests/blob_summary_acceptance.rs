@@ -1,4 +1,4 @@
-//! A blob summary is not acceptance (GitHub #448): what `oce_api::inspect_blob` and
+//! A blob summary is not acceptance (issue #448): what `oce_api::inspect_blob` and
 //! `oce_graph::blob::inspect` refuse after the decoder's structural pass (a class this build does
 //! not register, a class index outside the class table, another engine version), and what they
 //! report for a blob the decoder refuses at a later step, which is the blob as written.

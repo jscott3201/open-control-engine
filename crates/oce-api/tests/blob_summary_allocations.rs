@@ -1,4 +1,4 @@
-//! What reading a blob summary allocates (GitHub #448), by count for every golden and by peak
+//! What reading a blob summary allocates (issue #448), by count for every golden and by peak
 //! bytes against the blob length for the hostile shapes that make each list as long as its bytes
 //! allow.
 //!

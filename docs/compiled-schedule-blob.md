@@ -142,7 +142,7 @@ for instance in &summary.instances {
 | `engine_version` | The encoder's `major.minor.patch`: this build's, because any other is refused |
 | `content_id` | The header's 32 digest bytes read back as the canonical content id (`oce:canon1:`), `None` when they are all zero (a hand-built model with no id). Read, never recomputed or checked against the body |
 | `classes` | The class table in blob order (strictly increasing by path bytes): `class_path` and the `signature_hash` the encoder recorded |
-| `instances` | One record per block, in block id order: `block`, `class` (an index into `classes`), `stateful`, `state_words` and `initial_state_crc` (CRC-32C of the initial state words, each as eight little-endian bytes; 0 for a block without state) |
+| `instances` | One record per block, in block id order: `block`, `class` (an index into `classes`), `stateful`, `state_words` and `initial_state_crc` (CRC-32C of the initial state words, each as eight little-endian bytes), all three as recorded |
 | `inputs`, `outputs` | The boundary I/O paths in slot order |
 | `target_bound` | Whether any class in the table is target-bound in this build's registry |
 
@@ -172,9 +172,9 @@ as for a decode.
 
 The core reader allocates the four lists it returns, each sized once by a count the structural
 pass proved against the bytes: four allocations at most, none for a refusal up to the end of that
-pass, and at most 2 bytes held per blob byte (measured: 1.6× for the longest class table its bytes
-allow, 1.33× for the longest output list, 0.8× for the longest instance list). The facade's owned
-summary holds at most 4× while it is built (3.33× for the longest output list).
+pass, and at most 2 bytes held per blob byte (measured: 1.6× for 200,000 classes with three-byte
+paths, 1.33× for 500,000 outputs with empty paths, 0.8× for 100,000 minimal instances). The
+facade's owned summary holds at most 4× while it is built (3.33× for that output list).
 
 ## Versioning
 

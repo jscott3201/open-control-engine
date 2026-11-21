@@ -1,4 +1,4 @@
-//! The blob summary reader over every checked-in golden (GitHub #448): `inspect` states what
+//! The blob summary reader over every checked-in golden (issue #448): `inspect` states what
 //! `decode` builds from the same bytes, reports a class signature hash and an initial-state CRC
 //! that `decode` refuses, and refuses what the decoder's structural pass refuses.
 //!

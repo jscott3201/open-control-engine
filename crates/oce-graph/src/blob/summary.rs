@@ -1,4 +1,4 @@
-//! Reading what a blob records about itself, without building it: [`inspect()`] (GitHub #448).
+//! Reading what a blob records about itself, without building it: [`inspect()`] (issue #448).
 //!
 //! A comparison of two blobs (`docs/design/diff.md`, decision 15) needs the content id, the class
 //! table and each instance's initial-state CRC, and must be able to read them from a blob this
@@ -32,9 +32,8 @@ use super::{ENGINE_VERSION, EngineVersion, FORMAT_VERSION};
 /// bytes.
 ///
 /// # Invariants
-/// For every value [`inspect()`] returns: `format_version` is
-/// [`FORMAT_VERSION`](super::FORMAT_VERSION) and `engine_version` is
-/// [`ENGINE_VERSION`](super::ENGINE_VERSION) (any other is refused); `classes` is strictly
+/// For every value [`inspect()`] returns: `format_version` is [`FORMAT_VERSION`] and
+/// `engine_version` is [`ENGINE_VERSION`] (any other is refused); `classes` is strictly
 /// increasing by UTF-8 path bytes and every path is registered in this build; `instances[i].block`
 /// is `i` and `instances[i].class` indexes `classes`; `inputs` is strictly increasing and `outputs`
 /// non-decreasing by UTF-8 path bytes (the slot order of each list).

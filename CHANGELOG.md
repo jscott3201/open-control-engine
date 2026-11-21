@@ -40,7 +40,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Facade
 
 - **`oce_api::inspect_blob` reads what a compiled-schedule blob records about itself** (GitHub
-  #PRNUM, issue #448). It is the accessor a blob comparison needs (`oce-diff`, design note
+  #672, issue #448). It is the accessor a blob comparison needs (`oce-diff`, design note
   decision 15): a leverage crate may not call `oce_graph::blob`, and the facade exposed only
   `Engine::compile_blob`.
   - **What it returns.** A `BlobSummary`, owned and `#[non_exhaustive]`: `format_version`,

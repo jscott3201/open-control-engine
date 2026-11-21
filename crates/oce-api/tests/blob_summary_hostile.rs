@@ -1,4 +1,4 @@
-//! Hostile bytes through `oce_api::inspect_blob` and `oce_graph::blob::inspect` (GitHub #448):
+//! Hostile bytes through `oce_api::inspect_blob` and `oce_graph::blob::inspect` (issue #448):
 //! every refusal of the decoder's framing and structural pass is the summary's refusal too, the
 //! identical typed error at the identical offset, and no input panics.
 //!
