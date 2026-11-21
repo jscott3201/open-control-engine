@@ -354,6 +354,83 @@ fn an_unmapped_unit_iri_is_refused_by_both_readers() {
 }
 
 #[test]
+fn base_is_inert_so_no_binding_of_it_turns_an_identifier_into_a_unit() {
+    // `base` may be any string here, an IRI or not. Nothing is expanded through it, as a prefix
+    // or as a whole token, so the importer refuses each of these.
+    let cases = [
+        // Bound to a string that ends in a zero-width space: the engine expands it, finds no
+        // unit (the table reads no fallback carrying a character no reader can see) and refuses
+        // the identifier for the character.
+        (
+            "http://data.ashrae.org/S231#K\u{200B}",
+            "base",
+            Some(DiagCode::MalformedDocument),
+        ),
+        (
+            "http://data.ashrae.org/S231#",
+            "base:K\u{200B}",
+            Some(DiagCode::MalformedDocument),
+        ),
+        // Bound to a fragment that only a join makes an IRI: the engine refuses the binding.
+        (
+            "h",
+            "base:ttp://qudt.org/vocab/unit#K",
+            Some(DiagCode::NonSubsetConstruct),
+        ),
+        // Bound to a real unit namespace or a unit IRI: a standing difference, the engine the
+        // more lenient. It reads any prefix; this reader takes `S231:`, `qudt:` and `unit:`.
+        (UNIT_HASH, "base:K", None),
+        ("http://qudt.org/vocab/unit#K", "base", None),
+        ("http://data.ashrae.org/S231#", "base:1/s", None),
+    ];
+    for (base, id, engine_code) in cases {
+        let mut context = upstream_context();
+        context["base"] = json!(base);
+        for (key, _) in KEYS {
+            for node in BOUNDARIES.into_iter().chain(PARAMETERS) {
+                let doc = with(document(context.clone()), node, key, json!({ "@id": id }));
+                assert_eq!(
+                    refusal(&doc),
+                    wrong_shape(node, key),
+                    "{base:?} {id:?} {key} {node}"
+                );
+                match engine_code {
+                    Some(code) => {
+                        assert_eq!(engine_refusal(&doc).0, code, "{base:?} {id:?} {key} {node}")
+                    }
+                    None => {
+                        engine(&doc).unwrap_or_else(|e| panic!("{base:?} {id:?} {key}: {e:?}"));
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn no_imported_unit_is_blank_or_carries_whitespace_or_an_invisible_character() {
+    // Every identifier the importer maps, it maps to a string the engine's term rule accepts.
+    let ids = [
+        "unit:K",
+        "S231:1/s",
+        "http://data.ashrae.org/S231#s/K",
+        "http://qudt.org/vocab/unit/M3-PER-SEC",
+        "S231:µS/cm",
+    ];
+    for id in ids {
+        let doc = with(upstream(), ROOT_INPUT, "qudt:hasUnit", json!({ "@id": id }));
+        let unit = boundary_units(&doc, ROOT_INPUT).0.expect("a unit");
+        assert!(!unit.trim().is_empty() && unit.trim() == unit, "{unit:?}");
+        assert!(
+            !unit
+                .chars()
+                .any(|c| c.is_whitespace() || oce_api::is_format_or_control(c)),
+            "{unit:?}"
+        );
+    }
+}
+
+#[test]
 fn a_malformed_unit_value_is_refused_by_both_readers_under_every_spelling() {
     let shapes = [
         json!(5),

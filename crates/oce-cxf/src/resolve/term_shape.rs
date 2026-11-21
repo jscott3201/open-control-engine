@@ -110,7 +110,11 @@ const BOTH: &str = "an object carrying both @id and @value";
 ///
 /// The expansion pass has already replaced every mapped IRI node by its unit string and every
 /// expandable `@id` by its expanded IRI ([`crate::unit_iri`]), so any IRI node still here is
-/// unmapped. The IRI is quoted as an [`excerpt`]: a megabyte-long one costs the message 64 bytes.
+/// unmapped. The IRI is quoted as an [`excerpt`]: a megabyte-long one costs the message 64 bytes
+/// of the document's text. It is passed through [`visible`] as well. [`problem`] already refuses
+/// an identifier that carries a format or control character, the expanded one included (an
+/// expansion can carry one its `@context` binding wrote), so this is a second guard that no
+/// message ever holds such a character as it is.
 /// Never call this for `quantity`, which is not read through the table.
 pub(crate) fn unmapped_unit(term: &TermAttr) -> Option<String> {
     let TermAttr::Iri { id, .. } = term else {
@@ -120,7 +124,7 @@ pub(crate) fn unmapped_unit(term: &TermAttr) -> Option<String> {
         "the IRI node `{}`, which the closed unit table does not map; a unit written as an IRI \
          node is read only as a QUDT unit the table lists (`http://qudt.org/vocab/unit#K`) or as \
          an S231-namespace unit string, so write one of those or the unit as a string (`\"K\"`)",
-        excerpt(id)
+        visible(&excerpt(id))
     ))
 }
 

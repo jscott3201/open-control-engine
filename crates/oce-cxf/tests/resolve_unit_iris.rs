@@ -212,6 +212,15 @@ fn an_unmapped_iri_is_refused_on_every_role_under_every_key() {
         ("urn:unit:K", "urn:unit:K"),
         // A prefix the document does not bind.
         ("u:K", "u:K"),
+        // An identifier that holds whitespace is no IRI: it is not expanded, even through a
+        // bound prefix, and is quoted as written.
+        ("unit:K ", "unit:K "),
+        (" unit:K", " unit:K"),
+        ("unit: K", "unit: K"),
+        (
+            "http://qudt.org/vocab/unit#K ",
+            "http://qudt.org/vocab/unit#K ",
+        ),
         ("q:Pressure", "q:Pressure"),
     ];
     for (written, quoted) in cases {
@@ -521,6 +530,91 @@ fn a_context_term_cannot_launder_a_blank_or_invisible_identifier_into_a_unit() {
             ],
             "{key}"
         );
+    }
+}
+
+#[test]
+fn a_context_term_cannot_turn_a_whitespace_bearing_identifier_into_a_unit() {
+    // A term may be spelled with whitespace, and a whole-token match would expand it. An `@id`
+    // that holds whitespace is no IRI, so it is never looked up.
+    let mut context = upstream_context();
+    context[" K"] = json!(format!("{UNIT_HASH}K"));
+    context["de g"] = json!(format!("{UNIT_HASH}DEG"));
+    for (key, term) in KEYS {
+        for id in [" K", "de g"] {
+            assert_eq!(
+                refusal(&with(
+                    document(context.clone()),
+                    PORT,
+                    key,
+                    json!({ "@id": id })
+                )),
+                vec![unmapped(PORT, term, id)],
+                "{key} {id:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_binding_cannot_put_an_invisible_character_into_a_unit() {
+    // The `@id` is clean, so it is expanded; the expansion carries what the `@context` binding
+    // wrote. The table reads no S231 fallback that carries a format or control character, so
+    // the term stays an IRI node, and the shape rule refuses the identifier it now names, with
+    // the character written `\u{…}`, never as it is.
+    let mut context = upstream_context();
+    context["kelvin"] = json!(format!("{S231}K\u{200B}"));
+    context["bom"] = json!(format!("{S231}\u{FEFF}"));
+    let carrying = |node: &str, term: &str, quoted: &str, named: &str| {
+        let on = if PARAMETER_ROLES.contains(&node) {
+            " on a parameter"
+        } else {
+            ""
+        };
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            format!(
+                "S231:{term}{on} is an IRI node whose @id `{quoted}` carries {named} that no \
+                 reader can see — malformed term"
+            ),
+        )
+        .with_subject(node)
+    };
+    for (key, term) in KEYS {
+        for role in ROLES {
+            let diags = refusal(&with(
+                document(context.clone()),
+                role,
+                key,
+                json!({ "@id": "kelvin" }),
+            ));
+            assert_eq!(
+                diags,
+                vec![carrying(
+                    role,
+                    term,
+                    &format!("{S231}K\\u{{200B}}"),
+                    "U+200B, a format character (Cf)"
+                )],
+                "{key} {role}"
+            );
+            assert!(!diags[0].message.contains('\u{200B}'));
+            assert_eq!(
+                refusal(&with(
+                    document(context.clone()),
+                    role,
+                    key,
+                    json!({ "@id": "bom:K" })
+                )),
+                vec![carrying(
+                    role,
+                    term,
+                    &format!("{S231}\\u{{FEFF}}K"),
+                    "U+FEFF, a format character (Cf)"
+                )],
+                "{key} {role}"
+            );
+        }
     }
 }
 

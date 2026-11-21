@@ -24,11 +24,13 @@ in the build, each the narrowest reading:
 - **A `qudt` prefix the document binds elsewhere, or nowhere, does not name the QUDT schema.**
   The key is matched by its expanded IRI alone, so `qudt:hasUnit` then stays an unread
   pass-through key in the engine, and is `unknown-key` in the importer.
-- **The S231 fallback's unit string is not empty and holds no whitespace.** An IRI holds none,
-  and a blank unit would reach the gate as a declared unit.
+- **The S231 fallback's unit string is not empty and holds no whitespace and no format or
+  control character**, and an `@id` that holds whitespace is not looked up. An IRI holds none,
+  and a blank or invisible unit would reach the gate as a declared unit.
 - **The importer** admits two more `@context` terms, `qudt` and `unit`, bound to the namespaces
-  the table is keyed under; refuses an unmapped IRI node as `wrong-shape`; and refuses two
-  spellings with a kind of its own, `two-spellings`.
+  the table is keyed under; looks an identifier up through those prefixes and `S231` only, never
+  through `base`; refuses an unmapped IRI node as `wrong-shape`; and refuses two spellings with a
+  kind of its own, `two-spellings`.
 
 The table is `oce_cxf::QUDT_UNITS` (`crates/oce-cxf/src/unit_iri.rs`), re-exported with its
 lookup as `oce_api::QUDT_UNITS` and `oce_api::unit_of_iri`.

@@ -449,8 +449,8 @@ is matched after the same expansion, on every node that carries one:
 - **`unit`** is also `S231:hasUnit`, and `hasUnit` in either QUDT schema namespace:
   `http://qudt.org/schema/qudt#`, as the modelica-json translations bind `qudt`, and
   `http://qudt.org/schema/qudt/`, as QUDT and CXF-Core do. The compact key `qudt:hasUnit` is that
-  property only through a `qudt` prefix bound to one of the two; under any other binding, or
-  none, it names something else and stays an unread pass-through key.
+  property only through a `qudt` prefix bound to one of the two. Unbound, or bound to any other
+  namespace but the S231 one, it names no modeled property and stays an unread pass-through key.
 - **`displayUnit`** is also `S231:hasDisplayUnit`.
 - **`quantity` has no other spelling.** `qudt:hasQuantityKind` is not read: modelica-json writes
   `PressureDifference` as the kind `Pressure`, so reading it would report the wrong quantity. The
@@ -473,10 +473,11 @@ through a closed table:
   nothing registers an entry at run time (`oce_api::QUDT_UNITS`, `oce_api::unit_of_iri`);
 - an IRI in the S231 namespace reads as the text after the namespace, the form modelica-json
   writes for a unit its table lacks (`http://data.ashrae.org/S231#s/K` is `s/K`). The text is not
-  empty and holds no whitespace;
+  empty and holds no whitespace and no format or control character;
 - **any other IRI is refused** as `non-subset-construct`, subject the node, with the IRI quoted in
-  at most 64 bytes: a relative reference (`{"@id": "degC"}`), a `unit:` prefix the document binds
-  elsewhere or not at all, a name the table lacks, and the two entries left out of it. Those two
+  at most 64 bytes: a relative reference (`{"@id": "degC"}`), an `@id` that holds whitespace, a
+  `unit:` prefix the document binds to another vocabulary or not at all, a name the table lacks,
+  and the two entries left out of it. Those two
   are `unit:M3-PER-MIN`, which modelica-json writes for `cfm` and which is cubic metres a minute,
   and `unit:IN_H2O_60DEG_F`, which it writes for `inH2O` and which is the inch of water at 60 °F.
   Write such a unit as a string.

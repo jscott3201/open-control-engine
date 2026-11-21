@@ -30,8 +30,10 @@
 //!   ([`S231_SPELLINGS`], [`QUDT_HAS_UNIT`]): `hasUnit` in the S231 namespace or in either QUDT
 //!   schema namespace ([`QUDT_SCHEMA_NAMESPACES`]: `#` as the translations bind `qudt`, `/` as
 //!   QUDT and CXF-Core do) moves into `unit`, and `S231:hasDisplayUnit` into `displayUnit`. The
-//!   QUDT key is matched by its expanded IRI alone: a `qudt:` prefix the document binds elsewhere,
-//!   or binds nowhere, does not name the QUDT schema, and the key stays in the pass-through map.
+//!   QUDT key is matched by its expanded IRI alone: under a `qudt:` prefix the document binds
+//!   nowhere, or to a namespace that is neither QUDT schema namespace nor the S231 one, the key
+//!   names no modeled property and stays in the pass-through map. (Bound to the S231 namespace,
+//!   `qudt:hasUnit` is `S231:hasUnit` under another prefix, and is read as that.)
 //!   `qudt:hasQuantityKind` is not read under any binding (decision 1: modelica-json's quantity
 //!   table is lossy at `PressureDifference`).
 //! - **Two spellings of one property on one node** — compact plus expanded, two expanded, or

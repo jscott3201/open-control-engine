@@ -13,8 +13,10 @@
 //!   modelica-json binds `unit` to the `#` one and QUDT publishes the `/` one.
 //! - **The S231 fallback** is the S231 namespace ([`crate::export::S231_CONTEXT_IRI`]) followed by
 //!   the unit string itself (`http://data.ashrae.org/S231#s/K` reads `s/K`). The string is not
-//!   empty and holds no whitespace: an IRI holds none, and a blank unit would reach the unit gate
-//!   as a declared unit.
+//!   empty and holds no whitespace and no Unicode format or control character
+//!   ([`crate::is_format_or_control`]): an IRI holds none, a blank unit would reach the unit gate
+//!   as a declared unit, and no reader can see a zero-width space. So whatever this module
+//!   returns is a term the term-shape rule accepts.
 //! - **Anything else maps to nothing**, and the resolver refuses the term as outside the subset
 //!   (`non-subset-construct`): another namespace, a local name the table lacks, a relative
 //!   reference, a different case.
@@ -25,9 +27,11 @@
 //!
 //! The matching is on the IRI after `@context` expansion, which the caller does: the resolver
 //! with its own prefix expansion (`expand`), a second reader above the facade with its own. Both
-//! then call [`unit_of_iri`], so they cannot disagree on an IRI.
+//! then call [`unit_of_iri`], so they give one IRI one reading; whether they expand an identifier
+//! to the same IRI is each expansion's to hold.
 
 use crate::export::S231_CONTEXT_IRI;
+use crate::format_controls::is_format_or_control;
 
 /// The two namespaces a QUDT unit IRI is read in: the one modelica-json binds `unit` to in the
 /// documents it writes, and the one QUDT publishes.
@@ -87,7 +91,9 @@ pub const QUDT_UNITS: &[(&str, &str)] = &[
 /// nothing and trims nothing. A QUDT unit IRI ([`QUDT_UNIT_NAMESPACES`], then exactly a local name
 /// of [`QUDT_UNITS`]) reads as its entry's unit string. An IRI in the S231 namespace reads as the
 /// text after the namespace, when that text is not empty and holds no whitespace (Unicode
-/// `White_Space`, as [`char::is_whitespace`] reads it). Every other input is `None`.
+/// `White_Space`, as [`char::is_whitespace`] reads it) and no format or control character
+/// ([`crate::is_format_or_control`]). Every other input is `None`. A string this returns is
+/// therefore never blank and never carries a character no reader can see.
 ///
 /// Work is one prefix comparison per namespace and one binary search; it allocates nothing and
 /// never panics.
@@ -102,8 +108,9 @@ pub fn unit_of_iri(iri: &str) -> Option<&str> {
             .ok()
             .map(|at| QUDT_UNITS[at].1);
     }
-    iri.strip_prefix(S231_CONTEXT_IRI)
-        .filter(|unit| !unit.is_empty() && !unit.contains(char::is_whitespace))
+    iri.strip_prefix(S231_CONTEXT_IRI).filter(|unit| {
+        !unit.is_empty() && !unit.contains(|c: char| c.is_whitespace() || is_format_or_control(c))
+    })
 }
 
 #[cfg(test)]
@@ -265,6 +272,32 @@ mod tests {
                 None,
                 "{unit:?}"
             );
+        }
+    }
+
+    #[test]
+    fn a_fallback_carrying_a_format_or_control_character_maps_to_nothing() {
+        // Outside `White_Space`: a zero-width space, a byte-order mark, a soft hyphen, a
+        // bidirectional control, NUL, U+001F, DEL and a C1 control, at each end and inside.
+        for c in [
+            '\u{200B}', '\u{FEFF}', '\u{AD}', '\u{202E}', '\u{0}', '\u{1F}', '\u{7F}', '\u{9F}',
+        ] {
+            for unit in [
+                format!("{c}K"),
+                format!("K{c}"),
+                format!("s{c}/K"),
+                c.to_string(),
+            ] {
+                assert_eq!(
+                    unit_of_iri(&format!("{S231_CONTEXT_IRI}{unit}")),
+                    None,
+                    "{unit:?}"
+                );
+            }
+        }
+        // No table entry carries one, so nothing this module returns does.
+        for (_, unit) in QUDT_UNITS {
+            assert!(!unit.contains(|c: char| c.is_whitespace() || is_format_or_control(c)));
         }
     }
 

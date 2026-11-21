@@ -183,8 +183,9 @@ pub use oce_cxf::QUDT_UNITS;
 pub use oce_cxf::is_format_or_control;
 /// Re-export of the loader's unit lookup: the unit string an absolute IRI stands for under
 /// [`QUDT_UNITS`] and the S231 fallback, or `None` when the closed table does not map it (issue
-/// #631). The caller expands the IRI against its document's `@context` first; a second reader
-/// that calls this cannot disagree with the loader on an IRI. Allocates nothing, never panics.
+/// #631). The caller expands the IRI against its document's `@context` first; two readers that
+/// hand this the same IRI get the same answer, and a string it returns is never blank and never
+/// carries whitespace or a format or control character. Allocates nothing, never panics.
 pub use oce_cxf::unit_of_iri;
 
 /// Re-export of the diagnostic code vocabulary: the type of [`Diagnostic::code`], so a host

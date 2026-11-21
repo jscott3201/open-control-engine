@@ -6,25 +6,30 @@
 //! - **`S231`** to the one namespace the engine reads the vocabulary in ([`S231_IRI`]). `S231`
 //!   bound to any other IRI, and any term bound to the namespace written through release 0.4.0, is
 //!   [`Kind::NamespaceMismatch`] naming the IRI found and the IRI expected (GitHub #527).
-//! - **`base`**, the corpus's inert term, to any string.
+//! - **`base`**, the corpus's inert term, to any string. Nothing reads it: no key and no
+//!   identifier is expanded through it.
 //! - **`qudt`** to either QUDT schema namespace the engine reads `hasUnit` in
 //!   ([`oce_api::QUDT_SCHEMA_NAMESPACES`]: `#` as modelica-json writes it, `/` as QUDT and
 //!   CXF-Core do), and **`unit`** to either QUDT unit namespace
 //!   ([`oce_api::QUDT_UNIT_NAMESPACES`]) (issue #631; unit-spellings note, decision 6).
 //!
 //! Any other term, and `qudt` or `unit` bound to anything else, is [`Kind::UnknownKey`] naming
-//! the term. The engine is more lenient: it accepts any prefix map and reads the QUDT key through
-//! whatever prefix expands to it.
+//! the term. The engine reads any prefix map whose bindings are absolute IRIs, and the QUDT key
+//! and a unit identifier through whatever prefix expands to them; this reader takes the two
+//! prefix names modelica-json and CXF-Core write.
 //!
 //! The compact key `qudt:hasUnit` is the QUDT schema property only where the document binds
 //! `qudt` so ([`Context::reads_qudt`]). Without the binding it is no property the importer knows,
 //! as for the engine, which then leaves it unread.
 //!
-//! [`Context::unit_of`] reads a unit IRI node's `@id` as the engine does: expanded against the
-//! bindings by the engine's own rule (a whole-token term match first, then a compact IRI through
-//! its prefix, never one whose suffix starts with `//`), then looked up with the engine's lookup,
-//! [`oce_api::unit_of_iri`]. The lookup is exact about the IRI, so the two readers map the same
-//! identifiers to the same unit strings.
+//! [`Context::unit_of`] reads a unit IRI node's `@id`: a compact IRI through `S231`, `qudt` or
+//! `unit` where the document binds the prefix (never one whose suffix starts with `//`, which
+//! JSON-LD reads as an IRI), and any other identifier as written; then the engine's lookup,
+//! [`oce_api::unit_of_iri`]. Each of the three prefixes can only be bound to a namespace the
+//! engine accepts under that name, so every identifier this maps, the engine maps to the same
+//! unit string. The engine maps more: an identifier through `base` or a whole-token `@context`
+//! term, which this reader leaves unexpanded and so refuses. `base` may be any string here, an
+//! IRI or not, and must never be able to turn an identifier into a unit.
 
 use std::borrow::Cow;
 
@@ -101,25 +106,27 @@ impl<'a> Context<'a> {
         self.binding("qudt").is_some()
     }
 
-    /// `token` expanded as the engine expands an identifier: the binding of a term spelled
-    /// exactly `token`; else, for a compact IRI whose suffix does not start with `//`, the
-    /// binding of its prefix followed by the suffix; else `token` as written.
+    /// `token` expanded: for a compact IRI through `S231`, `qudt` or `unit` whose suffix does
+    /// not start with `//`, the binding of its prefix followed by the suffix, where the document
+    /// binds the prefix; else `token` as written. `base` is never expanded through, and no
+    /// whole-token term is matched (see the module docs).
     fn expand<'t>(&self, token: &'t str) -> Cow<'t, str> {
-        if let Some(iri) = self.binding(token) {
-            return Cow::Owned(iri.to_owned());
-        }
         match token.split_once(':') {
-            Some((prefix, suffix)) if !suffix.starts_with("//") => match self.binding(prefix) {
-                Some(iri) => Cow::Owned(format!("{iri}{suffix}")),
-                None => Cow::Borrowed(token),
-            },
+            Some((prefix @ ("S231" | "qudt" | "unit"), suffix)) if !suffix.starts_with("//") => {
+                match self.binding(prefix) {
+                    Some(iri) => Cow::Owned(format!("{iri}{suffix}")),
+                    None => Cow::Borrowed(token),
+                }
+            }
             _ => Cow::Borrowed(token),
         }
     }
 
     /// The unit string the unit IRI node `@id` `id` stands for, or `None` when the engine's
     /// closed unit table does not map it: [`oce_api::unit_of_iri`] of the expanded identifier.
-    /// A relative reference and an unbound prefix expand to themselves and map to nothing.
+    /// A relative reference, an unbound prefix and an identifier through `base` expand to
+    /// themselves and map to nothing. The string returned is never blank and carries no
+    /// whitespace and no format or control character: the lookup returns none that does.
     pub(super) fn unit_of(&self, id: &str) -> Option<String> {
         oce_api::unit_of_iri(&self.expand(id)).map(str::to_owned)
     }
@@ -250,12 +257,21 @@ mod tests {
             unit(&json!({}), "http://data.ashrae.org/S231#s/K"),
             Some("s/K".to_owned())
         );
-        // A whole-token term, and a compact IRI through `base`, are IRIs too.
-        assert_eq!(
-            unit(&json!({ "base": "http://qudt.org/vocab/unit#K" }), "base"),
-            k
-        );
-        assert_eq!(unit(&json!({ "base": UNIT_HASH }), "base:K"), k);
+        // `base` is inert, whatever it binds: an IRI, a fragment of one, or a string that ends
+        // in a character no reader can see. Nor is a whole-token term matched.
+        for (base, id) in [
+            ("http://qudt.org/vocab/unit#K", "base"),
+            (UNIT_HASH, "base:K"),
+            ("h", "base:ttp://qudt.org/vocab/unit#K"),
+            ("http://data.ashrae.org/S231#K\u{200B}", "base"),
+            ("http://data.ashrae.org/S231#", "base:K\u{200B}"),
+            ("http://data.ashrae.org/S231#", "base:K"),
+        ] {
+            assert_eq!(unit(&json!({ "base": base }), id), None, "{base:?} {id:?}");
+        }
+        for id in ["S231", "qudt", "unit"] {
+            assert_eq!(unit(&upstream, id), None, "{id}");
+        }
         // Unbound prefixes and relative references expand to themselves and map to nothing.
         for id in ["unit:K", "S231:1/s", "K", "degC", "u:K", "", ":"] {
             assert_eq!(unit(&json!({}), id), None, "{id:?}");
@@ -264,8 +280,6 @@ mod tests {
         // fallback `//K`.
         assert_eq!(unit(&upstream, "S231://K"), None);
         assert_eq!(unit(&upstream, "unit://K"), None);
-        // The whole-token term `S231` is the namespace itself, which names no unit.
-        assert_eq!(unit(&upstream, "S231"), None);
         // What the table lacks, in a namespace it reads.
         for id in [
             "unit:M3-PER-MIN",
@@ -280,7 +294,10 @@ mod tests {
         for id in ["S231:s K", "http://data.ashrae.org/S231# K", "S231:"] {
             assert_eq!(unit(&upstream, id), None, "{id:?}");
         }
-        // A junk `base` binding maps nothing.
-        assert_eq!(unit(&json!({ "base": "junk" }), "base:K"), None);
+        // The lookup refuses a format or control character in a fallback, so no identifier
+        // reads as a unit that carries one.
+        for id in ["S231:K\u{200B}", "http://data.ashrae.org/S231#K\u{FEFF}"] {
+            assert_eq!(unit(&upstream, id), None, "{id:?}");
+        }
     }
 }

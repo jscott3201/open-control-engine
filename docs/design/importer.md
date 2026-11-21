@@ -253,7 +253,8 @@ lists one **normalisation**: a boundary typed by a constant package becomes an I
 Where the two readers differ on these attributes, and on a boundary's terms, each follows a
 convention it already had. The review of GitHub #594 probed for an attribute the importer accepts
 and the engine refuses and found none, and so did the review of GitHub #623: in every difference
-the engine is the more lenient, or both refuse with different codes.
+the engine is the more lenient, or both refuse with different codes. The review of GitHub #674
+found one that both had missed, the last row below (#679).
 
 | Input | Engine | Importer |
 | --- | --- | --- |
@@ -262,8 +263,10 @@ the engine is the more lenient, or both refuse with different codes.
 | a `unit` or `displayUnit` IRI node the unit table does not map | `non-subset-construct` | `wrong-shape` naming the key |
 | two spellings of `unit` or `displayUnit` on one node | `malformed-document` | `two-spellings` |
 | `qudt:hasUnit` with no `qudt` binding, or `qudt:hasQuantityKind` | an unread pass-through key | `unknown-key` |
-| a `qudt` or `unit` prefix bound to another IRI | accepted; `qudt:hasUnit` is then unread, and a `unit:` identifier unmapped | `unknown-key` naming the term |
+| a `qudt` or `unit` prefix bound to another IRI | accepted; the key or identifier is then whatever it expands to (for any namespace but the S231 one, an unread key and an unmapped identifier) | `unknown-key` naming the term |
+| a unit IRI node through `base` or a whole-token `@context` term (`{"@id": "base:K"}` with `base` bound to a unit namespace) | read through the table | `wrong-shape`: `base` is inert, and only `S231:`, `qudt:` and `unit:` identifiers and full IRIs are looked up |
 | a unit, in any spelling, on a block port | read | `port-attribute` (decision 8) |
+| a `unit`, `quantity` or `displayUnit` on an Integer or Boolean boundary | `malformed-document` | **imported**: the one difference in which the importer is the more lenient, found by the review of GitHub #674 and filed as #679 |
 | object bound that is no typed literal (`{}`, `{"@id": …}`, `{"@value": "30"}`) | the whole document fails to parse (`CxfError::Json`, no code or subject) | `wrong-shape` naming the key |
 | a well-shaped attribute under its full-IRI key | normalised, then checked | `unknown-key`: compact keys only |
 | typed literal carrying `@context` | `non-subset-construct` | `wrong-shape` |
@@ -292,7 +295,8 @@ on a document modelica-json could have written:
   (`http://qudt.org/vocab/unit#` or `http://qudt.org/vocab/unit/`). Either term bound to anything
   else is `unknown-key` naming the term, as any other term is.
 - **A boundary.** A string is the unit, as before. An IRI node, `wrong-shape` before, is expanded
-  against the `@context` by the engine's rule and looked up with the engine's lookup
+  through the `S231`, `qudt` or `unit` prefix where the document binds it (never `base`) and
+  looked up with the engine's lookup
   (`oce_api::unit_of_iri`, over `oce_api::QUDT_UNITS`): `{"@id": "unit:K"}` is `K`, and the S231
   fallback `{"@id": "S231:1/s"}` is `1/s`. One the table does not map stays `wrong-shape` naming
   the key as written, where the engine says `non-subset-construct`.

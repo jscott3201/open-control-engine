@@ -51,7 +51,7 @@
 //!   read ([`crate::resolve`]'s term-shape rule, `non-subset-construct`); nothing is refused
 //!   here. A term the shape rule refuses for another reason (a key beside `@id`, a blank `@id`, a
 //!   format or control character) is left exactly as written, so that refusal quotes the authored
-//!   text. See [`read_unit_iris`].
+//!   text, and so is an `@id` that holds whitespace, which is no IRI. See [`read_unit_iris`].
 //!
 //! Deliberately excluded from expansion: the [`crate::dto::TermAttr::Iri`] arm of `quantity` (a
 //! lexical term consumed verbatim by attribute parsing), the `@type` annotation
@@ -638,8 +638,10 @@ fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut Vec<Diagnostic>
 /// A term the shape rule already refuses ([`term_shape::problem`]) is left as written: a blank
 /// `@id` or one carrying a format or control character is never expanded, even where a `@context`
 /// term of that exact spelling exists, so the document cannot use a binding to launder a term no
-/// reader can see. `quantity` is never read here (decision 1): its IRI node stays a verbatim
-/// lexical term.
+/// reader can see. An `@id` that holds whitespace anywhere is left as written too: no IRI holds
+/// any, so it is no identifier to look up, whatever term the `@context` declares under that
+/// spelling, and it is refused as unmapped where it is read. `quantity` is never read here
+/// (decision 1): its IRI node stays a verbatim lexical term.
 ///
 /// Work is one expansion and one table lookup per term; nothing is dereferenced and nothing is
 /// refused here.
@@ -654,6 +656,9 @@ fn read_unit_iris(node: &mut Node, table: &PrefixTable) {
         let TermAttr::Iri { id, .. } = term else {
             continue;
         };
+        if id.contains(char::is_whitespace) {
+            continue;
+        }
         if let Expansion::Expanded(iri) = expand_token(id, table) {
             *id = iri;
         }
