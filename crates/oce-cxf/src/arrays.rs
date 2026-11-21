@@ -414,9 +414,11 @@ fn mint_element(
 /// (`MalformedDocument`), and then the count and the bytes of the element paths (`owner`, `.`,
 /// element name) are reserved from the document's `budget` ([`MAX_DOCUMENT_ARRAY_ELEMENTS`] and
 /// [`MAX_DOCUMENT_ARRAY_PATH_BYTES`], `ResourceLimitExceeded`), before any element name is built
-/// or any value expression is evaluated, so a hostile document cannot drive an array-parameter
-/// allocation past either budget. A parameter refused for size draws nothing from either. Names
-/// are built one at a time where their elements are minted, once the value's shape is checked
+/// or any value expression is evaluated. So the elements an array mints and their names and
+/// paths stay within those budgets. Their values do not yet: a broadcast string value is
+/// grounded again for each element, each a string of its own, and neither budget counts its
+/// bytes (issue #736). A parameter refused for size draws nothing from either budget. Names are
+/// built one at a time where their elements are minted, once the value's shape is checked
 /// (issue #710): a refused value builds none, and nothing holds every name beside the minted
 /// entries.
 ///

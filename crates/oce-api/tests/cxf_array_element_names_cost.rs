@@ -161,7 +161,7 @@ fn bytes(count: usize) -> u64 {
 fn a_long_name_over_a_large_size_is_refused_before_any_name_is_built() {
     // The issue's document (a 64 KiB name over 1,024 elements) and the review's (1 KiB over
     // 262,144). Each is refused with the one diagnostic of the path budget, and costs what reading
-    // the document costs. [measured: peaks of 702,256 and 124,266 bytes; before, 202,112,449 and
+    // the document costs. [measured: peaks of 702,330 and 124,303 bytes; before, 202,112,449 and
     // 860,475,847, refused for the missing `k` once every name was built]
     for (local, size) in [("k".repeat(64 * 1024), 1_024), ("k".repeat(1_024), 262_144)] {
         let document = renamed_k(&local, &format!("({size})"), "[ 1.0 ]");
@@ -203,7 +203,7 @@ fn a_long_instance_iri_over_a_large_size_is_refused_before_any_name_is_built() {
 #[test]
 fn the_declared_size_of_a_refused_array_costs_nothing() {
     // The same 64 KiB name over 1,024 and over 1,048,576 elements: the two refusals request the
-    // same bytes but for the digits of the size. [measured: 1,000,631 bytes in total at 1,024
+    // same bytes but for the digits of the size. [measured: 1,000,902 bytes in total at 1,024
     // elements, 15 more at 1,048,576]
     let local = "k".repeat(64 * 1024);
     let (_, small) = refused(&renamed_k(&local, "(1024)", "[ 1.0 ]"));
@@ -221,7 +221,7 @@ fn the_declared_size_of_a_refused_array_costs_nothing() {
 #[test]
 fn a_value_refused_for_its_shape_builds_no_name() {
     // A 32 KiB name over 1,024 elements fits the budget; each value below is refused for its
-    // shape, before any name is built. [measured: peaks of 410,497 to 410,972 bytes; before,
+    // shape, before any name is built. [measured: peaks of 410,561 to 411,036 bytes; before,
     // 67.5 MB each]
     let local = "k".repeat(32 * 1024);
     for (value, message) in [
@@ -313,16 +313,19 @@ fn assert_budget_edge(instance: &str, base: &str, len: usize, copies: u64) {
 #[test]
 fn paths_of_long_names_that_fill_the_budget_load_whole_and_one_byte_more_is_refused() {
     // A 65,000-byte name over 1,024 elements, under the constant's 30-byte IRI: the names are
-    // nearly all of every path. [measured: a peak of 268,967,071 bytes loaded, 4.01 times the
-    // budget, and 137,993,874 refused; before, both loaded at about 269 MB]
-    assert_budget_edge(CON, &"p".repeat(65_000), 1_024, 5);
+    // nearly all of every path. The name is 32,500 two-byte characters, so a count of characters
+    // instead of bytes would admit one byte more. [measured: a peak of 268,967,071 bytes loaded,
+    // 4.01 times the budget, and 137,993,874 refused; before, both loaded at about 269 MB]
+    assert_budget_edge(CON, &"π".repeat(32_500), 1_024, 5);
 }
 
 #[test]
 fn paths_under_a_long_instance_iri_that_fill_the_budget_load_whole_and_one_byte_more_is_refused() {
-    // The one-byte name `q` over 16,000 elements of a constant whose IRI is 4,123 bytes: the IRI
-    // is nearly all of every path. The reader spells each element's path once to check minted
-    // aliases, so the refusal holds the first array's paths too. [measured: a peak of 208,207,573
-    // bytes loaded, 3.10 times the budget, and 142,237,593 refused; before, both loaded]
-    assert_budget_edge(&"c".repeat(4 * 1024), "q", 16_000, 5);
+    // The one-byte name `q` over 16,000 elements of a constant whose IRI is 4,123 bytes, 2,048 of
+    // its characters two bytes each: the IRI is nearly all of every path, and a count of its
+    // characters instead of its bytes would admit one byte more. The reader spells each
+    // element's path once to check minted aliases, so the refusal holds the first array's paths
+    // too. [measured: a peak of 208,207,573 bytes loaded, 3.10 times the budget, and
+    // 142,237,593 refused; before, both loaded]
+    assert_budget_edge(&"é".repeat(2 * 1024), "q", 16_000, 5);
 }

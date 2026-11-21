@@ -859,6 +859,10 @@ so far, and no tag is cut by the bump.
     at its peak: a document whose paths fill the budget with long names loads at 269 MB, as
     before, and one whose paths a 4 KiB instance IRI fills, at 208 MB. The element budget
     already admits a 5.6 KB document of 1,048,576 one-letter names that peaks at 786 MB.
+  - **Not bounded yet: an element's value.** The two budgets count elements and the bytes of
+    their paths. A broadcast array whose one value is a string literal grounds the string again
+    for each element, each a string of its own, and no budget counts those bytes: `q[1024]` with
+    a 60 KB string, a 66 KB document, loads at 124 MB (issue #736).
   - **Breaking, in place:** a document whose array element paths total more than 64 MiB loaded
     before, memory permitting, and is now refused, among them the 38 KB document above and a
     65,000-byte name over 1,024 elements beside a one-element array named by 513,075 bytes,

@@ -698,6 +698,13 @@ at most about four copies of the paths at its peak: measured, 269 MB for a docum
 fill the budget with long names, and 208 MB when a long instance IRI fills it. Nothing is built for
 a parameter refused for its size or for its value's shape.
 
+The two budgets bound how many elements an array mints and the bytes of their names and paths, not
+their values. A broadcast array whose one value is a string literal is grounded again for each
+element, each a string of its own, and no budget counts those bytes yet (issue #736): `q[1024]`
+with a 60 KB string, a 66 KB document, loads at 124 MB, and the cost grows with the declared size.
+Until that is fixed, treat a document that declares a large array with a string value as one that
+can need memory in proportion to the declared size.
+
 ### A refusal list is a bounded answer
 
 A diagnostic copies document text: its subject is a node's `@id`, and most messages name that
@@ -766,7 +773,8 @@ The byte cap does not bound peak memory, CPU time, expansion, or total graph com
 a sandbox, cancellation/deadline guarantee, or evidence that every below-cap document is safe.
 Below the cap the pipeline refuses the known amplification shapes with typed diagnostics (issue
 #365): a `containsBlock` child reached twice (`shared-instance`), array parameters past a
-1,048,576-element per-document budget or past 64 MiB of element paths (issue #710), run state
+1,048,576-element per-document budget or past 64 MiB of element paths (issue #710; a broadcast
+string value is not yet counted, issue #736), run state
 past 4,194,304 words and, since issue #700, what the constructed blocks hold outside their state
 (tables, gain matrices, resolved port kinds) past 4,194,304 words (all three
 `resource-limit-exceeded`), and binding evaluation past 2^24 deterministic work units per
