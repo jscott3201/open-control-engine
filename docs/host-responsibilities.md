@@ -711,11 +711,11 @@ of a load, to 8 MiB of text (issue #695). What you can rely on:
   `OcError::diagnostics()`. A receipt sorts its records by stage, subject, code and severity,
   and a record with no subject sorts before every record with one, so in
   `load_cxf_with_receipt` it is the first `Import` record.
-- **It is always a refusal, and that changes one accepted outcome.** The closing error is an
-  error whatever was left out, so a document whose warnings alone pass the bound is refused
-  where it loaded with all of them. A load never succeeds with warnings missing. Measured at
-  the edge: 127 unused boundary inputs under a 64 KiB namespace load with 127 warnings, and 128
-  are refused.
+- **It is always a refusal, for warnings too.** The closing error is an error whatever was
+  left out, so a document that raises nothing but warnings is refused once they pass the
+  bound: the bound is the one reason a document with no error of its own does not load. A load
+  never succeeds with warnings missing. Measured at the edge: 127 unused boundary inputs under
+  a 64 KiB namespace load with 127 warnings, and 128 are refused.
 - **A list within the bound is whole.** Every diagnostic the reader raises is listed, with its
   message and subject as they are: nothing is shortened, cut, merged or dropped. Every tracked
   document and every document of `open-control-library` is far inside the bound (the largest

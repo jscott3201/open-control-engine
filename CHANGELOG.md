@@ -652,14 +652,14 @@ and a gate that accepted any text would restore exactly the false assurance desc
     written and with the retired namespace rewritten, is byte-identical before and after:
     severity, code, message and subject, 535 loads. The largest list among them is 196
     diagnostics and 29,460 bytes.
-  - **Work past the bound.** On seventeen routes, where one node raises a diagnostic per item of a
+  - **Work past the bound.** On eighteen routes, where one node raises a diagnostic per item of a
     list the document sets, a finding past the bound is counted and nothing is built for it: a
     key written twice, a modeled or `hasUnit` key in surrounding whitespace, a modeled term in a
     foreign namespace, `hasUnit` in a near miss of a QUDT namespace, a second spelling of one
     property, a relative reference, the four refusals of a typing token, a reference carrying a
     key beside its `@id`, a Modelica construct that survived lowering, a re-bound declaration
-    (as lowering reads it and as the specialization pass withholds it), a child listed again,
-    and a `hasInstance` member outside its owner. Each is measured through `Engine::load_cxf` on
+    (as lowering reads it, beside a conditional child, and as it is released for a composite
+    its guard prunes), a child listed again, and a `hasInstance` member outside its owner. Each is measured through `Engine::load_cxf` on
     a 256 KiB `@id` at 400 and 1,600 items (`crates/oce-api/tests/cxf_diagnostic_list_cost.rs`):
     peaks of 6.1 to 11.5 MB where they were 106 to 316 MB at 400 items, and 142 to 1,966
     requested bytes for a further item where it was 262,144 or more. Elsewhere a finding past
