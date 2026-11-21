@@ -12,6 +12,7 @@ use oce_model::{
     determinism::{det_max, det_min},
 };
 
+use crate::constructed::buffer_words;
 use crate::{
     Block, BlockKind, BlockSignature, Ctx, PortKind, PortShape, ResolvedBlockSignature, emit_real,
     read_real,
@@ -55,6 +56,10 @@ impl Block for MultiSum {
             inputs: Cow::Borrowed(self.inputs.as_slice()),
             outputs: Cow::Borrowed(&OUTPUTS),
         }
+    }
+
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs) + buffer_words(&self.gains)
     }
 
     fn kind(&self) -> BlockKind {
@@ -116,6 +121,10 @@ impl Block for MultiMin {
         }
     }
 
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs)
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
@@ -170,6 +179,10 @@ impl Block for MultiMax {
             inputs: Cow::Borrowed(self.inputs.as_slice()),
             outputs: Cow::Borrowed(&OUTPUTS),
         }
+    }
+
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs)
     }
 
     fn kind(&self) -> BlockKind {

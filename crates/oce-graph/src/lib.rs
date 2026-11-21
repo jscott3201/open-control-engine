@@ -50,11 +50,13 @@ use oce_model::{BlockId, ConnectorId, Model, Value};
 
 pub mod blob;
 mod build;
+mod constructed;
 pub mod frame;
 mod tick;
 mod topo;
 
 pub use build::{FeedthroughDag, build_driver_of, build_feedthrough_dag};
+pub use constructed::{ConstructedBudget, MAX_CONSTRUCTED_WORDS};
 pub use tick::{EvalContext, allocate_state, eval_tick, run_tick};
 pub use topo::topo_sort;
 
@@ -202,6 +204,29 @@ pub enum BuildError {
         /// Words requested up to and including `block`, saturated at `u64::MAX`.
         requested: u64,
         /// The enforced budget, [`MAX_STATE_WORDS`].
+        limit: usize,
+    },
+
+    /// The model's constructed blocks would hold more than [`MAX_CONSTRUCTED_WORDS`] words
+    /// outside their `[S]` state regions. What a block holds is input-derived: a
+    /// `CDL.*.Sources.TimeTable` sizes its table from its `table_<row>_<col>` parameter names, a
+    /// `CDL.Reals.MatrixGain` holds `nin × nout` gains, and every width-driven class holds its
+    /// resolved port kinds. Each block is capped; this budget is the bound for a model of many,
+    /// so a small document cannot make the build hold an unbounded amount. `block` is the first
+    /// block (declaration order) whose construction takes the running total past the budget;
+    /// it and every later block are not kept. Raised while the blocks are constructed, so
+    /// before any schedule or state refusal. Remedy: reduce the table, matrix or vector sizes,
+    /// or split the model.
+    #[error(
+        "constructed blocks too large: {requested} word(s) held by the blocks through block \
+         {block} exceed the supported maximum ({limit} words)"
+    )]
+    ConstructedTooLarge {
+        /// Authored identity of the block at which the budget was crossed.
+        block: ConnectorPath,
+        /// Words held by the blocks up to and including `block`, saturated at `u64::MAX`.
+        requested: u64,
+        /// The enforced budget, [`MAX_CONSTRUCTED_WORDS`].
         limit: usize,
     },
 }

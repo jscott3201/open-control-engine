@@ -48,8 +48,10 @@ mod class_descriptions;
 #[cfg(feature = "std")]
 mod class_metadata;
 mod class_signature;
+mod constructed;
 pub use catalog_rules::ParamRuleProjection;
 pub use class_signature::{class_is_target_bound, class_signature_hash};
+pub use constructed::MAX_CONSTRUCTION_PEAK_BYTES;
 mod conversions;
 mod discrete;
 mod discrete_sampled;
@@ -369,6 +371,25 @@ pub trait Block: Send + Sync {
     /// Word count of this block's `[S]` state region within `RunState.words` (0 for `[A]`). Fixed
     /// at BUILD; the tick never resizes it (`01` §7 req 1).
     fn state_len(&self) -> usize {
+        0
+    }
+
+    /// Heap this resolved instance keeps alive beyond its own value and outside its `[S]` state
+    /// region, in 64-bit words: every buffer the instance owns (resolved port-kind vectors,
+    /// tables, gains, selectors, a message), counted by capacity and each rounded up to whole
+    /// words. The instance's own value (`size_of_val`, what its `Box` holds) is not counted: it
+    /// is a fixed size per class.
+    ///
+    /// The count does not depend on the target: an index (`usize`) element is one word on every
+    /// pointer width, so a 32-bit target reports what a 64-bit host does and holds no more.
+    ///
+    /// A loader sums this over a model as it constructs the blocks and refuses a model past its
+    /// budget (`oce_graph::MAX_CONSTRUCTED_WORDS`), so an implementation that owns a buffer sized
+    /// by a parameter **must** count it: a block that holds more than it reports defeats the
+    /// budget. `tests/constructed_words.rs` measures every registered class against this value
+    /// under hostile parameter tables. The default is zero, for a block that owns no buffer.
+    /// Never panics.
+    fn constructed_words(&self) -> usize {
         0
     }
 

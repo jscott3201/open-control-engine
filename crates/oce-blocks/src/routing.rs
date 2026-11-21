@@ -10,6 +10,7 @@ use alloc::vec::Vec;
 
 use oce_model::Value;
 
+use crate::constructed::{buffer_words, index_buffer_words};
 use crate::{
     Block, BlockKind, BlockSignature, Ctx, MAX_RESOLVED_PORT_WIDTH, PortKind, PortShape,
     ResolvedBlockSignature, emit_real, read_int, read_real,
@@ -80,6 +81,10 @@ impl Block for RealExtractSignal {
         }
     }
 
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs) + buffer_words(&self.outputs) + index_buffer_words(&self.extract)
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
@@ -138,6 +143,10 @@ impl Block for RealExtractor {
             inputs: Cow::Borrowed(self.inputs.as_slice()),
             outputs: Cow::Borrowed(&OUTPUTS),
         }
+    }
+
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs)
     }
 
     fn kind(&self) -> BlockKind {
@@ -208,6 +217,10 @@ impl Block for RealScalarReplicator {
         }
     }
 
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.outputs)
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
@@ -239,9 +252,10 @@ pub struct RealVectorFilter {
 
 impl RealVectorFilter {
     pub(crate) fn new(nin: usize, nout: usize, mask: Vec<bool>) -> Self {
-        let selected = (0..nin)
-            .filter(|idx| mask.get(*idx).copied().unwrap_or(true))
-            .collect();
+        // Counted first, so the kept buffer is allocated once at its exact length.
+        let is_selected = |idx: &usize| mask.get(*idx).copied().unwrap_or(true);
+        let mut selected = Vec::with_capacity((0..nin).filter(is_selected).count());
+        selected.extend((0..nin).filter(is_selected));
         Self {
             inputs: real_kinds(nin),
             outputs: real_kinds(nout),
@@ -267,6 +281,12 @@ impl Block for RealVectorFilter {
             inputs: Cow::Borrowed(self.inputs.as_slice()),
             outputs: Cow::Borrowed(self.outputs.as_slice()),
         }
+    }
+
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs)
+            + buffer_words(&self.outputs)
+            + index_buffer_words(&self.selected)
     }
 
     fn kind(&self) -> BlockKind {
@@ -330,6 +350,10 @@ impl Block for RealVectorReplicator {
             inputs: Cow::Borrowed(self.inputs.as_slice()),
             outputs: Cow::Borrowed(self.outputs.as_slice()),
         }
+    }
+
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs) + buffer_words(&self.outputs)
     }
 
     fn kind(&self) -> BlockKind {

@@ -212,6 +212,22 @@ pub const RULE_VARIANTS: [&str; 27] = [
 
 /// Every parameter name a class's rules and defaults mention, with array and matrix members.
 pub fn names_of(class_path: &str) -> Vec<String> {
+    names_with(class_path, false)
+}
+
+/// [`names_of`], and for every array or matrix parameter the members whose index alone sizes a
+/// buffer (issue #700): a vector element at the port width and past it, and matrix cells whose
+/// shape is at, just inside and just past the width in both orientations. One such name makes a
+/// `TimeTable` hold its whole table, so tables over these names are costly to construct.
+#[allow(
+    dead_code,
+    reason = "shared by several test binaries, each of which uses one generator"
+)]
+pub fn names_sized_by_index_of(class_path: &str) -> Vec<String> {
+    names_with(class_path, true)
+}
+
+fn names_with(class_path: &str, sized_by_index: bool) -> Vec<String> {
     let entry = catalog()
         .iter()
         .find(|entry| entry.class_path == class_path)
@@ -240,6 +256,24 @@ pub fn names_of(class_path: &str) -> Vec<String> {
         names.push(format!("{base}_"));
         names.push(format!("{base}_1_"));
         names.push(format!("{base}_18446744073709551616"));
+        if sized_by_index {
+            let width = MAX_RESOLVED_PORT_WIDTH;
+            names.push(format!("{base}_{width}"));
+            names.push(format!("{base}_{}", width + 1));
+            for (row, col) in [
+                (width / 2, 2),
+                (width / 2 - 1, 2),
+                (width / 2 + 1, 2),
+                (1, width),
+                (2, width / 2),
+                (width, 1),
+                (1024, 1024),
+                (1024, 1025),
+                (width, width),
+            ] {
+                names.push(format!("{base}_{row}_{col}"));
+            }
+        }
     }
     names.extend(["".into(), "_".into(), "x".into(), "\u{1F525}".into()]);
     names.sort_unstable();
@@ -315,9 +349,26 @@ pub fn random_value(rng: &mut XorShift) -> Value {
 /// The fuzz's tables for one class: the empty table, every known name alone with each edge value
 /// kind, then `cases` seeded random tables of up to eight entries (duplicates included).
 pub fn hostile_tables(class_path: &str, cases: u64, rng: &mut XorShift) -> Vec<ParamTable> {
-    let names = names_of(class_path);
+    tables_over(&names_of(class_path), cases, rng)
+}
+
+/// [`hostile_tables`] over [`names_sized_by_index_of`]: the tables that make a constructor
+/// allocate as much as one name or value can.
+#[allow(
+    dead_code,
+    reason = "shared by several test binaries, each of which uses one generator"
+)]
+pub fn hostile_tables_sized_by_index(
+    class_path: &str,
+    cases: u64,
+    rng: &mut XorShift,
+) -> Vec<ParamTable> {
+    tables_over(&names_sized_by_index_of(class_path), cases, rng)
+}
+
+fn tables_over(names: &[String], cases: u64, rng: &mut XorShift) -> Vec<ParamTable> {
     let mut tables = vec![ParamTable::default()];
-    for name in &names {
+    for name in names {
         for value in [
             Value::Real(f64::NAN),
             Value::Real(-0.0),
@@ -335,7 +386,7 @@ pub fn hostile_tables(class_path: &str, cases: u64, rng: &mut XorShift) -> Vec<P
     for _ in 0..cases {
         let count = rng.below(9);
         let values = (0..count)
-            .map(|_| (Arc::from(rng.pick(&names).as_str()), random_value(rng)))
+            .map(|_| (Arc::from(rng.pick(names).as_str()), random_value(rng)))
             .collect();
         tables.push(ParamTable { values });
     }

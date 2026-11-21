@@ -9,6 +9,7 @@ use alloc::{vec, vec::Vec};
 
 use oce_model::{EnumClassId, ParamTable, Value};
 
+use crate::constructed::buffer_words;
 use crate::math;
 use crate::{
     Block, BlockKind, BlockSignature, Ctx, MAX_RESOLVED_PORT_WIDTH, PortKind, PortShape,
@@ -205,6 +206,11 @@ impl TableData {
         }
     }
 
+    /// The words the two buffers hold, for [`Block::constructed_words`].
+    fn words(&self) -> usize {
+        buffer_words(&self.times) + buffer_words(&self.values)
+    }
+
     fn rows(&self) -> usize {
         self.times.len()
     }
@@ -372,6 +378,10 @@ impl Block for RealTimeTable {
         }
     }
 
+    fn constructed_words(&self) -> usize {
+        self.table.words() + buffer_words(&self.offsets) + buffer_words(&self.outputs)
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
@@ -469,6 +479,10 @@ impl Block for IntegerTimeTable {
         }
     }
 
+    fn constructed_words(&self) -> usize {
+        self.table.words() + buffer_words(&self.outputs)
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
@@ -531,6 +545,10 @@ impl Block for LogicalTimeTable {
             inputs: Cow::Borrowed(&[]),
             outputs: Cow::Borrowed(self.outputs.as_slice()),
         }
+    }
+
+    fn constructed_words(&self) -> usize {
+        self.inner.constructed_words() + buffer_words(&self.outputs)
     }
 
     fn kind(&self) -> BlockKind {

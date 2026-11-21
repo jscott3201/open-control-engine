@@ -216,15 +216,15 @@ A summary costs two things in turn, never held together:
 
 1. **The decoder's building pass**, exactly what `decode` allocates for the same bytes up to its
    result or its refusal, all of it freed before step 2. Its peak is the decoder's
-   ([Cost](#cost)). That includes the state the blocks declare, at most the engine's
-   4,194,304-word state budget (32 MiB), and what block constructors allocate from the blob's
-   parameters (a `CDL.Reals.Sources.TimeTable` sizes its table from the largest `table_r_c`
-   parameter-name index, a `CDL.Reals.MatrixGain` from nin×nout). That is capped per block, at
-   up to about 8 MiB, but not across the model, so **the peak is not bounded by the blob
-   length**: a 4,003-byte blob of 64 such TimeTables peaks at 536,903,536 bytes. Do not run a
-   summary on untrusted bytes without your own memory limit until a model-wide budget lands
-   (issue #700). The shapes in the table below are measurements, not bounds; for the 46 goldens
-   it is 1.55× to 21.59× the blob length.
+   ([Cost](#cost)), and it is bounded: at most 64 bytes per blob byte, plus three fixed terms
+   of 32 MiB each. The first is what block constructors allocate from the blob's parameters,
+   held to 4,194,304 words across the model (`MAX_CONSTRUCTED_WORDS`); the second is the one
+   block under construction when that budget is checked; the third is the state the blocks
+   declare, held to 4,194,304 words (`MAX_STATE_WORDS`). So **a summary of `n` blob bytes peaks
+   within `64 n` bytes and 96 MiB**, whatever the parameters size: the 4,003-byte blob of 64
+   `CDL.Reals.Sources.TimeTable` blocks that peaked at 536,903,536 bytes is now refused at its
+   fourth block holding 33,564,016, and its summary carries `ConstructedTooLarge` as the
+   refusal. For the 46 goldens the peak is 1.55× to 21.59× the blob length.
 2. **The result.** The core reader's four lists are each allocated once at a count the structural
    pass proved against the bytes: four allocations at most, and at most 2 bytes held per blob
    byte (measured: 1.33× for 500,000 outputs with empty paths, 0.8× for 100,000 minimal
@@ -233,8 +233,8 @@ A summary costs two things in turn, never held together:
    the bytes asked of the allocator, not its per-allocation overhead, which a blob of millions of
    short paths multiplies.
 
-So the peak of a summary is the larger of the two (the lists are bounded as above; the building
-pass is not, as step 1 says), and its allocation count in the core is the
+So the peak of a summary is the larger of the two, each bounded as above, and its allocation
+count in the core is the
 decoder's for the same bytes plus one per non-empty list. Before issue #680 a summary cost step 2
 alone; the verdict is what step 1 buys. Measured peaks, as multiples of the blob length:
 
@@ -243,6 +243,8 @@ alone; the verdict is what step 1 buys. Measured peaks, as multiples of the blob
 | The 46 goldens | accepted | 1.55× to 21.59× | 0.17× to 0.41× | 1.55× to 21.59× |
 | One 200,000-input block fed by one boundary input | accepted | 26.62× | ≈0× | 26.62× |
 | One block owning the whole state budget, a 287-byte blob | accepted | 32 MiB of state words | 76 bytes | 32 MiB |
+| Four `TimeTable` blocks holding the whole constructed budget, a 403-byte blob | accepted | 32 MiB of tables | 104 bytes | 32 MiB |
+| 64 `TimeTable` blocks of 8 MiB each, a 4,003-byte blob | refused at the fourth block (`ConstructedTooLarge`) | 33,564,016 bytes | 1,304 bytes | 33,564,016 bytes |
 | 500,000 outputs with empty paths | refused at the first output | 3.33× | 1.33× | 3.33× |
 | 100,000 minimal instances | refused at block 0's arity | 5.12× | 0.80× | 5.12× |
 | One block listing 10⁶ input ids it does not have | refused at its arity check | 2.00× | ≈0× | 2.00× |
@@ -292,12 +294,38 @@ resolve (`oce_blocks::MAX_RESOLVED_ARITY`, twice `MAX_RESOLVED_PORT_WIDTH`) is r
 anything is sized by it, and connector ownership costs 8 bytes per id until every block's arity
 has been checked, so the framing and structural passes are linear in the blob length: a hostile
 blob that lists a million connector ids its block does not have is refused holding 2.0× its
-length (the test bounds it at 8×); the densest blob that decodes of the shapes measured holds
-26.6× its length, which is the decoded executable itself. That is a measurement, not a bound
-for the whole decoder: block constructors allocate from parameter names and values, capped per
-block (up to about 8 MiB) but not across the model, so a blob of a few kilobytes can allocate
-hundreds of megabytes until the model-wide budget of issue #700 lands. Every registered block
-constructor is fuzzed with hostile parameter tables bounded by `MAX_RESOLVED_PORT_WIDTH`.
+length (the test bounds it at 8×).
+
+Block constructors are the one place an allocation is sized by a parameter's name or value
+rather than by a count of bytes: a `CDL.Reals.Sources.TimeTable` sizes its table from the largest
+`table_<row>_<col>` name it is given, a `CDL.Reals.MatrixGain` holds `nin × nout` gains whether
+or not one is bound. Each block is capped by `MAX_RESOLVED_PORT_WIDTH`, and a model has many, so
+the decoder holds them to a model-wide budget (issue #700): every constructed block reports the
+words it holds outside its state (`Block::constructed_words`), the decoder sums them as it
+constructs, and the first block that takes the total past `oce_graph::MAX_CONSTRUCTED_WORDS`
+(4,194,304 words, 32 MiB) is dropped and the blob refused with `ConstructedTooLarge`. The state
+the blocks declare has its own budget of the same size (`MAX_STATE_WORDS`, `StateTooLarge`). So
+the decoder's peak is bounded:
+
+```text
+  64 x the blob length                               the linear term
++ 8 x MAX_CONSTRUCTED_WORDS                 32 MiB   the constructed budget
++ oce_blocks::MAX_CONSTRUCTION_PEAK_BYTES   32 MiB   one block under construction
++ 8 x MAX_STATE_WORDS                       32 MiB   the state budget
+```
+
+The linear term is the decoded executable itself, sized from counts the structural pass checked
+against the bytes. Its costliest record is a connector id in an output list, four encoded bytes
+for about 184 decoded: a block of 200,000 unread outputs holds 44.2× its blob, the densest shape
+measured, and the tests hold every shape and every seeded hostile model to 64×. The constructed
+budget is a budget of its own, not a share of the state budget, so a model may spend both in
+full; it admits one block at the widest the per-block bound allows (2,228,223 words) and three
+dense 1024 × 1024 gain matrices together, while the largest of the 46 G36 fixtures holds 42
+words. A model past it is refused, not truncated: reduce the table, matrix or vector sizes, or
+split the model. The CXF load applies the same budget with the same counter
+(`BuildError::ConstructedTooLarge`, recorded as `resource-limit-exceeded`), so a model the host
+loaded is one the target constructs. Every registered block constructor is fuzzed with hostile
+parameter tables bounded by `MAX_RESOLVED_PORT_WIDTH`, and measured against what it reports.
 
 **Integrity** is a CRC-32C trailer over every preceding byte. It detects corruption in flash,
 transfer or storage; it is not tamper evidence, because anyone can recompute it.
@@ -310,13 +338,23 @@ the CRC; profile and flags; structure
 (section order and lengths, bounded counts, port lists no longer than any class resolves, UTF-8,
 tags, canonical list order, no trailing bytes);
 each class (registered, same hash), then each instance in turn (class index, unique parameter
-names, finite Reals, known enum classes and in-range ordinals, the constructed block's kind, state
-length and arity, connectors in range and not already claimed), then every class used and every
-connector claimed; boundary inputs (not Enum-typed, typed targets used once,
+names, finite Reals, known enum classes and in-range ordinals, the constructed budget
+(`MAX_CONSTRUCTED_WORDS`, charged the moment the block is constructed), the constructed block's
+kind, state length and arity, connectors in range and not already claimed), then every class
+used and every connector claimed; boundary inputs (not Enum-typed, typed targets used once,
 typed, finite and uncrossed bounds), connections (output to input, equal kinds, distinct blocks, never into a boundary
 input, one driver per input), undriven inputs and boundary outputs (output sources, unique paths);
 the schedule (a permutation that respects emit-before under the target's own feedthrough); the state
 budget (`MAX_STATE_WORDS`) and each initial-state CRC.
+
+The constructed budget is checked inside the instance pass, so `ConstructedTooLarge` names the
+first block (in id order) whose construction crosses it and wins over everything checked after
+that point: that block's own kind, state length, arity and connectors, every later block, an
+unused class, a missing connector, and all of the boundary, connection, schedule and state
+checks, the state budget included even when the oversized state belongs to an earlier block.
+It loses to everything checked before the crossing block is constructed: the header and
+structure, the class table, any fault of an earlier block, and the crossing block's own class
+index and parameters (`tests/blob_constructed_budget.rs`).
 
 ### Which refusal wins
 
@@ -361,7 +399,8 @@ what it returns — the model arena, the blocks and whatever their constructors 
 the run state and the I/O table — plus one default-parameter block per class for its signature
 hash and four scratch vectors, all freed before it returns; I/O paths and payloads borrow the input
 bytes. `crates/oce-api/tests/blob_allocations.rs` pins that count exactly for every fixture, and
-`blob_peak_allocation.rs` bounds peak memory against blob length for hostile and dense shapes.
+`blob_peak_allocation.rs` pins peak memory for hostile and dense shapes against the bound in the
+[trust model](#trust-model): the linear term, the constructed budget and the state budget.
 Executing frames allocates nothing: `crates/oce-graph/tests/blob_execution.rs` decodes every golden
 once and runs its 160 frames inside a counting-allocator region that must record zero
 allocations, against the `no_std + alloc` build of `oce-graph` in the `no-std-build` job (the 46
@@ -445,6 +484,7 @@ without a panic, and a missing, foreign, swapped or oversized file.
 | The same run on bare metal | `firmware/link/tests/run_tests.rs` (every golden reaches its digest through the image's run code) and `schedule_tests.rs` (the image's schedule equals the test schedule bit for bit), per PR; `qemu.yml` (nightly): the image on `netduinoplus2` and riscv32 `virt` prints the host's run digest after each of 160 frames |
 | Encoded on one machine, the same run on x86_64, aarch64 and wasm32 | `crates/oce-conformance/tests/blob_round_trip.rs` ([above](#the-blob-round-trip)): every output, warning and raw state word after every frame of all 46 fixtures, recorded in all four per-PR determinism cells (required identical, release codegen included) and replayed from the x86_64 debug recording on aarch64 and on `wasm32-wasip1` under wasmtime, per PR; its controls flip one recorded bit and require the report to name it |
 | Raw state words restore all or nothing | `crates/oce-graph/tests/blob_state_words.rs` |
+| Decoder memory is bounded by the blob length and two fixed budgets | `blob_peak_allocation.rs`: the shapes of issue #700 (one, 16 and 64 `TimeTable` blocks sized by one parameter name, a dense 1024 × 1024 `MatrixGain`) decode or refuse with `ConstructedTooLarge` within the words they hold and 64× their length; blocks holding exactly the constructed budget decode and one more block of four words is refused; a blob spending the constructed and the state budget in full decodes within their sum; a block of 200,000 unread outputs stays within the linear term. `blob_hostile_parameter_models.rs`: 100 seeded models of up to thirteen blocks with hostile parameter tables decode or refuse exactly as predicted from the words each block reports, the summary carries the same verdict, and no peak passes the bound. `blob_constructed_budget.rs`: the refusal's place among every other refusal, and `inspect`, `inspect_blob` and `Executable::from_blob` reporting it alike. `oce-graph`'s `constructed_budget` unit tests: exactly the budget accepted, one word past refused, overflow saturated. `oce-blocks` `tests/constructed_words.rs`: every registered class, under the hostile tables, holds no more and no less than it reports, and no construction peaks above `MAX_CONSTRUCTION_PEAK_BYTES` |
 | Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
 | A blob of an earlier layout under the same format number is refused | `blob_old_layout.rs`: the release-0.4.0 encoding of one fixture, kept unblessed, is refused with `EngineVersionMismatch` by `decode` and by `Executable::from_blob` |
 | A blob of the same layout and an earlier meaning is refused | `engine_0_5_0_artefacts.rs`: the release-0.5.0 encoding of `trim_and_respond_have_hol_false`, kept unblessed, differs from this build's in one parameter record (an Integer where a Real parameter now holds a Real) and the content id, and is refused with `EngineVersionMismatch` by `decode`, `Executable::from_blob` and `inspect_blob`; restamped with this version it would decode |
@@ -453,7 +493,7 @@ without a panic, and a missing, foreign, swapped or oversized file.
 | A summary states what the blob holds, identically on every cell | `blob_goldens.rs`: the summary of each of the 46 blobs equals its checked-in JSON under `crates/oce-api/tests/fixtures/blob_summary/` byte for byte, in every determinism cell and both platform cells, and an independent JSON reader finds the same facts in it; `blob_summary.rs`: each summary equals what the test-side writer derives from the decoded executable (class per block, this build's hashes, the CRC of the words the decoder allocated) and the content id the engine minted and the content-id pin records; `oce-graph`'s `tests/blob_summary.rs` holds the core reader to the decoder over the same goldens |
 | A changed class hash or initial-state CRC shows in the summary, and nowhere else | `blob_summary.rs`: every bit of every class hash and of every instance's CRC of one golden, then state length, kind, content id and I/O paths. The decoder refuses a changed hash, CRC, state length or kind with its named error and accepts a changed content id or path, which it carries without checking; in every case the summary differs from the original in exactly that field |
 | A summary has no refusal exactly when this build's decoder accepts the blob, and otherwise carries the decoder's own error | `support/blob_summary_facts.rs`: every summary any test reads is checked there, core and facade, against `decode` on the same bytes. `blob_goldens.rs` and `blob_summary.rs`: all 46 goldens, fresh and checked in, have no refusal. `blob_summary_acceptance.rs`: nine blobs the decoder refuses after its structural pass (schedule, undriven input, duplicate output path, non-finite and duplicated parameters, connector out of range, unused class, another initial state) and fifteen more (every other instance field, both enum faults, a claimed connector, boundary input, connection and output faults, the other schedule faults, one word past the state budget) summarise as written with exactly the error `decode` returns; a blob with four defects reports the decoder's first, then the next as each is repaired, then none; an unregistered class and a class index outside the table are refused by index and never reported as a decode refusal. `blob_summary.rs`: every flipped bit of every class hash and initial-state CRC carries its named refusal. `blob_summary_hostile.rs`: the 10,000 seeded mutations hold the field to the decoder's verdict in every case. `oce-graph`'s `tests/blob_summary.rs`: every one-bit change of two goldens, resealed, through the core reader alone |
-| The summary reader refuses hostile bytes as the decoder does, never a panic | `blob_summary_hostile.rs`: every prefix and resealed truncation, every header defect alone and in every pair that can occur (the earlier check wins, as in the decoder), `u32::MAX` in every count and length at its own offset, misframed sections, trailing bytes, invalid UTF-8, tags outside their tables and every list out of canonical order give the decoder's identical error, and 10,000 seeded byte mutations never part from the decoder's verdict; `blob_summary_allocations.rs` pins zero allocations for a refusal of every kind (framing, structure, a 200,000-entry unregistered class table, a class index outside the table on the last of 100,000 blocks); for every golden, three blobs the decoder refuses, the densest accepted shape, a blob at the state budget and the longest lists it requires the summary's allocation count to equal `decode`'s for the same bytes plus one per non-empty list, and its peak to equal the larger of `decode`'s peak and the lists' bytes |
+| The summary reader refuses hostile bytes as the decoder does, never a panic | `blob_summary_hostile.rs`: every prefix and resealed truncation, every header defect alone and in every pair that can occur (the earlier check wins, as in the decoder), `u32::MAX` in every count and length at its own offset, misframed sections, trailing bytes, invalid UTF-8, tags outside their tables and every list out of canonical order give the decoder's identical error, and 10,000 seeded byte mutations never part from the decoder's verdict; `blob_summary_allocations.rs` pins zero allocations for a refusal of every kind (framing, structure, a 200,000-entry unregistered class table, a class index outside the table on the last of 100,000 blocks); for every golden, three blobs the decoder refuses, the 200,000-input accepted shape, a blob at the state budget, blobs at and past the constructed budget and the longest lists it requires the summary's allocation count to equal `decode`'s for the same bytes plus one per non-empty list, and its peak to equal the larger of `decode`'s peak and the lists' bytes |
 
 On a bare-metal target the blob runs in the firmware image (`firmware/link`, GitHub #449, issue
 #402): it embeds the `multizone_vav_supply_fan` golden, decodes it with `Executable` and runs the

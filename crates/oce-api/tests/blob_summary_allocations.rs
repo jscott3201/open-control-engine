@@ -24,10 +24,10 @@ use std::mem::size_of;
 use allocation_counter::measure;
 use blob_corpus::{FIXTURES, golden};
 use blob_image::{Image, Inst, Out};
-use blob_models::{chain, moving_mean};
+use blob_models::{chain, moving_mean, time_tables};
 use oce_api::{BlobError, InstanceField, OcError, inspect_blob};
-use oce_graph::MAX_STATE_WORDS;
 use oce_graph::blob::{Summary, SummaryClass, SummaryInstance, decode, inspect};
+use oce_graph::{MAX_CONSTRUCTED_WORDS, MAX_STATE_WORDS};
 
 /// The core reader's documented bound on the bytes its four lists hold per blob byte.
 const CORE_LISTS_RATIO: f64 = 2.0;
@@ -147,8 +147,8 @@ fn a_summary_of_a_blob_the_decoder_refuses_costs_what_the_decoder_spent_before_r
 }
 
 #[test]
-fn a_summary_of_the_densest_accepted_blob_peaks_where_the_decoder_peaks() {
-    // The decoder's densest accepted shape (`blob_peak_allocation.rs`): the building pass holds
+fn a_summary_of_a_wide_accepted_blob_peaks_where_the_decoder_peaks() {
+    // A wide accepted shape of the decoder's (`blob_peak_allocation.rs`): the building pass holds
     // far more than the lists, and all of it is freed before they are allocated, so the summary
     // peaks exactly where `decode` does and within the decoder's recorded bound.
     let bytes = wide_accepted_block();
@@ -185,6 +185,55 @@ fn a_summary_of_a_blob_at_the_state_budget_holds_the_state_the_decoder_allocates
     );
     // Nothing of it outlives the call.
     assert_eq!(info.bytes_current, 0);
+}
+
+#[test]
+fn a_summary_of_blobs_at_and_past_the_constructed_budget_holds_what_the_decoder_holds() {
+    // Blobs of a few hundred bytes whose blocks hold megabytes by one parameter name each
+    // (issue #700). The verdict is the decoder's, so the summary constructs the blocks, holds
+    // them to the budget and frees them: its peak is the decoder's, bounded by the budget.
+    let budget = 8 * MAX_CONSTRUCTED_WORDS as u64;
+    let at_budget = time_tables(&["table_524287_2"; 4]).to_bytes();
+    assert_eq!(at_budget.len(), 403);
+    let past = time_tables(&["table_524288_2"; 64]).to_bytes();
+    assert_eq!(past.len(), 4_003);
+    for (what, bytes, verdict, lists_bytes) in [
+        ("at the constructed budget", &at_budget, None, 104),
+        (
+            "past the constructed budget",
+            &past,
+            Some(BlobError::ConstructedTooLarge {
+                block: 3,
+                requested: MAX_CONSTRUCTED_WORDS as u64 + 8,
+            }),
+            1_304,
+        ),
+    ] {
+        let (_, _, refusal) = core_cost_is_the_decoders_then_the_lists(bytes, what);
+        assert_eq!(refusal, verdict, "{what}");
+        let (_, decoder_peak) = decoder_cost(bytes);
+        let mut lists = (0, 0);
+        let info = measure(|| lists = lists_cost(&inspect(bytes).unwrap()));
+        assert_eq!(lists.1, lists_bytes, "{what}: the lists");
+        assert_eq!(info.bytes_max, decoder_peak, "{what}");
+        assert!(
+            info.bytes_max >= budget - 64,
+            "{what}: the tables were held"
+        );
+        assert!(
+            info.bytes_max <= budget + 64 + 64 * bytes.len() as u64,
+            "{what}: peak {} bytes against a budget of {budget}",
+            info.bytes_max
+        );
+        // Nothing of it outlives the call.
+        assert_eq!(info.bytes_current, 0, "{what}");
+        facade_peak_is_within_the_decoders_or_the_result_bound(bytes, what);
+        let summary = inspect_blob(bytes).unwrap();
+        assert_eq!(
+            summary.decode_refusal, verdict,
+            "{what}: the facade's verdict"
+        );
+    }
 }
 
 /// Zero allocations in the core reader and in the facade for `bytes`, which both refuse with

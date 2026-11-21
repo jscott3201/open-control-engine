@@ -257,8 +257,10 @@ impl Engine {
     /// [`OcError::Load`] only if a block class somehow fails to re-instantiate (unreachable on an
     /// already-loaded model); [`OcError::Build`] carrying [`oce_graph::BuildError::StateTooLarge`]
     /// if the edited state-sizing parameters push the re-seeded `[S]` state past
-    /// [`oce_graph::MAX_STATE_WORDS`]. Either failure leaves the engine halted with its edits
-    /// pending. Never panics (R-ERR-1).
+    /// [`oce_graph::MAX_STATE_WORDS`], or [`oce_graph::BuildError::ConstructedTooLarge`] if the
+    /// re-instantiated blocks exceed [`oce_graph::MAX_CONSTRUCTED_WORDS`] (unreachable while no
+    /// editable parameter sizes a block's buffers: the loaded model was within the budget). Any
+    /// of these leaves the engine halted with its edits pending. Never panics (R-ERR-1).
     pub fn resume(&mut self) -> Result<(), OcError> {
         if self.params_dirty {
             // Fence before effective model mutation; even a failed rebuild cannot reuse old plans.

@@ -2,7 +2,9 @@
 //!
 //! Every allocation here is sized by a count the structural pass checked against the input
 //! (`sections::check_structure`), or by a constructed block whose arity has just been compared with
-//! the blob's own port lists. No step panics on any input.
+//! the blob's own port lists. What the block constructors themselves allocate is sized by the
+//! blob's parameters, and is charged block by block against the model-wide
+//! [`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS). No step panics on any input.
 
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 
@@ -23,7 +25,7 @@ use super::sections::{
 };
 use super::wire::{RawType, RawValue, state_crc};
 use super::{BlobInput, BlobOutput, Decoded, any_class_target_bound, recorded_content_id};
-use crate::{MAX_STATE_WORDS, Schedule, allocate_state, build_driver_of};
+use crate::{ConstructedBudget, MAX_STATE_WORDS, Schedule, allocate_state, build_driver_of};
 
 /// Decode and check one `OCEB` blob into a ready-to-tick executable.
 ///
@@ -43,9 +45,11 @@ use crate::{MAX_STATE_WORDS, Schedule, allocate_state, build_driver_of};
 ///    canonical list order and exact consumption ([`BlobError::Malformed`]);
 /// 7. each class in turn (registered, same signature hash); then each block in turn (class index,
 ///    unique parameter names, each parameter in order a finite Real or a known enum class and
-///    ordinal, then the constructed block's kind, state length and arity, and each of its
-///    connector ids in range and not already claimed); then every class used and every connector
-///    id claimed;
+///    ordinal, then the constructed budget
+///    ([`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS), charged the moment the block is
+///    constructed: [`BlobError::ConstructedTooLarge`]), then the constructed block's kind, state
+///    length and arity, and each of its connector ids in range and not already claimed); then
+///    every class used and every connector id claimed;
 /// 8. boundary inputs, connections (direction, kind, distinct blocks, not an input target, one
 ///    driver), undriven inputs and boundary outputs;
 /// 9. the schedule: a permutation that respects emit-before under this build's `feeds_through`;
@@ -153,6 +157,7 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
     let mut owners = Owners::new(connector_total);
     let mut blocks: Vec<Box<dyn Block>> = Vec::with_capacity(block_total);
     let mut used = 0usize;
+    let mut constructed = ConstructedBudget::new();
     let mut names_scratch: Vec<&str> = Vec::with_capacity(counts.largest_parameter_list);
 
     for index in 0..block_total {
@@ -214,6 +219,11 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
         let params = ParamTable { values: params };
 
         let instance = (entry.make)(&params);
+        // Charged before anything about the block is compared: past the budget it is dropped
+        // here, so the blocks kept never hold more than `MAX_CONSTRUCTED_WORDS`.
+        if let Err(requested) = constructed.charge(instance.as_ref()) {
+            return Err(BlobError::ConstructedTooLarge { block, requested });
+        }
         let signature = instance.resolved_signature();
         let mismatch = |field| Err(BlobError::InstanceMismatch { block, field });
         if instance.kind() != record.kind {

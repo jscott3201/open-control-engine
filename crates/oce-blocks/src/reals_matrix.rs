@@ -12,6 +12,7 @@ use oce_model::{
     determinism::{det_max, det_min},
 };
 
+use crate::constructed::buffer_words;
 use crate::{
     Block, BlockKind, BlockSignature, Ctx, MAX_RESOLVED_PORT_WIDTH, PortKind, PortShape,
     ResolvedBlockSignature, emit_real, read_real,
@@ -74,21 +75,22 @@ impl MatrixGain {
             };
         }
 
-        let gains = (0..nout)
-            .flat_map(|row| {
-                let gains = &gains;
-                (0..nin).map(move |col| {
+        // Allocated once at its exact length: `product` is `nin * nout`, in bounds above.
+        let mut dense = Vec::with_capacity(product);
+        for row in 0..nout {
+            for col in 0..nin {
+                dense.push(
                     gains
                         .get(row * nin + col)
                         .copied()
-                        .unwrap_or(if row == col { 1.0 } else { 0.0 })
-                })
-            })
-            .collect();
+                        .unwrap_or(if row == col { 1.0 } else { 0.0 }),
+                );
+            }
+        }
         Self {
             inputs: real_kinds(nin),
             outputs: real_kinds(nout),
-            gains,
+            gains: dense,
             nin,
         }
     }
@@ -111,6 +113,10 @@ impl Block for MatrixGain {
             inputs: Cow::Borrowed(self.inputs.as_slice()),
             outputs: Cow::Borrowed(self.outputs.as_slice()),
         }
+    }
+
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs) + buffer_words(&self.outputs) + buffer_words(&self.gains)
     }
 
     fn kind(&self) -> BlockKind {
@@ -200,6 +206,10 @@ impl Block for MatrixMax {
         }
     }
 
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs) + buffer_words(&self.outputs)
+    }
+
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
@@ -282,6 +292,10 @@ impl Block for MatrixMin {
             inputs: Cow::Borrowed(self.inputs.as_slice()),
             outputs: Cow::Borrowed(self.outputs.as_slice()),
         }
+    }
+
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs) + buffer_words(&self.outputs)
     }
 
     fn kind(&self) -> BlockKind {
@@ -374,6 +388,10 @@ impl Block for Sort {
             inputs: Cow::Borrowed(self.inputs.as_slice()),
             outputs: Cow::Borrowed(self.outputs.as_slice()),
         }
+    }
+
+    fn constructed_words(&self) -> usize {
+        buffer_words(&self.inputs) + buffer_words(&self.outputs)
     }
 
     fn kind(&self) -> BlockKind {
