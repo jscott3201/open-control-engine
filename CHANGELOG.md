@@ -377,7 +377,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     documents carry no term. `fixture_corpus_import.txt` is byte-identical. The workspace version
     is not bumped (owner ruling: tightening accepted CXF input is not a format change).
 - **The unit spellings modelica-json and CXF-Core write are read, through a closed table, in both
-  readers** (GitHub #PRNUM, issue #631; closes #622; design note
+  readers** (GitHub #674, issue #631; closes #622; design note
   [`docs/design/unit-spellings.md`](docs/design/unit-spellings.md), owner rulings of 2026-11-12).
   The OBC §7.10 unit gate read a connector's unit only under `S231:unit` and its display unit only
   under `S231:displayUnit`. modelica-json writes `qudt:hasUnit` and `S231:hasDisplayUnit`, 484 and
