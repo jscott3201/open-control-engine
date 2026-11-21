@@ -106,7 +106,7 @@ an LBL file has none, and is refused at bind as `reference-incomplete`, naming t
 
 ### As landed: the spec and mapping readers
 
-*(GitHub #NNN, issue #658.)* The two readers are in `crates/leverage/oce-verify`
+*(GitHub #704, issue #658.)* The two readers are in `crates/leverage/oce-verify`
 (`src/commissioning/`): `CommissioningSpec::from_json_bytes` and `from_json_str`,
 `PointMapping::from_json_bytes` and `from_json_str`, each with `to_canonical_json`, and
 `CommissioningSpec::spec_id`. This note said the loader is "bounded" and gave no numbers, and

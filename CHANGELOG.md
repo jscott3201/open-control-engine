@@ -559,6 +559,52 @@ and a gate that accepted any text would restore exactly the false assurance desc
     content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
 ### Leverage
 
+- **`oce-verify` reads the commissioning test spec and the point mapping** (GitHub #704, issue
+  #658). Part 1 of 7 of the commissioning verifier (OBC §12; design note
+  `docs/design/commissioning.md`, "Test-spec file" and "Point mapping"): the two files a
+  commissioning run reads, as typed values or typed refusals. No engine, no file access, no
+  comparison; `oce-cli`, `oce-api` and the vector format are untouched, and no version moves.
+  - **`CommissioningSpec`**, `oce/commissioning-spec/v1` (`COMMISSIONING_SPEC_SCHEMA`), a
+    strict-JSON superset of OBC §12.7 Listing 12.1: `from_json_bytes` and `from_json_str`. A
+    document with no `schema` is an LBL spec and is read as this format; any other tag is
+    `unknown-schema`. `//` and `/* */` comments outside strings are removed first, in one pass
+    that keeps every other byte in place, so a refusal's line and column are those of the text
+    as written; an open `/*` is `unterminated-comment`. Listing 12.1 loads as published, and so
+    does a copy with comments added.
+  - **Fields.** The LBL fields load unchanged. `generateJson`, `modelJsonDirectory`,
+    `runController` and `controller` take any strict JSON value, are never interpreted, and are
+    reported by `findings()` and `findings_for(reference)` as `lbl-field-ignored` (`Finding`:
+    `code`, `at`), top-level fields sorted by name and then each reference's, whatever the
+    file's key order. Added: `time.origin` (`oce_replay::TimeOrigin`), `ltolx` and `ltoly`, and
+    per reference `cxf`, `parameters`, `inputs`, `expected` and `indicatorSources`
+    (`TrendSource`: `path`, `format`, `table`, `timeColumn`, `columns`, `hold.maxAge`), `window`,
+    `envelope` (read as `oce_verify::Envelope`, the comparison's own type) and
+    `funnelReference` (`FunnelReference`, default `engine`). `window` and `cxf` are optional to
+    load and required to run, which is bind's refusal (#662).
+  - **Keys.** `OverrideKey`, `glob_matches` (`*` any run, `?` one character, anchored at both
+    ends, nothing else special), `SpecReference::select_output_keys` and
+    `select_indicator_keys` over the output names a run passes in, with the `unmatched-key`
+    refusal, `CommissioningSpec::tolerances_for` (overrides in declaration order, later fields
+    winning; `PartialTolerances::resolved` gives the comparison's `Tolerances`) and
+    `SpecReference::indicators_for`. A selection is held to a work bound counted in steps of
+    the matcher (`work-limit-exceeded`).
+  - **The canonical form** (`to_canonical_json`) always carries `schema`, and `spec_id` is
+    `spec:fnv1a128:` over it. It sorts every object's keys except those of an `outputs` and an
+    `indicators` map, which keep declaration order, because that order decides which override
+    wins: sorted, two specs with different meanings would share an id.
+  - **`PointMapping`**: Listing 12.2's shape, from a file's bytes or inline, names kept as
+    written with no sequence prefix, `float`, `int` and `bool`, and `duplicate-point` for a name
+    twice on one side.
+  - **Bounds and codes.** `SpecLimits` (lowerable, never raised): 4 MiB, 256 parameters per
+    reference, 4,096 keys per `outputs`, `indicators` or `columns` map, 2^28 work units per key
+    selection; with the strict profile's nesting 8, strings 4,096 bytes and lists 65,536, which
+    the design note now records as landed. `SpecError` and `SpecErrorKind` with 29 kebab-case
+    codes (`SPEC_ERROR_CODES`), the strict-JSON ones spelled as the vector reader spells them;
+    every sentence is at most 512 bytes of printable ASCII.
+  - **Inside the crate.** The strict cursor is generic over the kind it reports
+    (`strict::StrictKind`), so the two readers share one profile and each keeps its own codes;
+    no vector code, sentence or place moves. The path rule a mutant path is held to is one
+    function both readers call.
 - **`oce-verify` declares the funnel port's licence in its package metadata** (GitHub #706,
   issue #703). The crate's `license` field is now `(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`
   and no longer inherits the workspace's `MIT OR Apache-2.0`: `src/funnel/`, the port of LBNL
