@@ -8,8 +8,10 @@ use crate::{Engine, OcError};
 /// it, the ingest pipeline bounds these input-derived amplifications, each with a typed refusal
 /// rather than a panic or allocation abort (issue #365): lowering visits each `containsBlock`
 /// composite and leaf at most once (`shared-instance`); inherited parameter scopes are shared,
-/// not copied per leaf; array parameters total at most 1,048,576 elements per document and run
-/// state at most 4,194,304 words (`resource-limit-exceeded`); and binding evaluation spends at
+/// not copied per leaf; array parameters total at most 1,048,576 elements per document, whose
+/// paths (instance IRI, `.`, element name) total at most 64 MiB (issue #710), and run state at
+/// most 4,194,304 words
+/// (`resource-limit-exceeded`); and binding evaluation spends at
 /// most 2^24 work units per expression and 2^26 per document (`grounding-failed`). These bound
 /// growth, not absolute footprint or time: a maximal admissible document can still need
 /// hundreds of MiB and a noticeable load. Hosts still own transport limits, trust isolation of

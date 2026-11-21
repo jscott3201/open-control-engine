@@ -810,8 +810,8 @@ so far, and no tag is cut by the bump.
     shared 64 KiB subject) peaks at 8.5 MB with a receipt where it peaked at 67.9 MB. The later
     stages' lists are not held to the bound, so #708 stays open for them.
   - **Not held to this bound:** the lists the later load stages return and an export's
-    diagnostics. `@context` expansion and an array parameter's element names amplify a document
-    without a diagnostic (issues #709 and #710).
+    diagnostics. `@context` expansion amplifies a document without a diagnostic (issue #709);
+    an array parameter's element names did too, until the path budget below (issue #710).
   - **Both readers.** `oce-author`'s importer answers with one refusal and already refuses a
     name longer than 64 bytes as `invalid-name`; the same document is pinned there as one
     refusal that names the `@id` once. Its source is unchanged.
@@ -819,6 +819,63 @@ so far, and no tag is cut by the bump.
     `ValidationReport::diagnostics` are the types they were; the list type is internal to
     `oce-cxf`. No format, content id, blob or golden moves, and the workspace version is not
     bumped.
+- **An array parameter's element paths are held to 64 MiB a document, and its names are built
+  one at a time** (GitHub #724, issue #710). Every element of `k[n]` on an instance `c` is minted
+  under a name of its own, `k_1` to `k_n`, and `Engine::params()` keys each by its path, `c.k_1`
+  to `c.k_n`, with `c` the instance's full IRI; the reader also spells each path once to check
+  minted aliases. So an array's paths take `n` times the lengths of `c` and `k`, and the reader
+  built every name before it read the value. The per-document element budget counts elements,
+  not bytes, so a long name or a long instance IRI over a large declared size asked for
+  `elements × (IRI + name)` bytes whatever the value was: the issue's document (a 64 KiB name over
+  1,024 elements, 136,486 bytes) peaked at 202 MB, a 1 KiB name over 262,144 elements (7,464
+  bytes) at 860 MB, and a constant renamed to 4 KiB with an array of 65,536 (38,356 bytes) loaded
+  at 854 MB.
+  - **The bound.** The element paths of all preserved array parameters of one document take at
+    most 67,108,864 bytes together (`MAX_DOCUMENT_ARRAY_PATH_BYTES`, the element budget at 64
+    bytes an element). A path is counted as `params()` spells it, the instance IRI, `.`, the
+    element's name, exactly and without building a name. A parameter that crosses the budget is
+    refused as `resource-limit-exceeded`, subject the parameter, where the element budget is
+    checked and before its value is read: ``array parameter's 1024 element path(s) (instance
+    IRI, `.`, element name) need 67144621 byte(s) but the element paths of the document's array
+    parameters already use 0 of the 67108864-byte per-document budget``. The element budget is
+    checked first, so a parameter over both is refused for its elements as before, and a refused
+    parameter draws on neither. The three documents above are now refused with that one
+    diagnostic, at peaks of 0.70 MB, 0.12 MB and 0.26 MB, and the declared size of a refused
+    array costs nothing: the issue's name over 1,048,576 elements requests 15 bytes more than
+    over 1,024.
+  - **What it admits.** One array of the whole element budget, `k[1048576]`, only while the
+    instance IRI and the base name take at most 56 bytes together; 933,610 elements under 64
+    bytes of the two, and 494,264 under 128. Real instance IRIs are often longer than 56 bytes,
+    so for a million-element array this budget, not the element budget, binds. No model that the
+    257 tracked documents holding an `@graph` or the 139 CXF documents of
+    `open-control-library` load holds more than 12,217 bytes of parameter paths in all, or a path
+    longer than 137 bytes.
+  - **Names are built one at a time,** into one buffer, where each element is minted and once
+    the value's shape is known to fit. A list of the wrong length, a scalar or an expression of
+    the wrong length builds none (a 32 KiB name over 1,024 elements refused for its value peaked
+    at 67.5 MB and now at 0.41 MB), and nothing holds every name beside the minted entries. The
+    names and their order are unchanged.
+  - **What a load within the budget costs.** A load holds at most about four copies of the paths
+    at its peak: a document whose paths fill the budget with long names loads at 269 MB, as
+    before, and one whose paths a 4 KiB instance IRI fills, at 208 MB. The element budget
+    already admits a 5.6 KB document of 1,048,576 one-letter names that peaks at 786 MB.
+  - **Breaking, in place:** a document whose array element paths total more than 64 MiB loaded
+    before, memory permitting, and is now refused, among them the 38 KB document above and a
+    65,000-byte name over 1,024 elements beside a one-element array named by 513,075 bytes,
+    which loaded at 269 MB. No tracked or library document comes near it. Their 535 loads (the
+    library's as written and again with the retired namespace rewritten) give byte-identical
+    outcomes, diagnostics, resolved models and content ids before and after. Tightening accepted
+    CXF input is not a format change (the unit-spellings ruling 7, the ruling on #647, and
+    GitHub #713 before this), so no format, content id, blob or golden moves and the workspace
+    version is not bumped.
+  - **Tests.** `oce-cxf`'s `arrays_tests.rs` (the names against a Cartesian-product oracle, the
+    counted path bytes against the paths built, what the budget admits, the budget at its exact
+    byte and one past, a refusal reserving nothing), two cases in `resolve_load_bounds.rs` (the
+    budget to the byte across two leaves, one under a multibyte 4 KB IRI with multibyte names,
+    and a parameter refused for its paths drawing no element), and `oce-api`'s
+    `cxf_array_element_names_cost.rs` (the three documents above and the 64 KiB instance,
+    the declared size, the three refused values, and the budget's edge under long names and
+    under a long IRI, measured with `allocation-counter`).
 
 ### Leverage
 
