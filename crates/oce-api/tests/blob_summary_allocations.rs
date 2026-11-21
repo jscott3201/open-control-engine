@@ -1,10 +1,12 @@
-//! What reading a blob summary allocates (issue #448), by count for every golden and by peak
-//! bytes against the blob length for the hostile shapes that make each list as long as its bytes
-//! allow.
+//! What reading a blob summary allocates (issue #448): nothing for any refusal, by count for
+//! every golden, and by peak bytes against the blob length for the hostile shapes that make each
+//! list as long as its bytes allow.
 //!
-//! `oce_graph::blob::inspect` documents four allocations at most, one per non-empty list, and at
-//! most 2 bytes held per blob byte; `oce_api::inspect_blob` documents at most 4. Peaks are
-//! `allocation_counter`'s `bytes_max` divided by the blob length, as in `blob_peak_allocation.rs`.
+//! `oce_graph::blob::inspect` documents that every check runs before anything is allocated, four
+//! allocations at most for a summary (one per non-empty list) and at most 2 bytes held per blob
+//! byte; `oce_api::inspect_blob` documents at most 4 requested bytes. Peaks are
+//! `allocation_counter`'s `bytes_max` divided by the blob length, as in
+//! `blob_peak_allocation.rs`: bytes requested of the allocator, not its per-allocation overhead.
 
 // Shared helpers, declared once for this binary in its root `facade_allocation_census.rs`.
 use crate::blob_corpus;
@@ -13,7 +15,7 @@ use crate::blob_image;
 use allocation_counter::measure;
 use blob_corpus::{FIXTURES, golden};
 use blob_image::{Image, Inst, Out};
-use oce_api::{BlobError, OcError, inspect_blob};
+use oce_api::{BlobError, InstanceField, OcError, inspect_blob};
 use oce_graph::blob::inspect;
 
 /// The core reader's documented bound on bytes held per blob byte.
@@ -78,27 +80,114 @@ fn the_facade_summary_of_every_golden_stays_within_four_times_the_blob_length() 
     }
 }
 
+/// Zero allocations in the core reader and in the facade for `bytes`, which both refuse with
+/// `refusal`.
+fn refused_without_allocating(bytes: &[u8], refusal: Option<BlobError>, what: &str) {
+    let mut found = None;
+    let core = measure(|| found = inspect(bytes).err());
+    assert!(found.is_some(), "{what}: the core reader summarised");
+    if refusal.is_some() {
+        assert_eq!(found, refusal, "{what}");
+    }
+    assert_eq!(core.count_total, 0, "{what}: the core reader allocated");
+    let expected = found;
+    let facade = measure(|| {
+        found = match inspect_blob(bytes) {
+            Ok(_) => None,
+            Err(OcError::Blob(error)) => Some(error),
+            Err(other) => panic!("a refusal that is not OcError::Blob: {other:?}"),
+        };
+    });
+    assert_eq!(found, expected, "{what}: the facade's refusal");
+    assert_eq!(facade.count_total, 0, "{what}: the facade allocated");
+}
+
 #[test]
-fn a_refusal_before_the_structural_pass_ends_allocates_nothing() {
+fn a_refusal_of_the_framing_or_the_structural_pass_allocates_nothing() {
     let bytes = golden(FIXTURES[0]);
-    let mut cases: Vec<Vec<u8>> = vec![Vec::new(), b"OCEB".to_vec(), bytes[..60].to_vec()];
+    refused_without_allocating(&[], None, "no bytes");
+    refused_without_allocating(b"OCEB", None, "the magic alone");
+    refused_without_allocating(&bytes[..60], None, "a 60-byte prefix");
     // A flipped body byte: refused at the CRC.
     let mut flipped = bytes.clone();
     flipped[100] ^= 1;
-    cases.push(flipped);
+    refused_without_allocating(&flipped, None, "a flipped byte");
     // A trailing byte in the last section: refused by the structural pass.
     let mut image = Image::from_decoded(&oce_graph::blob::decode(&bytes).unwrap());
     image.section_tail[4] = vec![0];
-    cases.push(image.to_bytes());
-    for (index, case) in cases.iter().enumerate() {
-        let mut refused = false;
-        let core = measure(|| refused = inspect(case).is_err());
-        assert!(refused, "case {index}");
-        assert_eq!(core.count_total, 0, "case {index}: the core reader");
-        let facade = measure(|| refused = inspect_blob(case).is_err());
-        assert!(refused, "case {index}");
-        assert_eq!(facade.count_total, 0, "case {index}: the facade");
-    }
+    refused_without_allocating(&image.to_bytes(), None, "a trailing byte");
+}
+
+#[test]
+fn a_hostile_class_table_is_refused_before_anything_is_sized_by_its_count() {
+    // 200,000 distinct three-letter paths in canonical order, none registered: 3 MB of class
+    // table whose proven count would size a 4.8 MB list. It is refused at its first entry with
+    // nothing allocated.
+    let count = 200_000u32;
+    let letter = |digit: u32| b'A' + u8::try_from(digit % 59).unwrap();
+    let mut image = Image::new();
+    image.classes = (0..count)
+        .map(|n| (vec![letter(n / 59 / 59), letter(n / 59), letter(n)], 0))
+        .collect();
+    let bytes = image.to_bytes();
+    assert!(bytes.len() >= 15 * count as usize);
+    refused_without_allocating(
+        &bytes,
+        Some(BlobError::UnknownClass { class: 0 }),
+        "200,000 unregistered classes",
+    );
+
+    // The unregistered class last in a real table, behind every registered one.
+    let golden_bytes = golden(FIXTURES[0]);
+    let mut image = Image::from_decoded(&oce_graph::blob::decode(&golden_bytes).unwrap());
+    let last = image.classes.len() - 1;
+    assert!(last >= 1);
+    image.classes[last].0.push(b'~');
+    refused_without_allocating(
+        &image.to_bytes(),
+        Some(BlobError::UnknownClass {
+            class: u32::try_from(last).unwrap(),
+        }),
+        "the last class unregistered",
+    );
+}
+
+/// `count` instances of 25 bytes each, the shortest record: no ports, no parameters, no state.
+fn minimal_instances(count: usize) -> Image {
+    let mut image = Image::new();
+    image.classes = vec![(
+        b"CDL.Reals.Sources.Constant".to_vec(),
+        oce_blocks::class_signature_hash("CDL.Reals.Sources.Constant").unwrap(),
+    )];
+    image.instances = (0..count)
+        .map(|_| Inst {
+            class: 0,
+            kind: 0,
+            state_len: 0,
+            state_crc: 0,
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            params: Vec::new(),
+        })
+        .collect();
+    image
+}
+
+#[test]
+fn a_class_index_outside_the_table_on_the_last_of_many_blocks_allocates_nothing() {
+    // 100,000 instances, every class index in range but the last block's: the instance list is
+    // not allocated until every index has been checked.
+    let count = 100_000;
+    let mut image = minimal_instances(count);
+    image.instances[count - 1].class = 1;
+    refused_without_allocating(
+        &image.to_bytes(),
+        Some(BlobError::InstanceMismatch {
+            block: u32::try_from(count - 1).unwrap(),
+            field: InstanceField::ClassIndex,
+        }),
+        "the last block's class index",
+    );
 }
 
 /// The longest output list its bytes allow: every record is 12 bytes, an empty path, a source id
@@ -131,47 +220,9 @@ fn the_longest_output_list_stays_within_the_documented_ratios() {
 }
 
 #[test]
-fn the_longest_class_table_is_refused_within_the_documented_ratios() {
-    // 200,000 distinct three-letter paths in canonical order, none registered: the table is
-    // sized by its proven count, then refused at its first entry.
-    let count = 200_000u32;
-    let letter = |digit: u32| b'A' + u8::try_from(digit % 59).unwrap();
-    let mut image = Image::new();
-    image.classes = (0..count)
-        .map(|n| (vec![letter(n / 59 / 59), letter(n / 59), letter(n)], 0))
-        .collect();
-    let bytes = image.to_bytes();
-    assert!(bytes.len() >= 15 * count as usize);
-    let refusal = Some(BlobError::UnknownClass { class: 0 });
-    let (ratio, found) = core_peak(&bytes);
-    assert_eq!(found, refusal);
-    assert!(ratio <= CORE_PEAK_RATIO, "core peak {ratio:.2}x");
-    let (ratio, found) = facade_peak(&bytes);
-    assert_eq!(found, refusal);
-    assert!(ratio <= FACADE_PEAK_RATIO, "facade peak {ratio:.2}x");
-}
-
-#[test]
 fn the_longest_instance_list_stays_within_the_documented_ratios() {
-    // 100,000 instances of 25 bytes each: no ports, no parameters, no state.
     let count = 100_000;
-    let mut image = Image::new();
-    image.classes = vec![(
-        b"CDL.Reals.Sources.Constant".to_vec(),
-        oce_blocks::class_signature_hash("CDL.Reals.Sources.Constant").unwrap(),
-    )];
-    image.instances = (0..count)
-        .map(|_| Inst {
-            class: 0,
-            kind: 0,
-            state_len: 0,
-            state_crc: 0,
-            inputs: Vec::new(),
-            outputs: Vec::new(),
-            params: Vec::new(),
-        })
-        .collect();
-    let bytes = image.to_bytes();
+    let bytes = minimal_instances(count).to_bytes();
     let (ratio, refusal) = core_peak(&bytes);
     assert_eq!(refusal, None);
     assert!(ratio <= CORE_PEAK_RATIO, "core peak {ratio:.2}x");

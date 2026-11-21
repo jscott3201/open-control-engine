@@ -60,23 +60,26 @@ and a gate that accepted any text would restore exactly the false assurance desc
     `decode` refuses the blob. Refusals are the existing `BlobError`, wrapped as `OcError::Blob`.
   - **In the core.** `oce_graph::blob::inspect` returns a `Summary` (`SummaryClass`,
     `SummaryInstance`) whose paths borrow from the bytes and whose content id is the raw
-    `Option<[u8; 32]>`; it builds `no_std + alloc`. It allocates the four lists it returns and at
-    most 2 bytes per blob byte, nothing for a refusal up to the end of the structural pass; the
-    facade's owned copy holds at most 4.
-  - **Evidence.** 46 new goldens, `crates/oce-api/tests/fixtures/blob_summary/*.json`, one
-    summary per blob golden, compared byte for byte in every determinism and platform cell and
-    re-blessed by `OCE_BLESS_BLOB=1`; they carry the engine version, so a version bump moves
-    them with the blobs. `tests/blob_summary.rs` holds each summary to what the test-side writer
-    derives from the decoded executable, to the engine's content id and to the content-id pin,
-    and flips every bit of every class hash and initial-state CRC of one golden and requires
-    exactly that field to move. `tests/blob_summary_acceptance.rs` summarises nine blobs the
-    decoder refuses after its structural pass and pins the two refusals the reader adds.
-    `tests/blob_summary_hostile.rs` feeds the hostile-bytes defects, every pair of header
-    defects and 10,000 seeded mutations through both readers and requires the decoder's
-    identical error for every structural refusal. `tests/blob_summary_allocations.rs` pins the allocation count and the peak ratios.
-    `oce-graph`'s `tests/blob_summary.rs` checks the core reader against `decode`, and passes
-    against the `no_std + alloc` build. The facade-contract check's positive control compiles a
-    host-side use.
+    `Option<[u8; 32]>`; it builds `no_std + alloc`. Every check runs before anything is
+    allocated, so a refusal allocates nothing; a summary costs the four lists it returns, at most
+    2 bytes per blob byte. The facade's owned copy adds one `String` per non-empty path and
+    requests at most 4 bytes per blob byte (requested bytes, not allocator overhead). The
+    content-id and `target_bound` rules are one helper each, shared with `decode`.
+  - **Evidence.** 46 new goldens, `crates/oce-api/tests/fixtures/blob_summary/*.json`, one summary
+    per blob golden, compared byte for byte in every determinism and platform cell and re-blessed
+    by `OCE_BLESS_BLOB=1`; they carry the engine version, so a version bump moves them with the
+    blobs. `tests/blob_summary.rs` holds each summary to what the test-side writer derives from the
+    decoded executable, to the engine's content id and to the content-id pin, and flips every bit
+    of every class hash and initial-state CRC of one golden and requires exactly that field to move
+    (the decoder refuses those blobs; it accepts a changed content id or I/O path, which the
+    summary also shows). `tests/blob_summary_acceptance.rs` summarises nine blobs the decoder
+    refuses after its structural pass and pins the two refusals the reader adds.
+    `tests/blob_summary_hostile.rs` feeds the hostile-bytes defects, every pair of header defects
+    and 10,000 seeded mutations through both readers and requires the decoder's identical error for
+    every structural refusal. `tests/blob_summary_allocations.rs` pins zero allocations for every
+    kind of refusal, the allocation count for every golden and the peak ratios. `oce-graph`'s
+    `tests/blob_summary.rs` checks the core reader against `decode`, and passes against the
+    `no_std + alloc` build. The facade-contract check's positive control compiles a host-side use.
   - No blob byte, existing golden, content id or refusal changes. Documented in
     [inspecting a blob](docs/compiled-schedule-blob.md#inspecting-a-blob).
 

@@ -18,7 +18,7 @@ use crate::blob_summary_facts;
 use blob_corpus::{FIXTURES, golden};
 use blob_image::{Image, VType, Val, rechecksum, reseal};
 use blob_summary_facts::{Facts, assert_invariants, summarise};
-use oce_api::{BlobError, ENGINE_VERSION, InstanceField, MalformedFault};
+use oce_api::{BlobError, ConnectorFault, ENGINE_VERSION, InstanceField, MalformedFault};
 use oce_graph::blob::{HEADER_BYTES, MAX_BLOB_BYTES, decode};
 
 const WORKED: &str = "generic_air_economizer_high_limits_ashrae_differential";
@@ -75,15 +75,58 @@ fn against_the_decoder(bytes: &[u8], what: &str) -> Verdict {
                 assert_invariants(&facts, what);
                 Verdict::SummarisedAsWritten
             }
-            Err(
-                BlobError::UnknownClass { .. }
-                | BlobError::InstanceMismatch {
-                    field: InstanceField::ClassIndex,
-                    ..
-                },
-            ) => Verdict::RefusedFurtherOn,
+            Err(BlobError::UnknownClass { class }) => {
+                assert_further_on(Reached::Class(class), later, what);
+                Verdict::RefusedFurtherOn
+            }
+            Err(BlobError::InstanceMismatch {
+                block,
+                field: InstanceField::ClassIndex,
+            }) => {
+                assert_further_on(Reached::Block(block), later, what);
+                Verdict::RefusedFurtherOn
+            }
             Err(other) => panic!("{what}: the decoder says {later:?}, the summary {other:?}"),
         },
+    }
+}
+
+/// A place in the decoder's step 7, which reads the class table in order and then the blocks in
+/// id order. The derived order is that reading order: every class comes before every block.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Reached {
+    Class(u32),
+    Block(u32),
+}
+
+/// The summary refused at `summary` where the decoder refused with `decoder` at a later step:
+/// require the summary's place to lie strictly further on than the one the decoder stopped at.
+/// The decoder had already passed its own place's registration or class-index check, so an equal
+/// place would mean the two readers disagree about one record.
+fn assert_further_on(summary: Reached, decoder: BlobError, what: &str) {
+    match decoder {
+        BlobError::ClassSignatureMismatch { class, .. } => {
+            assert!(summary > Reached::Class(class), "{what}: {decoder:?}");
+        }
+        BlobError::DuplicateParameter { block, .. }
+        | BlobError::NonFiniteParameter { block, .. }
+        | BlobError::InstanceMismatch { block, .. } => {
+            assert!(summary > Reached::Block(block), "{what}: {decoder:?}");
+        }
+        // Raised inside a block and named by a byte offset or a connector id, not by the block.
+        // Every class had passed by then, so only a block's class index can lie further on.
+        BlobError::UnknownEnumClass { .. }
+        | BlobError::EnumOrdinalOutOfRange { .. }
+        | BlobError::InvalidConnector {
+            fault: ConnectorFault::OutOfRange | ConnectorFault::Duplicated,
+            ..
+        } => assert!(
+            matches!(summary, Reached::Block(_)),
+            "{what}: {summary:?} against {decoder:?}"
+        ),
+        // Every other refusal comes after the decoder read every class and every block's class
+        // index, so the summary has nothing left to refuse.
+        _ => panic!("{what}: the summary refuses at {summary:?}, the decoder later: {decoder:?}"),
     }
 }
 
@@ -537,5 +580,47 @@ fn a_summary_refusal_further_on_in_the_table_is_told_from_the_decoders_earlier_o
     assert_eq!(
         against_the_decoder(&bytes, "kind, then class index"),
         Verdict::RefusedFurtherOn
+    );
+
+    // The same in the class table: the decoder stops at class 0's hash, the summary at class 1,
+    // which this build does not register.
+    let mut image = crate::blob_models::chain();
+    image.classes[0].1 ^= 1;
+    image.classes[1].0 = b"CDL.Reals.Sources.Constanz".to_vec();
+    let bytes = image.to_bytes();
+    assert!(matches!(
+        decode(&bytes),
+        Err(BlobError::ClassSignatureMismatch { class: 0, .. })
+    ));
+    assert_eq!(summarise(&bytes), Err(BlobError::UnknownClass { class: 1 }));
+    assert_eq!(
+        against_the_decoder(&bytes, "hash, then unregistered class"),
+        Verdict::RefusedFurtherOn
+    );
+}
+
+#[test]
+#[should_panic(expected = "the summary refuses at Block(0)")]
+fn a_summary_refusal_where_the_decoder_had_passed_every_block_fails_the_comparison() {
+    // The control for `assert_further_on`: a decoder refusal from after the instance loop leaves
+    // the summary nothing to refuse, so a summary refusal beside it is a disagreement.
+    assert_further_on(
+        Reached::Block(0),
+        BlobError::UndrivenInput { connector: 1 },
+        "control",
+    );
+}
+
+#[test]
+#[should_panic(expected = "equal place")]
+fn a_summary_refusal_at_the_decoders_own_place_fails_the_comparison() {
+    assert!(Reached::Class(3) < Reached::Block(0));
+    assert_further_on(
+        Reached::Block(2),
+        BlobError::NonFiniteParameter {
+            block: 2,
+            parameter: 0,
+        },
+        "equal place",
     );
 }

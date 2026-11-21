@@ -171,6 +171,22 @@ pub fn content_id_field(digest: Option<[u8; 32]>) -> [u8; 32] {
     digest.unwrap_or([0u8; 32])
 }
 
+/// The content id a 32-byte content-id field records: the field verbatim, or `None` when it is 32
+/// zero bytes. The inverse of [`content_id_field`], and the one reading of the field for
+/// [`decode()`] and [`inspect()`].
+fn recorded_content_id(field: [u8; 32]) -> Option<[u8; 32]> {
+    (field != [0u8; 32]).then_some(field)
+}
+
+/// Whether any of `class_paths` is target-bound in this build's registry
+/// ([`oce_blocks::class_is_target_bound`]): the one definition of an executable's `target_bound`
+/// flag for [`decode()`] and [`inspect()`], over the paths of a blob's class table.
+fn any_class_target_bound<'a>(class_paths: impl IntoIterator<Item = &'a str>) -> bool {
+    class_paths
+        .into_iter()
+        .any(oce_blocks::class_is_target_bound)
+}
+
 /// One executable boundary input: the record the encoder writes and the decoder returns.
 ///
 /// The slot is the record's position in its list; the list is sorted by UTF-8 path bytes.

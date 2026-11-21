@@ -119,9 +119,11 @@ impl Facts {
     }
 
     /// What a summary of `image.to_bytes()` must say, read from the lists the bytes are written
-    /// from. `target_bound` comes from the catalog's per-class flag, not from the function the
-    /// reader calls. Panics on a path that is not UTF-8 or a kind byte that is not 0 or 1: the
-    /// reader refuses those, so no summary exists to compare.
+    /// from. `target_bound` is read through the catalog's per-class flag, which `oce-blocks`
+    /// computes with the function the reader calls (`class_is_target_bound`): this checks that
+    /// the reader folds the flag over the class table, not which classes are target-bound.
+    /// Panics on a path that is not UTF-8 or a kind byte that is not 0 or 1: the reader refuses
+    /// those, so no summary exists to compare.
     pub(crate) fn of_image(image: &Image) -> Self {
         let text = |bytes: &[u8]| String::from_utf8(bytes.to_vec()).expect("a UTF-8 path");
         let classes: Vec<ClassFact> = image

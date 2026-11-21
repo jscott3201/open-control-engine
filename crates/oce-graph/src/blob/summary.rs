@@ -12,7 +12,7 @@
 
 use alloc::vec::Vec;
 
-use oce_blocks::{BlockKind, class_is_target_bound, lookup};
+use oce_blocks::{BlockKind, lookup};
 
 use super::decode::index_u32;
 use super::error::{BlobError, InstanceField};
@@ -20,7 +20,9 @@ use super::sections::{
     self, class_count, class_record, input_count, input_record, instance_counts, instance_record,
     output_count, output_record,
 };
-use super::{ENGINE_VERSION, EngineVersion, FORMAT_VERSION};
+use super::{
+    ENGINE_VERSION, EngineVersion, FORMAT_VERSION, any_class_target_bound, recorded_content_id,
+};
 
 /// What one blob records about itself: the header facts, the class table, one record per block
 /// instance and the boundary I/O paths, as [`inspect()`] read them.
@@ -107,8 +109,10 @@ pub struct SummaryInstance {
 /// steps is summarised as written, and after step 6 the first refusal here need not be the one
 /// [`decode()`](super::decode()) reports.
 ///
-/// It allocates the four lists it returns, each sized once by a count the structural pass proved
-/// against the input, and nothing else: at most 2 bytes held per blob byte.
+/// Every check runs before anything is allocated, so a refusal allocates nothing, whatever the
+/// counts in the refused bytes say. A summary costs the four lists it returns, each allocated
+/// once at a count the structural pass proved against the input, and nothing else: at most 2
+/// bytes held per blob byte.
 ///
 /// # Errors
 /// A typed [`BlobError`] naming the first failed check; never a panic.
@@ -116,39 +120,48 @@ pub fn inspect(bytes: &[u8]) -> Result<Summary<'_>, BlobError> {
     let layout = sections::frame(bytes)?;
     sections::check_structure(&layout)?;
 
+    // The two checks of this reader, in table order then block order, before any allocation.
     let mut r = layout.classes.reader();
     let class_total = class_count(&mut r)?;
-    let mut classes = Vec::with_capacity(class_total);
-    let mut target_bound = false;
     for index in 0..class_total {
-        let record = class_record(&mut r)?;
-        if lookup(record.path).is_none() {
+        if lookup(class_record(&mut r)?.path).is_none() {
             return Err(BlobError::UnknownClass {
                 class: index_u32(index),
             });
         }
-        target_bound |= class_is_target_bound(record.path);
+    }
+    let mut r = layout.instances.reader();
+    let (block_total, _) = instance_counts(&mut r)?;
+    for index in 0..block_total {
+        let class = instance_record(&mut r)?.class;
+        if !usize::try_from(class).is_ok_and(|class| class < class_total) {
+            return Err(BlobError::InstanceMismatch {
+                block: index_u32(index),
+                field: InstanceField::ClassIndex,
+            });
+        }
+    }
+
+    // Nothing below refuses: every record was parsed by the structural pass and checked above.
+    let mut r = layout.classes.reader();
+    class_count(&mut r)?;
+    let mut classes = Vec::with_capacity(class_total);
+    for _ in 0..class_total {
+        let record = class_record(&mut r)?;
         classes.push(SummaryClass {
             class_path: record.path,
             signature_hash: record.hash,
         });
     }
+    let target_bound = any_class_target_bound(classes.iter().map(|class| class.class_path));
 
     let mut r = layout.instances.reader();
-    let (block_total, _) = instance_counts(&mut r)?;
+    instance_counts(&mut r)?;
     let mut instances = Vec::with_capacity(block_total);
     for index in 0..block_total {
-        let block = index_u32(index);
         let record = instance_record(&mut r)?;
-        let in_table = usize::try_from(record.class).is_ok_and(|class| class < class_total);
-        if !in_table {
-            return Err(BlobError::InstanceMismatch {
-                block,
-                field: InstanceField::ClassIndex,
-            });
-        }
         instances.push(SummaryInstance {
-            block,
+            block: index_u32(index),
             class: record.class,
             stateful: record.kind == BlockKind::Stateful,
             state_words: record.state_len,
@@ -172,7 +185,7 @@ pub fn inspect(bytes: &[u8]) -> Result<Summary<'_>, BlobError> {
         // `frame` refused every other format and engine version, so the header holds these two.
         format_version: FORMAT_VERSION,
         engine_version: ENGINE_VERSION,
-        content_id: (layout.content_id != [0u8; 32]).then_some(layout.content_id),
+        content_id: recorded_content_id(layout.content_id),
         classes,
         instances,
         inputs,

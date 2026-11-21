@@ -101,12 +101,21 @@ pub struct BlobInstance {
 /// index is inside the class table ([`BlobError::InstanceMismatch`](crate::BlobError) with
 /// [`InstanceField::ClassIndex`](crate::InstanceField::ClassIndex)).
 ///
-/// No signature hash is compared, no block is constructed, no state is allocated and nothing is
-/// executed; see [`BlobSummary`] for what follows from that. No [`Engine`](crate::Engine) is
-/// involved and none is changed.
+/// **`Ok` does not mean this build accepts the blob or can run it.** No signature hash is
+/// compared, no block is constructed, no state is allocated and nothing is executed, so a blob
+/// whose class hash or initial-state CRC is not this build's, or whose parameters, connectors,
+/// connections or schedule are wrong, still has a summary, while the execution entry
+/// (`oce_graph::blob::Executable::from_blob`, on the target) refuses it. The facade has no
+/// acceptance check for bytes it is handed. What a facade caller can rely on is where the bytes
+/// came from: a blob [`Engine::compile_blob`](crate::Engine::compile_blob) returned was decoded
+/// by this build before it was returned, and a blob from anywhere else is accepted or refused
+/// only by the target that decodes it. Use a summary to compare blobs, never to admit one. No
+/// [`Engine`](crate::Engine) is involved and none is changed.
 ///
-/// The result is owned: at most 4 bytes are held per blob byte while it is built, and a blob is
-/// at most 64 MiB.
+/// A refusal allocates nothing. The result is owned, one `String` per non-empty path: at most 4
+/// bytes are requested and held per blob byte while it is built (a count of the bytes asked of
+/// the allocator, not of its per-allocation overhead, which a blob of many short paths
+/// multiplies), and a blob is at most 64 MiB.
 ///
 /// # Errors
 /// [`OcError::Blob`] carrying the typed [`BlobError`](crate::BlobError) of the first failed
