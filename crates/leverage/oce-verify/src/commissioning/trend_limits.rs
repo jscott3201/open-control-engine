@@ -4,7 +4,8 @@
 //! "Every source is bounded by replay's limits": a `csv` file is read by replay's own
 //! [`oce_replay::CsvSource`] under [`ReplayLimits`], a `combiTimeTable` file is held to the same
 //! caps by this crate's reader, and the merged inputs to the caps of the
-//! [`oce_replay::ColumnarSource`] they become. One bound is added: the number of sources.
+//! [`oce_replay::ColumnarSource`] they become. Two bounds are added: the number of sources, and
+//! the bytes of a reference's files together.
 //!
 //! Each field is a default and a documented maximum at once, as [`crate::CompareLimits`] is: a
 //! caller may lower any of them, to zero included, and a value above the maximum is read as the
@@ -23,6 +24,12 @@ pub struct TrendLimits {
     /// complete `sources` list; past it the refusal is `too-many-sources`, decided from the spec
     /// before any file is looked at.
     pub max_sources: u32,
+    /// Bytes of a reference's files together: its mapping file, its trend sources and its
+    /// `controllerOutput`, each counted once, the CXF not included. Maximum 1 GiB; past it the
+    /// refusal is `too-many-total-bytes`, decided from the lengths of the files handed in before
+    /// any is parsed (the owner's ruling of 2026-11-21). One file is also held to
+    /// `replay.max_source_bytes`; this bounds them together.
+    pub max_total_bytes: u64,
     /// The caps of replay, applied to each file and to the merged inputs:
     ///
     /// - `max_source_bytes` (1 GiB): the bytes of one file, decided from its length before a
@@ -44,6 +51,7 @@ impl TrendLimits {
     /// The documented maxima, which are also the defaults.
     pub const MAX: Self = Self {
         max_sources: 256,
+        max_total_bytes: 1 << 30,
         replay: ReplayLimits::MAX,
     };
 
@@ -55,6 +63,7 @@ impl TrendLimits {
         let given = self.replay;
         Self {
             max_sources: self.max_sources.min(Self::MAX.max_sources),
+            max_total_bytes: self.max_total_bytes.min(Self::MAX.max_total_bytes),
             replay: ReplayLimits {
                 max_rows: given.max_rows.min(max.max_rows),
                 max_columns: given.max_columns.min(max.max_columns),
@@ -83,6 +92,7 @@ mod tests {
         let limits = TrendLimits::default();
         assert_eq!(limits, TrendLimits::MAX);
         assert_eq!(limits.max_sources, 256);
+        assert_eq!(limits.max_total_bytes, 1 << 30);
         assert_eq!(limits.replay, ReplayLimits::default());
         assert_eq!(limits.replay.max_rows, 16_777_216);
         assert_eq!(limits.replay.max_columns, 4_096);
@@ -94,6 +104,7 @@ mod tests {
     fn a_limit_can_be_lowered_and_never_raised() {
         let raised = TrendLimits {
             max_sources: u32::MAX,
+            max_total_bytes: u64::MAX,
             replay: ReplayLimits {
                 max_rows: u64::MAX,
                 max_columns: u32::MAX,
@@ -108,6 +119,7 @@ mod tests {
         assert!(raised.effective().replay.validate().is_ok());
         let lowered = TrendLimits {
             max_sources: 0,
+            max_total_bytes: 8,
             replay: ReplayLimits {
                 max_rows: 1,
                 max_columns: 2,
@@ -122,6 +134,7 @@ mod tests {
         // One field raised leaves the others as given.
         let one = TrendLimits {
             max_sources: 300,
+            max_total_bytes: 9,
             replay: ReplayLimits {
                 max_rows: 9,
                 ..ReplayLimits::MAX
@@ -131,6 +144,7 @@ mod tests {
             one.effective(),
             TrendLimits {
                 max_sources: 256,
+                max_total_bytes: 9,
                 replay: ReplayLimits {
                     max_rows: 9,
                     ..ReplayLimits::MAX

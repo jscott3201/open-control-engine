@@ -338,3 +338,39 @@ fn the_values_one_source_keeps_are_held_to_the_byte_cap_in_every_role() {
     assert_eq!(read(34), "read");
     assert_eq!(read(33), "too-many-bytes");
 }
+
+#[test]
+fn the_files_of_a_reference_together_are_held_to_the_total_byte_bound_before_any_parse() {
+    // Two sources and a mapping file; the second source is not even a csv, so a parse would
+    // refuse it: the total is decided first, from the lengths.
+    let spec = loaded(
+        r#"{"references": [{"model": "M", "sequence": "s", "pointNameMapping": "m.json",
+            "inputs": [{"path": "a.csv", "format": "csv", "timeColumn": "time", "columns": {}}],
+            "expected": [{"path": "b.csv", "format": "csv", "timeColumn": "time", "columns": {}},
+                         {"path": "a.csv", "format": "csv", "timeColumn": "time", "columns": {}}]}]}"#,
+    );
+    let files = |second: &[u8]| SpecInputs {
+        cxf: vec![0; 10_000],
+        files: vec![
+            ("m.json".to_owned(), b"[]".to_vec()),
+            ("a.csv".to_owned(), b"time\n0\n".to_vec()),
+            ("b.csv".to_owned(), second.to_vec()),
+        ],
+    };
+    let limits = |total: u64| TrendLimits {
+        max_total_bytes: total,
+        ..TrendLimits::default()
+    };
+    // `a.csv` is named twice and counted once; the CXF is not counted.
+    let good = files(b"time\n1\n");
+    let total = 2 + 7 + 7;
+    assert!(TrendSources::read(&spec, 0, &good, &limits(total)).is_ok());
+    let error = TrendSources::read(&spec, 0, &good, &limits(total - 1)).expect_err("refused");
+    assert_eq!(error.code(), "too-many-total-bytes");
+    let unparsable = files(b"\xff\xff\xff\xff\xff\xff\xff");
+    let error = TrendSources::read(&spec, 0, &unparsable, &limits(total - 1)).expect_err("refused");
+    assert_eq!(error.code(), "too-many-total-bytes");
+    // Lowered, and never raised past 1 GiB.
+    assert_eq!(limits(u64::MAX).effective().max_total_bytes, 1 << 30);
+    assert_eq!(TrendLimits::default().max_total_bytes, 1 << 30);
+}

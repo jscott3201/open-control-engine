@@ -869,8 +869,11 @@ so far, and no tag is cut by the bump.
   §12.7.3's csv. Every cell goes through its type rule and the unit table once; an infinity, a
   decreasing time, a `0.5` in a Boolean column, an unknown or one-sided unit pair (before any row
   is read) and two columns naming one device point in a role are typed `SourceError`s
-  (`SOURCE_ERROR_CODES`, 38 codes) with file, row and column. Bounded by `TrendLimits`: 256
-  sources and replay's caps on each file and on the merge. A `csv` Boolean reads `true`,
+  (`SOURCE_ERROR_CODES`, 39 codes) with file, row and column. Bounded by `TrendLimits`: 256
+  sources, 1 GiB of a reference's files together (`too-many-total-bytes`, checked from the
+  lengths before any parse), and replay's caps on each file and on the merge, whose columns
+  cost frames times columns and are checked against the byte cap before they are allocated.
+  OBC §12.7.3's padded example csv files are refused until replay trims cells (#733). A `csv` Boolean reads `true`,
   `false`, `1` and `0` only until replay hands a text cell over (#728).
 
 - **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point

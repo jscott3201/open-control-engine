@@ -431,7 +431,7 @@ outputs under the same code, so the comparison's `too-many-points` is never reac
 merged inputs (`TrendInputs`, which becomes a `ColumnarSource` bound to the run's `InputMap`),
 the expected and indicator series (`TrendSeries`, finite samples in CDL units and types) and the
 receipt's `sources`, `mapping` and `units.columns` records. No engine is loaded. Every refusal
-is a `SourceError` with a kebab-case code (`SOURCE_ERROR_CODES`, 38), the file as the spec
+is a `SourceError` with a kebab-case code (`SOURCE_ERROR_CODES`, 39), the file as the spec
 writes its path, the data row counted from 1, the column as the spec addresses it, and the
 lower layer's code as its cause (a `UnitError`, a mapping's `SpecError`, a cell rule's).
 
@@ -457,6 +457,21 @@ lower layer's code as its cause (a `UnitError`, a mapping's `SpecError`, a cell 
    `no-point-columns`; a repeated header `duplicate-column`; an instant in its time column
    `bad-time`. Beside an `expected` it is not read and not one of the reference's files, as
    GitHub #704's `lbl-field-ignored` finding has it.
+
+Two more, **ruled by the owner on 2026-11-21** in the review of GitHub #729:
+
+5. **OBC §12.7.3's printed example files are refused today.** Replay's `CsvSource` neither
+   trims a cell nor a header, and §12.7.3 prints its csv files padded: a header
+   `time, uHea, uCoo, ...` and rows like `   0,    1, ...`. Read as they are printed, the time
+   cell `   0` is `bad-time`, and a header ` uHea` names no mapped device point
+   (`unmapped-point`) unless the mapping writes its space. Trimming spaces and tabs around csv
+   cells and headers belongs in replay's reader, issue #733; until it lands, such a file is
+   refused. A `combiTimeTable` is not affected: its separators include spaces.
+6. **The files of a reference together are bounded**: `TrendLimits::max_total_bytes`, 1 GiB
+   by default and lowerable, never raisable, is the summed length of the files handed in
+   (the mapping file, each trend source and the `controllerOutput`, a file named twice counted
+   once, the CXF not counted), checked from the lengths before any file is parsed, and refused
+   past it as `too-many-total-bytes`.
 
 **Decided here**, under the delegation of GitHub #704's review:
 
@@ -516,6 +531,7 @@ says.
 | Bound | Value | Code | Why this value |
 | --- | --- | --- | --- |
 | sources per reference | 256 | `too-many-sources` | decision 42's bound on the complete `sources` list |
+| bytes of a reference's files together (mapping, sources, `controllerOutput`; each once; not the CXF) | 1 GiB | `too-many-total-bytes` | the owner's ruling of 2026-11-21; decided from the lengths before any file is parsed |
 | bytes of one file | 1 GiB | `too-many-bytes` | replay's `max_source_bytes`, decided from the length |
 | values one source keeps, and the merged inputs hold | 1 GiB | `too-many-bytes` | the same cap as a `ColumnarSource`'s bytes, checked from the counts before allocating |
 | rows of one file, frames of the merge | 16,777,216 | `too-many-rows` | replay's `max_rows`; the merge counts its frames before allocating and stops at the first past the cap |

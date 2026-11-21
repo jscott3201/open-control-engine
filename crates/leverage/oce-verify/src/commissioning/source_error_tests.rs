@@ -4,7 +4,7 @@ use super::*;
 
 /// Every kind, in declaration order. The match in `declared_index` is exhaustive, so a new kind
 /// fails to compile there until it has a row; this list then fails the test until it has one.
-const ALL: [SourceErrorKind; 38] = {
+const ALL: [SourceErrorKind; 39] = {
     use SourceErrorKind as K;
     [
         K::ReferenceOutOfRange,
@@ -12,6 +12,7 @@ const ALL: [SourceErrorKind; 38] = {
         K::DuplicateFile,
         K::FileUnlisted,
         K::FileMissing,
+        K::TooManyTotalBytes,
         K::MappingRequired,
         K::MappingRefused,
         K::ColumnReferenceInvalid,

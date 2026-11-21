@@ -250,6 +250,7 @@ fn the_code_list_is_pinned() {
             "duplicate-file",
             "file-unlisted",
             "file-missing",
+            "too-many-total-bytes",
             "mapping-required",
             "mapping-refused",
             "column-reference-invalid",

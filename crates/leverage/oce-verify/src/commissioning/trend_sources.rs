@@ -10,6 +10,8 @@
 //! 2. the files handed in: in the order given, a path the reference does not name is
 //!    `file-unlisted` and a path given twice `duplicate-file`; then the files named, the
 //!    mapping's first and then the sources' in receipt order, one with no bytes `file-missing`;
+//!    then their lengths together against [`TrendLimits::max_total_bytes`]
+//!    (`too-many-total-bytes`), before any is parsed;
 //! 3. the mapping: required when there is a source (`mapping-required`); a file is read with
 //!    [`PointMapping::from_json_bytes`] (`mapping-refused`, its code the cause);
 //! 4. every source's columns, in receipt order: each addressed as its format takes
@@ -288,6 +290,18 @@ impl TrendSources {
             }
         }
         check_files(&named, inputs)?;
+        let total = inputs.files.iter().fold(0_u64, |sum, (_, bytes)| {
+            sum.saturating_add(u64::try_from(bytes.len()).unwrap_or(u64::MAX))
+        });
+        if total > limits.max_total_bytes {
+            return Err(SourceError::new(
+                Kind::TooManyTotalBytes,
+                format!(
+                    "the reference's files hold {total} bytes together; at most {} are read",
+                    limits.max_total_bytes
+                ),
+            ));
+        }
         let loaded;
         let (mapping, record) = match reference.point_name_mapping() {
             Some(PointNameMapping::Inline(mapping)) => (Some(mapping), None),
