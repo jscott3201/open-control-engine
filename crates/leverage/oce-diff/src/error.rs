@@ -32,6 +32,9 @@ pub enum DiffError {
         root: String,
         /// The block or boundary path.
         path: String,
+        /// The delimiter (`#`, `/` or `:`) the name under the root holds, when the path is under
+        /// the root and is refused for that alone; `None` when the path is not under the root.
+        delimiter: Option<char>,
     },
     /// The ports of a block could not be named: the facade's `class_ports` refused its class and
     /// ground parameters, or named a different number of ports than the block has. A port is
@@ -71,9 +74,24 @@ fn side_name(side: Side) -> &'static str {
 impl fmt::Display for DiffError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::OutsideRoot { side, root, path } => write!(
+            Self::OutsideRoot {
+                side,
+                root,
+                path,
+                delimiter: None,
+            } => write!(
                 f,
                 "{}: `{path}` is not named under the root `{root}`",
+                side_name(*side)
+            ),
+            Self::OutsideRoot {
+                side,
+                root,
+                path,
+                delimiter: Some(delimiter),
+            } => write!(
+                f,
+                "{}: `{path}` is under the root `{root}`, but its name holds `{delimiter}`, which the content id reads as the end of a namespace",
                 side_name(*side)
             ),
             Self::UnresolvedPorts { side, block, class } => write!(

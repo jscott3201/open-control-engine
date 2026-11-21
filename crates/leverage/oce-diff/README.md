@@ -150,8 +150,9 @@ exactly as at the authoring level, and it builds a `Diff` with `source: cxf`.
   shapes, with `parameters_equal` `null`.
 
 **Content ids.** Equal canonical content ids and equal sequence names never coexist with a graph
-or interface entry: a topology holds every fact the id encodes, and under the name rule above
-the id names every element `{sequence}.{name}`. Equal ids alone are not enough: the id never
+or interface entry: the diff reads only facts the id encodes, plus the root, and under the name
+rule above the id names every element `{sequence}.{name}`, so with equal sequence names the
+root adds nothing the id has not already fixed. Equal ids alone are not enough: the id never
 encodes the root id, so a document whose root `@id` alone moved to a shorter dot-prefix of its
 instance IRIs keeps its id, has another sequence name, and names every element differently here.
 The converse does not hold either: a renamed root moves the id and is a `sequence-renamed` entry

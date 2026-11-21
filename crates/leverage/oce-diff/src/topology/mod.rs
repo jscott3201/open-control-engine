@@ -55,9 +55,9 @@ use crate::wiring;
 /// - order is never compared and no entry is `reordered`.
 ///
 /// **Content ids.** Equal canonical content ids and equal sequence names never coexist with a
-/// graph or interface entry. A topology holds every fact the id encodes, and a name here is
-/// what follows the root and a `.`, with no `#`, `/` or `:`, so the id names the same element
-/// `{sequence}.{name}`. The sequence names are needed: the id never encodes the root id, so a
+/// graph or interface entry. The diff reads only facts the id encodes, plus the root, and a
+/// name here is what follows the root and a `.`, with no `#`, `/` or `:`, so the id names the
+/// same element `{sequence}.{name}`; with equal sequence names the root adds nothing. The sequence names are needed: the id never encodes the root id, so a
 /// document whose root `@id` alone moved to a shorter dot-prefix of its instance IRIs keeps its
 /// id and names every element differently here. The converse does not hold either: a renamed
 /// root moves the id and is only a `sequence-renamed` entry, and an interface-only change moves

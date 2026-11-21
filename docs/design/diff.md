@@ -225,8 +225,9 @@ pub enum Confidence { Exact, High }
 ```
 
 `Summary` holds `equal`, `graph_equal`, `interface_equal`, `parameters_equal` and `metadata_equal`
-(the last two `Option<bool>`, `None` from the CXF adapter) and the block counts (`by_name`,
-`renamed`, `base_only`, `head_only`). `Literal` mirrors the model's tagged literal (`{"real",
+(the last two `Option<bool>`; from the CXF adapter `parameters_equal` is `None` and
+`metadata_equal` is `false` beside a renamed root, `None` otherwise) and the block counts
+(`by_name`, `renamed`, `base_only`, `head_only`). `Literal` mirrors the model's tagged literal (`{"real",
 "bits"}`, `{"integer"}`, `{"boolean"}`, `{"text"}`, `{"ref"}`, `{"member"}`); `Driver` is
 `{port, source}`; `DiffOptions` holds `renames` and `canonical_ids_equal` (the caller's statement
 behind decision 8's fast path, a hint that never changes the result); the three rename caps are
@@ -779,8 +780,8 @@ building decisions 3, 8 and 15 against the facade as it stands, not a new decisi
   hold a `unit`, `quantity` or `displayUnit` on a boundary that is not a Real, the spelling of an
   Integer-written bound on a Real boundary, or a constant-package member as a member.
 - **How this level stands to decision 8.** The decision's text is about equal canonical ids and
-  the loaded graphs they prove equal. Every fact the id encodes is in a topology, but the id
-  never encodes the root id, and this level names every element under it. So the guarantee here
+  the loaded graphs they prove equal. This level reads only facts the id encodes, plus the
+  root, and the id never encodes the root id while this level names every element under it. So the guarantee here
   is: equal canonical content ids **and equal sequence names** never coexist with a graph or
   interface entry; under the name rule the id names each element `{sequence}.{name}`, and equal
   sequence names make the two namings one. Equal ids alone are not enough: a document whose root

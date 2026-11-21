@@ -70,12 +70,19 @@ impl Lowered<'_> {
     }
 }
 
-/// The name a path has under `root`, if it has one: what follows the root and a `.`, never empty
-/// and never holding a `#`, `/` or `:`.
-fn under<'t>(root: &str, path: &'t str) -> Option<&'t str> {
-    path.strip_prefix(root)?
-        .strip_prefix('.')
-        .filter(|name| !name.is_empty() && !name.contains(['#', '/', ':']))
+/// The name a path has under `root`: what follows the root and a `.`, never empty. `Err(None)`
+/// when the path has no such name, `Err(Some(delimiter))` when the name holds a `#`, `/` or `:`
+/// (the first one), which the content id reads as the end of a namespace.
+fn under<'t>(root: &str, path: &'t str) -> Result<&'t str, Option<char>> {
+    let name = path
+        .strip_prefix(root)
+        .and_then(|rest| rest.strip_prefix('.'))
+        .filter(|name| !name.is_empty())
+        .ok_or(None)?;
+    match name.chars().find(|c| matches!(c, '#' | '/' | ':')) {
+        Some(delimiter) => Err(Some(delimiter)),
+        None => Ok(name),
+    }
 }
 
 /// Whether a block path is the facade's spelling of a block with no instance IRI: `b` and one
@@ -88,19 +95,20 @@ fn is_unnamed(path: &str) -> bool {
 /// Name every block and boundary of `topology`, the side being `which`.
 pub(super) fn lower<'t>(topology: &'t Topology, which: Which) -> Result<Lowered<'t>, DiffError> {
     let root = topology.model_id.as_str();
-    let outside = |path: &str| DiffError::OutsideRoot {
+    let outside = |path: &str, delimiter: Option<char>| DiffError::OutsideRoot {
         side: which,
         root: root.to_owned(),
         path: path.to_owned(),
+        delimiter,
     };
-    let boundary = |path: &'t str| under(root, path).ok_or_else(|| outside(path));
+    let boundary = |path: &'t str| under(root, path).map_err(|delimiter| outside(path, delimiter));
     let mut blocks = Vec::with_capacity(topology.blocks.len());
     for block in &topology.blocks {
         let path = block.instance_path.as_str();
         let (name, named) = match under(root, path) {
-            Some(name) => (name, true),
-            None if is_unnamed(path) => (path, false),
-            None => return Err(outside(path)),
+            Ok(name) => (name, true),
+            Err(None) if is_unnamed(path) => (path, false),
+            Err(delimiter) => return Err(outside(path, delimiter)),
         };
         let (inputs, outputs) = ports(block, which)?;
         visited(block.params.len());

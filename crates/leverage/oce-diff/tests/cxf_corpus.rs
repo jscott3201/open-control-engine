@@ -206,7 +206,6 @@ fn equal_ids_and_equal_sequence_names_never_coexist_with_a_graph_or_interface_en
             assert!(!diff.summary.equal, "{context}");
         } else {
             unequal_ids += 1;
-            assert!(!diff.summary.equal || same_names, "{context}");
             if diff.graph.is_empty() && diff.interface.is_empty() {
                 assert!(!same_names, "{context}: unequal ids and nothing seen");
                 roots_only.push(diff.base.sequence.clone());

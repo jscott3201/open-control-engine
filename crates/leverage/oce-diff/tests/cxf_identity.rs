@@ -78,6 +78,7 @@ fn a_block_outside_the_root_is_refused_on_the_side_it_is_on() {
         side,
         root: "urn:oce:author:chw_plant_reset".to_owned(),
         path: "http://other.org#chw_plant_reset.sel".to_owned(),
+        delimiter: None,
     };
     assert_eq!(refusal(&bad.topology, &good.topology), outside(Side::Base));
     assert_eq!(refusal(&good.topology, &bad.topology), outside(Side::Head));
@@ -118,7 +119,13 @@ fn an_exported_document_keeps_its_id_and_is_refused_as_outside_its_root() {
         "urn:open-control:cxf-export:root"
     );
     match refusal(&original.topology, &exported.topology) {
-        DiffError::OutsideRoot { side, root, path } => {
+        DiffError::OutsideRoot {
+            side,
+            root,
+            path,
+            delimiter,
+        } => {
+            assert_eq!(delimiter, None);
             assert_eq!(side, Side::Head);
             assert_eq!(root, "urn:open-control:cxf-export:root");
             assert!(
@@ -134,22 +141,27 @@ fn an_exported_document_keeps_its_id_and_is_refused_as_outside_its_root() {
 fn a_name_is_what_follows_the_root_and_one_dot_and_is_never_empty_nor_delimited() {
     let good = load(&emitted(&plant())).topology;
     let root = good.model_id.as_str().to_owned();
-    for path in [
-        root.clone(),
-        format!("{root}."),
-        format!("{root}x.sel"),
-        format!("{root}/sel"),
-        format!("x{root}.sel"),
-        format!("{root}.x/sel"),
-        format!("{root}.x#sel"),
-        format!("{root}.x:sel"),
-        format!("{root}.sel/"),
+    for (path, delimiter) in [
+        (root.clone(), None),
+        (format!("{root}."), None),
+        (format!("{root}x.sel"), None),
+        (format!("{root}/sel"), None),
+        (format!("x{root}.sel"), None),
+        (format!("{root}.x/sel"), Some('/')),
+        (format!("{root}.x#sel"), Some('#')),
+        (format!("{root}.x:sel"), Some(':')),
+        (format!("{root}.sel/"), Some('/')),
+        (format!("{root}.a:b/c"), Some(':')),
     ] {
         let mut bad = good.clone();
         bad.blocks[4].instance_path.clone_from(&path);
         let error = refusal(&good, &bad);
         assert!(
-            matches!(&error, DiffError::OutsideRoot { path: refused, .. } if *refused == path),
+            matches!(
+                &error,
+                DiffError::OutsideRoot { path: refused, delimiter: found, .. }
+                    if *refused == path && *found == delimiter
+            ),
             "{path}: {error:?}"
         );
     }
@@ -299,6 +311,7 @@ fn the_refusal_codes_are_pinned() {
             side: Side::Base,
             root: String::new(),
             path: String::new(),
+            delimiter: None,
         },
         DiffError::UnresolvedPorts {
             side: Side::Base,
@@ -476,7 +489,13 @@ fn a_delimiter_in_a_name_is_refused_where_the_id_would_name_another_element() {
             side: Side::Base,
             root: "urn:oce:author:s".to_owned(),
             path: "urn:oce:author:s.x/a".to_owned(),
+            delimiter: Some('/'),
         }
+    );
+    assert_eq!(error.code(), "outside-root");
+    assert_eq!(
+        error.to_string(),
+        "base: `urn:oce:author:s.x/a` is under the root `urn:oce:author:s`, but its name holds `/`, which the content id reads as the end of a namespace"
     );
     // `s.a/k` and `s.b/k` under one namespace and under another: the id names the two blocks
     // `k` (twice, so each keeps its whole IRI) and the ids differ, while names here would be

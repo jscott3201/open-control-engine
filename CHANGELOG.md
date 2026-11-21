@@ -637,9 +637,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
     a CXF diff in exactly those shapes.
   - **Content ids.** `diff_topology_with_ids` takes the two documents' content ids beside the
     topologies and gives the same result whatever ids it is given. Equal content ids and equal
-    sequence names never coexist with a graph or interface entry, held over every pair of the
-    content-id pin's 47 documents, four re-spelled copies of each and a re-rooted copy, which
-    keeps the id under another sequence name.
+    sequence names never coexist with a graph or interface entry: the diff reads only facts
+    the id encodes, plus the root. Held over the content-id pin's 47 documents, each with four
+    re-spelled copies and a re-rooted copy (which keeps the id under another sequence name):
+    every pair within each family of six, and every pair of two families' originals.
   - **Across the levels.** For two authoring models that emit and load, the CXF diff equals the
     authoring diff of the models as loaded, held over every ordered pair of the 42 tracked
     authoring fixtures that load and eleven edits of each; the note's worked examples have
