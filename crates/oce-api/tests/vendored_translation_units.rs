@@ -53,7 +53,7 @@ const TRANSLATIONS: [Translation; 7] = [
             ("dpBuiSetPoi.y", "Pa", None),
             ("swi.y", "1", None),
         ],
-        content_id: "oce:canon1:76639584ab7b11f0b1a284cc20ee912acfa8e3ead6fb79b5172ac9304e895454",
+        content_id: "oce:canon1:f71a9e7c4cb771c00d95285459e240ff60922fd07fd823391d1e4db9d0dd0353",
     },
     Translation {
         file: "AHUs/MultiZone/VAV/SetPoints/ReliefFan.jsonld",
@@ -64,7 +64,7 @@ const TRANSLATIONS: [Translation; 7] = [
             ("movMea.y", "Pa", None),
             ("pro1.y", "1", None),
         ],
-        content_id: "oce:canon1:34e3a0773acbe3af87d655024aefc014966a17a3b502e39b6331904a60fc20ea",
+        content_id: "oce:canon1:689bf77b39bca3fe63b1aa7ba6a51ae93f26c3f6a573b20af9250758405006a6",
     },
     Translation {
         file: "AHUs/MultiZone/VAV/SetPoints/SupplySignals.jsonld",
@@ -77,28 +77,28 @@ const TRANSLATIONS: [Translation; 7] = [
             ("conSigHea.y", "1", None),
             ("swi.y", "1", None),
         ],
-        content_id: "oce:canon1:0cbd23d5a2083c234fb62688868d232cd01c67336715da1f46711d560ba61aef",
+        content_id: "oce:canon1:3052444e33e2e4e955831ddca0eac3202624ffacbbd560cafa0766d1b1f2bcc8",
     },
     Translation {
         file: "Generic/TimeSuppression.jsonld",
         class: "Generic.TimeSuppression",
         rows: 56,
         with_unit: &[],
-        content_id: "oce:canon1:1a6cba312ec0a27ffdd89c4e5507a024cab8b51e0bcb1cb10e73ebda737def8b",
+        content_id: "oce:canon1:c33293d7c13b387f37c5bb31d2440682ee381caced2a22c2aa873400f5815e60",
     },
     Translation {
         file: "TerminalUnits/Reheat/Subsequences/Overrides.jsonld",
         class: "TerminalUnits.Reheat.Subsequences.Overrides",
         rows: 26,
         with_unit: &[("pro.y", "1", None), ("swi1.y", "1", None)],
-        content_id: "oce:canon1:bdaa46333f5fe0c1dc38dddfc3d69b67f156c4c5c8ff4b4debf69bb6f8ac8df7",
+        content_id: "oce:canon1:d60aa8aa0bd97ddd407592aad67efbb7677a5521e82ccdb87bf0af016c86e104",
     },
     Translation {
         file: "ThermalZones/ControlLoops.jsonld",
         class: "ThermalZones.ControlLoops",
         rows: 37,
         with_unit: &[("cooConSig.y", "1", None), ("heaConSig.y", "1", None)],
-        content_id: "oce:canon1:f709e746dd1f53a43bab53b72aa46c20826e7b3410fb300cef4be96509f3ea50",
+        content_id: "oce:canon1:58d5fc96555aa21fc7f943c9dccd6ebc9a638f8fd44e6237b423f40b65af5fb8",
     },
     // The seventh carries no unit in any spelling: nothing about it moved.
     Translation {

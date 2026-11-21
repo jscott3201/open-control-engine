@@ -11,6 +11,10 @@
 //! `expand_array_param`'s sibling-name collision set, which is built from `param_iris` itself;
 //! that set is lookup-only and never iterated into a model id or a vector order.
 //!
+//! Once an instance's table is complete, an Integer bound to a parameter its class types Real is
+//! held as that Real, or refused above 2^53 in magnitude (`real_parameters`, issue #683). The
+//! sibling scope keeps the grounded value.
+//!
 //! Bounded on hostile input: each instance reads its enclosing scope through the shared,
 //! hash-indexed [`ScopeFrame`] its parent composite built (never a per-instance copy), siblings
 //! accumulate in a hash-indexed region, and every preserved array parameter in the document draws
@@ -32,6 +36,7 @@ use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
 use super::instance_interface::InstanceDerivation;
 use super::local_name;
 use super::parameter_attrs::CheckedParameters;
+use super::real_parameters::hold_real_parameters_as_reals;
 use super::specialize::validate_g36_parameter_value;
 
 /// One resolved instance's wiring state, carried from Step 3 through Steps 5-8.
@@ -65,6 +70,8 @@ pub(super) fn ground_instance_params(
     let mut array_budget = ArrayElementBudget::per_document();
     for inst in insts {
         let mut table: Vec<(Arc<str>, Value)> = Vec::new();
+        // The parameter node each table entry came from, in step with `table`.
+        let mut sources: Vec<&str> = Vec::new();
         // The instance's own grounded members; the inherited scope stays in its shared frame.
         let mut siblings = IndexedEntries::default();
         let enclosing: &ScopeFrame = &inst.inherited_scope;
@@ -137,7 +144,10 @@ pub(super) fn ground_instance_params(
                     Err(e) => diags.push(crate::ground::ground_failure(&e, piri, &inst.node.id)),
                 }
             }
+            sources.resize(table.len(), piri);
         }
-        blocks[inst.id.0 as usize].params = ParamTable { values: table };
+        let block = &mut blocks[inst.id.0 as usize];
+        hold_real_parameters_as_reals(&block.class_iri, &inst.node.id, &mut table, &sources, diags);
+        block.params = ParamTable { values: table };
     }
 }

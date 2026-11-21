@@ -8,7 +8,7 @@ exit: 0
   "ok": true,
   "output": "out/receipt.json",
   "passed": true,
-  "receipt_id": "receipt:fnv1a128:cca7cd3d97e3ee78ab48d54f4320df2c",
+  "receipt_id": "receipt:fnv1a128:dbd29d316beccd32cc42074e90b28b19",
   "schema": "oce-report/1",
   "status": "pass",
   "subject": "rule.cxf.jsonld",

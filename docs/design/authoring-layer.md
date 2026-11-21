@@ -422,7 +422,9 @@ rules: a target the connection list repeats is `single-assignment` at stage 1 (w
 written the engine loaded a block output beside a boundary input without a refusal, GitHub #472;
 it refuses it since GitHub #477, and stage 1 still reports the repeat first), and an Integer literal of magnitude above 2^53 on a Real
 parameter is `parameter-out-of-range` (it has no exact Real, so the engine would load a value the
-author never wrote).
+author never wrote). *Amended 2026-11-21, issue #683:* the engine refuses the same literal under
+the same code since 0.6.0, and holds every other Integer bound to a Real parameter as that Real,
+so the Integer and the Real spelling of one number are one loaded model and one content id.
 
 ## Emitter
 

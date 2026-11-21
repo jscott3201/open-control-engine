@@ -9,7 +9,7 @@ const PASS_THROUGH: &str =
 /// The canonical content id of `minimal_loop.jsonld` (also pinned in
 /// `context_expansion_identity.rs`).
 const MINIMAL_LOOP_CONTENT_ID: &str =
-    "oce:canon1:0cef94f71eddaea00a23797d1e5844ed2e6ca41a0be9a2e938fc587c5d31e6c8";
+    "oce:canon1:9cc5f3e2e97c2af2cda6a67fe223022fdecf53fb0e0bf445889f11bc22db21d3";
 /// The canonical content id of both issue #338 `Reals.Abs` documents.
 const ABS_DOCUMENT_CONTENT_ID: &str =
     "oce:canon1:e17765dcb273746d316a9813b8f2316b43adf1415120469dfe2eb203fc0a1549";
@@ -67,7 +67,7 @@ fn export_bytes_are_unchanged_by_the_canonical_id() {
     let exported = engine.export_cxf().expect("fixture exports");
     assert_eq!(
         independent_fnv1a128(&exported.bytes),
-        0x1291_31e1_e9e1_beaf_4001_9e56_fe1c_b285
+        0xe81f_6e9e_9ad5_b18b_43b2_5da1_2bf2_1a02
     );
 }
 
@@ -236,11 +236,11 @@ fn content_id_is_independent_of_authored_graph_order() {
     // exactly as the retired order-bearing export tags did (issue #338).
     assert_eq!(
         independent_fnv1a128(&export_a),
-        0xd282_8dca_c6fd_b609_2a77_0b7f_5aec_e499
+        0x0074_1231_4018_a3e6_6c97_3e79_6679_3096
     );
     assert_eq!(
         independent_fnv1a128(&export_b),
-        0x6f68_fd0f_2321_3d72_261d_8a28_2e96_2a71
+        0x8f0e_d990_e095_e005_ccdf_4b4d_634d_200a
     );
     // The canonical id names the loaded graph, so authored order no longer moves it.
     assert_eq!(id_a, id_b);

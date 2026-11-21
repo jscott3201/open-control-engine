@@ -17,7 +17,7 @@ use crate::class_metadata::{parameter_type_evidence, rule_parameters};
 use crate::registry::{all_entries, param_defaults};
 use crate::{
     DefaultSource, PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER,
-    ParamNameTemplate, ParamRule, class_description, class_parameters,
+    ParamNameTemplate, ParamRule, class_description, class_parameters, parameter_value_type,
 };
 
 #[test]
@@ -351,4 +351,136 @@ fn malformed_templates_are_scalar_names() {
         ParamNameTemplate::parse("a_<i>_<row>_<col>"),
         ParamNameTemplate::Matrix { base: "a_<i>" }
     );
+}
+
+#[test]
+fn a_bound_name_is_typed_as_the_catalog_types_its_parameter_for_every_class() {
+    // The oracle is the allocating listing: every scalar under its own name, and every array
+    // template under element names at the first index, a multi-digit index and the largest one.
+    let mut typed = 0usize;
+    for entry in all_entries() {
+        for parameter in class_parameters(entry.class_path).expect("registered") {
+            let template = ParamNameTemplate::parse(parameter.name);
+            let indices: &[&[usize]] = match template.rank() {
+                0 => &[&[]],
+                1 => &[&[1], &[10], &[usize::MAX]],
+                _ => &[&[1, 1], &[2, 37], &[usize::MAX, usize::MAX]],
+            };
+            for index in indices {
+                let name = template.element_name(index).expect("valid indices");
+                assert_eq!(
+                    parameter_value_type(entry.class_path, &name),
+                    Some(parameter.value_type),
+                    "{} {name}",
+                    entry.class_path
+                );
+                typed += 1;
+            }
+            // The template text itself is not a name a model binds.
+            if template.rank() > 0 {
+                assert_eq!(parameter_value_type(entry.class_path, parameter.name), None);
+            }
+        }
+    }
+    assert!(typed > 0);
+}
+
+#[test]
+fn a_name_the_class_does_not_declare_has_no_catalog_type() {
+    assert_eq!(parameter_value_type("CDL.Reals.NoSuchClass", "k"), None);
+    assert_eq!(parameter_value_type("", "k"), None);
+    for (class_path, name) in [
+        ("CDL.Reals.Hysteresis", ""),
+        ("CDL.Reals.Hysteresis", "ulow"),
+        ("CDL.Reals.Hysteresis", "uLow_1"),
+        ("CDL.Reals.Hysteresis", "uLow "),
+        ("CDL.Reals.MultiSum", "k"),
+        ("CDL.Reals.MultiSum", "k_"),
+        ("CDL.Reals.MultiSum", "k_0"),
+        ("CDL.Reals.MultiSum", "k_01"),
+        ("CDL.Reals.MultiSum", "k_+1"),
+        ("CDL.Reals.MultiSum", "k_-1"),
+        ("CDL.Reals.MultiSum", "k_1 "),
+        ("CDL.Reals.MultiSum", "k_1_1"),
+        ("CDL.Reals.MultiSum", "k_\u{0661}"),
+        ("CDL.Reals.MatrixGain", "K_1"),
+        ("CDL.Reals.MatrixGain", "K_1_"),
+        ("CDL.Reals.MatrixGain", "K__1"),
+        ("CDL.Reals.MatrixGain", "K_1_0"),
+        ("CDL.Reals.MatrixGain", "K_1_1_1"),
+        ("CDL.Reals.MatrixGain", "k_1_1"),
+    ] {
+        assert_eq!(
+            parameter_value_type(class_path, name),
+            None,
+            "{class_path} {name:?}"
+        );
+    }
+}
+
+#[test]
+fn the_catalog_type_of_a_bound_name_is_the_parameters_own_not_its_neighbours() {
+    use ValueType::{Boolean, Integer, Real};
+    for (class_path, name, expected) in [
+        ("CDL.Reals.Hysteresis", "uLow", Real),
+        ("CDL.Reals.Hysteresis", "pre_y_start", Boolean),
+        ("CDL.Reals.MultiSum", "nin", Integer),
+        ("CDL.Reals.MultiSum", "k_3", Real),
+        ("CDL.Integers.MultiSum", "k_3", Integer),
+        ("CDL.Integers.Sources.Constant", "k", Integer),
+        ("CDL.Reals.Sources.Constant", "k", Real),
+        ("CDL.Reals.MatrixGain", "K_2_1", Real),
+        ("CDL.Reals.MatrixGain", "nout", Integer),
+        ("CDL.Integers.Sources.TimeTable", "table_1_2", Real),
+        ("CDL.Integers.Sources.Pulse", "amplitude", Integer),
+        ("CDL.Integers.Sources.Pulse", "period", Real),
+        ("CDL.Reals.LimitSlewRate", "fallingSlewRate", Real),
+        (
+            "CDL.Reals.PID",
+            "controllerType",
+            ValueType::Enum(EnumClassId::SIMPLE_CONTROLLER),
+        ),
+    ] {
+        assert_eq!(
+            parameter_value_type(class_path, name),
+            Some(expected),
+            "{class_path} {name}"
+        );
+    }
+}
+
+#[test]
+fn a_template_covers_exactly_the_canonical_element_names_of_its_array() {
+    let scalar = ParamNameTemplate::parse("k");
+    assert!(scalar.names("k"));
+    assert!(!scalar.names("k_1") && !scalar.names("") && !scalar.names("K"));
+
+    let vector = ParamNameTemplate::parse("k_<i>");
+    for name in ["k_1", "k_9", "k_10", "k_18446744073709551616"] {
+        assert!(vector.names(name), "{name}");
+    }
+    for name in [
+        "k", "k_", "k_0", "k_01", "k_+1", "k_-1", "k_1_1", "k_1a", "k_ 1", "kk_1", "K_1", "_1", "",
+    ] {
+        assert!(!vector.names(name), "{name:?}");
+    }
+
+    let matrix = ParamNameTemplate::parse("table_<row>_<col>");
+    for name in ["table_1_1", "table_12_3", "table_3_12"] {
+        assert!(matrix.names(name), "{name}");
+    }
+    for name in [
+        "table",
+        "table_1",
+        "table_1_",
+        "table__1",
+        "table_0_1",
+        "table_1_0",
+        "table_01_1",
+        "table_1_1_1",
+        "table_1_x",
+        "tables_1_1",
+    ] {
+        assert!(!matrix.names(name), "{name:?}");
+    }
 }

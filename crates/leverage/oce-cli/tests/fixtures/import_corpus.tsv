@@ -210,7 +210,7 @@ refused	unknown-key	-	-	crates/oce-cxf/tests/fixtures/minimal_loop_compact.jsonl
 refused	unknown-key	-	-	crates/oce-cxf/tests/fixtures/modelica_json_style.jsonld
 refused	nested-composite	-	-	crates/oce-cxf/tests/fixtures/nested_composite.jsonld
 refused	no-root	-	-	crates/oce-cxf/tests/fixtures/node_scoped_contexts.jsonld
-same-id-real-literals	1	0	0	crates/oce-cxf/tests/fixtures/pass_through_miniature.jsonld
+same-id	-	0	0	crates/oce-cxf/tests/fixtures/pass_through_miniature.jsonld
 refused	namespace-mismatch	-	-	crates/oce-cxf/tests/fixtures/previous_layout/minimal_loop.export.cxf.json
 refused	no-root	-	-	crates/oce-cxf/tests/fixtures/profile/parameter-gated-connector.jsonld
 same-id-restamped	g36.profile.	0	0	crates/oce-cxf/tests/fixtures/profile/small-composite.jsonld

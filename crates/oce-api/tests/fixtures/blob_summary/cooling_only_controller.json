@@ -1,7 +1,7 @@
 {
   "format_version": 1,
-  "engine_version": "0.5.0",
-  "content_id": "oce:canon1:f4d9c78866444a22a06bf06f8be6f8d8bd94496d2887b3c07bdfc7278e4e9b23",
+  "engine_version": "0.6.0",
+  "content_id": "oce:canon1:4de404a60a2cc1e795a47767e79145fa14d4adcd2031c3a062b6197bacb42840",
   "target_bound": false,
   "classes": [
     {"class_path": "CDL.Conversions.BooleanToInteger", "signature_hash": "5e08715184cb20ce"},

@@ -1141,7 +1141,10 @@ standing rule 10 is: an artefact carrying engine version 0.5.0 is refused by 0.6
 `EngineVersionMismatch`. The second of the two PRs, and the closeout (#671), bump nothing.
 `oce/receipt/v1` stays the one tag for both kinds (vectors decision 37): `kind: "commissioning"`
 and `mode: "tolerance"` arrive in place, with no second receipt format, importer or dual-read
-path.
+path. *(2026-11-21: the bump has landed, ahead of all of these, with
+issue #683. An Integer bound to a Real parameter is held as a Real from 0.6.0 on, which moves
+content ids and blob bytes; `crates/oce-api/tests/engine_0_5_0_artefacts.rs` is the test that a
+0.5.0 blob and a 0.5.0 snapshot are refused. So none of the PRs named here bumps.)*
 
 **39. The M3 gate row "Tolerance mode checked"** *(ruled by the owner, 2026-11-20, on issue
 #663).* The four OpenModelica exact-bit cases are the existing `oce-conformance` differentials.

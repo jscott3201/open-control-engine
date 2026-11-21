@@ -72,6 +72,25 @@ impl<'a> ParamNameTemplate<'a> {
         }
     }
 
+    /// Whether `flattened` is a name this catalog name covers: the scalar name itself, or an
+    /// element of the array in the canonical spelling ([`Self::element_name`]: each index a
+    /// one-based decimal with no sign and no leading zero). Total; allocates nothing.
+    #[must_use]
+    pub fn names(&self, flattened: &str) -> bool {
+        let indices = |base: &str| {
+            flattened
+                .strip_prefix(base)
+                .and_then(|rest| rest.strip_prefix('_'))
+        };
+        match *self {
+            Self::Scalar(name) => flattened == name,
+            Self::Vector { base } => indices(base).is_some_and(canonical_index),
+            Self::Matrix { base } => indices(base)
+                .and_then(|rest| rest.split_once('_'))
+                .is_some_and(|(row, col)| canonical_index(row) && canonical_index(col)),
+        }
+    }
+
     /// The flattened name of the element at 1-based `indices` (`[]` for a scalar, `[i]` for a
     /// vector, `[row, col]` for a matrix). `None` when the index count is not [`Self::rank`] or an
     /// index is zero. Allocates the returned name.
@@ -87,4 +106,12 @@ impl<'a> ParamNameTemplate<'a> {
             _ => return None,
         })
     }
+}
+
+/// A one-based decimal index as the CXF import writes it: digits only, first digit non-zero.
+fn canonical_index(text: &str) -> bool {
+    text.as_bytes()
+        .first()
+        .is_some_and(|first| (b'1'..=b'9').contains(first))
+        && text.bytes().all(|byte| byte.is_ascii_digit())
 }

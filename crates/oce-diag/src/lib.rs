@@ -220,7 +220,11 @@ pub enum DiagCode {
     /// spellings of one element would otherwise both reach a block that parses indices as
     /// integers, and the later one in table order would win (GitHub #470).
     NonCanonicalElementName,
-    /// A block parameter violates a class-level range or ordering rule.
+    /// A block parameter violates a class-level range or ordering rule, or binds an Integer above
+    /// 2^53 in magnitude to a Real parameter. The second is raised by the CXF resolver on the
+    /// parameter node (issue #683): an Integer bound to a Real parameter is held as the Real of
+    /// the same value, and past 2^53 a binary64 does not hold every integer exactly, so the
+    /// document is refused instead of rounded.
     ParameterOutOfRange,
     /// A parameter holds, or its binding expression produced, a non-finite Real value (`NaN`,
     /// `+inf` or `-inf`). Engine-wide: every Real parameter at every level — root, composite and

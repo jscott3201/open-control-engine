@@ -184,10 +184,10 @@ exit: 0
     "mode": "exact"
   },
   "content_id": "oce:canon1:faddaaad1ed2bc2adfaece89cbc5a5bb9fa68eccc958c800678ddaf37edf2d7b",
-  "engine_version": "0.5.0",
+  "engine_version": "0.6.0",
   "kind": "vectors",
   "passed": true,
-  "receipt_id": "receipt:fnv1a128:cca7cd3d97e3ee78ab48d54f4320df2c",
+  "receipt_id": "receipt:fnv1a128:dbd29d316beccd32cc42074e90b28b19",
   "schema": "oce/receipt/v1",
   "spec_id": "spec:fnv1a128:21155b0b2204f4353df7751eab35d1ee",
   "timings": {

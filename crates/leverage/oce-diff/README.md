@@ -143,9 +143,9 @@ exactly as at the authoring level, and it builds a `Diff` with `source: cxf`.
 - **Ground values.** A block's parameters are the values its document bound, grounded: a
   sequence-parameter retune is `reparameterized` on each leaf it reaches, so `parameters_equal` is
   `null`. A value on one side only is `parameter-defaulted` against the catalog's literal default,
-  as at the authoring level. An Integer literal against the equal Real is a change of value here:
-  the loaded graph holds two values and the content id moves (issue #683 will make the engine
-  hold the Real). An entry lists a block's ground parameters by name.
+  as at the authoring level. An Integer literal against the equal Real on a Real parameter is
+  no entry: the engine holds both as the one Real and they have one content id (issue #683,
+  engine 0.6.0). An entry lists a block's ground parameters by name.
 - **Interface.** A boundary input is in a topology only when something reads it and an output
   only when something drives it. An input's `min` and `max` are its effective bounds (the
   declaration's intersected with every port it feeds; an Integer input left open is the `i32`

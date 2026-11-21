@@ -244,27 +244,27 @@ oce import rule.cxf.jsonld | oce emit - --from text | oce id - --from cxf
 ### The round trip
 
 `oce import FILE | oce emit - --from text | oce id - --from cxf` prints the line `oce id FILE`
-prints wherever `oce emit` accepts the imported sequence, with one exception by design and one
-known gap:
+prints wherever `oce emit` accepts the imported sequence, with one exception by design:
 
-1. **A name prefix on the root** (by design; importer note, decision 14). The importer keeps
-   the trailing identifier of the root `@id` as the sequence name, and names are inside the id.
-   A root such as `http://example.org#g36.source.reheat_overrides` carries `g36.source.`
-   between its namespace and that identifier, which no emitted document can spell (a namespace
-   ends in `#`, `/` or `:`). The round trip has the id of the original with its root
-   re-stamped to `<namespace><sequence>`. Every G36 corpus fixture the importer accepts is in
-   this class.
-2. **An Integer literal on a Real parameter** (a known gap, issue #683). The importer keeps
-   `k = 0` as written, the emitter writes a Real parameter's value as a Real, and the engine's
-   id tells an Integer literal from a Real one, an element of a Real array included. The round
-   trip has the id of the original with that literal written as a Real. #683 is ruled
-   "normalise at load"; when it lands the two spellings have one id and this exception goes.
+**A name prefix on the root** (importer note, decision 14). The importer keeps the trailing
+identifier of the root `@id` as the sequence name, and names are inside the id. A root such as
+`http://example.org#g36.source.reheat_overrides` carries `g36.source.` between its namespace
+and that identifier, which no emitted document can spell (a namespace ends in `#`, `/` or
+`:`). The round trip has the id of the original with its root re-stamped to
+`<namespace><sequence>`. Every G36 corpus fixture the importer accepts is in this class.
+
+An Integer literal on a Real parameter is not a second case (issue #683). The importer keeps
+`k = 0` as written and the emitter writes a Real parameter's value as a Real, and the engine
+holds an Integer bound to a Real parameter as that Real, an element of a Real array included,
+so both spellings have one id. Until engine 0.6.0 the id told them apart and this round trip
+moved it.
 
 `oce emit` answers no wherever the validator has an error finding, and the validator is
 stricter than a bare engine load. A document that loads with a warning has an id, and its
 imported sequence is refused by `emit` ([`oce id`](#oce-id) has the same asymmetry). An
-Integer literal above 2^53 on a Real parameter loads in an engine and is refused by stage 1
-(`parameter-out-of-range`): the authoring layer will not write a Real it cannot write exactly.
+Integer literal above 2^53 on a Real parameter is refused by the engine and by stage 1 alike
+(`parameter-out-of-range`): neither will hold a Real it cannot hold exactly, so such a document
+imports and has no id.
 
 `tests/import_corpus.rs` runs this over every `.jsonld` and `.cxf.json` file git tracks under
 `crates/` (the vendored tree under `third_party/` is left out, so a pin advance does not move
@@ -279,7 +279,6 @@ its row from one `OCE_BLESS_CLI=1` run, and no count is written down here. The c
 | `refused` | the importer refuses the document under one stable code (the detail), and writes nothing |
 | `same-id` | imported, emitted, and the id is the original's |
 | `same-id-restamped` | imported, emitted, and the id is the original's once its root is re-stamped; the detail is the name prefix |
-| `same-id-real-literals` | imported, emitted, and the id is the original's once its Integer literals on Real parameters are written as Reals (issue #683; goes when it lands) |
 | `warned` | imported; the original loads with a warning and `oce emit` answers no; what the emitter alone writes has the original's id |
 | `author-refused` | imported; the original loads, and stage 1 refuses the sequence, so nothing is emitted |
 | `no-id` | imported; the original does not load in an engine, so it has no id, and `oce emit` answers no |
@@ -556,7 +555,8 @@ For `import`:
 - `tests/import_corpus.rs` is the round trip over every CXF fixture tracked under `crates/`
   ([above](#the-round-trip)); its table, `tests/fixtures/import_corpus.tsv`, regenerates with
   the transcripts. It asserts one split by hand, the G36 catalog's, and builds the two shapes
-  of issue #683 that no tracked fixture writes;
+  of issue #683 that no tracked fixture writes: an Integer element of a Real array, which
+  keeps its id, and an Integer above 2^53 on a Real parameter, which has none;
 - `tests/import_refusals.rs` earns each of the twenty-seven importer codes a CXF document can
   earn, from a file and from stdin and in both output forms, names the four no run earns, and
   holds hostile bytes and the escaped rendering;

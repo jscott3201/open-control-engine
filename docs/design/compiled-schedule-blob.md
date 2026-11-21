@@ -142,16 +142,16 @@ digest of its canonical content id,
 
 The dump below walks the encoded bytes field by field. For strings longer than four bytes it shows
 only the `u32` length prefix; the UTF-8 bytes follow. It was first printed by the throwaway
-prototype at engine 0.2.0 with a placeholder class hash; it is regenerated (2026-11-09, issue #509)
+prototype at engine 0.2.0 with a placeholder class hash; it is regenerated (2026-11-21, issue #683)
 from the checked-in golden
 (`crates/oce-api/tests/fixtures/blob/generic_air_economizer_high_limits_ashrae_differential.oceb`)
-at engine 0.5.0, so the class hash, the content id and the CRC are the real bytes.
+at engine 0.6.0, so the class hash, the content id and the CRC are the real bytes.
 
 ```text
 0000  4f 43 45 42                      magic "OCEB"
 0004  01 00                            format 1
 0006  01 00                            profile 1 (HostTick v1)
-0008  00 00 05 00 00 00                engine 0.5.0
+0008  00 00 06 00 00 00                engine 0.6.0
 000e  00 00                            flags 0
 0010  a2 01 00 00                      total length 418
 0014  22 d0 10 e1 29 8d 0a 13 92 a8 bc c0 47 5d 9e 20
@@ -184,7 +184,7 @@ at engine 0.5.0, so the class hash, the content id and the CRC are the real byte
 0135  01 00 00 00                      1 output
 0139  59 00 00 00                      path str "…TCut" (89 bytes)
 0196  01 00 00 00 00 00 00 00          source connector 1, empty payload
-019e  26 83 7c 9b                      CRC-32C
+019e  43 f2 19 80                      CRC-32C
 ```
 
 ## Decisions

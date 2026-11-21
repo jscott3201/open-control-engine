@@ -16,27 +16,27 @@
 //!   carries a prefix after its namespace (`http://example.org#g36.source.<name>`); the importer
 //!   keeps the trailing identifier as the sequence name, and names are inside the id. The row
 //!   names the prefix;
-//! - `same-id-real-literals` (and `same-id-restamped-real-literals`): the same once the
-//!   original's Integer literals on Real parameters are written as Reals. **A known gap, issue
-//!   #683**: the importer keeps such a literal as written, the emitter writes a Real
-//!   parameter's value as a Real, and the engine's id tells the two apart. #683 is ruled
-//!   "normalise at load"; when it lands these rows become `same-id` (or `same-id-restamped`)
-//!   and this class, with [`with_real_literals`], goes;
 //! - `warned`: it imports, the original loads with warnings and so has an id, and `oce emit`
 //!   answers no, because the validator counts an engine warning as an error finding. The id of
 //!   what the emitter alone writes (`oce_author::emit`, no engine stage) is still the
 //!   original's, under the explanation the row names;
 //! - `author-refused`: it imports and the original loads, but stage 1 of the validator refuses
-//!   the sequence, so nothing is emitted and there is no second id. An Integer literal above
-//!   2^53 on a Real parameter is one (`parameter-out-of-range`): the engine loads it, and the
-//!   authoring layer will not write a Real it cannot write exactly;
+//!   the sequence, so nothing is emitted and there is no second id. No tracked fixture is one
+//!   today. (An Integer literal above 2^53 on a Real parameter was, until the engine began to
+//!   refuse it too, issue #683: it is `no-id` now);
 //! - `no-id`: it imports, but the original does not load in an engine, so there is no id to
 //!   keep; `oce emit` answers no with the findings the row lists.
 //!
-//! The ids of a round trip differ from the original's only in the re-stamped and the
-//! real-literal classes, and for each such document the test proves the named cause is the
-//! only difference: the original, changed in that respect alone, has the round trip's id. A
-//! difference neither explains fails the test; that is a finding, not a row.
+//! The id of a round trip differs from the original's only in the re-stamped class, and for
+//! each such document the test proves the named cause is the only difference: the original,
+//! with its root re-stamped and nothing else changed, has the round trip's id. A difference
+//! that does not explain fails the test; that is a finding, not a row.
+//!
+//! How a Real parameter's number is spelled is not a cause any more (issue #683). The importer
+//! keeps an Integer literal as written and the emitter writes a Real parameter's value as a
+//! Real, and the engine holds both as the same Real, so both have one id. The class that
+//! recorded the difference, `same-id-real-literals`, is gone with the helper that rewrote the
+//! literals.
 //!
 //! For every imported document the test also holds the text and the wire output to the
 //! sequence `oce_author::import_cxf` returns, each canonical in its form (`oce fmt --check`),
@@ -51,10 +51,9 @@ mod support;
 use std::path::Path;
 use std::process::Command;
 
-use oce_api::ValueType;
 use oce_author::{EmitOptions, ImportOptions};
 use serde_json::{Value, json};
-use support::cxf_edit::{XSD_DOUBLE, XSD_INTEGER, edited, node};
+use support::cxf_edit::{edited, node};
 use support::{Run, author_fixture, compare_or_bless, crate_dir, oce, scratch};
 
 /// The repository root as seen from the crate directory every run starts in.
@@ -129,15 +128,6 @@ fn finding_codes(report: &Value) -> String {
     codes.join(",")
 }
 
-/// The nodes a relation names: one reference or a list of them.
-fn references(relation: &Value) -> Vec<String> {
-    let one = |reference: &Value| reference["@id"].as_str().map(str::to_owned);
-    match relation {
-        Value::Array(items) => items.iter().filter_map(one).collect(),
-        other => one(other).into_iter().collect(),
-    }
-}
-
 /// The root `@id` of a flat document: the node that contains blocks.
 fn root_of(document: &Value) -> String {
     document["@graph"]
@@ -191,90 +181,9 @@ fn restamped(original: &[u8], root: &str, sequence: &str) -> Vec<u8> {
     serde_json::to_vec(&document).expect("JSON")
 }
 
-/// An Integer literal as the Real the emitter writes for it, or `None` for any other value: a
-/// bare JSON integer, or a typed `xsd:integer`.
-fn as_real_literal(value: &Value) -> Option<Value> {
-    let integer: i64 = match value {
-        Value::Number(number) if !number.is_f64() => number.as_i64()?,
-        Value::Object(literal) if literal.get("@type") == Some(&json!(XSD_INTEGER)) => {
-            literal.get("@value")?.as_str()?.parse().ok()?
-        }
-        _ => return None,
-    };
-    Some(json!({ "@value": format!("{integer}.0"), "@type": XSD_DOUBLE }))
-}
-
-/// Write every Integer literal in `value` as a Real: the value itself, or each element of an
-/// array parameter's list, a matrix's rows included. Returns how many moved.
-fn write_as_reals(value: &mut Value) -> usize {
-    if let Value::Array(items) = value {
-        return items.iter_mut().map(write_as_reals).sum();
-    }
-    match as_real_literal(value) {
-        Some(real) => {
-            *value = real;
-            1
-        }
-        None => 0,
-    }
-}
-
-/// `original` with every Integer literal on a Real parameter written as a Real (issue #683): a
-/// sequence parameter declared `S231:Real`, and a block parameter the catalog types Real, a
-/// scalar by its name and an array (`k_<i>`, `table_<row>_<col>`) by its template's base name,
-/// each element of its list. Returns the document and how many literals moved.
-fn with_real_literals(original: &[u8]) -> (Vec<u8>, usize) {
-    let mut document: Value = serde_json::from_slice(original).expect("JSON");
-    let root = root_of(&document);
-    let graph = document["@graph"].as_array().expect("a graph").clone();
-    let node = |id: &str| graph.iter().find(|node| node["@id"] == id);
-    let mut real_parameters: Vec<String> = Vec::new();
-    let root_node = node(&root).expect("the root");
-    for parameter in references(&root_node["S231:hasParameter"]) {
-        if node(&parameter).is_some_and(|n| n["S231:isOfDataType"]["@id"] == "S231:Real") {
-            real_parameters.push(parameter);
-        }
-    }
-    for block in references(&root_node["S231:containsBlock"]) {
-        let Some(block_node) = node(&block) else {
-            continue;
-        };
-        let class = block_node["@type"]
-            .as_str()
-            .and_then(|iri| iri.split_once("Buildings.Controls.OBC."))
-            .map(|(_, path)| path);
-        let Some(meta) = oce_api::class_metadata()
-            .iter()
-            .find(|meta| Some(meta.class_path) == class)
-        else {
-            continue;
-        };
-        for parameter in references(&block_node["S231:hasParameter"]) {
-            let name = parameter.strip_prefix(&format!("{block}.")).unwrap_or("");
-            let typed_real = meta.parameters.iter().any(|p| {
-                let base = p.name.split_once("_<").map_or(p.name, |(base, _)| base);
-                p.value_type == ValueType::Real && (p.name == name || base == name)
-            });
-            if typed_real {
-                real_parameters.push(parameter);
-            }
-        }
-    }
-    let mut moved = 0;
-    for node in document["@graph"].as_array_mut().expect("a graph") {
-        let id = node["@id"].as_str().unwrap_or("").to_owned();
-        if real_parameters.contains(&id)
-            && let Some(value) = node.get_mut("S231:value")
-        {
-            moved += write_as_reals(value);
-        }
-    }
-    (serde_json::to_vec(&document).expect("JSON"), moved)
-}
-
 /// Why `round_trip` is the id of the document: the class and its detail. Panics, naming the
-/// document, when neither the root's name nor an Integer literal on a Real parameter explains
-/// a difference: that is a finding, not a class.
+/// document, when the root's name does not explain a difference: that is a finding, not a
+/// class.
 fn explained(
     label: &str,
     original: &[u8],
@@ -289,27 +198,12 @@ fn explained(
         assert!(prefix.is_empty(), "{label}: equal ids under a name prefix");
         return ("same-id", "-".to_owned());
     }
-    let mut candidate = original.to_vec();
-    if !prefix.is_empty() {
-        candidate = restamped(original, &root, sequence);
-        if id_of(&candidate) == round_trip {
-            return ("same-id-restamped", prefix);
-        }
-    }
-    let (candidate, moved) = with_real_literals(&candidate);
     assert!(
-        moved > 0 && id_of(&candidate) == round_trip,
-        "{label}: the round trip's id is not the original's, and neither the root's name prefix \
-         (`{prefix}`) nor an Integer literal on a Real parameter ({moved} found) explains it"
+        !prefix.is_empty() && id_of(&restamped(original, &root, sequence)) == round_trip,
+        "{label}: the round trip's id is not the original's, and the root's name prefix \
+         (`{prefix}`) does not explain it"
     );
-    if prefix.is_empty() {
-        ("same-id-real-literals", moved.to_string())
-    } else {
-        (
-            "same-id-restamped-real-literals",
-            format!("{prefix} {moved}"),
-        )
-    }
+    ("same-id-restamped", prefix)
 }
 
 /// Run one document through the verbs and classify it. `label` names it in the row and in a
@@ -512,14 +406,15 @@ fn every_tracked_cxf_fixture_round_trips_or_is_refused_with_a_stable_code() {
 }
 
 #[test]
-fn the_shapes_issue_683_names_classify_without_a_tracked_fixture() {
-    // No tracked fixture writes either shape, so each is built here and run through the same
-    // classifier: a future fixture that does gets a row, not a panic.
-    let dir = scratch("import_corpus_683");
+fn an_integer_literal_on_a_real_parameter_keeps_its_id_and_one_past_two_to_the_53rd_has_none() {
+    // The two shapes issue #683 named that no tracked fixture writes, built here and run through
+    // the same classifier.
+    let dir = scratch("import_corpus_real_literals");
     let element =
         std::fs::read_to_string(crate_dir().join(author_fixture("emit/every_element.cxf.json")))
             .expect("fixture");
     // An Integer element of a Real array: `sum3.k = [1.0, -2, 1e-7]`, the `-2` a bare integer.
+    // The importer keeps it, the emitter writes `-2.0`, and the id does not move.
     let mut document: Value = serde_json::from_str(&element).expect("JSON");
     let gains = document["@graph"]
         .as_array_mut()
@@ -530,14 +425,15 @@ fn the_shapes_issue_683_names_classify_without_a_tracked_fixture() {
     assert_eq!(gains["S231:value"][1]["@value"], "-2.0");
     gains["S231:value"][1] = json!(-2);
     let array = dir.join("array.cxf.json");
-    std::fs::write(&array, serde_json::to_vec(&document).expect("JSON")).expect("write");
+    let respelled = serde_json::to_vec(&document).expect("JSON");
+    std::fs::write(&array, &respelled).expect("write");
     let row = classify("an Integer element of a Real array", &array, &dir);
-    assert_eq!(
-        (row.class, row.detail.as_str()),
-        ("same-id-real-literals", "1")
-    );
+    assert_eq!((row.class, row.detail.as_str()), ("same-id", "-"));
+    // And that id is the unedited fixture's: the spelling is not in the id.
+    assert_eq!(id_of(&respelled), id_of(element.as_bytes()));
 
-    // An Integer above 2^53 on a Real parameter: the engine loads it, stage 1 refuses it.
+    // An Integer above 2^53 on a Real parameter: the engine refuses it, as stage 1 does and
+    // under the same code, so the document has no id.
     let large = dir.join("large.cxf.json");
     std::fs::write(
         &large,
@@ -549,6 +445,8 @@ fn the_shapes_issue_683_names_classify_without_a_tracked_fixture() {
     let row = classify("an Integer above 2^53 on a Real parameter", &large, &dir);
     assert_eq!(
         (row.class, row.detail.as_str()),
-        ("author-refused", "parameter-out-of-range")
+        ("no-id", "parameter-out-of-range")
     );
+    let id = oce(&["id", &large.to_string_lossy(), "--from", "cxf"], b"");
+    assert_eq!(id.code, 2, "{}", id.transcript());
 }

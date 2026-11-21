@@ -4,9 +4,9 @@
 //! **Ground parameters.** A loaded block's parameter table holds the values the document bound,
 //! grounded: a sequence parameter it referenced is its value here, and a parameter the document
 //! left out is absent. A value on both sides that differs is `reparameterized`, a Real by its
-//! bits, and an Integer against the equal Real is a difference of value: the loaded graph holds
-//! two different values, and the content id moves with them (issue #683 is the engine's ruling
-//! that will make them one). A value on one side only is `parameter-defaulted` when it equals the
+//! bits. An Integer against the equal Real would be a difference of value, and a loaded
+//! document never shows one on a Real parameter: the engine holds an Integer bound to a Real
+//! parameter as that Real (issue #683), so the two spellings are one value and one id. A value on one side only is `parameter-defaulted` when it equals the
 //! catalog's literal default, by the same rule as the authoring level, and `reparameterized`
 //! with the other side empty otherwise. No `reordered` entry is made: order is not semantic, and
 //! a table's order is the loader's.

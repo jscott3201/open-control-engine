@@ -429,7 +429,7 @@ fn populated_portable_vector_is_target_independent() {
     assert_eq!(actual, expected);
     assert_eq!(
         fnv(&actual),
-        221_504_633_131_550_149_303_491_069_061_102_061_802
+        290_998_916_226_510_573_226_639_275_183_988_187_161
     );
     EngineStateSnapshot::from_bytes(&actual).unwrap();
 }

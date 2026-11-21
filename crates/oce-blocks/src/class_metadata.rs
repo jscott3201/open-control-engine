@@ -40,7 +40,7 @@ use oce_model::{EnumClassId, ValueType, enum_descriptor};
 
 use crate::class_descriptions::CLASS_DESCRIPTIONS;
 use crate::class_signature::is_reserved;
-use crate::{DefaultLiteral, DefaultSource, ParamRule, RegistryEntry, registry};
+use crate::{DefaultLiteral, DefaultSource, ParamNameTemplate, ParamRule, RegistryEntry, registry};
 
 /// One parameter of a class, as an author sees it.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -94,6 +94,35 @@ pub fn class_parameters(class_path: &str) -> Option<Vec<ClassParameter>> {
         }
     }
     Some(parameters)
+}
+
+/// The value type the catalog gives a parameter of a registered class, looked up by the name a
+/// resolved model binds it under: a scalar's own name, or one element of an array parameter in
+/// the flattened spelling (`k_2`, `table_1_2`; for an array the element type). `None` for an
+/// unregistered class, for a name the class does not declare, and for a parameter no evidence
+/// types (none in the registry as shipped). Where a scalar and an array template both cover the
+/// name, the first in [`class_parameters`] order decides. Never panics.
+#[must_use]
+pub fn parameter_value_type(class_path: &str, name: &str) -> Option<ValueType> {
+    let entry = registry::lookup(class_path)?;
+    let covers = |catalog_name: &str| ParamNameTemplate::parse(catalog_name).names(name);
+    let typed = |catalog_name: &str, default: Option<DefaultSource>| {
+        parameter_type_evidence(entry, catalog_name, default)
+            .into_iter()
+            .next()
+    };
+    if let Some(param) = registry::param_defaults(entry.class_path)
+        .iter()
+        .find(|param| covers(param.name))
+    {
+        return typed(param.name, Some(param.default));
+    }
+    entry
+        .param_rules()
+        .iter()
+        .flat_map(|rule| rule_parameters(rule).into_iter().flatten())
+        .find(|(catalog_name, _)| covers(catalog_name))
+        .and_then(|(catalog_name, _)| typed(catalog_name, None))
 }
 
 /// The value type of one class parameter (see the module documentation), or `Real` for a

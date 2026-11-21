@@ -18,8 +18,8 @@ fn every_field_changes_canonical_bytes_and_has_an_exact_symmetric_refusal() {
         (|d| d.parameter_schema += 1, M::ParameterSchema),
         (|d| d.execution_profile = "HostTick-v2", M::ExecutionProfile),
         (|d| d.execution_profile_schema += 1, M::ExecutionProfile),
-        (|d| d.oce_api_version = "0.5.1", M::Build),
-        (|d| d.oce_api_version = "0.5.0+other", M::Build),
+        (|d| d.oce_api_version = "0.6.1", M::Build),
+        (|d| d.oce_api_version = "0.6.0+other", M::Build),
         (
             |d| d.content = Some(ContentId::from_digest([0; 32])),
             M::ContentIdPresence,
@@ -51,7 +51,7 @@ fn refusal_precedence_is_canonical_and_unknown_equal_revisions_still_refuse() {
     changed.value_schema += 1;
     changed.parameter_schema += 1;
     changed.execution_profile_schema += 1;
-    changed.oce_api_version = "0.6.0";
+    changed.oce_api_version = "0.7.0";
     changed.content = Some(ContentId::from_digest([1; 32]));
     for (cause, field) in [
         (M::DescriptorRevision, 0),

@@ -127,6 +127,23 @@ The id writes them **sorted by name**, not in table order: table order is the au
 `hasParameter` order, which the blob keeps because `make` receives it. Values are the blob's tagged
 values: Real as `f64::to_bits`, Integer `i64`, Boolean, String, Enum as class path plus ordinal.
 
+*Amended 2026-11-21 (issue #683, engine 0.6.0): the tag follows the parameter's type, not the
+literal's spelling, for a Real parameter.* Grounding is literal-natural, so until 0.6.0 a Real
+parameter written `0`, as a typed `xsd:integer`, as an Integer expression or as a reference to an
+Integer sequence parameter was in the table, the blob and the id as an Integer, and the same
+document written `0.0` had another id (`oce import` then `oce emit` moved it, since the emitter
+writes a Real parameter's value as a Real). The resolver now holds an Integer bound to a parameter
+the block catalog types Real as the Real of the same value, scalars and flattened array elements
+alike, once, before anything reads the table; an Integer above 2^53 in magnitude, which a binary64
+does not hold exactly in general, is refused at load with `parameter-out-of-range` on the
+parameter node. So the two spellings are one table, one blob and one id, and the id is the one the
+Real spelling always had. An Integer on an Integer or enumeration parameter is untouched, and
+`-0.0` and `0.0` remain two ids. The ids of documents that wrote such a literal moved (4 of the 47
+pinned documents: `cooling_only_controller`, `multizone_vav_supply_fan`,
+`multizone_vav_supply_temperature`, `trim_and_respond_have_hol_false`), which is a change of
+meaning under the unchanged `oce:canon1:` tag: the workspace version moved to 0.6.0 with it, and
+a 0.5.0 blob or snapshot is refused with `EngineVersionMismatch`.
+
 Sorting is sound only if no class reads two entries as the same parameter, and today one can.
 Duplicate detection is by exact name, but `TimeTable` walks `params.values` in table order and
 parses `table_<r>_<c>` and `offset_<i>` with `usize::parse` (`source_timetable.rs`
