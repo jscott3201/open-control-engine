@@ -91,7 +91,7 @@ The engine is, by design:
   lifecycle, transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
 - **Synchronous and in-process.** Every public method is a blocking synchronous call, and no async
   runtime is pulled at any layer. The check is the dependency set below, not a promise.
-- **`#![forbid(unsafe_code)]` in all 18 workspace members**, belt and braces: each
+- **`#![forbid(unsafe_code)]` in all 19 workspace members**, belt and braces: each
   `crates/*/src/lib.rs`, each `crates/leverage/*/src/lib.rs`, the `oce` binary root
   (`crates/leverage/oce-cli/src/main.rs`) and the firmware image's lib and bin roots carry the crate
   attribute,
@@ -110,7 +110,7 @@ small RustCrypto tree (`digest`, `block-buffer`, `crypto-common`, `generic-array
 nothing else in the workspace depends on, so a host embedding `oce-api` never links them; and
 `csv-core` exists only inside the leverage crate `oce-replay`, `schemars` only inside
 `oce-author` and `oce-verify` and `clap` only inside `oce-cli`, all above the facade; `oce-vocab`
-adds none.
+and `oce-diff` add none.
 
 ### `no_std + alloc`: the core four
 
@@ -207,11 +207,12 @@ them, because nothing re-measures them in CI.
 ## The crate map
 
 Twelve engine crates, plus the unpublished firmware image `oce-firmware-link` (`firmware/link`),
-which links the `no_std` core into a bare-metal binary, and five unpublished leverage crates above
+which links the `no_std` core into a bare-metal binary, and six unpublished leverage crates above
 the facade, `oce-replay` (`crates/leverage/oce-replay`), `oce-author` (`crates/leverage/oce-author`),
-`oce-cli` (`crates/leverage/oce-cli`), `oce-vocab` (`crates/leverage/oce-vocab`) and `oce-verify`
-(`crates/leverage/oce-verify`): 18 workspace members, 10 publishable and eight private. The
-dependency direction is acyclic and organized around the seam above.
+`oce-cli` (`crates/leverage/oce-cli`), `oce-vocab` (`crates/leverage/oce-vocab`), `oce-verify`
+(`crates/leverage/oce-verify`) and `oce-diff` (`crates/leverage/oce-diff`): 19 workspace members,
+10 publishable and nine private. The dependency direction is acyclic and organized around the seam
+above.
 Their responsibilities below do not imply equal support or publication status: publication is
 read from each crate's `publish` flag and checked by the
 [package validator](ci-and-the-gate.md#the-package-validator), and a publishable implementation
@@ -253,6 +254,7 @@ crate is registry closure for the facade, not an independently supported host AP
 | `oce-cli` | **Leverage, `publish = false`; binary `oce`.** The command-line tool ([crate README](../crates/leverage/oce-cli/README.md)): `emit`, `validate`, `fmt`, `catalog` and `vocab` over `oce-author`, `oce-vocab` and the facade's catalog (`class_metadata`, `class_ports`), with `clap` argument parsing, bounded reads, a documented JSON report on stdout and the exit rule 0 yes / 1 no / 2 error. `catalog` serves the block vocabulary beside the engine's facts (each parameter's and port's meaning, declared unit and quantity, each parameter's range rendered from the catalog's rules, the typed notes without their `evidence`, the upstream links), and `vocab` the text form's words, the unit scale factors and every code. `verify` (M3, GitHub #573) replays a vector set against a subject over `oce-verify` and prints the receipt; its test over both in-repo library rules is the M3 in-repo replay gate. `id` (M3, issue #513) prints `Engine::content_id` of a CXF document, or of the CXF a text or wire file emits, alone on stdout. `import` (M3, issue #514) reads a flat CXF document through `oce-author`'s importer and prints the sequence as canonical text or in the wire form, with the importer's dropped and normalised lists in the report and its own code on a refusal; it validates nothing and loads no engine. Neither `import -o` nor `emit -o` replaces its own input file. Every engine it loads is a throwaway (the validator's, the verifier's, or the one `id` loads to name a document) and opens no listener; it depends on `oce-api` and the leverage crates `oce-author`, `oce-vocab` and `oce-verify`, with `oce-bless` as a dev-dependency. |
 | `oce-vocab` | **Leverage, `publish = false`.** The block vocabulary ([design note](design/vocabulary.md), [crate README](../crates/leverage/oce-vocab/README.md)): reference text for the 133 authorable classes as two checked-in strict-JSON files, `generated.json` (connector and parameter descriptions with declared units and quantities, projected from the vendored modelica-json `CXF-Core.jsonld` through the catalog's own names by a regenerate-and-diff test) and `curated.json` (typed notes, and descriptions only where upstream has none), merged and checked against the catalog (`vocabulary()`) and joined with it per class (`class_vocab()`), where each parameter's range is rendered from the catalog's rules (`parameter_range`); and the closed unit scale-factor table (`SCALE_FACTORS`: `min`, `h`, `d`). It is not engine behaviour: nothing on the load path, the emitter, the blob or a content id reads it, and it never copies a default or a range. It depends on `oce-api` only, with `oce-bless` and `sha2` as dev-dependencies. |
 | `oce-verify` | **Leverage, `publish = false`.** Verification over vectors ([design note](design/vectors.md), [crate README](../crates/leverage/oce-verify/README.md)): the one vector format, `oce/vectors/v1` (a strict bounded reader, `VectorSet::from_json_bytes`, with closed objects, so a key the format does not define is refused and never ignored, and the lowerable `VerifyLimits`; the rules a shape cannot say checked at load: a clock whose cadence is decided by multiplication, step lists from `t = 0`, windows that hold at least one tick, a diagnostic instant on a tick; the canonical form and `spec_id`; closed `VectorErrorKind` codes; the `schemars`-derived JSON Schema, `schema/vectors.schema.json`, pinned byte for byte), and the run, `run_vectors`: a set bound once to a CXF subject (every name by `oce-replay`'s one name rule, every value typed by the port or parameter it lands on), each scenario replayed on a freshly loaded engine through `oce-replay` on the set's grid with its parameter edits applied in passes, compared exactly (a Real by its bits), and the receipt (`oce/receipt/v1`: the header shared with the commissioning verifier, the closed `ReceiptBody`, exact value spellings, `receipt_id` over the canonical bytes without `timings`), with closed `VerifyErrorKind` codes for every bind and run refusal, and mutant mode: the deliberately broken copies of the subject a set lists, validated at bind (each loads, has the subject's boundary, differs from its content id and admits every parameter edit) and, when the subject passes, scored as the integer pair `caught` of `total` in the receipt. It opens no file and measures nothing; among `oce-*` packages it depends on `oce-api` and `oce-replay` only, with `oce-bless` as a dev-dependency. |
+| `oce-diff` | **Leverage, `publish = false`.** Structural diff ([design note](design/diff.md), [crate README](../crates/leverage/oce-diff/README.md)): `diff` compares two authoring models and returns plain serde data (`oce-diff/1`: a summary whose `graph_equal` and `parameters_equal` tell a site retune from a graph change, closed-enum notes, and four sections sorted by subject, each entry tagged by a kebab-case `kind`), with the authored block name as a block's identity, a class change under one name as removal plus addition, and a bounded rename pass over what is left (same class and the same assignments bit for bit, an agreeing neighbourhood, one candidate on each side, at most 8 rounds, 2,048 unmatched blocks a side and 65,536 gated pairs; past a cap the pass does not run and the diff says so). Every connection change is reported once, at its target; a Real is carried as its spelling and its bits; `render_text` and `render_markdown` are pure functions of the data. It never validates, grounds a reference or loads an engine, and reads the catalog only for a parameter's literal default and type. Its cost is pinned in counted work, not elapsed time. It depends on `oce-api` and the leverage crate `oce-author` only, with `oce-bless` as a dev-dependency. |
 
 Every crate listed here does work today. Reserved placeholder crates were removed rather than kept
 as empty seams, so nobody plans a feature against a crate that does nothing.
