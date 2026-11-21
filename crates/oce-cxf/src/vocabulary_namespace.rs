@@ -47,7 +47,7 @@
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use super::{Expansion, PrefixTable, expand_token};
+use super::token_expansion::{Expansion, Iri, PrefixTable, expand_token};
 use crate::diagnostic_list::DiagnosticList;
 use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
@@ -196,12 +196,14 @@ pub(super) fn check_typing_whitespace(
     if trimmed == token {
         return false;
     }
+    // The trimmed token's expansion is read in place, never joined: a node may carry any number
+    // of such tokens through a prefix bound to an IRI of any length (GitHub issue #709).
     let iri = match expand_token(trimmed, table) {
         Expansion::Expanded(iri) => iri,
-        Expansion::Verbatim | Expansion::Relative => trimmed.to_owned(),
+        Expansion::Verbatim | Expansion::Relative => Iri::whole(trimmed),
     };
     let named = match trimmed.strip_prefix("S231:") {
-        Some(term) => Some((S231_CONTEXT_IRI, term)),
+        Some(term) => Some((S231_CONTEXT_IRI, Iri::whole(term))),
         None => std::iter::once(S231_CONTEXT_IRI)
             .chain(FOREIGN_NAMESPACES)
             .find_map(|namespace| Some((namespace, iri.strip_prefix(namespace)?))),
@@ -210,9 +212,9 @@ pub(super) fn check_typing_whitespace(
         return false;
     };
     diags.raise(|| {
-        let (quoted, named) = (excerpt(token), excerpt(term));
+        let (quoted, named) = (excerpt(token), term.excerpt());
         let subject = if owner.is_empty() { &quoted } else { owner };
-        let message = if term.contains(char::is_whitespace) {
+        let message = if term.contains_whitespace() {
             // No spelling of it without the surrounding whitespace names a term, so none is
             // offered.
             format!(

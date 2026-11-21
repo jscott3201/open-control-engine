@@ -36,6 +36,7 @@ mod blob_peak_allocation;
 mod blob_summary_allocations;
 mod cxf_admission;
 mod cxf_constructed_budget;
+mod cxf_context_expansion_cost;
 mod cxf_diagnostic_list_cost;
 mod cxf_pass_through_key_cost;
 mod hostile_load_bounds;

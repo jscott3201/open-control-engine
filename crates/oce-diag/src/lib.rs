@@ -253,9 +253,12 @@ pub enum DiagCode {
 
     // --- Hostile-input resource budgets (any ingest stage) ---
     /// A document or model crossed a documented, deterministic resource budget that bounds
-    /// input-derived memory: the per-document array-parameter element budget (`oce-cxf`) or the
-    /// per-model `[S]` state-word budget (`oce-graph`). The refusal is typed and happens before
-    /// the over-budget allocation; the message names the budget and the requested amount.
+    /// input-derived memory: the per-document array-parameter element budget (`oce-cxf`), the
+    /// bytes `@context` expansion may add to one document (`oce-cxf`, GitHub issue #709: 8 MiB
+    /// over every expanded token, an expansion counted as its length less the token's; the
+    /// subject is the node the first token that does not fit is written on) or the per-model
+    /// `[S]` state-word budget (`oce-graph`). The refusal is typed and happens before the
+    /// over-budget allocation; the message names the budget and the requested amount.
     ///
     /// The same code closes a diagnostic list of the `oce-cxf` reader that reached its budget of
     /// text (GitHub issue #695): 8 MiB of messages and subjects, a subject counted for every

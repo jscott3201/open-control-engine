@@ -52,6 +52,11 @@ Enumerate the input domain and hit every boundary and degenerate case:
   one that does not fit ends the list, and a closing `ResourceLimitExceeded` counts the rest.
   A new loop that can raise many diagnostics about one long string raises them through
   `DiagnosticList::raise` and gets a case in `crates/oce-api/tests/cxf_diagnostic_list_cost.rs`.
+  What `@context` expansion adds to one document is held to 8 MiB the same way (issue #709): an
+  expansion is counted as its length less its token's, and the first that does not fit is
+  `ResourceLimitExceeded`. A new place that reads a token through a prefix compares it in place
+  (`oce-cxf`'s `Iri`), joins it only through the document's `ExpansionBudget`, and gets a case in
+  `crates/oce-api/tests/cxf_context_expansion_cost.rs`.
   Pin each such limit
   at its boundary (the limit accepted, one past it refused) and assert cost with deterministic
   measures — allocation counts and peak bytes, fuel units — never wall-clock time. Assert the

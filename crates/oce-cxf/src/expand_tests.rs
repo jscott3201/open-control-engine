@@ -12,7 +12,14 @@ fn table(entries: &[(&str, &str)]) -> PrefixTable {
 fn identity(token: &str, table: &PrefixTable) -> Result<String, Vec<Diagnostic>> {
     let mut token = token.to_owned();
     let mut diags = DiagnosticList::new();
-    expand_identity(&mut token, "@id", None, table, &mut diags);
+    expand_identity(
+        &mut token,
+        "@id",
+        None,
+        table,
+        &mut ExpansionBudget::new(),
+        &mut diags,
+    );
     if diags.is_empty() {
         Ok(token)
     } else {
@@ -42,7 +49,14 @@ fn curie_with_declared_prefix_expands_to_the_concatenated_iri() {
         "http://example.org#MinLoop.con"
     );
     let mut typing = "S231:RealInput".to_owned();
-    expand_typing(&mut typing, &table);
+    expand_typing(
+        &mut typing,
+        "@type",
+        "urn:n",
+        &table,
+        &mut ExpansionBudget::new(),
+        &mut DiagnosticList::new(),
+    );
     assert_eq!(typing, "http://s231#RealInput");
 }
 
@@ -76,7 +90,14 @@ fn unknown_prefix_in_absolute_form_passes_through_as_written() {
     let table = table(&[("ex", "http://example.org#")]);
     assert_eq!(identity("vendor:Thing", &table).unwrap(), "vendor:Thing");
     let mut typing = "vendor:Thing".to_owned();
-    expand_typing(&mut typing, &table);
+    expand_typing(
+        &mut typing,
+        "@type",
+        "urn:n",
+        &table,
+        &mut ExpansionBudget::new(),
+        &mut DiagnosticList::new(),
+    );
     assert_eq!(typing, "vendor:Thing");
 }
 
@@ -99,7 +120,14 @@ fn unknown_prefix_without_absolute_form_is_refused_as_relative_iri() {
             diags[0].message
         );
         let mut typing = token.to_owned();
-        expand_typing(&mut typing, &table);
+        expand_typing(
+            &mut typing,
+            "@type",
+            "urn:n",
+            &table,
+            &mut ExpansionBudget::new(),
+            &mut DiagnosticList::new(),
+        );
         assert_eq!(typing, token);
     }
 }
@@ -194,7 +222,14 @@ fn double_slash_suffix_without_a_valid_scheme_is_refused_as_relative_iri() {
             diags[0].message
         );
         let mut typing = token.to_owned();
-        expand_typing(&mut typing, &table);
+        expand_typing(
+            &mut typing,
+            "@type",
+            "urn:n",
+            &table,
+            &mut ExpansionBudget::new(),
+            &mut DiagnosticList::new(),
+        );
         assert_eq!(typing, token);
     }
 }
@@ -488,7 +523,14 @@ fn relative_identity_token_is_refused_and_relative_typing_token_is_not() {
     // The identical token in a typing slot stays verbatim: the pinned downstream
     // no-match diagnostics own junk there.
     let mut typing = "MinLoop".to_owned();
-    expand_typing(&mut typing, &table);
+    expand_typing(
+        &mut typing,
+        "@type",
+        "urn:n",
+        &table,
+        &mut ExpansionBudget::new(),
+        &mut DiagnosticList::new(),
+    );
     assert_eq!(typing, "MinLoop");
 }
 
@@ -502,6 +544,7 @@ fn relative_reference_names_its_slot_owner_and_token() {
         "S231:isConnectedTo",
         Some("http://example.org#M.con.y"),
         &table,
+        &mut ExpansionBudget::new(),
         &mut diags,
     );
     assert_eq!(diags.len(), 1);

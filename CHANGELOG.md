@@ -819,6 +819,59 @@ so far, and no tag is cut by the bump.
     `ValidationReport::diagnostics` are the types they were; the list type is internal to
     `oce-cxf`. No format, content id, blob or golden moves, and the workspace version is not
     bumped.
+- **`@context` expansion adds at most 8 MiB to a document, and reading a token copies nothing**
+  (GitHub #PRNUM, issue #709). A token read through a prefix is as long as the IRI the prefix
+  binds. The document sets that length and the number of tokens and pays a few bytes for each,
+  and nothing tied the two together: 1,024 `@type` tokens `p:T` under a 64 KiB binding, a
+  document of 78,157 bytes, loaded and held 202 MB, and 16,384 tokens under a 16 KiB binding,
+  136,525 bytes, loaded and held 807 MB.
+  - **The bound.** Expanding a document's tokens adds at most 8,388,608 bytes to it. An
+    expansion is counted as its length less the length of the token as written, over every
+    node `@id`, reference, `@type`, `isOfDataType` and `unit` or `displayUnit` IRI node, and
+    every property key that ends in `hasUnit` and is read through a prefix. A token written as
+    an absolute IRI is not expanded and adds nothing, so the identity and typing text the
+    reader works on is at most the document's own plus 8 MiB. The bound is on what expansion
+    adds, not on the length of a binding: one long namespace IRI read by a few tokens loads.
+  - **The refusal.** The first expansion that does not fit is not made, and the document is
+    refused with one `resource-limit-exceeded` error whose subject is the node the token is
+    written on (the token as written for a node's own `@id`, `@graph[i]` for a key on a node
+    with no `@id`). Its message quotes at most 64 bytes of the token, escaped, and states the
+    sizes: ``@type `p:T` expands to 65547 bytes through the document's @context, 65544 more
+    than it is written in; expansion had added 8324709 bytes, and may add at most 8388608 to
+    one document``. Nothing after that token is read, so the list holds that error and
+    whatever was raised before it, in the reader's usual sorted order. No new code;
+    `oce-diag`'s description of the code names this use.
+  - **Breaking, in place: a document whose expansion adds more than 8 MiB is refused.** Such a
+    document loaded, where the host had the memory for it, and is now refused with the typed
+    error above. Nothing else that loaded is refused. No tracked or library document is near
+    it: over the 257 tracked documents that hold an `@graph` and the 139 CXF documents of
+    `open-control-library` (`main` at `d90f63b`), the most expansion adds to one document is
+    66,275 bytes (the vendored `CXF-Core.jsonld`, 682,615 bytes), 126 times under the bound;
+    the longest IRI any of them binds is 51 bytes, and expansion adds at most 0.31 bytes for
+    each byte of a document, so a document at the 8 MiB admission limit would have to more than
+    double under expansion to be refused. A document that fills the bound exactly loads (17.3 MB
+    at its peak, for 137 KB), and one byte more is refused.
+  - **Measured through `Engine::load_cxf`** (`crates/oce-api/tests/cxf_context_expansion_cost.rs`,
+    requested bytes, debug build). The issue's document is refused holding 8.6 MB at its peak
+    (8,649,348 bytes; 201,749,795 before) and the 807 MB one holding 9.4 MB. Fourteen routes
+    are measured at a 64 KiB binding and 256 tokens, at four times the binding and at four
+    times the tokens. The eight that keep what they expand (a node `@id`, a reference, a
+    `@type`, each through a prefix and as a whole term, an `isOfDataType`, a unit IRI node, a
+    `hasUnit` key) request 8.7 to 23.2 MB where they requested 34 to 411 MB.
+  - **Reading a token copies nothing.** A token is classified, compared with a namespace or
+    with a term's mapping, and found relative, in place, on the bound IRI and the token's
+    suffix as the document holds them. Before, each of these joined the two for every token
+    and dropped the result, so they cost `tokens × binding` in copying while holding nothing:
+    a reference or a node `@id` whose suffix holds whitespace, a `@type` in surrounding
+    whitespace, and every pass-through key through a prefix requested 51 to 208 MB at those
+    sizes and now request 0.6 to 7.2 MB. A `@context` term spelled through a prefix that binds
+    another IRI is compared in place too, and its refusal, which names the term's expansion
+    whole, is built only while the diagnostic list has room: 59 MB at every size where it was
+    160 to 614 MB. The same documents took 81 s to measure before and take under 5 s.
+  - **A document within the bound is read as it was.** Every load outcome, loaded model,
+    content id and diagnostic (severity, code, message, subject, order) of the tracked and
+    library documents, as written and with the retired namespace rewritten, is byte-identical
+    before and after. No public type changes, and no format, content id, blob or golden moves.
 
 ### Leverage
 
