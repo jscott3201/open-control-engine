@@ -7,7 +7,8 @@
 //! reference to the same name. The list is read from head, and from base for a removed parameter.
 //!
 //! Two spellings of one value are metadata, not a parameter change: an Integer literal against
-//! the equal Real on a parameter both sides declare `Real`, or a changed unit suffix.
+//! the equal Real on a parameter both sides declare `Real`, or a changed unit suffix or written
+//! number. A changed value whose suffix changed too is both: a parameter change and a spelling.
 
 use std::collections::BTreeMap;
 
@@ -17,7 +18,7 @@ use crate::changes::{MetadataChange, ParameterChange};
 use crate::pairing::{pair, reordered};
 use crate::work::{Counted, sort_counted, visited};
 
-use super::blocks::{commented, respelled};
+use super::blocks::{commented, respelled, written_differently};
 use super::lower;
 
 /// For each sequence parameter name, the `block.param` assignments of `sequence` that reference
@@ -107,7 +108,16 @@ pub(super) fn changes(
             &new.annotations.comments,
             metadata,
         );
+        let same_value = old.value == new.value;
+        let written = written_differently(
+            same_value,
+            (&old.suffix, &old.scaled_from),
+            (&new.suffix, &new.scaled_from),
+        );
         if old.value_type != new.value_type {
+            if written {
+                respelled(subject, spelled(old), spelled(new), metadata);
+            }
             changes.push(ParameterChange::TypeChanged {
                 subject: subject.to_owned(),
                 old_type: old.value_type.as_str().to_owned(),
@@ -120,9 +130,10 @@ pub(super) fn changes(
         }
         let one_real =
             new.value_type == ParameterType::Real && lower::same_real(&old.value, &new.value);
-        if old.value == new.value || one_real {
+        if written || (one_real && !same_value) {
             respelled(subject, spelled(old), spelled(new), metadata);
-        } else {
+        }
+        if !same_value && !one_real {
             changes.push(ParameterChange::Changed {
                 subject: subject.to_owned(),
                 value_type: new.value_type.as_str().to_owned(),

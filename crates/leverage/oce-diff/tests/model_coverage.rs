@@ -9,7 +9,9 @@
 
 mod support;
 
-use oce_author::{Bound, Literal, ParamValue, ParameterType, ProvenanceId, Sequence, SignalType};
+use oce_author::{
+    Bound, Endpoint, Literal, ParamValue, ParameterType, ProvenanceId, Sequence, SignalType,
+};
 
 use support::{block, boundary, compare, id, link, parse, real_parameter};
 
@@ -285,6 +287,27 @@ fn edits() -> Vec<(&'static str, &'static str, Edit)> {
         ("connections reordered", "graph", |m| {
             m.connections.swap(0, 4)
         }),
+        // Differences no spelling shows: the same text, another structure.
+        (
+            "assignment written number of the same spelling",
+            "metadata",
+            |m| m.blocks[2].assignments[0].scaled_from = Some(Literal::Real(1.0)),
+        ),
+        (
+            "parameter written number of the same spelling",
+            "metadata",
+            |m| m.params[0].scaled_from = Some(Literal::Real(2.0)),
+        ),
+        (
+            "connection target as a boundary of the same spelling",
+            "graph",
+            |m| m.connections[1].target = Endpoint::Boundary(id("lim.u")),
+        ),
+        (
+            "connection source as a boundary of the same spelling",
+            "graph",
+            |m| m.connections[1].source = Endpoint::Boundary(id("scale.y")),
+        ),
     ]
 }
 
@@ -316,20 +339,22 @@ fn every_single_field_edit_is_reported_in_its_section() {
                     diff.to_json()
                 );
             }
-            assert_eq!(diff.summary.graph_equal, section != "graph", "{name}");
+            // A section flag is false for a change in its section, a reordering excepted.
+            let differs = |flagged: &str| section == flagged && !name.ends_with("reordered");
+            assert_eq!(diff.summary.graph_equal, !differs("graph"), "{name}");
             assert_eq!(
                 diff.summary.interface_equal,
-                section != "interface",
+                !differs("interface"),
                 "{name}"
             );
             assert_eq!(
                 diff.summary.parameters_equal,
-                Some(section != "parameters"),
+                Some(!differs("parameters")),
                 "{name}"
             );
             assert_eq!(
                 diff.summary.metadata_equal,
-                Some(section != "metadata"),
+                Some(!differs("metadata")),
                 "{name}"
             );
         }

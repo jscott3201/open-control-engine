@@ -11,8 +11,10 @@
 //! it stands. Nothing is loaded, grounded, scheduled or run.
 //!
 //! One thing in a model is not compared: whether a blank line precedes a statement
-//! (`Annotations::blank_line_before`), which is layout. Every other field of the model is, so an
-//! empty diff means the two models are equal up to blank lines.
+//! (`Annotations::blank_line_before`), which is layout. Every other field of the model is, as a
+//! field and never as its spelling (a link end as a boundary or as a block and a port, a written
+//! number beside the value it stands for), so an empty diff means the two models are equal up to
+//! blank lines.
 
 mod blocks;
 mod interface;
@@ -23,7 +25,7 @@ mod parameters;
 use oce_author::Sequence;
 
 use crate::catalog;
-use crate::changes::sort_section;
+use crate::changes::{same_but_for_order, sort_section};
 use crate::data::{DIFF_SCHEMA, Diff, DiffOptions, SequenceRef, Source, Summary};
 use crate::wiring;
 
@@ -61,14 +63,18 @@ pub fn diff(base: &Sequence, head: &Sequence, options: &DiffOptions) -> Diff {
     sort_section(&mut graph);
     sort_section(&mut metadata);
 
-    // A block left unmatched by name and class is in the graph section as `removed`, `added` or
-    // `renamed` whatever the rename pass did, so an empty section never depends on the pass.
-    let graph_equal = graph.is_empty();
+    // A section flag ignores `reordered` entries (decisions 5 and 16: order is not semantic);
+    // `equal` does not. A block left unmatched by name and class is in the graph section as
+    // `removed`, `added` or `renamed` whatever the rename pass did, so `graph_equal` never
+    // depends on the pass.
     let summary = Summary {
-        equal: graph_equal && parameters.is_empty() && interface.is_empty() && metadata.is_empty(),
-        graph_equal,
-        parameters_equal: Some(parameters.is_empty()),
-        interface_equal: interface.is_empty(),
+        equal: parameters.is_empty()
+            && interface.is_empty()
+            && graph.is_empty()
+            && metadata.is_empty(),
+        graph_equal: same_but_for_order(&graph),
+        parameters_equal: Some(same_but_for_order(&parameters)),
+        interface_equal: same_but_for_order(&interface),
         metadata_equal: Some(metadata.is_empty()),
         blocks: outcome.counts,
     };

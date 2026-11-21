@@ -70,11 +70,12 @@ pub fn render_text(diff: &Diff) -> String {
     for note in &diff.notes {
         out.push(match note {
             Note::NamesDisjoint => format!(
-                "# names disjoint: no block kept its name; {} of {} matched by the rename pass, {} not matched",
+                "# names disjoint: no block kept its name and class; {} of {} base blocks matched by the rename pass, {} removed, {} added",
                 blocks.renamed,
                 // The counts of a diff read from JSON may be anything: never overflow.
                 blocks.renamed.saturating_add(blocks.base_only),
-                blocks.base_only
+                blocks.base_only,
+                blocks.head_only
             ),
             Note::RenamePassSkipped => format!(
                 "# rename pass skipped: more than {MAX_RENAME_CANDIDATES} unmatched blocks on a side or more than {MAX_RENAME_PAIRS} candidate pairs"

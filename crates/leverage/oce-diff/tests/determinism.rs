@@ -54,12 +54,8 @@ fn without_reordered(diff: &Diff) -> Value {
             .expect("a section")
             .retain(|entry| entry["kind"] != "reordered");
     }
-    // The four flags follow the sections; with the reorderings gone they are recomputed by the
-    // caller's own comparison, so they are left out here.
-    json["summary"]["equal"].take();
-    for flag in ["graph_equal", "parameters_equal", "interface_equal"] {
-        json["summary"][flag].take();
-    }
+    // The section flags stay in: a reordering does not move them. `equal` stays in too: every
+    // pair here differs before anything is permuted.
     json
 }
 
@@ -189,6 +185,14 @@ fn a_reversed_list_is_reported_reordered_and_nothing_else_is() {
     );
     assert_eq!(json["metadata"], serde_json::json!([]));
     assert_eq!(json["summary"]["equal"], serde_json::json!(false));
+    for flag in [
+        "graph_equal",
+        "parameters_equal",
+        "interface_equal",
+        "metadata_equal",
+    ] {
+        assert_eq!(json["summary"][flag], serde_json::json!(true), "{flag}");
+    }
 }
 
 #[test]

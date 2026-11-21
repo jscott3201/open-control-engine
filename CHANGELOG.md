@@ -534,7 +534,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   so no transcript moves. `tests/rendering.rs` is the regression test over `validate` and
   `emit`; `tests/import_refusals.rs` covers a key and an `@id`.
 
-- **`oce-diff`, a structural diff of two authoring models** (GitHub #PRNUM, issue #665). A new
+- **`oce-diff`, a structural diff of two authoring models** (GitHub #692, issue #665). A new
   leverage crate, `crates/leverage/oce-diff` (design note `docs/design/diff.md`, part 1 of 4;
   the CXF adapter, the blob comparison and the `oce diff` verb are #666 to #668). It depends on
   `oce-api` and `oce-author` only, is `publish = false`, and is the workspace's 19th member and
@@ -567,17 +567,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
     `0.0` and one NaN payload against another are differences.
   - **Renderers.** `render_text` (one line per entry in the text form's syntax) and
     `render_markdown` (a `Change | Subject | Was | Now` table), pure functions of the data.
-  - **Where the note and the code met.** Five things were settled while building and written
-    back to the note: a boundary's `min` and `max` have kinds of their own (the note predates
-    them, and a bound on an input is inside the canonical content id); `renamed` carries the
-    block's assignments and a parameter `changed` its type, because the text rendering the note
-    shows needs both; a `reordered` graph entry names its list; `derived_from` is `null`, not
-    the word `none`; and a comment is carried as the model holds it.
+  - **The summary's flags.** A section flag (`graph_equal`, `parameters_equal`,
+    `interface_equal`) is true when its section holds no entry other than `reordered`, as the
+    note's decisions 5 and 16 have it: order is not semantic, and a script that wants "same
+    structure" reads `graph_equal`. `equal` is true only when every section is empty, so it is
+    not the four flags together.
+  - **Reading one back is strict.** Closed objects, every key required (`null` for a value that
+    may be absent), `schema` exactly `oce-diff/1`, a Real's spelling the spelling of its bits,
+    and the summary's flags what the sections give.
+  - **Where the note and the code met.** Six things followed from building it and are written
+    back to the note under "As landed": a boundary's `min` and `max` have kinds of their own
+    (the note predates them, and a bound on an input is inside the canonical content id);
+    `renamed` carries the block's assignments and a parameter `changed` its type, because the
+    text rendering the note shows needs both; a `reordered` graph entry names its list;
+    `derived_from` is `null`, not the word `none`; a comment is carried as the model holds it;
+    and the diff reads a parameter's type from the catalog as well as its literal default,
+    because an Integer literal against the equal Real is one value (`literal-respelled`) only
+    where a Real is expected.
   - **Evidence.** The note's three worked examples and the literal variant as checked-in pairs
     with golden JSON, text and Markdown; their expected entries typed by hand from the note; one
     pair per kind of every section; both caps at their boundaries; every permutation of the
-    examples' blocks; a single-field edit of every field of the model reported in its section;
-    and the cost at the text form's statement limits and at the pair cap held in counted work.
+    examples' blocks; a second implementation of the note's rename rules, pair by pair, agreeing
+    with the crate's on 135,168 enumerated pairs of small models; a single-field edit of every
+    field of the model reported in its section; and the cost at the text form's statement limits
+    and at the pair cap held in counted work.
 
 - **`oce id` prints the canonical content id of a CXF or authoring file** (GitHub #513). The
   id `Engine::content_id` mints (`oce:canon1:`, GitHub #474) had no command-line surface, and

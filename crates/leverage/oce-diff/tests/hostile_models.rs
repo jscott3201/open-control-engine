@@ -9,7 +9,10 @@
 
 mod support;
 
-use oce_author::{Assignment, Literal, MAX_STATEMENTS_PER_KIND, ParamValue, Sequence, SignalType};
+use oce_author::{
+    Assignment, Connection, Endpoint, Literal, MAX_STATEMENTS_PER_KIND, ParamValue, Sequence,
+    SignalType,
+};
 use oce_diff::{Diff, Note, render_markdown, render_text};
 use serde_json::json;
 
@@ -202,6 +205,85 @@ fn the_inputs_of_a_removed_block_are_sorted_by_port_then_by_the_drivers_spelling
 }
 
 #[test]
+fn ends_are_compared_as_what_they_are_never_as_text() {
+    // Three ends that all spell `a.b.c` or `a.b`, built in code because no parser splits a
+    // spelling anywhere but at its first dot. A model may hold any of them, and they differ.
+    let port = |block: &str, port: &str| Endpoint::Port {
+        block: id(block),
+        port: id(port),
+    };
+    let ends = [
+        ("the port `c` of `a.b`", port("a.b", "c")),
+        ("the port `b.c` of `a`", port("a", "b.c")),
+        ("the boundary `a.b.c`", Endpoint::Boundary(id("a.b.c"))),
+    ];
+    for (declared, with_blocks) in [("nothing declared", false), ("`a` declared", true)] {
+        for as_source in [true, false] {
+            let side = |end: &Endpoint| {
+                let mut model = sequence("s");
+                model.inputs.push(boundary("u", SignalType::Real));
+                model.outputs.push(boundary("y", SignalType::Real));
+                if with_blocks {
+                    model.blocks.push(block("a", "CDL.Reals.Abs", &[]));
+                }
+                model.connections.push(if as_source {
+                    Connection::new(end.clone(), Endpoint::Boundary(id("y")))
+                } else {
+                    Connection::new(Endpoint::Boundary(id("u")), end.clone())
+                });
+                model
+            };
+            for (old_name, old) in &ends {
+                for (new_name, new) in &ends {
+                    let (base, head) = (side(old), side(new));
+                    assert_eq!(
+                        base.connections[0].spelling().len(),
+                        head.connections[0].spelling().len()
+                    );
+                    let diff = compare(&base, &head);
+                    assert_eq!(
+                        diff.summary.equal,
+                        old == new,
+                        "{declared}, as source {as_source}: {old_name} against {new_name}\n{}",
+                        diff.to_json()
+                    );
+                    assert_eq!(diff.summary.equal, base == head);
+                    assert_eq!(diff.summary.graph_equal, old == new);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn a_written_number_no_spelling_shows_is_still_a_difference() {
+    // `scaled_from` is the number written before a scaled unit suffix. With no suffix beside it
+    // a parser never sets it, and `1.0` written as `1.0` spells like the value itself.
+    let side = |written: Option<Literal>| {
+        let mut model = sequence("s");
+        let mut limiter = block("lim", "CDL.Reals.Limiter", &[("uMax", Literal::Real(1.0))]);
+        limiter.assignments[0].scaled_from = written.clone();
+        model.blocks.push(limiter);
+        let mut parameter = real_parameter("p", 1.0);
+        parameter.scaled_from = written;
+        model.params.push(parameter);
+        model
+    };
+    let (base, head) = (side(None), side(Some(Literal::Real(1.0))));
+    assert_ne!(base, head);
+    let diff = compare(&base, &head);
+    assert_eq!(
+        support::json(&diff)["metadata"],
+        json!([
+          { "kind": "literal-respelled", "subject": "lim.uMax", "old": "1.0", "new": "1.0" },
+          { "kind": "literal-respelled", "subject": "p", "old": "1.0", "new": "1.0" }
+        ])
+    );
+    assert!(diff.summary.graph_equal && !diff.summary.equal);
+    assert!(compare(&head, &head).summary.equal);
+}
+
+#[test]
 fn a_target_on_a_block_nobody_declared_is_reported_as_spelled() {
     let side = |source: &str| {
         let mut model = sequence("s");
@@ -226,6 +308,11 @@ fn a_target_on_a_block_nobody_declared_is_reported_as_spelled() {
     assert_eq!(
         support::json(&compare(&side("ghost.y"), &side("phantom.y")))["graph"],
         json!([{ "kind": "rewired", "subject": "y", "old": "ghost.y", "new": "phantom.y" }])
+    );
+    // Another port of the same undeclared block is another driver.
+    assert_eq!(
+        support::json(&compare(&side("ghost.y"), &side("ghost.z")))["graph"],
+        json!([{ "kind": "rewired", "subject": "y", "old": "ghost.y", "new": "ghost.z" }])
     );
 }
 

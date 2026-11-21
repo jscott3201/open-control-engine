@@ -1,6 +1,6 @@
 # oce diff chw_plant_reset -> chw_plant_reset
 # graph differs; parameters equal; interface equal; metadata differs
-# names disjoint: no block kept its name; 3 of 5 matched by the rename pass, 2 not matched
+# names disjoint: no block kept its name and class; 3 of 5 base blocks matched by the rename pass, 2 removed, 2 added
 # graph
 > block TMax = CDL.Reals.Sources.Constant(k = 285.15)   # was THigh; renamed, exact
 > block TMin = CDL.Reals.Sources.Constant(k = 279.15)   # was TLow; renamed, exact

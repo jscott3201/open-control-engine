@@ -26,6 +26,34 @@ fn empty() -> Value {
     support::json(&compare(&model, &model))
 }
 
+/// `value` with its summary flags set to what its sections give, so a hand-built diff is one a
+/// reader accepts: `equal` when every section is empty, a section flag when its section holds
+/// no entry other than `reordered`. A flag that is `null` stays `null`.
+fn follow(mut value: Value) -> Value {
+    let section = |value: &Value, name: &str| -> (bool, bool) {
+        let entries = value[name].as_array().expect("a section");
+        (
+            entries.is_empty(),
+            entries.iter().all(|entry| entry["kind"] == "reordered"),
+        )
+    };
+    let mut empty = true;
+    for (name, flag) in [
+        ("parameters", "parameters_equal"),
+        ("interface", "interface_equal"),
+        ("graph", "graph_equal"),
+        ("metadata", "metadata_equal"),
+    ] {
+        let (is_empty, same_but_for_order) = section(&value, name);
+        empty &= is_empty;
+        if !value["summary"][flag].is_null() {
+            value["summary"][flag] = json!(same_but_for_order);
+        }
+    }
+    value["summary"]["equal"] = json!(empty);
+    value
+}
+
 #[test]
 fn the_constants_are_the_notes() {
     assert_eq!(DIFF_SCHEMA, "oce-diff/1");
@@ -159,11 +187,14 @@ fn every_literal_shape_reads_back_and_no_other_shape_is_read() {
 fn every_object_is_closed_and_every_kind_is_known() {
     let good = empty();
     assert!(serde_json::from_value::<Diff>(good.clone()).is_ok());
+    // Each edit is followed by the flags, so the one thing wrong is the thing named.
     let edited = |edit: &dyn Fn(&mut Value)| {
         let mut value = good.clone();
         edit(&mut value);
-        serde_json::from_value::<Diff>(value)
+        serde_json::from_value::<Diff>(follow(value))
     };
+    let rewired = json!([{ "kind": "rewired", "subject": "a", "old": null, "new": null }]);
+    assert!(edited(&|v| v["graph"] = rewired.clone()).is_ok());
     assert!(
         edited(&|v| v["extra"] = json!(1)).is_err(),
         "a key at the top"
@@ -186,38 +217,264 @@ fn every_object_is_closed_and_every_kind_is_known() {
         "a source"
     );
     assert!(
-        edited(&|v| {
-            v.as_object_mut().expect("object").remove("graph");
-        })
-        .is_err()
-    );
-    assert!(
         edited(&|v| v["graph"] = json!([{ "kind": "moved", "subject": "a" }])).is_err(),
         "a kind the section does not have"
     );
     assert!(
-        edited(
-            &|v| v["graph"] = json!([{ "kind": "rewired", "subject": "a", "old": null,
-                                          "new": null, "extra": 1 }])
-        )
+        edited(&|v| {
+            v["graph"] = rewired.clone();
+            v["graph"][0]["extra"] = json!(1);
+        })
         .is_err(),
         "a key in an entry"
     );
+    // A kind of one section is not a kind of another.
+    assert!(edited(&|v| v["metadata"] = rewired.clone()).is_err());
+}
+
+#[test]
+fn every_key_is_required_and_a_value_that_may_be_absent_is_written_null() {
+    // Nothing is read as "absent means none": a missing key is refused wherever it stands.
+    let (base, head) = example("every_kind");
+    let good = support::json(&compare(&base, &head));
+    assert!(serde_json::from_value::<Diff>(good.clone()).is_ok());
+    let without = |path: &[&str]| {
+        let mut value = good.clone();
+        let (last, parents) = path.split_last().expect("a path");
+        let mut at = &mut value;
+        for key in parents {
+            at = match key.parse::<usize>() {
+                Ok(index) => &mut at[index],
+                Err(_) => &mut at[*key],
+            };
+        }
+        let removed = at.as_object_mut().expect("an object").remove(*last);
+        assert!(removed.is_some(), "{path:?} is in the golden");
+        serde_json::from_value::<Diff>(value)
+    };
+    for key in [
+        "schema",
+        "source",
+        "catalog",
+        "base",
+        "head",
+        "summary",
+        "notes",
+        "parameters",
+        "interface",
+        "graph",
+        "metadata",
+    ] {
+        assert!(without(&[key]).is_err(), "top-level `{key}`");
+    }
+    for key in [
+        "equal",
+        "graph_equal",
+        "parameters_equal",
+        "interface_equal",
+        "metadata_equal",
+        "blocks",
+    ] {
+        assert!(without(&["summary", key]).is_err(), "summary `{key}`");
+    }
+    for key in ["by_name", "renamed", "base_only", "head_only"] {
+        assert!(
+            without(&["summary", "blocks", key]).is_err(),
+            "blocks `{key}`"
+        );
+    }
     assert!(
-        edited(
-            &|v| v["graph"] = json!([{ "kind": "rewired", "subject": "a", "old": null,
-                                          "new": null }])
-        )
+        without(&["base", "derived_from"]).is_err(),
+        "a null `derived_from` is written"
+    );
+    assert!(without(&["head", "sequence"]).is_err());
+    // Every key of every entry of every section.
+    let mut keys = 0;
+    for section in ["parameters", "interface", "graph", "metadata"] {
+        let entries = good[section].as_array().expect("a section");
+        for (index, entry) in entries.iter().enumerate() {
+            for key in entry.as_object().expect("an entry").keys() {
+                let index = index.to_string();
+                assert!(
+                    without(&[section, &index, key]).is_err(),
+                    "{section}[{index}] without `{key}`: {entry}"
+                );
+                keys += 1;
+            }
+        }
+    }
+    assert!(keys > 100, "{keys} keys were each taken out once");
+    // The nullable keys in particular: an entry with one side empty writes that side `null`.
+    let diff: Diff = serde_json::from_value(follow({
+        let mut value = empty();
+        value["graph"] = json!([
+          { "kind": "reparameterized", "subject": "a.k", "old": null, "new": { "integer": 1 } },
+          { "kind": "rewired", "subject": "a.u", "old": "b.y", "new": null }
+        ]);
+        value
+    }))
+    .expect("null is a value");
+    assert_eq!(diff.graph.len(), 2);
+    for (entry, key) in [(0, "old"), (1, "new")] {
+        let mut value = follow(support::json(&diff));
+        value["graph"][entry]
+            .as_object_mut()
+            .expect("an entry")
+            .remove(key);
+        assert!(
+            serde_json::from_value::<Diff>(value).is_err(),
+            "graph[{entry}] without `{key}`"
+        );
+    }
+}
+
+#[test]
+fn only_this_schema_is_read() {
+    let with = |schema: Value| {
+        let mut value = empty();
+        value["schema"] = schema;
+        serde_json::from_value::<Diff>(value)
+    };
+    assert!(with(json!("oce-diff/1")).is_ok());
+    for schema in [
+        json!("oce-diff/2"),
+        json!("oce-diff/1 "),
+        json!("OCE-DIFF/1"),
+        json!("oce-report/1"),
+        json!(""),
+        json!(1),
+        Value::Null,
+    ] {
+        let error = with(schema.clone()).expect_err("another schema");
+        if schema.is_string() {
+            assert!(
+                error.to_string().contains("is not `oce-diff/1`"),
+                "{schema}: {error}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_real_whose_bits_are_malformed_or_are_not_its_spelling_is_refused() {
+    let read = |real: &str, bits: &str| {
+        serde_json::from_value::<Literal>(json!({ "real": real, "bits": bits }))
+    };
+    assert!(read("0.6", "0x3fe3333333333333").is_ok());
+    assert!(read("-0.0", "0x8000000000000000").is_ok());
+    assert!(
+        read("NaN", "0x7ff8000000000001").is_ok(),
+        "a NaN payload is its bits"
+    );
+    assert!(read("inf", "0x7ff0000000000000").is_ok());
+    for bits in [
+        "zzz",
+        "",
+        "0x",
+        "3fe3333333333333",
+        "0x3fe333333333333",
+        "0x3fe33333333333333",
+        "0x3FE3333333333333",
+        "0X3fe3333333333333",
+        "0x3fe333333333333g",
+        "0x+fe3333333333333",
+        " 0x3fe3333333333333",
+    ] {
+        let error = read("0.6", bits).expect_err("malformed bits");
+        assert!(
+            error.to_string().contains("16 lowercase hex digits"),
+            "`{bits}`: {error}"
+        );
+    }
+    // Well-formed bits of another value, and another spelling of the same value.
+    for (real, bits) in [
+        ("0.6", "0x3fe6666666666666"),
+        ("0.0", "0x8000000000000000"),
+        ("0.60", "0x3fe3333333333333"),
+        ("6e-1", "0x3fe3333333333333"),
+        ("nan", "0x7ff8000000000000"),
+        ("", "0x3fe3333333333333"),
+    ] {
+        let error = read(real, bits).expect_err("the two halves disagree");
+        assert!(
+            error
+                .to_string()
+                .contains("is not the spelling of its bits"),
+            "`{real}` with {bits}: {error}"
+        );
+    }
+    // Inside a diff the same refusal stops the whole read.
+    let mut value = follow({
+        let mut value = empty();
+        value["graph"] = json!([{ "kind": "reparameterized", "subject": "a.k", "old": null,
+                                  "new": { "real": "0.6", "bits": "zzz" } }]);
+        value
+    });
+    assert!(serde_json::from_value::<Diff>(value.clone()).is_err());
+    value["graph"][0]["new"]["bits"] = json!("0x3fe3333333333333");
+    assert!(serde_json::from_value::<Diff>(value).is_ok());
+}
+
+#[test]
+fn a_summary_its_sections_contradict_is_refused() {
+    let rewired = json!([{ "kind": "rewired", "subject": "a.u", "old": null, "new": "b.y" }]);
+    let reordered = json!([{ "kind": "reordered", "subject": "blocks", "list": "blocks" }]);
+    let changed = |edit: &dyn Fn(&mut Value)| {
+        let mut value = empty();
+        edit(&mut value);
+        serde_json::from_value::<Diff>(value).map_err(|error| error.to_string())
+    };
+    // `equal: true` beside an entry, and `equal: false` beside none.
+    let error = changed(&|v| v["graph"] = rewired.clone()).expect_err("equal beside an entry");
+    assert!(error.contains("summary.equal is true"), "{error}");
+    let error = changed(&|v| v["summary"]["equal"] = json!(false)).expect_err("nothing differs");
+    assert!(error.contains("summary.equal is false"), "{error}");
+    // A section flag that says equal beside a change, or differs beside none.
+    let error = changed(&|v| {
+        v["graph"] = rewired.clone();
+        v["summary"]["equal"] = json!(false);
+    })
+    .expect_err("graph_equal beside a rewiring");
+    assert!(error.contains("summary.graph_equal is true"), "{error}");
+    for flag in [
+        "graph_equal",
+        "parameters_equal",
+        "interface_equal",
+        "metadata_equal",
+    ] {
+        let error = changed(&|v| v["summary"][flag] = json!(false)).expect_err(flag);
+        assert!(
+            error.contains(&format!("summary.{flag} is false")),
+            "{error}"
+        );
+    }
+    // A reordering leaves its section's flag true and `equal` false: both are required.
+    assert!(
+        changed(&|v| {
+            v["graph"] = reordered.clone();
+            v["summary"]["equal"] = json!(false);
+        })
         .is_ok()
     );
-    // A kind of one section is not a kind of another.
-    assert!(
-        edited(
-            &|v| v["metadata"] = json!([{ "kind": "rewired", "subject": "a", "old": null,
-                                             "new": null }])
-        )
-        .is_err()
-    );
+    let error = changed(&|v| {
+        v["graph"] = reordered.clone();
+        v["summary"]["equal"] = json!(false);
+        v["summary"]["graph_equal"] = json!(false);
+    })
+    .expect_err("a reordering is not a graph difference");
+    assert!(error.contains("summary.graph_equal is false"), "{error}");
+    let error = changed(&|v| v["graph"] = reordered.clone()).expect_err("a reordering is an entry");
+    assert!(error.contains("summary.equal is true"), "{error}");
+    // `null` is "this level cannot tell", and only beside an empty section.
+    assert!(changed(&|v| v["summary"]["parameters_equal"] = Value::Null).is_ok());
+    let error = changed(&|v| {
+        v["metadata"] = json!([{ "kind": "comment-changed", "subject": "u",
+                                 "old": null, "new": " c" }]);
+        v["summary"]["equal"] = json!(false);
+        v["summary"]["metadata_equal"] = Value::Null;
+    })
+    .expect_err("null beside an entry");
+    assert!(error.contains("summary.metadata_equal is null"), "{error}");
 }
 
 #[test]
@@ -240,12 +497,10 @@ fn a_diff_from_a_level_without_parameters_or_metadata_says_so() {
     value["source"] = json!("cxf");
     value["summary"]["parameters_equal"] = Value::Null;
     value["summary"]["metadata_equal"] = Value::Null;
-    value["summary"]["graph_equal"] = json!(false);
-    value["summary"]["equal"] = json!(false);
     value["graph"] = json!([{ "kind": "reparameterized", "subject": "dehum.uHigh",
                               "old": { "real": "0.6", "bits": "0x3fe3333333333333" },
                               "new": { "real": "0.7", "bits": "0x3fe6666666666666" } }]);
-    let diff = read(value);
+    let diff = read(follow(value));
     assert_eq!(diff.source, Source::Cxf);
     assert_eq!(diff.summary.parameters_equal, None);
     assert_eq!(
@@ -276,7 +531,7 @@ fn each_note_has_its_own_header_line() {
         render_text(&diff),
         "# oce diff s -> s\n\
          # graph equal; parameters equal; interface equal; metadata equal\n\
-         # names disjoint: no block kept its name; 3 of 5 matched by the rename pass, 2 not matched\n\
+         # names disjoint: no block kept its name and class; 3 of 5 base blocks matched by the rename pass, 2 removed, 4 added\n\
          # rename pass skipped: more than 2048 unmatched blocks on a side or more than 65536 candidate pairs\n\
          # rename pass off\n"
     );
@@ -305,7 +560,7 @@ fn counts_read_from_json_cannot_overflow_a_renderer() {
                                          "base_only": usize::MAX, "head_only": usize::MAX });
     let text = render_text(&read(value.clone()));
     assert!(text.contains(&format!(
-        "# names disjoint: no block kept its name; {max} of {max} matched by the rename pass, {max} not matched\n",
+        "# names disjoint: no block kept its name and class; {max} of {max} base blocks matched by the rename pass, {max} removed, {max} added\n",
         max = usize::MAX
     )));
     value["notes"] = json!([]);
@@ -335,11 +590,11 @@ fn the_one_sided_templates_spell_the_empty_side() {
       { "kind": "derived-from-changed", "subject": "derived_from", "old": "cxf:a", "new": null },
       { "kind": "comment-changed", "subject": "u", "old": null, "new": " a | b\n <c> *d*" }
     ]);
-    let diff = read(value);
+    let diff = read(follow(value));
     assert_eq!(
         render_text(&diff),
         "# oce diff s -> s\n\
-         # graph equal; parameters equal; interface equal; metadata equal\n\
+         # graph differs; parameters equal; interface differs; metadata differs\n\
          # interface\n\
          ~ in u @unit K   # was none\n\
          ~ out y @max none   # was 10\n\

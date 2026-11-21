@@ -131,7 +131,7 @@ pub(super) fn run(
     Some(
         accepted
             .into_iter()
-            .map(|(b, h)| (b, h, confidence(sides, matching, &gates, b, h)))
+            .map(|(b, h)| (b, h, confidence(sides, matching, &gates, b)))
             .collect(),
     )
 }
@@ -173,18 +173,17 @@ fn round(
         .collect()
 }
 
-/// `exact` when the two blocks' final profiles are equal and every port agrees; `high` otherwise.
-fn confidence(
-    sides: &Sides<'_, '_>,
-    matching: &Matching,
-    gates: &Gates,
-    b: usize,
-    h: usize,
-) -> Confidence {
-    let old = base_profile(sides, matching, gates, b);
-    let new = head_profile(sides, matching, gates, h);
-    match (old, new) {
-        (Some(old), Some(new)) if old == new && old.all_agree() => Confidence::Exact,
+/// `exact` when every port of the pair agrees at the end; `high` when a port still ends at a
+/// block no round matched.
+///
+/// One block's final profile decides it. The two profiles were equal when the pair was accepted
+/// and stay equal: an unmatched end at a port of one block can only be matched to the end at the
+/// same port of the other, because by then the other block's links are the only links of the
+/// other side that give an end that anchor. So an unknown port either stays unknown on both
+/// sides or comes to agree on both, and never comes to disagree.
+fn confidence(sides: &Sides<'_, '_>, matching: &Matching, gates: &Gates, b: usize) -> Confidence {
+    match base_profile(sides, matching, gates, b) {
+        Some(profile) if profile.all_agree() => Confidence::Exact,
         _ => Confidence::High,
     }
 }

@@ -71,13 +71,14 @@ blocks costs what its links cost. The pair cap is still counted and enforced.
 **`summary.graph_equal` never depends on the pass.** A block left unmatched by name and class is
 in the graph section as `removed`, `added` or `renamed` whatever the pass did.
 
-`DiffOptions` has two switches. `renames: false` turns the pass off and always carries the note
-`rename-pass-off`. `canonical_ids_equal: true` is a caller's statement that both sides load to
-equal canonical content ids ([content-id note](../../../docs/design/content-id.md)): names are
-inside the id, so no block can be left unmatched and the pass is skipped. Equal ids prove nothing
-about parameters, comments or authored order, so everything else is compared in full. If blocks
-are unmatched on both sides all the same, the statement was wrong for these inputs and the diff
-says `rename-pass-off`.
+`DiffOptions` has one switch and one hint. `renames: false` turns the pass off and always carries
+the note `rename-pass-off`. `canonical_ids_equal: true` is a caller's statement that both sides
+load to equal canonical content ids ([content-id note](../../../docs/design/content-id.md)), and
+it **never changes the result**. Names and classes are inside the id, so with equal ids no block
+is left unmatched and the pass has nothing to do: that is the whole fast path, and `diff` takes it
+whenever a side has nothing left, hinted or not. Equal ids prove nothing about parameters,
+comments or authored order, so everything else is compared in full. If the statement is wrong and
+blocks are unmatched on both sides, the pass runs as it would without the hint.
 
 ## The data: `oce-diff/1`
 
@@ -94,10 +95,14 @@ written as a kebab-case string; every object is closed.
 | `graph` | `added`, `removed`, `renamed`, `reparameterized`, `rewired`, `reordered`, `parameter-defaulted` | a block, `block.param`, `block.port`, a boundary output, `blocks` or `connections` |
 | `metadata` | `sequence-renamed`, `derived-from-changed`, `semantic-changed`, `comment-changed`, `literal-respelled` | `sequence`, `derived_from`, `boundary.field`, a statement, `sequence.trailing` |
 
-- **`summary`** holds `equal` (every section empty), `graph_equal`, `interface_equal`,
-  `parameters_equal` and `metadata_equal` (each: its section is empty; the last two are `null`
-  from a level that cannot tell) and `blocks` (`by_name`, `renamed`, `base_only`, `head_only`).
-  A site retune is `graph_equal && !parameters_equal`.
+- **`summary`** holds `equal`, the four section flags `graph_equal`, `interface_equal`,
+  `parameters_equal` and `metadata_equal` (the last two `null` from a level that cannot tell),
+  and `blocks` (`by_name`, `renamed`, `base_only`, `head_only`). A section flag is true when its
+  section holds no entry other than `reordered`: authored order is not semantic, so a reordered
+  list is still the same structure. `equal` is true only when every section is empty. So `equal`
+  is **not** the four flags together: a diff of reorderings alone has all four true and `equal`
+  false. "Same structure?" reads `graph_equal`; "nothing at all changed?" reads `equal`. A site
+  retune is `graph_equal && !parameters_equal`.
 - **`notes`**: `names-disjoint` (both sides have blocks and none kept its name and class),
   `rename-pass-skipped`, `rename-pass-off`.
 - **A value** is one object per kind: `{"real", "bits"}`, `{"integer"}`, `{"boolean"}`,
@@ -105,12 +110,15 @@ written as a kebab-case string; every object is closed.
   (`{ "real": "0.6", "bits": "0x3fe3333333333333" }`), never a JSON number.
 - **Connections** are reported once, at their target. An added or removed block carries its
   driven inputs; any other target whose driver moved is `rewired`, compared after renames are
-  mapped. A driver on a block that is not matched is compared by its spelling.
+  mapped. A driver on a block that is not matched is compared by the block and port names as
+  written.
 - **A sequence parameter** change lists as `affects` the `block.param` assignments that reference
   it (head side; base side for a removed parameter) and is not repeated in the graph section.
 - **One value, two spellings** is metadata (`literal-respelled`), not a change: an Integer
   literal against the equal Real where a Real is expected (a `Real` sequence parameter, a block
-  parameter the catalog types Real, a bound of a `Real` boundary), or a changed unit suffix.
+  parameter the catalog types Real, a bound of a boundary both sides type `Real`; exact up to
+  2^53), or a changed unit suffix or written number. When a value and its unit suffix both
+  change, both are reported: the value in its section and the two spellings here.
 - **`parameter-defaulted`** is an assignment on one side only whose literal equals the catalog's
   literal default. Against a derived default, a required parameter, an array element, a
   reference or an unknown class it is `reparameterized` with the other side `null`.
@@ -121,7 +129,15 @@ written as a kebab-case string; every object is closed.
   after `#`, the leading space included), lines joined by a line feed.
 
 One thing in a model is not compared: whether a blank line precedes a statement. Every other
-field is, so an empty diff means the two models are equal up to blank lines.
+field is, and as a field, never as its spelling: a boundary named `a.b` is not the port `b` of
+`a`, and a written number no spelling shows is still a difference. So an empty diff means the two
+models are equal up to blank lines, for any model the types can hold;
+`tests/model_coverage.rs` holds that against the model's own equality.
+
+Reading a `Diff` back with `serde` is strict: every object is closed and every key required (a
+value that may be absent is written `null`), `schema` must be `oce-diff/1`, a Real's spelling
+must be the spelling of its bits, and the five summary flags must be what the sections give. The
+block counts and the order of the entries are taken as written.
 
 ## What an invalid model means
 
@@ -130,7 +146,8 @@ reading, and the diff of any model against itself is empty.
 
 - A name used more than once in a list is matched occurrence by occurrence. A connection that
   names a repeated block means the first.
-- A connection end that names no declared block is kept as spelled and never matched.
+- A connection end that names no declared block is kept as written and never matched. Ends are
+  compared as what they are (a boundary, or a block and a port), never as text.
 - A target with several drivers is compared as a multiset: the shared drivers are set aside and
   what is left is paired in sorted order, a side that runs out reading as undriven.
 

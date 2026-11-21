@@ -36,12 +36,14 @@ pub struct DiffOptions {
     /// block removed or added and always puts [`Note::RenamePassOff`] on the diff. Default
     /// `true`.
     pub renames: bool,
-    /// The caller's statement that both sides load to equal canonical content ids (decision 8).
-    /// Equal ids prove equal loaded graphs, and block names are inside the id, so no block can be
-    /// left unmatched and the rename pass is skipped. They prove nothing else, so every section
-    /// is still compared in full. If blocks are left unmatched on both sides all the same, the
-    /// statement was wrong for these inputs: they are reported removed and added and the diff
-    /// carries [`Note::RenamePassOff`]. Default `false`.
+    /// The caller's statement that both sides load to equal canonical content ids (decision 8's
+    /// fast path). It is a hint and never changes the result. Equal ids prove equal loaded
+    /// graphs, and block names and classes are inside the id, so no block is left unmatched and
+    /// the rename pass has nothing to do: that is the whole fast path, and `diff` takes it
+    /// whenever no block is left unmatched on a side, hinted or not. Equal ids prove nothing
+    /// about parameters, comments or authored order, so every section is still compared in full.
+    /// If the statement is wrong for these inputs and blocks are unmatched on both sides, the
+    /// pass runs as it would without the hint. Default `false`.
     pub canonical_ids_equal: bool,
 }
 
@@ -66,9 +68,15 @@ impl DiffOptions {
 ///
 /// Each section is sorted by subject bytewise, then by kind in enum order, then by the rest of
 /// the entry, so the same two inputs always give the same bytes.
+///
+/// Reading one back (`Deserialize`) is strict: every object is closed, every key is required
+/// (a value that may be absent is written `null`, never left out), `schema` must be
+/// [`DIFF_SCHEMA`], a Real's spelling must be the spelling of its bits, and the summary's five
+/// flags must be what the four sections give. The block counts and the order of the entries are
+/// taken as written.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "crate::read::RawDiff")]
 pub struct Diff {
     /// The schema tag, [`DIFF_SCHEMA`].
     pub schema: String,
@@ -116,25 +124,36 @@ pub struct SequenceRef {
     pub sequence: String,
     /// The `derived_from` provenance id as authored, or `None` when the sequence derives from
     /// nothing (`null` in JSON; the text form spells it `none`).
+    #[serde(deserialize_with = "crate::read::nullable")]
     pub derived_from: Option<String>,
 }
 
-/// Which sections of a diff are empty, and how the blocks matched.
+/// Which sections of a diff differ, and how the blocks matched.
+///
+/// A section flag is true when its section holds no entry other than `reordered`: authored order
+/// is not semantic (the canonical content id ignores it), so a list in another order is still
+/// the same structure. `equal` is stricter and is true only when every section is empty. So
+/// `equal` is **not** the four flags together: a diff whose only entries are `reordered` has all
+/// four flags true and `equal` false. A script that asks "same structure?" reads `graph_equal`;
+/// one that asks "nothing at all changed?" reads `equal`.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Summary {
-    /// True only when every section is empty.
+    /// True only when every section is empty, `reordered` entries included.
     pub equal: bool,
-    /// True when the graph section is empty. It is decided by name and class alone and never by
-    /// the rename pass: a renamed block has another name, so any rename leaves it false.
+    /// True when the graph section holds no entry other than `reordered`. It is decided by name
+    /// and class alone and never by the rename pass: a renamed block has another name, so any
+    /// rename leaves it false.
     pub graph_equal: bool,
-    /// True when the parameters section is empty; `None` at a level that cannot tell a
-    /// sequence-parameter change from a graph change.
+    /// True when the parameters section holds no entry other than `reordered`; `None` at a level
+    /// that cannot tell a sequence-parameter change from a graph change.
+    #[serde(deserialize_with = "crate::read::nullable")]
     pub parameters_equal: Option<bool>,
-    /// True when the interface section is empty.
+    /// True when the interface section holds no entry other than `reordered`.
     pub interface_equal: bool,
     /// True when the metadata section is empty; `None` at a level that carries no metadata.
+    #[serde(deserialize_with = "crate::read::nullable")]
     pub metadata_equal: Option<bool>,
     /// How the blocks of the two sides matched.
     pub blocks: BlockCounts,
@@ -161,7 +180,8 @@ pub struct BlockCounts {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Note {
-    /// Both sides have blocks and none kept its name and class.
+    /// Both sides have blocks and none kept its name and class (a name kept under another class
+    /// counts as not kept).
     NamesDisjoint,
     /// Both sides had unmatched blocks and the rename pass did not run because a cap was passed
     /// ([`MAX_RENAME_CANDIDATES`] unmatched blocks on a side, or [`MAX_RENAME_PAIRS`] gated
@@ -179,7 +199,7 @@ pub enum Confidence {
     /// Every port of the pair agrees at the end of the pass.
     Exact,
     /// The pair was accepted on the ports that agreed, and at least one other port ends at a
-    /// block that was never matched, or at a different one.
+    /// block that was never matched.
     High,
 }
 
@@ -233,7 +253,7 @@ pub enum GraphList {
 /// kind: `{"real", "bits"}`, `{"integer"}`, `{"boolean"}`, `{"text"}`, `{"ref"}`, `{"member"}`.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(untagged, deny_unknown_fields)]
+#[serde(untagged, try_from = "crate::read::RawLiteral")]
 pub enum Literal {
     /// A Real: the shortest spelling that reads back to the same value (`0.6`, `-0.0`, `1e21`,
     /// `NaN`, `inf`) and its IEEE-754 bits as `0x` and 16 lowercase hex digits. The bits are the

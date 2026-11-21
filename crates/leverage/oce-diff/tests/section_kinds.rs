@@ -1,8 +1,8 @@
 //! One minimal pair per kind of the parameters, interface and metadata sections (diff note,
 //! "Categories and sections" and "Site parameters and the graph"), each asserting the kind, the
-//! subject and the values: a sequence-parameter change with what it affects, an Integer literal
-//! against the equal Real, every boundary attribute, every semantic field and a comment on every
-//! kind of statement.
+//! subject and the values: a sequence-parameter change with what it affects, every boundary
+//! attribute, every semantic field and a comment on every kind of statement, and what a
+//! reordering does to the summary. `literal_spellings.rs` holds the `literal-respelled` cases.
 
 mod support;
 
@@ -139,159 +139,114 @@ fn parameters_in_another_order_are_reordered_once() {
         diff["parameters"],
         json!([{ "kind": "reordered", "subject": "params" }])
     );
-    assert_eq!(diff["summary"]["parameters_equal"], json!(false));
+    // Order is not semantic: the parameters are the same parameters, and something did change.
+    assert_eq!(diff["summary"]["parameters_equal"], json!(true));
+    assert_eq!(diff["summary"]["equal"], json!(false));
 }
 
 #[test]
-fn an_integer_literal_against_the_equal_real_is_respelled_only_where_a_real_is_expected() {
-    // On a Real sequence parameter: one value, two spellings. Metadata, not a parameter change.
-    let diff = diffed("param t : Real = 60\n", "param t : Real = 60.0\n");
-    assert_eq!(diff["parameters"], json!([]));
-    assert_eq!(
-        diff["metadata"],
-        json!([{ "kind": "literal-respelled", "subject": "t", "old": "60", "new": "60.0" }])
-    );
-    // On a Real block parameter (`delayTime` of TrueDelay), the same.
-    let diff = diffed(
-        "block d = CDL.Logical.TrueDelay(delayTime = 60)\n",
-        "block d = CDL.Logical.TrueDelay(delayTime = 60.0)\n",
-    );
-    assert_eq!(diff["graph"], json!([]));
-    assert_eq!(diff["summary"]["graph_equal"], json!(true));
-    assert_eq!(
-        diff["metadata"],
-        json!([{ "kind": "literal-respelled", "subject": "d.delayTime",
-                 "old": "60", "new": "60.0" }])
-    );
-    // On an Integer block parameter (`k` of Integers.Sources.Constant) the Real is another value.
-    let diff = diffed(
-        "block c = CDL.Integers.Sources.Constant(k = 1)\n",
-        "block c = CDL.Integers.Sources.Constant(k = 1.0)\n",
-    );
-    assert_eq!(
-        support::kinds(&diff["graph"]),
-        [("reparameterized".to_owned(), "c.k".to_owned())]
-    );
-    assert_eq!(diff["metadata"], json!([]));
-    // And on a parameter the catalog does not know, the diff does not guess.
-    let diff = diffed(
-        "block c = CDL.Nowhere.Nothing(k = 1)\n",
-        "block c = CDL.Nowhere.Nothing(k = 1.0)\n",
-    );
-    assert_eq!(
-        support::kinds(&diff["graph"]),
-        [("reparameterized".to_owned(), "c.k".to_owned())]
-    );
-}
-
-#[test]
-fn an_integer_and_a_real_that_differ_in_value_or_sign_of_zero_are_not_respelled() {
-    let diff = diffed("param t : Real = 60\n", "param t : Real = 60.5\n");
-    assert_eq!(
-        support::kinds(&diff["parameters"]),
-        [("changed".to_owned(), "t".to_owned())]
-    );
-    // The Integer 0 means +0.0 where a Real is expected, never -0.0.
-    let diff = diffed("param z : Real = 0\n", "param z : Real = -0.0\n");
-    assert_eq!(
-        support::kinds(&diff["parameters"]),
-        [("changed".to_owned(), "z".to_owned())]
-    );
-    let diff = diffed("param z : Real = 0\n", "param z : Real = 0.0\n");
-    assert_eq!(diff["parameters"], json!([]));
-    // An array element of a Real array is a Real too.
-    let diff = diffed(
-        "block m = CDL.Reals.MultiSum(nin = 2, k = [1, 2])\n",
-        "block m = CDL.Reals.MultiSum(nin = 2, k = [1.0, 2.0])\n",
-    );
-    assert_eq!(diff["graph"], json!([]));
-    assert_eq!(
-        support::kinds(&diff["metadata"]),
-        [
-            ("literal-respelled".to_owned(), "m.k_1".to_owned()),
-            ("literal-respelled".to_owned(), "m.k_2".to_owned())
-        ]
-    );
-}
-
-#[test]
-fn an_integer_past_two_to_the_fifty_third_is_never_the_real_it_rounds_to() {
-    // 2^53 is the last Integer every one of whose neighbours is a Real. 2^53 + 1 rounds to 2^53
-    // as an f64: a different value, so a change, not a respelling.
-    let diff = diffed(
-        "param big : Real = 9007199254740992\n",
-        "param big : Real = 9007199254740992.0\n",
-    );
-    assert_eq!(diff["parameters"], json!([]));
-    assert_eq!(
-        diff["metadata"],
-        json!([{ "kind": "literal-respelled", "subject": "big",
-                 "old": "9007199254740992", "new": "9007199254740992.0" }])
-    );
-    for integer in [
-        "9007199254740993",
-        "-9007199254740993",
-        "9223372036854775807",
-    ] {
-        let real = if integer.starts_with('-') {
-            "-9007199254740992.0"
-        } else if integer.len() == 16 {
-            "9007199254740992.0"
-        } else {
-            "9223372036854775807.0"
-        };
-        let diff = diffed(
-            &format!("param big : Real = {integer}\n"),
-            &format!("param big : Real = {real}\n"),
+fn a_reordering_alone_leaves_every_section_flag_true_and_equal_false() {
+    // Decision 16: a `reordered`-only diff is not `equal`, and a script that wants "same
+    // structure" reads `graph_equal`. Every list of the model, each reordered alone.
+    let base = "param a : Real = 1.0\nparam b : Real = 2.0\n\
+                in u : Real\nin v : Real\nout y : Real\nout z : Real\n\
+                block p = CDL.Reals.Limiter(uMax = 1.0, uMin = 0.0)\nblock q = CDL.Reals.Abs\n\
+                u -> p.u\nv -> q.u\np.y -> y\nq.y -> z\n";
+    let heads = [
+        (
+            "parameters",
+            base.replace(
+                "param a : Real = 1.0\nparam b : Real = 2.0\n",
+                "param b : Real = 2.0\nparam a : Real = 1.0\n",
+            ),
+        ),
+        (
+            "interface",
+            base.replace("in u : Real\nin v : Real\n", "in v : Real\nin u : Real\n"),
+        ),
+        (
+            "interface",
+            base.replace(
+                "out y : Real\nout z : Real\n",
+                "out z : Real\nout y : Real\n",
+            ),
+        ),
+        (
+            "graph",
+            base.replace("uMax = 1.0, uMin = 0.0", "uMin = 0.0, uMax = 1.0"),
+        ),
+        (
+            "graph",
+            base.replace("u -> p.u\nv -> q.u\n", "v -> q.u\nu -> p.u\n"),
+        ),
+        (
+            "graph",
+            base.replace(
+                "block p = CDL.Reals.Limiter(uMax = 1.0, uMin = 0.0)\nblock q = CDL.Reals.Abs\n",
+                "block q = CDL.Reals.Abs\nblock p = CDL.Reals.Limiter(uMax = 1.0, uMin = 0.0)\n",
+            ),
+        ),
+    ];
+    for (section, head) in heads {
+        assert_ne!(head, base, "{section}: the head is another text");
+        let diff = diffed(base, &head);
+        assert_eq!(
+            support::kinds(&diff[section])
+                .into_iter()
+                .map(|(kind, _)| kind)
+                .collect::<Vec<_>>(),
+            ["reordered"],
+            "{section}"
         );
         assert_eq!(
-            support::kinds(&diff["parameters"]),
-            [("changed".to_owned(), "big".to_owned())],
-            "{integer} against {real}"
+            diff["summary"],
+            json!({ "equal": false, "graph_equal": true, "parameters_equal": true,
+                    "interface_equal": true, "metadata_equal": true,
+                    "blocks": { "by_name": 2, "renamed": 0, "base_only": 0, "head_only": 0 } }),
+            "{section}"
         );
-        assert_eq!(diff["metadata"], json!([]), "{integer} against {real}");
     }
-    // The same limit on a block parameter and on its catalog default.
-    let diff = diffed(
-        "block d = CDL.Logical.TrueDelay(delayTime = 9007199254740993)\n",
-        "block d = CDL.Logical.TrueDelay(delayTime = 9007199254740992.0)\n",
-    );
+    // The text says both things: the header calls the graph equal, the section lists the move.
+    let moved = base.replace("u -> p.u\nv -> q.u\n", "v -> q.u\nu -> p.u\n");
     assert_eq!(
-        support::kinds(&diff["graph"]),
-        [("reparameterized".to_owned(), "d.delayTime".to_owned())]
+        oce_diff::render_text(&compare(&model(base), &model(&moved))),
+        "# oce diff s -> s\n\
+         # graph equal; parameters equal; interface equal; metadata equal\n\
+         # graph\n\
+         ~ # connections reordered\n"
     );
-    let diff = diffed(
-        "block d = CDL.Logical.TrueDelay(delayTime = -9007199254740992)\n",
-        "block d = CDL.Logical.TrueDelay(delayTime = -9007199254740992.0)\n",
-    );
-    assert_eq!(diff["graph"], json!([]));
+    // A reordering beside a real change does not hide the change.
+    let both = moved.replace("uMax = 1.0", "uMax = 2.0");
+    let diff = diffed(base, &both);
+    assert_eq!(diff["summary"]["graph_equal"], json!(false));
 }
 
 #[test]
-fn a_changed_unit_suffix_is_respelled_when_the_value_is_the_same() {
-    // 1 h is 3600 s: one value, written two ways.
-    let diff = diffed(
-        "block d = CDL.Logical.TrueDelay(delayTime = 3600.0)\n",
-        "block d = CDL.Logical.TrueDelay(delayTime = 1 h)\n",
-    );
-    assert_eq!(diff["graph"], json!([]));
+fn what_a_changed_parameter_affects_is_read_from_head() {
+    // Head adds a second assignment that references `p`. The parameter changed between the two
+    // sides, and what it affects now is what head says: both assignments.
+    let base = "param p : Real = 1.0\n\
+                block a = CDL.Reals.MultiplyByParameter(k = p)\n\
+                block b = CDL.Reals.MultiplyByParameter(k = 5.0)\n";
+    let head = "param p : Real = 2.0\n\
+                block a = CDL.Reals.MultiplyByParameter(k = p)\n\
+                block b = CDL.Reals.MultiplyByParameter(k = p)\n";
     assert_eq!(
-        diff["metadata"],
-        json!([{ "kind": "literal-respelled", "subject": "d.delayTime",
-                 "old": "3600.0", "new": "1 h" }])
+        diffed(base, head)["parameters"][0]["affects"],
+        json!(["a.k", "b.k"])
     );
-    // 2 h is another value: a graph change, with no respelling beside it.
-    let diff = diffed(
-        "block d = CDL.Logical.TrueDelay(delayTime = 1 h)\n",
-        "block d = CDL.Logical.TrueDelay(delayTime = 2 h)\n",
-    );
+    // The other way round head is the side with one reference.
     assert_eq!(
-        diff["graph"],
-        json!([{ "kind": "reparameterized", "subject": "d.delayTime",
-                 "old": { "real": "3600.0", "bits": "0x40ac200000000000" },
-                 "new": { "real": "7200.0", "bits": "0x40bc200000000000" } }])
+        diffed(head, base)["parameters"][0]["affects"],
+        json!(["a.k"])
     );
-    assert_eq!(diff["metadata"], json!([]));
+    // The same for a changed type.
+    let retyped = head.replace("param p : Real = 2.0", "param p : Integer = 2");
+    let diff = diffed(base, &retyped);
+    assert_eq!(diff["parameters"][0]["kind"], json!("type-changed"));
+    assert_eq!(diff["parameters"][0]["affects"], json!(["a.k", "b.k"]));
+    let diff = diffed(&retyped, base);
+    assert_eq!(diff["parameters"][0]["affects"], json!(["a.k"]));
 }
 
 #[test]
@@ -394,28 +349,6 @@ fn inputs_and_outputs_are_each_reordered_on_their_own() {
     assert_eq!(
         diff["interface"],
         json!([{ "kind": "reordered", "subject": "outputs" }])
-    );
-}
-
-#[test]
-fn a_bound_written_as_an_integer_and_as_the_equal_real_is_respelled_on_a_real_connector() {
-    let diff = diffed(
-        "in u : Real @min 0 @max 10\n",
-        "in u : Real @min 0.0 @max 10.0\n",
-    );
-    assert_eq!(diff["interface"], json!([]));
-    assert_eq!(
-        diff["metadata"],
-        json!([
-          { "kind": "literal-respelled", "subject": "u.max", "old": "10", "new": "10.0" },
-          { "kind": "literal-respelled", "subject": "u.min", "old": "0", "new": "0.0" }
-        ])
-    );
-    // On an Integer connector a Real bound is not the Integer respelled.
-    let diff = diffed("in n : Integer @min 0\n", "in n : Integer @min 0.0\n");
-    assert_eq!(
-        support::kinds(&diff["interface"]),
-        [("min-changed".to_owned(), "n".to_owned())]
     );
 }
 

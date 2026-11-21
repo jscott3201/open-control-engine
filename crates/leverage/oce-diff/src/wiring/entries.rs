@@ -7,7 +7,8 @@
 //! difference is `rewired`.
 //!
 //! Two drivers are the same when they are the same boundary, the same port of one matched pair,
-//! or, for a port of a block that is not matched, the same spelling. A target has one driver in a
+//! or, for a port of a block that is not matched, the same block name and port name. Ends are
+//! compared as what they are, never as text: a boundary named `a.b` is not the port `b` of `a`. A target has one driver in a
 //! valid model. With several, the drivers on both sides are set aside as a multiset and what is
 //! left is paired in sorted order, a side that runs out reading as undriven, so every difference
 //! is still one entry at its target.
@@ -46,8 +47,8 @@ enum Source<'a> {
     Boundary(&'a str),
     /// A port of a matched block, by the head block's position.
     Port(usize, &'a str),
-    /// A port of a block that is not matched, as spelled.
-    Unmatched(String),
+    /// A port of a block that is not matched, by the names as written.
+    Unmatched(&'a str, &'a str),
 }
 
 /// The drivers of one target: each with its spelling on its own side.
@@ -176,7 +177,7 @@ fn place_source<'a>(
         End::Boundary(name) => Source::Boundary(name),
         End::Port { block, port } => match index.block(block).and_then(partner) {
             Some(head) => Source::Port(head, port),
-            None => Source::Unmatched(source.spelling()),
+            None => Source::Unmatched(block, port),
         },
     }
 }

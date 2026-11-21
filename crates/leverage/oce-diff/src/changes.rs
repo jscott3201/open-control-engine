@@ -63,8 +63,10 @@ pub enum GraphChange {
         /// `block.param`.
         subject: String,
         /// The base value, or `None` when base does not assign the parameter.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<Literal>,
         /// The head value, or `None` when head does not assign the parameter.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<Literal>,
     },
     /// A target whose driver changed, compared after renames are mapped.
@@ -72,8 +74,10 @@ pub enum GraphChange {
         /// `block.port` in head names, or a boundary output.
         subject: String,
         /// The base driver as base spells it, or `None` when the target was not driven.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<String>,
         /// The head driver as head spells it, or `None` when the target is not driven.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<String>,
     },
     /// The same elements in another authored order. No semantic claim: the canonical content id
@@ -178,14 +182,19 @@ pub enum InterfaceChange {
         #[serde(rename = "type")]
         value_type: String,
         /// Its `unit`, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         unit: Option<String>,
         /// Its `quantity`, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         quantity: Option<String>,
         /// Its `displayUnit`, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         display_unit: Option<String>,
         /// Its `min` bound, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         min: Option<Literal>,
         /// Its `max` bound, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         max: Option<Literal>,
     },
     /// A connector present only in base.
@@ -198,14 +207,19 @@ pub enum InterfaceChange {
         #[serde(rename = "type")]
         value_type: String,
         /// Its `unit`, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         unit: Option<String>,
         /// Its `quantity`, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         quantity: Option<String>,
         /// Its `displayUnit`, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         display_unit: Option<String>,
         /// Its `min` bound, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         min: Option<Literal>,
         /// Its `max` bound, if authored.
+        #[serde(deserialize_with = "crate::read::nullable")]
         max: Option<Literal>,
     },
     /// The connector's type differs.
@@ -226,8 +240,10 @@ pub enum InterfaceChange {
         /// Input or output.
         direction: Direction,
         /// The base unit.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<String>,
         /// The head unit.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<String>,
     },
     /// The `quantity` differs.
@@ -237,8 +253,10 @@ pub enum InterfaceChange {
         /// Input or output.
         direction: Direction,
         /// The base quantity.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<String>,
         /// The head quantity.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<String>,
     },
     /// The `displayUnit` differs.
@@ -248,8 +266,10 @@ pub enum InterfaceChange {
         /// Input or output.
         direction: Direction,
         /// The base display unit.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<String>,
         /// The head display unit.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<String>,
     },
     /// The `min` bound differs. On an input the bound is part of the acceptance domain and inside
@@ -260,8 +280,10 @@ pub enum InterfaceChange {
         /// Input or output.
         direction: Direction,
         /// The base bound.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<Literal>,
         /// The head bound.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<Literal>,
     },
     /// The `max` bound differs.
@@ -271,8 +293,10 @@ pub enum InterfaceChange {
         /// Input or output.
         direction: Direction,
         /// The base bound.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<Literal>,
         /// The head bound.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<Literal>,
     },
     /// The same connectors in another authored order.
@@ -293,8 +317,10 @@ pub enum MetadataChange {
         /// `sequence`.
         subject: String,
         /// The base name.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<String>,
         /// The head name.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<String>,
     },
     /// The `derived_from` provenance id differs.
@@ -302,8 +328,10 @@ pub enum MetadataChange {
         /// `derived_from`.
         subject: String,
         /// The base id, `None` for none.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<String>,
         /// The head id, `None` for none.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<String>,
     },
     /// A semantic field of a boundary other than `unit` differs.
@@ -312,8 +340,10 @@ pub enum MetadataChange {
         /// joined by one space, in authored order) or `provisional` (`true` or `false`).
         subject: String,
         /// The base value.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<String>,
         /// The head value.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<String>,
     },
     /// The comment lines above a statement differ.
@@ -322,18 +352,24 @@ pub enum MetadataChange {
         /// boundary, a block, `block.param`, or a connection as `source -> target`.
         subject: String,
         /// The base lines as the model holds them, joined by a line feed; `None` for no comment.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<String>,
         /// The head lines.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<String>,
     },
-    /// A value spelled another way, the value itself unchanged: an Integer literal against the
-    /// equal Real where a Real is expected, or a changed unit suffix.
+    /// A value written another way: an Integer literal against the equal Real where a Real is
+    /// expected, or a changed unit suffix or written number. The value itself is unchanged, with
+    /// one exception: when a value changes and its unit suffix changes with it, the change of
+    /// value is an entry of its own section and this entry records the two spellings.
     LiteralRespelled {
         /// A parameter, `block.param`, or `boundary.min` / `boundary.max`.
         subject: String,
         /// The base spelling, as the text form writes it.
+        #[serde(deserialize_with = "crate::read::nullable")]
         old: Option<String>,
         /// The head spelling.
+        #[serde(deserialize_with = "crate::read::nullable")]
         new: Option<String>,
     },
 }
@@ -400,15 +436,23 @@ impl MetadataChange {
     }
 }
 
-/// An entry of a section: it names its subject and has a total order.
+/// An entry of a section: it names its subject, says whether it is only a reordering, and has a
+/// total order.
 pub(crate) trait Entry: Ord {
     /// The entry's subject.
     fn entry_subject(&self) -> &str;
+
+    /// Whether the entry says only that a list is in another authored order.
+    fn is_reordering(&self) -> bool;
 }
 
 impl Entry for GraphChange {
     fn entry_subject(&self) -> &str {
         self.subject()
+    }
+
+    fn is_reordering(&self) -> bool {
+        matches!(self, Self::Reordered { .. })
     }
 }
 
@@ -416,11 +460,19 @@ impl Entry for ParameterChange {
     fn entry_subject(&self) -> &str {
         self.subject()
     }
+
+    fn is_reordering(&self) -> bool {
+        matches!(self, Self::Reordered { .. })
+    }
 }
 
 impl Entry for InterfaceChange {
     fn entry_subject(&self) -> &str {
         self.subject()
+    }
+
+    fn is_reordering(&self) -> bool {
+        matches!(self, Self::Reordered { .. })
     }
 }
 
@@ -428,6 +480,16 @@ impl Entry for MetadataChange {
     fn entry_subject(&self) -> &str {
         self.subject()
     }
+
+    fn is_reordering(&self) -> bool {
+        false
+    }
+}
+
+/// Whether a section differs in authored order at most: it holds no entry other than
+/// `reordered`. This is what a section flag of the summary says.
+pub(crate) fn same_but_for_order<E: Entry>(section: &[E]) -> bool {
+    section.iter().all(Entry::is_reordering)
 }
 
 /// Sort a section: by subject bytewise, then by kind in enum order, then by the rest of the

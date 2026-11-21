@@ -110,7 +110,7 @@ pub(crate) struct Outcome {
 ///
 /// Step 1 pairs blocks of the same name and class. Step 2 leaves a pair of the same name and
 /// different classes unmatched on both sides. Step 3, the rename pass, runs over what is left
-/// unless `options` turns it off, a side has nothing left, or a cap is passed.
+/// unless `options.renames` is off, a side has nothing left, or a cap is passed.
 pub(crate) fn compare(base: &Side<'_>, head: &Side<'_>, options: &DiffOptions) -> Outcome {
     let base_index = Index::new(base);
     let head_index = Index::new(head);
@@ -144,7 +144,9 @@ pub(crate) fn compare(base: &Side<'_>, head: &Side<'_>, options: &DiffOptions) -
 
     let mut notes = Vec::new();
     let nothing_to_pair = loose_base.is_empty() || loose_head.is_empty();
-    if !options.renames || (options.canonical_ids_equal && !nothing_to_pair) {
+    // `options.canonical_ids_equal` is a hint and is not read: with equal ids nothing is left
+    // to pair, which is the fast path whoever says so, and a wrong hint must not cost a rename.
+    if !options.renames {
         notes.push(Note::RenamePassOff);
     } else if !nothing_to_pair {
         let sides = rename::Sides {

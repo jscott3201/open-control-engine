@@ -4,7 +4,9 @@
 //!
 //! An assignment on both sides is `reparameterized` when its value differs. Two spellings of one
 //! value are not a graph change but a `literal-respelled` metadata entry: an Integer literal
-//! against the equal Real on a parameter the catalog types Real, or a changed unit suffix. An
+//! against the equal Real on a parameter the catalog types Real, or a changed unit suffix or
+//! written number. When a value changes and its unit suffix does too, both are reported: the
+//! value in the graph section, the spelling in the metadata. An
 //! assignment on one side only is `parameter-defaulted` when its literal equals the catalog's
 //! literal default, and `reparameterized` with the other side empty otherwise: against a derived
 //! default, a required parameter, an array element, a reference, or a class or parameter the
@@ -20,7 +22,7 @@ use crate::catalog;
 use crate::changes::{GraphChange, MetadataChange};
 use crate::data::{GraphList, Side};
 use crate::pairing::{pair, reordered};
-use crate::wiring::Matching;
+use crate::wiring::{End, Matching};
 use crate::work::visited;
 
 use super::{comment, lower};
@@ -45,15 +47,8 @@ pub(super) fn changes(
         }
     }
 
-    let spell = |sequence: &Sequence| -> Vec<String> {
-        sequence
-            .connections
-            .iter()
-            .map(oce_author::Connection::spelling)
-            .collect()
-    };
-    let (old_links, new_links) = (spell(base), spell(head));
-    let links = pair(&old_links, &new_links);
+    // Connections pair by their two ends as written, each end as what it is and not as text.
+    let links = pair(&ends(base), &ends(head));
     if reordered(&links.both) {
         graph.push(GraphChange::Reordered {
             subject: "connections".to_owned(),
@@ -61,19 +56,29 @@ pub(super) fn changes(
         });
     }
     for &(b, h) in &links.both {
-        if let (Some(old), Some(new), Some(subject)) = (
-            base.connections.get(b),
-            head.connections.get(h),
-            new_links.get(h),
-        ) {
+        if let (Some(old), Some(new)) = (base.connections.get(b), head.connections.get(h)) {
             commented(
-                subject,
+                &new.spelling(),
                 &old.annotations.comments,
                 &new.annotations.comments,
                 metadata,
             );
         }
     }
+}
+
+/// The two ends of every connection, in authored order.
+fn ends(sequence: &Sequence) -> Vec<(End<'_>, End<'_>)> {
+    sequence
+        .connections
+        .iter()
+        .map(|connection| {
+            (
+                lower::end(&connection.source),
+                lower::end(&connection.target),
+            )
+        })
+        .collect()
 }
 
 /// Add a `comment-changed` entry when the comment lines differ.
@@ -92,19 +97,33 @@ pub(super) fn commented(
     }
 }
 
-/// Add a `literal-respelled` entry when the two spellings of one value differ.
+/// Add a `literal-respelled` entry with the two spellings.
 pub(super) fn respelled(
     subject: &str,
     old: String,
     new: String,
     metadata: &mut Vec<MetadataChange>,
 ) {
-    if old != new {
-        metadata.push(MetadataChange::LiteralRespelled {
-            subject: subject.to_owned(),
-            old: Some(old),
-            new: Some(new),
-        });
+    metadata.push(MetadataChange::LiteralRespelled {
+        subject: subject.to_owned(),
+        old: Some(old),
+        new: Some(new),
+    });
+}
+
+/// Whether the way a value is written changed, given the text-only fields of both sides (the
+/// unit suffix and the number written before a scaled one). Under one value the fields are
+/// compared as fields, so a difference no spelling shows is still a difference. Under a changed
+/// value only the suffix counts: the written number follows the value.
+pub(super) fn written_differently(
+    same_value: bool,
+    old: (&Option<String>, &Option<oce_author::Literal>),
+    new: (&Option<String>, &Option<oce_author::Literal>),
+) -> bool {
+    if same_value {
+        old != new
+    } else {
+        old.0 != new.0
     }
 }
 
@@ -183,9 +202,17 @@ fn assigned_on_both(
         }
         _ => false,
     };
-    if old.value == new.value || one_real {
+    let same_value = old.value == new.value;
+    let written = written_differently(
+        same_value,
+        (&old.suffix, &old.scaled_from),
+        (&new.suffix, &new.scaled_from),
+    );
+    // An Integer against the equal Real is one value written two ways, whatever else is equal.
+    if written || (one_real && !same_value) {
         respelled(&subject, spelled(old), spelled(new), metadata);
-    } else {
+    }
+    if !same_value && !one_real {
         graph.push(GraphChange::Reparameterized {
             subject,
             old: Some(lower::value(&old.value)),

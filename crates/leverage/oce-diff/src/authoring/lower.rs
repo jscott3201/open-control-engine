@@ -84,7 +84,8 @@ pub(super) fn spelled(
     }
 }
 
-fn end(endpoint: &Endpoint) -> End<'_> {
+/// The level-neutral end of an authored endpoint.
+pub(super) fn end(endpoint: &Endpoint) -> End<'_> {
     match endpoint {
         Endpoint::Boundary(name) => End::Boundary(name.as_str()),
         Endpoint::Port { block, port } => End::Port {

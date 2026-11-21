@@ -1,6 +1,6 @@
 //! The rename pass (diff note, "Identity"; decision 11) through the public diff: the hard gates,
 //! agreement and refusal, mutual uniqueness, the rounds and their limit, both caps at their
-//! boundaries, the two switches, and `graph_equal` never depending on any of it.
+//! boundaries, the switch and the hint, and `graph_equal` never depending on any of it.
 //!
 //! Example (c) of the note pins refusal on disagreement and on a changed parameter; here each
 //! refusal also has its control, the same pair with the one difference taken away, which is
@@ -390,31 +390,54 @@ fn turning_the_pass_off_leaves_every_unmatched_block_removed_or_added() {
 }
 
 #[test]
-fn a_caller_that_knows_the_content_ids_are_equal_skips_the_pass() {
-    let mut options = DiffOptions::new();
-    options.canonical_ids_equal = true;
-    // The statement holds: reordered blocks load to one graph. The output is the default one.
+fn the_content_id_hint_never_changes_the_result() {
+    let mut hinted = DiffOptions::new();
+    hinted.canonical_ids_equal = true;
+    // The statement holds: reordered blocks load to one graph with one canonical id. The fast
+    // path is that nothing is left to pair, hinted or not, and the graph is equal as the id says.
     let base = model(
         "in u : Real\nblock a = CDL.Reals.Abs\nblock b = CDL.Reals.Sqrt\nu -> a.u\nu -> b.u\n",
     );
     let head = model(
         "in u : Real\nblock b = CDL.Reals.Sqrt\nblock a = CDL.Reals.Abs\nu -> b.u\nu -> a.u\n",
     );
-    let hinted = diff(&base, &head, &options);
-    assert_eq!(hinted, compare(&base, &head));
-    assert!(hinted.notes.is_empty());
+    let with = diff(&base, &head, &hinted);
+    assert_eq!(with, compare(&base, &head));
+    assert!(with.notes.is_empty());
+    assert!(with.summary.graph_equal, "equal ids are an equal graph");
     assert!(
-        !hinted.summary.equal,
-        "equal ids do not prove an empty authoring diff"
+        !with.summary.equal,
+        "and do not prove an empty authoring diff"
     );
-    // The statement is wrong for these inputs: the pass is still skipped, and the diff says so.
+    // The statement is false for every pair below (their blocks differ, so their ids do). A
+    // wrong hint costs nothing: the pass runs as it would without it, byte for byte.
+    let mut false_hints = 0;
+    for name in support::EXAMPLES.into_iter().chain(["every_kind"]) {
+        let (base, head) = example(name);
+        let with = diff(&base, &head, &hinted);
+        let without = compare(&base, &head);
+        assert_eq!(with, without, "{name}");
+        assert_eq!(with.to_json(), without.to_json(), "{name}");
+        false_hints += usize::from(!without.summary.graph_equal);
+    }
+    assert!(
+        false_hints >= 3,
+        "{false_hints} pairs give the hint the lie"
+    );
     let (base, head) = example("pressure_request");
-    let hinted = diff(&base, &head, &options);
-    assert_eq!(hinted.notes, [Note::RenamePassOff]);
-    assert!(renames(&hinted).is_empty());
     assert_eq!(
-        hinted.summary.graph_equal,
-        compare(&base, &head).summary.graph_equal
+        renames(&diff(&base, &head, &hinted)),
+        [(
+            "seventySet".to_owned(),
+            "setFrac".to_owned(),
+            Confidence::Exact
+        )]
+    );
+    // The switch still switches: `renames: false` beside the hint turns the pass off.
+    hinted.renames = false;
+    assert_eq!(
+        diff(&base, &head, &hinted),
+        compare_without_renames(&base, &head)
     );
 }
 

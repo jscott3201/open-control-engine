@@ -11,9 +11,8 @@ reopened. Decisions 9 to 16 were made while drafting and accepted by the archite
 **As landed.** The authoring diff, the rename pass and the two renderers are built as
 `crates/leverage/oce-diff` (issue #665, GitHub #692,
 [crate README](../../crates/leverage/oce-diff/README.md));
-the CXF adapter, the blob comparison and the `oce diff` verb are #666 to #668. Building it settled
-a few things this note had left open or had wrong, each written back where it belongs and listed
-under [As landed](#as-landed).
+the CXF adapter, the blob comparison and the `oce diff` verb are #666 to #668. What building it
+showed is written back where it belongs and listed under [As landed](#as-landed).
 
 The owner's work plan names the M3 deliverable as "a structural diff of two authoring models or CXF
 documents, used in receipts and bundle cards", with `oce diff` in the CLI. Its consumers are M3
@@ -146,10 +145,8 @@ comparison says only "different" (decision 15).
 
 **Data.** A serde `Diff`: a `schema` string (`oce-diff/1`), the `source` (`authoring` or `cxf`),
 the catalog content id the defaults came from, both sequence names and `derived_from` ids (`null`
-for none), a `summary`, closed-enum `notes`, and the four sections (decision 7). Each of the
-summary's four section flags is true when its section is empty, a `reordered` entry included, so
-`equal` is all four together. Each section is sorted by
-subject bytewise, then kind in enum order, then detail; nothing is in hash order. Reals are carried
+for none), a `summary`, closed-enum `notes`, and the four sections (decision 7). Each section is
+sorted by subject bytewise, then kind in enum order, then detail; nothing is in hash order. Reals are carried
 as the canonical printer's shortest round-trip spelling plus their bit pattern, so no float is
 parsed back from JSON (decision 13). `equal` is true only when every section is empty.
 
@@ -232,7 +229,8 @@ pub enum Confidence { Exact, High }
 `renamed`, `base_only`, `head_only`). `Literal` mirrors the model's tagged literal (`{"real",
 "bits"}`, `{"integer"}`, `{"boolean"}`, `{"text"}`, `{"ref"}`, `{"member"}`); `Driver` is
 `{port, source}`; `DiffOptions` holds `renames` and `canonical_ids_equal` (the caller's statement
-behind decision 8's fast path); the three rename caps are public constants.
+behind decision 8's fast path, a hint that never changes the result); the three rename caps are
+public constants.
 `BlobComparison` holds `same_bytes`, a `content_id` comparison (`same`, `different`, or `unknown`
 when a blob records none), class-table changes by class path (`added`, `removed`,
 `signature-changed`) and an `initial_state` comparison (`unknown` unless the block lists align by
@@ -506,7 +504,7 @@ candidates, because `delayTime` differs.
 ```text
 # oce diff chw_plant_reset -> chw_plant_reset
 # graph differs; parameters equal; interface equal; metadata differs
-# names disjoint: no block kept its name; 3 of 5 matched by the rename pass, 2 not matched
+# names disjoint: no block kept its name and class; 3 of 5 base blocks matched by the rename pass, 2 removed, 2 added
 # graph
 > block TMax = CDL.Reals.Sources.Constant(k = 285.15)   # was THigh; renamed, exact
 > block TMin = CDL.Reals.Sources.Constant(k = 279.15)   # was TLow; renamed, exact
@@ -673,44 +671,60 @@ the same way by every subcommand; the authoring note is aligned in the same PR a
 
 ## As landed
 
-What building the authoring diff (issue #665) settled, each also written into the section it
-belongs to. The worked examples above are the crate's oracle: their JSON, text and table rows are
-typed by hand into `crates/leverage/oce-diff/tests/note_examples.rs`, so the two are kept equal by
-hand, and a difference is resolved here or in the code.
+What building the authoring diff (issue #665, GitHub #692) showed, each also written into the
+section it belongs to. None of these is a new decision: each follows from a decision above once
+it meets the model as it stands, and each was accepted in the review of GitHub #692. The worked
+examples above are the crate's oracle: their JSON, text and table rows are typed by hand into
+`crates/leverage/oce-diff/tests/note_examples.rs`, so the two are kept equal by hand, and a
+difference is resolved here or in the code.
 
 - **`min-changed` and `max-changed`.** The interface kinds were written before a boundary had
   bounds (importer note, decision 4). A bound on an input is inside the canonical content id, so
   a changed bound is an interface entry of its own kind.
 - **`renamed` carries the block's assignments, and a parameter `changed` its type.** The text
-  rendering is a pure function of the data and writes whole statements
+  rendering is a pure function of the data (decision 7) and writes whole statements
   (`> block setFrac = CDL.Reals.MultiplyByParameter(k = 0.7)`, `~ param phiHigh : Real = 0.7`),
   so the data holds what those lines need. The examples' JSON gained `params` and `type`.
 - **`reordered` names its list** in the graph section, where the subject of a block's assignment
   order is the block and `blocks` is a legal block name.
 - **`derived_from` is `null` for none**, not the word `none`: a wire document can carry the id
-  `none` unchecked, and the diff never validates.
+  `none` unchecked, and the diff never validates (decision 10).
 - **A comment is carried as the model holds it**: the text after `#`, its leading space
   included, lines joined by a line feed. Example (a)'s `old` and `new` gained the space.
-- **Each section flag of the summary is "this section is empty".** A `reordered` entry makes its
-  section differ, so `equal` is the four flags together and a reordered block list is not
-  `graph_equal`. Decision 16's "scripts that want 'same structure' read `summary.graph_equal`"
-  therefore holds for a metadata-only diff and for a reordering of parameters or boundaries, and
-  not for a reordering of blocks, connections or assignments; a script that wants to ignore
-  those filters the `reordered` kind.
-- **The rename pass's open cases**: a port linked on one side only, a different number of
-  endpoints, and an endpoint that is neither an anchor nor an unmatched block all disagree; a cap
-  is passed only when both sides have unmatched blocks.
-- **The fast path is an option, not a computation.** `diff` loads nothing, so it cannot know the
-  two content ids; `DiffOptions::canonical_ids_equal` is the caller's statement, and skips the
-  pass.
+- **A section flag of the summary ignores `reordered`; `equal` does not.** Order is not semantic
+  (decision 5), and decision 16 has a `reordered`-only diff exit 1 while scripts that want "same
+  structure" read `summary.graph_equal`. So a section flag is "no entry other than `reordered`",
+  `equal` is "every section is empty", and `equal` is not the four flags together. It is also
+  what keeps the levels in step: the CXF adapter reports graph-equal from equal canonical ids
+  (decision 8), which ignore authored order.
 - **One value in two spellings needs a Real to be expected.** An Integer literal against the
   equal Real is `literal-respelled` on a `Real` sequence parameter, on a block parameter the
-  catalog types Real and on a bound of a `Real` boundary, and a change of value anywhere else. So
-  the diff reads a parameter's type from the catalog as well as its literal default.
+  catalog types Real and on a bound of a boundary both sides type `Real`, exactly up to 2^53, and
+  a change of value anywhere else. So the diff reads a parameter's type from the catalog as well
+  as its literal default. The engine is to normalise that spelling at load (owner ruling on
+  #683), which makes the loaded graph agree with this level.
+- **A value and its unit suffix that both change are both reported**: the value in its section,
+  the two spellings as `literal-respelled`. A scaled suffix kept across a change (`1 h` to `2 h`)
+  is not a respelling.
+- **The rename pass's open cases**: a port linked on one side only, a different number of
+  endpoints, and an endpoint that is neither an anchor nor an unmatched block all disagree; a cap
+  is passed only when both sides have unmatched blocks. A pair accepted on its agreeing ports
+  never comes to disagree later, so `high` means exactly "some port is still unknown".
+- **The fast path needs no switch.** With equal canonical ids every block matches by name and
+  class, so nothing is left for the rename pass, and `diff` takes that path whenever a side has
+  nothing left, whoever says so. `DiffOptions::canonical_ids_equal` is kept as the caller's
+  statement and is a hint only: it never changes the result, so a wrong one costs nothing.
+- **The names-disjoint line** of the text reads "no block kept its name and class" and counts the
+  removed and the added blocks: a name kept under another class is not a kept block.
 - **An array element is never `parameter-defaulted`**: an element is part of the array's shape.
 - **What an invalid model means** is fixed case by case in the
   [crate README](../../crates/leverage/oce-diff/README.md#what-an-invalid-model-means): a
-  repeated name is matched occurrence by occurrence, a target with several drivers as a multiset.
+  repeated name is matched occurrence by occurrence, a target with several drivers as a
+  multiset, and a link end is compared as what it is (a boundary, or a block and a port), never
+  as its spelling.
+- **Reading a diff back is strict**: closed objects, every key required (`null` for a value that
+  may be absent), `schema` exactly `oce-diff/1`, a Real's spelling the spelling of its bits, and
+  the summary's flags what the sections give.
 - **A round of the rename pass groups blocks instead of visiting pairs.** Whether a pair
   disagrees depends only on what each block sees, so the blocks with equal views are the
   candidates of one another and the work is the links at the unmatched blocks. The pair cap is
