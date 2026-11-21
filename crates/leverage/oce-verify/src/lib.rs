@@ -80,14 +80,22 @@
 //! - **Typed refusals** ([`SpecError`], [`SpecErrorKind`], [`SPEC_ERROR_CODES`]), each with the
 //!   line and column of the text as written, comments included.
 //!
-//! Nothing runs a commissioning spec yet: binding one to a sequence, its trend sources and its
-//! receipt are the later parts.
+//! Nothing runs a commissioning spec yet: binding one to a sequence and its receipt are the
+//! later parts.
 //!
 //! Its second part (issue #659) is the closed unit table a trend's readings are converted with,
 //! device unit to CDL unit, before any comparison: [`convert_unit`] over `units/v1`
 //! ([`UNITS_TABLE`]), each row one way, temperature readings and temperature differences kept
 //! apart, spellings compared byte for byte, every refusal a typed [`UnitError`] (stable codes in
 //! [`UNIT_ERROR_CODES`]) and never a pass-through.
+//!
+//! Its third part (issue #660) reads a reference's trend sources ([`TrendSources::read`]) from
+//! bytes the caller hands in ([`SpecInputs`]): `csv` through replay's own reader and
+//! `combiTimeTable` through this crate's reader of OBC §12.5.1's `#1` text, every cell converted
+//! once to its CDL point's unit and type, the input sources merged on the union of their times
+//! ([`TrendInputs`], a `ColumnarSource` for replay), the expected and indicator series
+//! ([`TrendSeries`]) and the receipt's records of the files; bounded by [`TrendLimits`], every
+//! refusal a typed [`SourceError`] naming its file, row and column ([`SOURCE_ERROR_CODES`]).
 //!
 //! ```
 //! use oce_verify::{Expectation, Literal, VectorSet, VerifyLimits};
