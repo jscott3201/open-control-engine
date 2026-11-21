@@ -140,6 +140,7 @@ mod bind;
 mod budget;
 mod canonical;
 mod clock;
+mod commissioning;
 mod compare;
 mod compare_error;
 mod compare_limits;
@@ -160,6 +161,7 @@ mod parameters;
 mod receipt;
 mod receipt_json;
 mod refusal_classes;
+mod relative_path;
 mod run;
 mod schema;
 mod strict;
@@ -170,6 +172,14 @@ mod verify_error;
 
 pub use aligned_grid::{ALIGNED_GRID_VERSION, aligned_grid};
 pub use clock::Clock;
+pub use commissioning::{
+    COMMISSIONING_SPEC_SCHEMA, CommissioningSpec, ComparisonWindow, Finding,
+    FunnelReference, IndicatorRule, KeySelection, LBL_FIELD_IGNORED, MAX_SPEC_DETAIL_BYTES,
+    OutputOverride, OverrideKey, PartialTolerances, PointMapping, PointNameMapping, PointPair,
+    PointSide, PointType, SPEC_ERROR_CODES, SPEC_FINDING_CODES, SourceColumn, SourceTimeColumn,
+    SpecError, SpecErrorKind, SpecLimits, SpecReference, TOLERANCE_NAMES, TrendFormat, TrendSource,
+    glob_matches, unmatched_key,
+};
 pub use compare_error::{Axis, COMPARE_ERROR_CODES, CompareError, SeriesEnd, SeriesRole};
 pub use compare_limits::CompareLimits;
 pub use envelope::{Curve, Envelope, FunnelResult, Series, Tolerances};

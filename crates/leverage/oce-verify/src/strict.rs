@@ -14,27 +14,70 @@
 //! a value nobody asked for. [`scan`] walks a whole document through the same cursor: it is how a
 //! load refuses every lexical defect before it judges the shape. Recursion is bounded by
 //! [`MAX_DEPTH`], and every refusal is a typed [`Refusal`] with a line and column, never a panic.
+//!
+//! Two readers are written against it, the vector set's and the commissioning spec's (decision 2:
+//! "one strict reader in `oce-verify`, shared with the commissioning spec loader"). Each has its
+//! own closed list of kinds, so the cursor is generic over the kind it reports ([`StrictKind`]):
+//! one profile, one set of sentences and places, and each reader's own codes.
 
 use std::collections::BTreeSet;
+use std::marker::PhantomData;
 
 use crate::error::{Location, VectorError, VectorErrorKind};
 use crate::limits::{MAX_DEPTH, MAX_LIST_LEN, MAX_STRING_BYTES};
 use crate::number::Number;
 
-/// A refusal at a place in the text.
+/// The strict-JSON refusals, as one reader's kind names them. The cursor reports each defect it
+/// meets through these constants, so a reader's refusals carry that reader's own kind and the
+/// cursor names no reader.
+pub(crate) trait StrictKind: Copy {
+    /// The text is not one JSON document.
+    const JSON_SYNTAX: Self;
+    /// Objects and arrays nest deeper than [`MAX_DEPTH`].
+    const NESTING_TOO_DEEP: Self;
+    /// A list has more than [`MAX_LIST_LEN`] entries.
+    const LIST_TOO_LONG: Self;
+    /// A string token is longer than [`MAX_STRING_BYTES`].
+    const STRING_TOO_LONG: Self;
+    /// An object writes one key twice.
+    const DUPLICATE_KEY: Self;
+    /// A value has the wrong JSON type for its position.
+    const WRONG_TYPE: Self;
+    /// `NaN` or `Infinity` spelled as a number, or a real that overflows binary64.
+    const NON_FINITE_NUMBER: Self;
+    /// An integer token outside the 64-bit signed range.
+    const INTEGER_OUT_OF_RANGE: Self;
+    /// A string carries a control character.
+    const CONTROL_CHARACTER: Self;
+}
+
+impl StrictKind for VectorErrorKind {
+    const JSON_SYNTAX: Self = Self::JsonSyntax;
+    const NESTING_TOO_DEEP: Self = Self::NestingTooDeep;
+    const LIST_TOO_LONG: Self = Self::ListTooLong;
+    const STRING_TOO_LONG: Self = Self::StringTooLong;
+    const DUPLICATE_KEY: Self = Self::DuplicateKey;
+    const WRONG_TYPE: Self = Self::WrongType;
+    const NON_FINITE_NUMBER: Self = Self::NonFiniteNumber;
+    const INTEGER_OUT_OF_RANGE: Self = Self::IntegerOutOfRange;
+    const CONTROL_CHARACTER: Self = Self::ControlCharacter;
+}
+
+/// A refusal at a place in the text, of the kind `K` of the reader that met it (the vector
+/// reader's, unless a reader says otherwise).
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Refusal {
+pub(crate) struct Refusal<K = VectorErrorKind> {
     /// The closed kind.
-    pub(crate) kind: VectorErrorKind,
+    pub(crate) kind: K,
     /// Where the reader stopped.
     pub(crate) at: Location,
     /// The sentence for people.
     pub(crate) detail: String,
 }
 
-impl Refusal {
+impl<K> Refusal<K> {
     /// A refusal of `kind` at `at`.
-    pub(crate) fn new(kind: VectorErrorKind, at: Location, detail: impl Into<String>) -> Self {
+    pub(crate) fn new(kind: K, at: Location, detail: impl Into<String>) -> Self {
         Self {
             kind,
             at,
@@ -49,8 +92,8 @@ impl From<Refusal> for VectorError {
     }
 }
 
-/// The result of one read.
-pub(crate) type Read<T> = Result<T, Refusal>;
+/// The result of one read by a reader whose kind is `K`.
+pub(crate) type Read<T, K = VectorErrorKind> = Result<T, Refusal<K>>;
 
 /// The JSON type of the value a cursor stands before.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -102,24 +145,33 @@ impl ObjectProgress {
     }
 }
 
-/// A position in one JSON text.
-pub(crate) struct Cursor<'a> {
+/// A position in one JSON text, reporting refusals of the kind `K`.
+pub(crate) struct Cursor<'a, K = VectorErrorKind> {
     text: &'a str,
     at: usize,
     line: usize,
     line_start: usize,
     depth: usize,
+    reports: PhantomData<fn() -> K>,
 }
 
 impl<'a> Cursor<'a> {
-    /// A cursor at the start of `text`.
+    /// A cursor at the start of `text` that reports the vector reader's kinds.
     pub(crate) fn new(text: &'a str) -> Self {
+        Self::reporting(text)
+    }
+}
+
+impl<'a, K: StrictKind> Cursor<'a, K> {
+    /// A cursor at the start of `text` that reports refusals of the kind `K`.
+    pub(crate) fn reporting(text: &'a str) -> Self {
         Self {
             text,
             at: 0,
             line: 1,
             line_start: 0,
             depth: 0,
+            reports: PhantomData,
         }
     }
 
@@ -136,12 +188,12 @@ impl<'a> Cursor<'a> {
         self.text.as_bytes()[self.at..].starts_with(word.as_bytes())
     }
 
-    fn refuse<T>(&self, kind: VectorErrorKind, detail: &str) -> Read<T> {
+    fn refuse<T>(&self, kind: K, detail: &str) -> Read<T, K> {
         Err(Refusal::new(kind, self.location(), detail))
     }
 
-    fn syntax<T>(&self, detail: &str) -> Read<T> {
-        self.refuse(VectorErrorKind::JsonSyntax, detail)
+    fn syntax<T>(&self, detail: &str) -> Read<T, K> {
+        self.refuse(K::JSON_SYNTAX, detail)
     }
 
     fn skip_whitespace(&mut self) {
@@ -163,7 +215,7 @@ impl<'a> Cursor<'a> {
     /// # Errors
     /// `non-finite-number` before `NaN`, `Infinity` or `-Infinity`; `json-syntax` when no value
     /// starts here.
-    pub(crate) fn peek(&mut self) -> Read<(Kind, Location)> {
+    pub(crate) fn peek(&mut self) -> Read<(Kind, Location), K> {
         self.skip_whitespace();
         let at = self.location();
         let kind = match self.byte() {
@@ -171,16 +223,16 @@ impl<'a> Cursor<'a> {
             Some(b'[') => Kind::Array,
             Some(b'"') => Kind::String,
             Some(b'-') if self.rest_starts_with("-Infinity") => {
-                return self.refuse(VectorErrorKind::NonFiniteNumber, "`-Infinity` is no number");
+                return self.refuse(K::NON_FINITE_NUMBER, "`-Infinity` is no number");
             }
             Some(b'-' | b'0'..=b'9') => Kind::Number,
             Some(b't' | b'f') => Kind::Boolean,
             Some(b'n') => Kind::Null,
             Some(b'N') if self.rest_starts_with("NaN") => {
-                return self.refuse(VectorErrorKind::NonFiniteNumber, "`NaN` is no number");
+                return self.refuse(K::NON_FINITE_NUMBER, "`NaN` is no number");
             }
             Some(b'I') if self.rest_starts_with("Infinity") => {
-                return self.refuse(VectorErrorKind::NonFiniteNumber, "`Infinity` is no number");
+                return self.refuse(K::NON_FINITE_NUMBER, "`Infinity` is no number");
             }
             Some(_) => return self.syntax("expected a value"),
             None => return self.syntax("the document ends where a value is expected"),
@@ -192,23 +244,23 @@ impl<'a> Cursor<'a> {
     ///
     /// # Errors
     /// `wrong-type` naming what was found, or any refusal of [`Self::peek`].
-    pub(crate) fn expect(&mut self, kind: Kind, what: &str) -> Read<Location> {
+    pub(crate) fn expect(&mut self, kind: Kind, what: &str) -> Read<Location, K> {
         let (found, at) = self.peek()?;
         if found == kind {
             Ok(at)
         } else {
             Err(Refusal::new(
-                VectorErrorKind::WrongType,
+                K::WRONG_TYPE,
                 at,
                 format!("expected {what}, found {}", found.described()),
             ))
         }
     }
 
-    fn enter(&mut self, at: Location) -> Read<()> {
+    fn enter(&mut self, at: Location) -> Read<(), K> {
         if self.depth >= MAX_DEPTH {
             return Err(Refusal::new(
-                VectorErrorKind::NestingTooDeep,
+                K::NESTING_TOO_DEEP,
                 at,
                 format!("nesting deeper than {MAX_DEPTH} levels"),
             ));
@@ -222,7 +274,7 @@ impl<'a> Cursor<'a> {
     ///
     /// # Errors
     /// `nesting-too-deep` past [`MAX_DEPTH`]; `json-syntax` when no `{` is here.
-    pub(crate) fn open_object(&mut self) -> Read<ObjectProgress> {
+    pub(crate) fn open_object(&mut self) -> Read<ObjectProgress, K> {
         self.skip_whitespace();
         let opened = self.location();
         if self.byte() != Some(b'{') {
@@ -240,7 +292,7 @@ impl<'a> Cursor<'a> {
     pub(crate) fn next_key(
         &mut self,
         object: &mut ObjectProgress,
-    ) -> Read<Option<(String, Location)>> {
+    ) -> Read<Option<(String, Location)>, K> {
         self.skip_whitespace();
         match (self.byte(), object.any) {
             (Some(b'}'), _) => {
@@ -273,7 +325,7 @@ impl<'a> Cursor<'a> {
     ///
     /// # Errors
     /// `nesting-too-deep` past [`MAX_DEPTH`]; `json-syntax` when no `[` is here.
-    pub(crate) fn open_list(&mut self) -> Read<ListProgress> {
+    pub(crate) fn open_list(&mut self) -> Read<ListProgress, K> {
         self.skip_whitespace();
         let opened = self.location();
         if self.byte() != Some(b'[') {
@@ -288,7 +340,7 @@ impl<'a> Cursor<'a> {
     ///
     /// # Errors
     /// `list-too-long` on the item past [`MAX_LIST_LEN`]; `json-syntax` for a missing `,`.
-    pub(crate) fn next_item(&mut self, list: &mut ListProgress) -> Read<bool> {
+    pub(crate) fn next_item(&mut self, list: &mut ListProgress) -> Read<bool, K> {
         self.skip_whitespace();
         match (self.byte(), list.len) {
             (Some(b']'), _) => {
@@ -304,7 +356,7 @@ impl<'a> Cursor<'a> {
         list.len += 1;
         if list.len > MAX_LIST_LEN {
             return Err(Refusal::new(
-                VectorErrorKind::ListTooLong,
+                K::LIST_TOO_LONG,
                 list.opened,
                 format!("the list has more than {MAX_LIST_LEN} entries"),
             ));
@@ -318,7 +370,7 @@ impl<'a> Cursor<'a> {
     /// `string-too-long` once the token passes [`MAX_STRING_BYTES`]; `control-character` for a
     /// raw or escaped control character; `json-syntax` for an unterminated string, an unknown
     /// escape or a lone surrogate.
-    pub(crate) fn string(&mut self) -> Read<String> {
+    pub(crate) fn string(&mut self) -> Read<String, K> {
         self.skip_whitespace();
         let opened = self.location();
         if self.byte() != Some(b'"') {
@@ -331,7 +383,7 @@ impl<'a> Cursor<'a> {
         loop {
             if self.at - start > MAX_STRING_BYTES {
                 return Err(Refusal::new(
-                    VectorErrorKind::StringTooLong,
+                    K::STRING_TOO_LONG,
                     opened,
                     format!("the string is longer than {MAX_STRING_BYTES} bytes"),
                 ));
@@ -364,15 +416,12 @@ impl<'a> Cursor<'a> {
         Ok(out)
     }
 
-    fn control_character<T>(&self) -> Read<T> {
-        self.refuse(
-            VectorErrorKind::ControlCharacter,
-            "a control character in a string",
-        )
+    fn control_character<T>(&self) -> Read<T, K> {
+        self.refuse(K::CONTROL_CHARACTER, "a control character in a string")
     }
 
     /// Read one escape; the cursor stands on its backslash and is left after it.
-    fn escape(&mut self) -> Read<char> {
+    fn escape(&mut self) -> Read<char, K> {
         let simple = match self.text.as_bytes().get(self.at + 1) {
             Some(b'"') => '"',
             Some(b'\\') => '\\',
@@ -396,7 +445,7 @@ impl<'a> Cursor<'a> {
     }
 
     /// Read a `\uXXXX` escape, or the surrogate pair it starts.
-    fn unicode_escape(&mut self) -> Read<char> {
+    fn unicode_escape(&mut self) -> Read<char, K> {
         let Some(unit) = self.code_unit(self.at + 2) else {
             return self.syntax("a `\\u` escape needs four hex digits");
         };
@@ -431,7 +480,7 @@ impl<'a> Cursor<'a> {
     /// # Errors
     /// `integer-out-of-range` for an integer token outside `i64`; `non-finite-number` for a real
     /// that overflows binary64; `json-syntax` for a token outside the JSON number grammar.
-    pub(crate) fn number(&mut self) -> Read<Number> {
+    pub(crate) fn number(&mut self) -> Read<Number, K> {
         self.skip_whitespace();
         let at = self.location();
         let start = self.at;
@@ -467,7 +516,7 @@ impl<'a> Cursor<'a> {
         if integer {
             return token.parse::<i64>().map(Number::Integer).map_err(|_| {
                 Refusal::new(
-                    VectorErrorKind::IntegerOutOfRange,
+                    K::INTEGER_OUT_OF_RANGE,
                     at,
                     "an integer outside the 64-bit signed range",
                 )
@@ -476,15 +525,11 @@ impl<'a> Cursor<'a> {
         match token.parse::<f64>() {
             Ok(value) if value.is_finite() => Ok(Number::Real(value)),
             Ok(_) => Err(Refusal::new(
-                VectorErrorKind::NonFiniteNumber,
+                K::NON_FINITE_NUMBER,
                 at,
                 "a real that overflows binary64",
             )),
-            Err(_) => Err(Refusal::new(
-                VectorErrorKind::JsonSyntax,
-                at,
-                "a malformed number",
-            )),
+            Err(_) => Err(Refusal::new(K::JSON_SYNTAX, at, "a malformed number")),
         }
     }
 
@@ -494,7 +539,7 @@ impl<'a> Cursor<'a> {
         }
     }
 
-    fn word(&mut self, word: &str) -> Read<()> {
+    fn word(&mut self, word: &str) -> Read<(), K> {
         self.skip_whitespace();
         if self.rest_starts_with(word) {
             self.at += word.len();
@@ -508,7 +553,7 @@ impl<'a> Cursor<'a> {
     ///
     /// # Errors
     /// `json-syntax` when neither word is here.
-    pub(crate) fn boolean(&mut self) -> Read<bool> {
+    pub(crate) fn boolean(&mut self) -> Read<bool, K> {
         self.skip_whitespace();
         if self.byte() == Some(b't') {
             self.word("true").map(|()| true)
@@ -522,7 +567,7 @@ impl<'a> Cursor<'a> {
     ///
     /// # Errors
     /// Any strict-JSON refusal.
-    pub(crate) fn skip_value(&mut self) -> Read<()> {
+    pub(crate) fn skip_value(&mut self) -> Read<(), K> {
         match self.peek()?.0 {
             Kind::Object => {
                 let mut object = self.open_object()?;
@@ -551,7 +596,7 @@ impl<'a> Cursor<'a> {
     ///
     /// # Errors
     /// `json-syntax` when anything follows the document.
-    pub(crate) fn finish(&mut self) -> Read<()> {
+    pub(crate) fn finish(&mut self) -> Read<(), K> {
         self.skip_whitespace();
         if self.at == self.text.len() {
             Ok(())
@@ -562,7 +607,7 @@ impl<'a> Cursor<'a> {
 }
 
 /// Record `key` as written in its object, refusing a repeat.
-fn unique(keys: &mut BTreeSet<String>, key: String, at: Location) -> Read<()> {
+fn unique<K: StrictKind>(keys: &mut BTreeSet<String>, key: String, at: Location) -> Read<(), K> {
     if keys.contains(&key) {
         return Err(duplicate_key(&key, at));
     }
@@ -571,12 +616,8 @@ fn unique(keys: &mut BTreeSet<String>, key: String, at: Location) -> Read<()> {
 }
 
 /// The refusal of a repeated `key`.
-pub(crate) fn duplicate_key(key: &str, at: Location) -> Refusal {
-    Refusal::new(
-        VectorErrorKind::DuplicateKey,
-        at,
-        format!("duplicate key `{key}`"),
-    )
+pub(crate) fn duplicate_key<K: StrictKind>(key: &str, at: Location) -> Refusal<K> {
+    Refusal::new(K::DUPLICATE_KEY, at, format!("duplicate key `{key}`"))
 }
 
 /// Control characters a string may not carry: C0 except line feed, DEL and C1.
@@ -592,7 +633,15 @@ fn is_refused_control(scalar: u32) -> bool {
 /// # Errors
 /// Any strict-JSON refusal.
 pub(crate) fn scan(text: &str) -> Read<Option<String>> {
-    let mut cursor = Cursor::new(text);
+    scan_reporting(text)
+}
+
+/// [`scan`], reporting refusals of the kind `K`.
+///
+/// # Errors
+/// Any strict-JSON refusal.
+pub(crate) fn scan_reporting<K: StrictKind>(text: &str) -> Read<Option<String>, K> {
+    let mut cursor = Cursor::reporting(text);
     let mut tag = None;
     if cursor.peek()?.0 == Kind::Object {
         let mut object = cursor.open_object()?;

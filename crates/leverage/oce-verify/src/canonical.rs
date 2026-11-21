@@ -15,7 +15,7 @@ use crate::model::{Expectation, Held, Input, Mutant, Parameter, Scenario};
 use crate::number::Literal;
 
 /// A JSON value ready to be written.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Json {
     /// A string, escaped on output.
     Str(String),

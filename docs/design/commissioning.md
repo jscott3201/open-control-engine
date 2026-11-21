@@ -104,6 +104,77 @@ carry no prefix.
 an LBL file has none, and is refused at bind as `reference-incomplete`, naming the missing field
 (decision 16). When present it holds both `start` and `stop`, finite, with `start <= stop`.
 
+### As landed: the spec and mapping readers
+
+*(GitHub #NNN, issue #658.)* The two readers are in `crates/leverage/oce-verify`
+(`src/commissioning/`): `CommissioningSpec::from_json_bytes` and `from_json_str`,
+`PointMapping::from_json_bytes` and `from_json_str`, each with `to_canonical_json`, and
+`CommissioningSpec::spec_id`. This note said the loader is "bounded" and gave no numbers, and
+left a few shapes unsaid; this is what was built.
+
+- **Bounds.** The two readers of the crate have one profile, the strict cursor's: nesting at
+  most 8, a string at most 4,096 bytes as written, a list at most 65,536 entries, each refused
+  as `nesting-too-deep`, `string-too-long` and `list-too-long`. `SpecLimits` holds the rest, each
+  a default and a maximum that a caller may lower and never raise: 4 MiB per document, comments
+  included (`input-too-large`, decided from the length); 256 entries in one reference's
+  `parameters` (`too-many-parameters`, decision 29); 4,096 keys in one `outputs`, `indicators`
+  or `columns` map (`too-many-keys`: the most outputs a run compares, and the most columns a
+  replay source has); and 2^28 work units for one selection of a reference's keys against a
+  sequence's output names (`work-limit-exceeded`, counted in steps of the matcher, never in
+  time). Every bound is inclusive and pinned at its edge.
+- **Comments.** `//` runs to the next line feed or carriage return, or to the end of the text.
+  `/*` runs to the next `*/`; block comments do not nest, `/*/` is an open comment, and one that
+  is never closed is `unterminated-comment` at its `/*`. A marker inside a string is text. Each
+  comment byte becomes a space and a line feed stays, so a refusal's line and byte column are
+  those of the text as written. The pass reads each byte once.
+- **Refusals.** `SpecError` carries a closed `SpecErrorKind`, its kebab-case code
+  (`SPEC_ERROR_CODES`), and for everything found in the text the line and column of the value
+  concerned; only `not-utf8`, `byte-order-mark` and `input-too-large` have no place. The
+  strict-JSON codes, `unknown-schema`, `too-many-parameters`, `empty-name` and `invalid-window`
+  are the vector reader's words; `invalid-tolerance` and `work-limit-exceeded` are the envelope
+  comparison's. The format's own are `unterminated-comment`, `too-many-keys`, `unknown-value`
+  (a `format`, `envelope`, `funnelReference` or point `type` outside its list), `path-invalid`,
+  `invalid-time-origin`, `invalid-sampling`, `invalid-hold`, `duplicate-point` and
+  `unmatched-key`. A sentence is at most 512 bytes of printable ASCII, whatever the document
+  wrote.
+- **What a value must be.** `references` is required, and in a reference `model` and
+  `sequence`; `sequence` is not empty. Every other key is optional at load. A tolerance is not
+  negative; `sampling` is above zero; `hold.maxAge` is not negative; a `window` holds `start`
+  and `stop` with `start <= stop`; `time` holds `origin`. An integer token read as a real is
+  held to 2^53, as a vector set's times are. A trend source holds `path`, `format`,
+  `timeColumn` and `columns`; `table` and `hold` are optional. `timeColumn` is a position
+  counted from 1 (an integer token) or a header name (a string), and `columns` maps a file
+  column, written as a string, to a device point name. Which of the two a format takes is the
+  source reader's rule (#660), decided with the file's bytes.
+- **Paths.** `cxf`, `controllerOutput`, a `pointNameMapping` written as a string, and a
+  source's `path` are held to the rule a vector set's mutant paths are held to
+  (`path-invalid`).
+- **The Scenario 1 fields.** `generateJson`, `modelJsonDirectory`, `runController` and
+  `controller` each take any one strict JSON value. The value is never interpreted and is kept:
+  the canonical form writes it and `spec_id` covers it, so a spec and its stored form have the
+  same findings. `CommissioningSpec::findings` lists them in the order the receipt's `findings`
+  row states, and `findings_for(reference)` gives what one reference's receipt carries.
+- **The canonical form keeps the declaration order of `outputs` and `indicators` keys.** It
+  sorts every other object's keys, `parameters` and `columns` among them, and always writes
+  `schema`. Overrides apply in declaration order, so that order is part of the spec: sorted,
+  two specs that compare an output under different tolerances would share a `spec_id`, and a
+  stored spec would run differently from its file. Decision 29 rejected declaration order for
+  `parameters` because the canonical form sorts them; for the two override maps the order is
+  the meaning, so the canonical form keeps it.
+- **Keys.** `OverrideKey::parse` splits a key from its literal prefix, `glob_matches` is the
+  matcher, and `SpecReference::select_output_keys` and `select_indicator_keys` match a
+  reference's keys against the names a run passes in, `<sequence>.<last segment>` of each
+  output's canonical path: a glob selects the names it matches whole, an exact key the names
+  equal to it, and the first key that selects nothing is `unmatched-key` with the sentence
+  decision 17 asks for. `CommissioningSpec::tolerances_for` lays the selecting keys' tolerances
+  over the top-level ones in declaration order; `SpecReference::indicators_for` gives the
+  indicators of every rule that selects an output, each once, since they are ANDed. An exact
+  key whose rest has more than one segment, or is ambiguous under the replay name rule, is
+  bind's to resolve (#662); `unmatched_key` is public so that bind raises the same refusal.
+- **The mapping.** A list of pairs, in file order, with no `schema` key. A name is kept as
+  written; a unit is kept as written and is the unit table's to judge (#659); a name twice on
+  one side is `duplicate-point` at its second place.
+
 ### Worked spec: Building 33 cooling-coil valve (§12.6)
 
 ```json

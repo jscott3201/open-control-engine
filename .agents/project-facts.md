@@ -525,6 +525,21 @@ test reads (an edit to the note runs the determinism lane); copy the block again
 does not build until `VECTOR_ERROR_CODES` lists its code in order, and needs its case in
 `tests/error_codes.rs`.
 
+`tests/fixtures/commissioning/` holds the commissioning readers' fixtures (issue #658), and none
+of them is blessed either. `listing_12_1.json` and `listing_12_2.json` are OBC §12.7 Listings
+12.1 and 12.2 verbatim (the directory's README records the page and the day it was read), and
+`tests/commissioning/listings.rs` pins their bytes: never edit them. `building_33.json` is the
+JSON block of the commissioning note's worked spec, copied by hand, as `oce-author`'s
+`wire_example.json` is: no test reads that note, so it is not on the classifier's test-read list,
+and when the block changes the fixture is copied again. `canonical/*.json` and the `spec_id`
+literals in `tests/commissioning/canonical_form.rs` come from
+`tests/fixtures/commissioning/derive_canonical.py`, a second implementation run by hand; the
+canonical writer, the number spelling, the comment rule or a fixture moves them. A new
+`SpecErrorKind` does not build until `SPEC_ERROR_CODES` lists its code in order, and needs its
+case in `tests/commissioning/error_codes.rs`. `tests/commissioning/` is one test binary: a new
+file there is a `mod` line in its `main.rs`, in name order, and a test fails on a file that is
+not declared.
+
 ## The funnel port carries funnel's licence
 
 `crates/leverage/oce-verify/src/funnel/` is a statement-by-statement port of LBNL funnel's C, so

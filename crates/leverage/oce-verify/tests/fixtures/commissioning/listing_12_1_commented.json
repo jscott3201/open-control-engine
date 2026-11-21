@@ -1,0 +1,44 @@
+// OBC §12.7 Listing 12.1 with comments added. Written for this repository's tests: the
+// published listing carries no comment. Every value below is the listing's.
+{
+  /* Two tests of one model: its instances setPoiVAV and setPoiVAV1. */
+  "references": [
+    {
+      "model": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints.Validation.Supply_u",
+      "generateJson": false, // the JSON translation is already in modelJsonDirectory
+      "sequence": "setPoiVAV",
+      "pointNameMapping": "realControllerPointMapping.json",
+      "runController": false,
+      "controllerOutput": "test/real_outputs.csv" // saved by an earlier run
+    },
+    {
+      "model": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints.Validation.Supply_u",
+      "generateJson": true,
+      "sequence": /* the second instance */ "setPoiVAV1",
+      "pointNameMapping": "realControllerPointMapping.json",
+      "runController": true,
+      "controllerOutput": "test/real_outputs.csv",
+      "outputs": {
+        "setPoiVAV1.TSup*" /* a glob */ : { "atoly": 0.5 }
+      },
+      "indicators": {
+        // A comment may hold "quotes", { braces }, a stray */ and a /* that opens nothing.
+        "setPoiVAV1.TSup*": [ "fanSta.y" ]
+      },
+      "sampling": 60
+    }
+  ],
+  "modelJsonDirectory": "test",
+  /*
+   * The global tolerances: "rtolx": 99 here is text in a comment, not a key.
+   * // A line comment inside a block comment is more comment.
+   */
+  "tolerances": { "rtolx": 0.002, "rtoly": 0.002, "atolx": 10, "atoly": 0 },
+  "sampling": 120, /**/ /***/
+  "controller": {
+    "networkAddress": "192.168.0.115/24",
+    "deviceAddress": "192.168.0.227",
+    "deviceId": 240001
+  }
+}
+// The end. No line feed follows this comment.

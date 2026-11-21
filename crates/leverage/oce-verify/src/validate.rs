@@ -20,6 +20,7 @@ use crate::model::{
     DiagnosticInstant, Expectation, Held, Input, Mutant, Parameter, Scenario, Step, Window,
 };
 use crate::number::{Literal, Number};
+use crate::relative_path::{self, PathDefect};
 use crate::vector_set::VectorSet;
 
 /// Check `dto` against the format's rules under `limits` (already
@@ -89,19 +90,16 @@ fn mutant_list(written: Vec<MutantDto>) -> Result<Vec<Mutant>, VectorError> {
 }
 
 /// Why `path` could leave the vector file's directory or name a file two ways, or `None`: an
-/// absolute path, an empty, `.` or `..` segment, or a backslash.
+/// absolute path, an empty, `.` or `..` segment, or a backslash ([`crate::relative_path`]).
 fn path_defect(path: &str) -> Option<&'static str> {
-    if path.contains('\\') {
-        return Some("holds a backslash; segments are separated by `/` only");
-    }
-    if path.starts_with('/') {
-        return Some("is absolute; it must be relative to the vector file");
-    }
-    path.split('/').find_map(|segment| match segment {
-        "" => Some("has an empty segment"),
-        "." => Some("has a `.` segment"),
-        ".." => Some("has a `..` segment; it must stay inside the vector file's directory"),
-        _ => None,
+    relative_path::defect(path).map(|defect| match defect {
+        PathDefect::Backslash => "holds a backslash; segments are separated by `/` only",
+        PathDefect::Absolute => "is absolute; it must be relative to the vector file",
+        PathDefect::EmptySegment => "has an empty segment",
+        PathDefect::DotSegment => "has a `.` segment",
+        PathDefect::ParentSegment => {
+            "has a `..` segment; it must stay inside the vector file's directory"
+        }
     })
 }
 

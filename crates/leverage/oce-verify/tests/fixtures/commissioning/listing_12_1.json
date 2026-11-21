@@ -1,0 +1,35 @@
+{
+  "references": [
+    {
+      "model": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints.Validation.Supply_u",
+      "generateJson": false,
+      "sequence": "setPoiVAV",
+      "pointNameMapping": "realControllerPointMapping.json",
+      "runController": false,
+      "controllerOutput": "test/real_outputs.csv"
+    },
+    {
+      "model": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints.Validation.Supply_u",
+      "generateJson": true,
+      "sequence": "setPoiVAV1",
+      "pointNameMapping": "realControllerPointMapping.json",
+      "runController": true,
+      "controllerOutput": "test/real_outputs.csv",
+      "outputs": {
+        "setPoiVAV1.TSup*": { "atoly": 0.5 }
+      },
+      "indicators": {
+        "setPoiVAV1.TSup*": [ "fanSta.y" ]
+      },
+      "sampling": 60
+    }
+  ],
+  "modelJsonDirectory": "test",
+  "tolerances": { "rtolx": 0.002, "rtoly": 0.002, "atolx": 10, "atoly": 0 },
+  "sampling": 120,
+  "controller": {
+    "networkAddress": "192.168.0.115/24",
+    "deviceAddress": "192.168.0.227",
+    "deviceId": 240001
+  }
+}

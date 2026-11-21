@@ -1,0 +1,106 @@
+{
+  "references": [
+    {
+      "cxf": "cxf/Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.json",
+      "envelope": "funnel",
+      "expected": [
+        {
+          "columns": {
+            "3": "Clg Coil Valve"
+          },
+          "format": "combiTimeTable",
+          "path": "data/Clg_Coil_Valve.mos",
+          "timeColumn": 1
+        }
+      ],
+      "funnelReference": "engine",
+      "indicators": {
+        "cooValSta.yCoo*": [
+          "cooValSta.uFanSta"
+        ]
+      },
+      "inputs": [
+        {
+          "columns": {
+            "3": "Supply Air Temp"
+          },
+          "format": "combiTimeTable",
+          "hold": {
+            "maxAge": 10
+          },
+          "path": "data/Supply_Air_Temp.mos",
+          "timeColumn": 1
+        },
+        {
+          "columns": {
+            "3": "SA Clg Stpt"
+          },
+          "format": "combiTimeTable",
+          "hold": {
+            "maxAge": 10
+          },
+          "path": "data/SA_Clg_Stpt.mos",
+          "timeColumn": 1
+        },
+        {
+          "columns": {
+            "3": "OA Temp"
+          },
+          "format": "combiTimeTable",
+          "hold": {
+            "maxAge": 10
+          },
+          "path": "data/OA_Temp.mos",
+          "timeColumn": 1
+        },
+        {
+          "columns": {
+            "3": "VFD Fan Feedback"
+          },
+          "format": "combiTimeTable",
+          "hold": {
+            "maxAge": 10
+          },
+          "path": "data/VFD_Fan_Feedback.mos",
+          "timeColumn": 1
+        },
+        {
+          "columns": {
+            "3": "VFD Fan Enable"
+          },
+          "format": "combiTimeTable",
+          "hold": {
+            "maxAge": 90000
+          },
+          "path": "data/VFD_Fan_Enable.mos",
+          "timeColumn": 1
+        }
+      ],
+      "model": "Buildings.Utilities.Plotters.Examples.ControlsVerification_CoolingCoilValve",
+      "outputs": {
+        "cooValSta.yCooVal": {
+          "atolx": 1,
+          "rtoly": 0.01
+        }
+      },
+      "parameters": {},
+      "pointNameMapping": "b33-points.json",
+      "sequence": "cooValSta",
+      "window": {
+        "start": 0,
+        "stop": 86400
+      }
+    }
+  ],
+  "sampling": 5,
+  "schema": "oce/commissioning-spec/v1",
+  "time": {
+    "origin": "2018-06-07T00:00:00-07:00"
+  },
+  "tolerances": {
+    "atolx": 1,
+    "atoly": 0,
+    "rtolx": 0,
+    "rtoly": 0.01
+  }
+}
