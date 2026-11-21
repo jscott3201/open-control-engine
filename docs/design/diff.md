@@ -11,8 +11,8 @@ reopened. Decisions 9 to 16 were made while drafting and accepted by the archite
 **As landed.** The authoring diff, the rename pass and the two renderers are built as
 `crates/leverage/oce-diff` (issue #665, GitHub #692,
 [crate README](../../crates/leverage/oce-diff/README.md)), and the CXF adapter as its
-`diff_topology` (issue #666, GitHub #715); the blob comparison and the `oce diff` verb are #667 and #668. What
-building them showed is listed under [As landed](#as-landed).
+`diff_topology` (issue #666, GitHub #715); the blob comparison and the `oce diff` verb are #667
+and #668. What building them showed is listed under [As landed](#as-landed).
 
 The owner's work plan names the M3 deliverable as "a structural diff of two authoring models or CXF
 documents, used in receipts and bundle cards", with `oce diff` in the CLI. Its consumers are M3
@@ -747,8 +747,8 @@ What starting the CXF adapter (issue #666) showed about the facade, ruled by the
   equal content ids never coexist with a non-empty graph or interface section; an
   interface-only change moves the id while the graph section stays empty.
 
-What building the CXF adapter (issue #666, GitHub #715) showed. Each is a consequence of building decisions 3,
-8 and 15 against the facade as it stands, not a new decision; the
+What building the CXF adapter (issue #666, GitHub #715) showed. Each is a consequence of
+building decisions 3, 8 and 15 against the facade as it stands, not a new decision; the
 [crate README](../../crates/leverage/oce-diff/README.md#the-cxf-adapter) states each in full.
 
 - **The root is read, never guessed, and a path outside it is refused.** A name is a path with
