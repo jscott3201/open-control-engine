@@ -1,83 +1,190 @@
-//! What reading a blob summary allocates (issue #448): nothing for any refusal, by count for
-//! every golden, and by peak bytes against the blob length for the hostile shapes that make each
-//! list as long as its bytes allow.
+//! What reading a blob summary allocates (issues #448 and #680): nothing for any refusal, and
+//! for a summary what the decoder allocates for the same bytes, freed, and then the lists.
 //!
-//! `oce_graph::blob::inspect` documents that every check runs before anything is allocated, four
-//! allocations at most for a summary (one per non-empty list) and at most 2 bytes held per blob
-//! byte; `oce_api::inspect_blob` documents at most 4 requested bytes. Peaks are
-//! `allocation_counter`'s `bytes_max` divided by the blob length, as in
+//! `oce_graph::blob::inspect` documents that every check runs before anything is allocated; that
+//! a summary then costs the decoder's building pass (exactly `decode`'s allocations for the same
+//! bytes, all freed) and after it one allocation per non-empty list, at most 2 bytes held per
+//! blob byte; and that the two are never held together, so the peak is the larger of them.
+//! `oce_api::inspect_blob` documents the same with at most 4 requested bytes per blob byte for
+//! its owned result. Peaks are `allocation_counter`'s `bytes_max`, as in
 //! `blob_peak_allocation.rs`: bytes requested of the allocator, not its per-allocation overhead.
+//! Every expected count and peak here is an equality against a measurement of `decode` on the
+//! same bytes, so an allocation the documentation does not list fails a test.
 
 // Shared helpers, declared once for this binary in its root `facade_allocation_census.rs`.
 use crate::blob_corpus;
 use crate::blob_image;
+use crate::blob_models;
+use crate::blob_peak_allocation::{
+    WIDE_ACCEPTED_PEAK_RATIO, constant_with_bogus_inputs, wide_accepted_block,
+};
+
+use std::mem::size_of;
 
 use allocation_counter::measure;
 use blob_corpus::{FIXTURES, golden};
 use blob_image::{Image, Inst, Out};
+use blob_models::{chain, moving_mean};
 use oce_api::{BlobError, InstanceField, OcError, inspect_blob};
-use oce_graph::blob::inspect;
+use oce_graph::MAX_STATE_WORDS;
+use oce_graph::blob::{Summary, SummaryClass, SummaryInstance, decode, inspect};
 
-/// The core reader's documented bound on bytes held per blob byte.
-const CORE_PEAK_RATIO: f64 = 2.0;
+/// The core reader's documented bound on the bytes its four lists hold per blob byte.
+const CORE_LISTS_RATIO: f64 = 2.0;
 
-/// The facade's documented bound: the core's lists and the owned copies, held together.
-const FACADE_PEAK_RATIO: f64 = 4.0;
+/// The facade's documented bound on its result: the core's lists and the owned copies, held
+/// together.
+const FACADE_RESULT_RATIO: f64 = 4.0;
 
 fn some(n: usize) -> u64 {
     u64::from(n > 0)
 }
 
-/// Peak bytes held while the core reads `bytes`, as a ratio of the blob length, and the refusal.
-fn core_peak(bytes: &[u8]) -> (f64, Option<BlobError>) {
-    let mut refusal = None;
-    let info = measure(|| {
-        refusal = inspect(bytes).err();
-    });
-    (info.bytes_max as f64 / bytes.len() as f64, refusal)
+/// What `decode` costs for `bytes`: its allocation count and its peak bytes, whether it returns
+/// an executable or a refusal. This is the building pass's share of a summary.
+fn decoder_cost(bytes: &[u8]) -> (u64, u64) {
+    let info = measure(|| drop(decode(bytes)));
+    (info.count_total, info.bytes_max)
 }
 
-/// The same for the facade's owned summary.
-fn facade_peak(bytes: &[u8]) -> (f64, Option<BlobError>) {
+/// The allocation count and bytes of the four lists of `summary`, each allocated once at its
+/// exact length.
+fn lists_cost(summary: &Summary<'_>) -> (u64, u64) {
+    let count = some(summary.classes.len())
+        + some(summary.instances.len())
+        + some(summary.inputs.len())
+        + some(summary.outputs.len());
+    let bytes = summary.classes.len() * size_of::<SummaryClass<'_>>()
+        + summary.instances.len() * size_of::<SummaryInstance>()
+        + (summary.inputs.len() + summary.outputs.len()) * size_of::<&str>();
+    (count, bytes as u64)
+}
+
+/// What the core reader costs for `bytes`, which it summarises, checked against the documented
+/// cost exactly: the decoder's allocations and then one per non-empty list, and a peak that is
+/// the larger of the decoder's and the lists', never their sum. Returns the decoder's peak and
+/// the lists' bytes as ratios of the blob length, and the summary's verdict.
+fn core_cost_is_the_decoders_then_the_lists(
+    bytes: &[u8],
+    what: &str,
+) -> (f64, f64, Option<BlobError>) {
+    let (decoder_count, decoder_peak) = decoder_cost(bytes);
+    let mut lists = (0, 0);
     let mut refusal = None;
     let info = measure(|| {
-        refusal = match inspect_blob(bytes) {
-            Ok(_) => None,
-            Err(OcError::Blob(error)) => Some(error),
-            Err(other) => panic!("a refusal that is not OcError::Blob: {other:?}"),
-        };
+        let summary = inspect(bytes).unwrap();
+        lists = lists_cost(&summary);
+        refusal = summary.decode_refusal;
     });
-    (info.bytes_max as f64 / bytes.len() as f64, refusal)
+    assert_eq!(info.count_total, decoder_count + lists.0, "{what}: count");
+    assert_eq!(info.bytes_max, decoder_peak.max(lists.1), "{what}: peak");
+    assert_eq!(refusal, decode(bytes).err(), "{what}: verdict");
+    let length = bytes.len() as f64;
+    assert!(
+        lists.1 as f64 <= CORE_LISTS_RATIO * length,
+        "{what}: the lists hold {:.2}x the blob",
+        lists.1 as f64 / length
+    );
+    (
+        decoder_peak as f64 / length,
+        lists.1 as f64 / length,
+        refusal,
+    )
+}
+
+/// Peak bytes held while the facade summarises `bytes`, as a ratio of the blob length, checked
+/// against the documented bound: the larger of the decoder's peak and 4 bytes per blob byte.
+fn facade_peak_is_within_the_decoders_or_the_result_bound(bytes: &[u8], what: &str) -> f64 {
+    let (_, decoder_peak) = decoder_cost(bytes);
+    let info = measure(|| {
+        inspect_blob(bytes).unwrap();
+    });
+    let length = bytes.len() as f64;
+    let bound = (decoder_peak as f64).max(FACADE_RESULT_RATIO * length);
+    assert!(
+        info.bytes_max as f64 <= bound,
+        "{what}: facade peak {:.2}x, decoder peak {:.2}x",
+        info.bytes_max as f64 / length,
+        decoder_peak as f64 / length
+    );
+    info.bytes_max as f64 / length
 }
 
 #[test]
-fn the_core_reader_allocates_one_vector_per_non_empty_list_for_every_golden() {
+fn a_summary_of_every_golden_costs_the_decoders_allocations_then_one_per_non_empty_list() {
+    let positive = measure(|| drop(std::hint::black_box(vec![0_u8; 64])));
+    assert_eq!(positive.count_total, 1, "the counter observes allocations");
     for name in FIXTURES {
         let bytes = golden(name);
-        let mut lists = 0;
-        let info = measure(|| {
-            let summary = inspect(&bytes).unwrap();
-            lists = some(summary.classes.len())
-                + some(summary.instances.len())
-                + some(summary.inputs.len())
-                + some(summary.outputs.len());
-        });
-        assert_eq!(info.count_total, lists, "{name}");
-        assert!(
-            info.bytes_max as f64 <= CORE_PEAK_RATIO * bytes.len() as f64,
-            "{name}"
-        );
-    }
-}
-
-#[test]
-fn the_facade_summary_of_every_golden_stays_within_four_times_the_blob_length() {
-    for name in FIXTURES {
-        let bytes = golden(name);
-        let (ratio, refusal) = facade_peak(&bytes);
+        let (decoder, lists, refusal) = core_cost_is_the_decoders_then_the_lists(&bytes, name);
         assert_eq!(refusal, None, "{name}");
-        assert!(ratio <= FACADE_PEAK_RATIO, "{name}: peak {ratio:.2}x");
+        // For a real executable the decoder's share is the larger one.
+        assert!(decoder > lists, "{name}: {decoder:.2}x against {lists:.2}x");
+        facade_peak_is_within_the_decoders_or_the_result_bound(&bytes, name);
     }
+}
+
+#[test]
+fn a_summary_of_a_blob_the_decoder_refuses_costs_what_the_decoder_spent_before_refusing() {
+    // Refused at the first class's hash: the decoder allocates one default-parameter block for
+    // the hash and stops, and the summary costs that and its lists.
+    let mut early = chain();
+    early.classes[0].1 ^= 1;
+    // Refused at the schedule, the last check but the state: everything is built by then.
+    let mut late = chain();
+    late.schedule = vec![1, 0];
+    // Refused at block 0's arity with a million-entry port list in hand.
+    let hostile = constant_with_bogus_inputs(1_000_000);
+    for (what, bytes) in [
+        ("a wrong hash", early.to_bytes()),
+        ("a wrong schedule", late.to_bytes()),
+        ("a hostile port list", hostile),
+    ] {
+        let (_, _, refusal) = core_cost_is_the_decoders_then_the_lists(&bytes, what);
+        assert!(refusal.is_some(), "{what}");
+        facade_peak_is_within_the_decoders_or_the_result_bound(&bytes, what);
+    }
+}
+
+#[test]
+fn a_summary_of_the_densest_accepted_blob_peaks_where_the_decoder_peaks() {
+    // The decoder's densest accepted shape (`blob_peak_allocation.rs`): the building pass holds
+    // far more than the lists, and all of it is freed before they are allocated, so the summary
+    // peaks exactly where `decode` does and within the decoder's recorded bound.
+    let bytes = wide_accepted_block();
+    let (decoder, lists, refusal) = core_cost_is_the_decoders_then_the_lists(&bytes, "wide");
+    assert_eq!(refusal, None);
+    assert!(
+        decoder > 20.0 && decoder <= WIDE_ACCEPTED_PEAK_RATIO,
+        "{decoder:.2}x"
+    );
+    assert!(lists < 0.01, "{lists:.4}x");
+    let facade = facade_peak_is_within_the_decoders_or_the_result_bound(&bytes, "wide");
+    assert!(facade <= WIDE_ACCEPTED_PEAK_RATIO, "{facade:.2}x");
+}
+
+#[test]
+fn a_summary_of_a_blob_at_the_state_budget_holds_the_state_the_decoder_allocates() {
+    // A blob of a few hundred bytes whose one block owns the whole state budget. The verdict is
+    // the decoder's, so the summary allocates that state, checks its CRC and frees it: its peak
+    // is the decoder's, bounded by the budget and not by the blob length.
+    let overhead = moving_mean(1).instances[0].state_len as usize - 1;
+    let bytes = moving_mean(i64::try_from(MAX_STATE_WORDS - overhead).unwrap()).to_bytes();
+    assert!(bytes.len() < 1_000);
+    let (_, _, refusal) = core_cost_is_the_decoders_then_the_lists(&bytes, "the state budget");
+    assert_eq!(refusal, None);
+    let (_, decoder_peak) = decoder_cost(&bytes);
+    let info = measure(|| drop(inspect(&bytes)));
+    assert_eq!(info.bytes_max, decoder_peak);
+    let words = 8 * MAX_STATE_WORDS as u64;
+    assert!(info.bytes_max >= words, "the state words were allocated");
+    assert!(
+        info.bytes_max <= words + 64 * 1024,
+        "peak {} bytes against {words} of state",
+        info.bytes_max
+    );
+    // Nothing of it outlives the call.
+    assert_eq!(info.bytes_current, 0);
 }
 
 /// Zero allocations in the core reader and in the facade for `bytes`, which both refuse with
@@ -191,8 +298,9 @@ fn a_class_index_outside_the_table_on_the_last_of_many_blocks_allocates_nothing(
 }
 
 /// The longest output list its bytes allow: every record is 12 bytes, an empty path, a source id
-/// and an empty payload. The structural pass accepts a repeated output path and the summary
-/// checks no source, so this blob summarises; it is the shape that holds the most per blob byte.
+/// and an empty payload. The structural pass accepts a repeated output path and no source is
+/// checked for the lists, so this blob summarises; it is the shape whose lists hold the most per
+/// blob byte. The decoder refuses it at its first output, having sized its own output table.
 fn outputs_with_empty_paths(count: u32) -> Vec<u8> {
     let mut image = Image::new();
     image.outputs = (0..count)
@@ -210,12 +318,16 @@ fn the_longest_output_list_stays_within_the_documented_ratios() {
     let count = 500_000;
     let bytes = outputs_with_empty_paths(count);
     assert!(bytes.len() >= 12 * count as usize);
-    let (ratio, refusal) = core_peak(&bytes);
-    assert_eq!(refusal, None);
-    assert!(ratio <= CORE_PEAK_RATIO, "core peak {ratio:.2}x");
-    let (ratio, refusal) = facade_peak(&bytes);
-    assert_eq!(refusal, None);
-    assert!(ratio <= FACADE_PEAK_RATIO, "facade peak {ratio:.2}x");
+    let (decoder, lists, refusal) = core_cost_is_the_decoders_then_the_lists(&bytes, "outputs");
+    assert!(matches!(
+        refusal,
+        Some(BlobError::InvalidOutput { output: 0, .. })
+    ));
+    // 16 bytes of list per 12-byte record; the decoder's own table of the same count is larger.
+    assert!(lists > 1.3 && lists <= CORE_LISTS_RATIO, "{lists:.2}x");
+    assert!(decoder > lists && decoder <= 4.0, "{decoder:.2}x");
+    let facade = facade_peak_is_within_the_decoders_or_the_result_bound(&bytes, "outputs");
+    assert!(facade <= FACADE_RESULT_RATIO, "{facade:.2}x");
     assert_eq!(inspect_blob(&bytes).unwrap().outputs.len(), count as usize);
 }
 
@@ -223,11 +335,16 @@ fn the_longest_output_list_stays_within_the_documented_ratios() {
 fn the_longest_instance_list_stays_within_the_documented_ratios() {
     let count = 100_000;
     let bytes = minimal_instances(count).to_bytes();
-    let (ratio, refusal) = core_peak(&bytes);
-    assert_eq!(refusal, None);
-    assert!(ratio <= CORE_PEAK_RATIO, "core peak {ratio:.2}x");
-    let (ratio, refusal) = facade_peak(&bytes);
-    assert_eq!(refusal, None);
-    assert!(ratio <= FACADE_PEAK_RATIO, "facade peak {ratio:.2}x");
+    let (decoder, lists, refusal) = core_cost_is_the_decoders_then_the_lists(&bytes, "instances");
+    assert_eq!(
+        refusal,
+        Some(BlobError::InstanceMismatch {
+            block: 0,
+            field: InstanceField::OutputArity
+        })
+    );
+    assert!(lists > 0.7 && lists <= CORE_LISTS_RATIO, "{lists:.2}x");
+    assert!(decoder > lists && decoder <= 8.0, "{decoder:.2}x");
+    facade_peak_is_within_the_decoders_or_the_result_bound(&bytes, "instances");
     assert_eq!(inspect_blob(&bytes).unwrap().instances.len(), count);
 }

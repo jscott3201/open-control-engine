@@ -51,7 +51,7 @@ fn peak(bytes: &[u8]) -> (f64, Result<(), BlobError>) {
 /// One `Constant` (no inputs) whose record nonetheless lists `n` input ids, with a connector count
 /// of `n + 1` so every id is in range: the shape that made the old decoder build a 144-byte
 /// connector per id before the arity check.
-fn constant_with_bogus_inputs(n: u32) -> Vec<u8> {
+pub(crate) fn constant_with_bogus_inputs(n: u32) -> Vec<u8> {
     let mut image = Image::new();
     image.classes = vec![class("CDL.Reals.Sources.Constant")];
     image.connectors = n + 1;
@@ -130,10 +130,11 @@ fn many_small_instances_refused_late_stay_within_their_recorded_ratio() {
 
 /// The densest accepted shape per encoded byte: one wide block whose inputs all fan out from one
 /// boundary input, so each connector costs eight encoded bytes (a port slot and a target).
-const WIDE_ACCEPTED_PEAK_RATIO: f64 = 32.0;
+pub(crate) const WIDE_ACCEPTED_PEAK_RATIO: f64 = 32.0;
 
-#[test]
-fn a_wide_accepted_block_stays_within_its_recorded_ratio() {
+/// The blob of that shape: one `MultiSum` of 200,000 inputs, all targets of one boundary input.
+/// `blob_summary_allocations.rs` summarises the same bytes.
+pub(crate) fn wide_accepted_block() -> Vec<u8> {
     let nin = 200_000u32;
     let params = ParamTable {
         values: vec![(Arc::from("nin"), Value::Integer(i64::from(nin)))],
@@ -163,7 +164,12 @@ fn a_wide_accepted_block_stays_within_its_recorded_ratio() {
         source: nin,
         payload: Vec::new(),
     }];
-    let bytes = image.to_bytes();
+    image.to_bytes()
+}
+
+#[test]
+fn a_wide_accepted_block_stays_within_its_recorded_ratio() {
+    let bytes = wide_accepted_block();
     let (ratio, outcome) = peak(&bytes);
     assert_eq!(outcome, Ok(()));
     assert!(

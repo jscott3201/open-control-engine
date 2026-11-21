@@ -1,7 +1,8 @@
-//! A blob summary is not acceptance (issue #448): what `oce_api::inspect_blob` and
-//! `oce_graph::blob::inspect` refuse after the decoder's structural pass (a class this build does
-//! not register, a class index outside the class table, another engine version), and what they
-//! report for a blob the decoder refuses at a later step, which is the blob as written.
+//! Having a blob summary is not acceptance, and the summary says which it is (issues #448 and
+//! #680): what `oce_api::inspect_blob` and `oce_graph::blob::inspect` refuse after the decoder's
+//! structural pass (a class this build does not register, a class index outside the class table,
+//! another engine version), and what they report for a blob the decoder refuses at a later step,
+//! which is the blob as written with the decoder's own refusal in `decode_refusal`.
 
 // Shared helpers, declared once for this binary in its root `facade.rs`.
 use crate::blob_corpus;
@@ -12,9 +13,12 @@ use crate::blob_summary_facts;
 use blob_corpus::{FIXTURES, golden};
 use blob_image::{Image, VType, Val};
 use blob_models::{adder, chain, class, delay, input, inst, moving_mean, out};
-use blob_summary_facts::{Facts, assert_invariants, summarise};
-use oce_api::{BlobError, ENGINE_VERSION, EngineVersion, InstanceField, Value};
-use oce_graph::blob::{ConnectorFault, OutputFault, ScheduleFault, decode};
+use blob_summary_facts::{Facts, assert_invariants, summarise, summarise_with_refusal};
+use oce_api::{BlobError, ENGINE_VERSION, EngineVersion, InstanceField, OcError, Value};
+use oce_graph::MAX_STATE_WORDS;
+use oce_graph::blob::{
+    ConnectionFault, ConnectorFault, InputFault, OutputFault, ScheduleFault, decode,
+};
 
 /// The blob an earlier release wrote under the same format number (`blob_old_layout.rs`).
 const OLD_LAYOUT: &[u8] = include_bytes!("fixtures/blob_legacy.oceb");
@@ -30,12 +34,17 @@ fn a_target_bound_class_in_the_table_makes_the_summary_target_bound() {
     sin.outputs = vec![out("urn:test:y", 1)];
     let bytes = sin.to_bytes();
     assert!(decode(&bytes).unwrap().target_bound);
-    assert!(summarise(&bytes).unwrap().target_bound);
+    let (facts, refusal) = summarise_with_refusal(&bytes).unwrap();
+    assert!(facts.target_bound);
+    // Target-bound is not a refusal: this build accepts the blob.
+    assert_eq!(refusal, None);
 
     for image in [chain(), adder(), delay(), moving_mean(4)] {
         let bytes = image.to_bytes();
         assert!(!decode(&bytes).unwrap().target_bound);
-        assert!(!summarise(&bytes).unwrap().target_bound);
+        let (facts, refusal) = summarise_with_refusal(&bytes).unwrap();
+        assert!(!facts.target_bound);
+        assert_eq!(refusal, None);
     }
 
     // The flag is a statement about the class table. A target-bound class no instance uses makes
@@ -48,9 +57,10 @@ fn a_target_bound_class_in_the_table_makes_the_summary_target_bound() {
         decode(&bytes).err(),
         Some(BlobError::UnusedClass { class: 1 })
     );
-    let facts = summarise(&bytes).unwrap();
+    let (facts, refusal) = summarise_with_refusal(&bytes).unwrap();
     assert!(facts.target_bound);
     assert_eq!(facts, Facts::of_image(&unused));
+    assert_eq!(refusal, Some(BlobError::UnusedClass { class: 1 }));
 }
 
 #[test]
@@ -144,16 +154,24 @@ fn a_class_index_outside_the_class_table_is_refused_by_its_block() {
         })
     );
     // The last index in the table is in range: both blocks on class 1 summarise, though the
-    // decoder refuses the blob (block 1 is not a Constant, and class 0 is now unused).
+    // decoder refuses the blob (block 1 lists an input a Constant does not have, and class 0 is
+    // now unused), and the summary carries the first of those refusals.
     let mut last = chain();
     last.instances[1].class = 1;
     let bytes = last.to_bytes();
-    assert!(decode(&bytes).is_err());
-    assert_eq!(summarise(&bytes), Ok(Facts::of_image(&last)));
+    let refusal = Some(BlobError::InstanceMismatch {
+        block: 1,
+        field: InstanceField::InputArity,
+    });
+    assert_eq!(decode(&bytes).err(), refusal);
+    assert_eq!(
+        summarise_with_refusal(&bytes),
+        Ok((Facts::of_image(&last), refusal))
+    );
 }
 
 #[test]
-fn a_blob_the_decoder_refuses_after_its_structural_pass_summarises_as_written() {
+fn a_blob_the_decoder_refuses_after_its_structural_pass_summarises_as_written_with_that_refusal() {
     let cases: Vec<(&str, Image, BlobError)> = vec![
         (
             "a schedule that runs the consumer first",
@@ -263,7 +281,8 @@ fn a_blob_the_decoder_refuses_after_its_structural_pass_summarises_as_written() 
     ];
     for (what, image, refusal) in cases {
         let bytes = image.to_bytes();
-        match (decode(&bytes).err(), refusal) {
+        let decoder = decode(&bytes).err();
+        match (decoder, refusal) {
             // The words the decoder allocated are its own business; the block and the carried
             // CRC are what the case pins.
             (
@@ -278,10 +297,310 @@ fn a_blob_the_decoder_refuses_after_its_structural_pass_summarises_as_written() 
             ) => assert_eq!((block, expected), (b, e), "{what}"),
             (found, refusal) => assert_eq!(found, Some(refusal), "{what}"),
         }
-        let facts = summarise(&bytes).unwrap_or_else(|err| panic!("{what}: {err:?}"));
+        let (facts, verdict) =
+            summarise_with_refusal(&bytes).unwrap_or_else(|err| panic!("{what}: {err:?}"));
         assert_eq!(facts, Facts::of_image(&image), "{what}");
         assert_invariants(&facts, what);
+        // The summary carries exactly the error `decode` returns: the same variant with the
+        // same indices and, for the state case, the same computed CRC.
+        assert!(decoder.is_some(), "{what}");
+        assert_eq!(verdict, decoder, "{what}");
+
+        // Through the public surface alone, with no test helper between: a host reads the
+        // refusal off the summary it was given.
+        let summary = oce_api::inspect_blob(&bytes).unwrap_or_else(|err| panic!("{what}: {err}"));
+        assert_eq!(summary.decode_refusal, decoder, "{what}");
+        assert_eq!(
+            oce_graph::blob::inspect(&bytes).unwrap().decode_refusal,
+            decoder,
+            "{what}"
+        );
     }
+}
+
+/// The acceptance check a host writes with the facade alone.
+fn accepted_by_this_build(bytes: &[u8]) -> bool {
+    matches!(oce_api::inspect_blob(bytes), Ok(summary) if summary.decode_refusal.is_none())
+}
+
+#[test]
+fn a_summary_with_no_refusal_is_exactly_a_blob_the_decoder_accepts() {
+    // Accepted: the hand-built models, and every golden (`blob_summary.rs`, `blob_goldens.rs`).
+    for image in [chain(), adder(), delay(), moving_mean(4), Image::new()] {
+        let bytes = image.to_bytes();
+        decode(&bytes).unwrap();
+        assert!(accepted_by_this_build(&bytes));
+    }
+    for name in FIXTURES {
+        assert!(accepted_by_this_build(&golden(name)), "{name}");
+    }
+
+    // `is_ok()` is not that check: this blob has a summary, and no build of this engine version
+    // runs it, because its class signature hash is not the one this build computes.
+    let mut wrong_hash = chain();
+    let expected = wrong_hash.classes[1].1;
+    wrong_hash.classes[1].1 = !expected;
+    let bytes = wrong_hash.to_bytes();
+    let summary = oce_api::inspect_blob(&bytes).unwrap();
+    assert!(!accepted_by_this_build(&bytes));
+    assert_eq!(
+        summary.decode_refusal,
+        Some(BlobError::ClassSignatureMismatch {
+            class: 1,
+            expected,
+            found: !expected
+        })
+    );
+    assert_eq!(decode(&bytes).err(), summary.decode_refusal);
+
+    // Bytes with no summary are not accepted either, and the refusal is then the `Err`.
+    let mut unknown = chain();
+    unknown.classes[0].0 = b"CDL.Reals.Abz".to_vec();
+    let bytes = unknown.to_bytes();
+    assert!(!accepted_by_this_build(&bytes));
+    assert!(matches!(
+        oce_api::inspect_blob(&bytes),
+        Err(OcError::Blob(BlobError::UnknownClass { class: 0 }))
+    ));
+}
+
+#[test]
+fn the_refusal_is_the_first_one_the_decoder_reports_when_a_blob_has_several() {
+    // A wrong hash in class 1 (step 7, the class table), a non-finite parameter in block 0
+    // (step 7, the blocks), an undriven input (step 8) and a reversed schedule (step 9): the
+    // decoder reports them in that order as each earlier one is repaired, and so does the
+    // summary.
+    let mut image = chain();
+    let hash = image.classes[1].1;
+    image.classes[1].1 ^= 1 << 63;
+    image.instances[0].params[0].1 = Val::real(f64::INFINITY);
+    image.connections.clear();
+    image.schedule = vec![1, 0];
+    let expected = [
+        BlobError::ClassSignatureMismatch {
+            class: 1,
+            expected: hash,
+            found: hash ^ (1 << 63),
+        },
+        BlobError::NonFiniteParameter {
+            block: 0,
+            parameter: 0,
+        },
+        BlobError::UndrivenInput { connector: 1 },
+        BlobError::InvalidSchedule {
+            position: 0,
+            fault: ScheduleFault::EmitBefore,
+        },
+    ];
+    let good = chain();
+    let repairs: [&dyn Fn(&mut Image); 4] = [
+        &|image| image.classes[1].1 = good.classes[1].1,
+        &|image| image.instances[0].params = good.instances[0].params.clone(),
+        &|image| image.connections = good.connections.clone(),
+        &|image| image.schedule = good.schedule.clone(),
+    ];
+    for (refusal, repair) in expected.into_iter().zip(repairs) {
+        let bytes = image.to_bytes();
+        assert_eq!(decode(&bytes).err(), Some(refusal));
+        let (facts, verdict) = summarise_with_refusal(&bytes).unwrap();
+        assert_eq!(verdict, Some(refusal));
+        assert_eq!(facts, Facts::of_image(&image));
+        repair(&mut image);
+    }
+    // Every defect repaired: the same summary reader now reports acceptance.
+    assert_eq!(
+        summarise_with_refusal(&image.to_bytes()),
+        Ok((Facts::of_image(&good), None))
+    );
+}
+
+#[test]
+fn a_refusal_of_every_later_decoder_step_reaches_the_summary_unchanged() {
+    // One blob per refusal the nine cases above do not reach: the remaining instance fields of
+    // step 7, an enum parameter fault, a boundary input and a connection fault of step 8, the
+    // other schedule faults of step 9 and the state budget of step 10.
+    let enum_holder = || {
+        let mut image = chain();
+        image.instances[0].params[0].1 = Val::Enum(b"CDL.Types.SimpleController".to_vec(), 1);
+        image
+    };
+    let cases: Vec<(&str, Image)> = vec![
+        ("a stateless block recorded as stateful", {
+            let mut image = chain();
+            image.instances[1].kind = 1;
+            image
+        }),
+        ("a state length the constructed block does not have", {
+            let mut image = chain();
+            image.instances[1].state_len = 1;
+            image
+        }),
+        ("a CRC on a block without state", {
+            let mut image = chain();
+            image.instances[1].state_crc = 1;
+            image
+        }),
+        ("one input too many", {
+            let mut image = chain();
+            image.instances[1].inputs.push(3);
+            image.connectors = 4;
+            image
+        }),
+        ("no outputs", {
+            let mut image = chain();
+            image.instances[1].outputs.clear();
+            image
+        }),
+        ("an enum class this build does not have", {
+            let mut image = enum_holder();
+            image.instances[0].params[0].1 = Val::Enum(b"CDL.Types.NoSuchEnum".to_vec(), 1);
+            image
+        }),
+        ("an enum ordinal of zero", {
+            let mut image = enum_holder();
+            image.instances[0].params[0].1 = Val::Enum(b"CDL.Types.SimpleController".to_vec(), 0);
+            image
+        }),
+        ("a connector claimed twice", {
+            let mut image = chain();
+            image.instances[1].outputs = vec![0];
+            image
+        }),
+        ("a boundary input with no targets", {
+            let mut image = adder();
+            image.inputs[0].targets.clear();
+            image
+        }),
+        ("a boundary input of the wrong type", {
+            let mut image = adder();
+            image.inputs[0].vtype = VType::Integer;
+            image
+        }),
+        ("a connection from an input", {
+            let mut image = chain();
+            image.connections = vec![(1, 1)];
+            image
+        }),
+        ("a boundary output read from an input", {
+            let mut image = chain();
+            image.outputs = vec![out("urn:test:y", 1)];
+            image
+        }),
+        ("a schedule naming a block that does not exist", {
+            let mut image = chain();
+            image.schedule = vec![0, 7];
+            image
+        }),
+        ("a schedule naming one block twice", {
+            let mut image = chain();
+            image.schedule = vec![0, 0];
+            image
+        }),
+        ("one word past the state budget", {
+            let overhead = moving_mean(1).instances[0].state_len as usize - 1;
+            moving_mean(i64::try_from(MAX_STATE_WORDS - overhead).unwrap() + 1)
+        }),
+    ];
+    let mut seen = Vec::new();
+    for (what, image) in &cases {
+        let bytes = image.to_bytes();
+        let decoder = decode(&bytes)
+            .err()
+            .unwrap_or_else(|| panic!("{what}: the decoder accepts the blob"));
+        let (facts, verdict) =
+            summarise_with_refusal(&bytes).unwrap_or_else(|err| panic!("{what}: {err:?}"));
+        assert_eq!(verdict, Some(decoder), "{what}");
+        assert_eq!(facts, Facts::of_image(image), "{what}");
+        seen.push(decoder);
+    }
+    // The cases reach the refusals they are named for, so the list above is not fifteen ways to
+    // one error.
+    let count = |pattern: &dyn Fn(&BlobError) -> bool| seen.iter().filter(|e| pattern(e)).count();
+    assert_eq!(
+        count(&|e| matches!(e, BlobError::InstanceMismatch { .. })),
+        5
+    );
+    for field in [
+        InstanceField::Kind,
+        InstanceField::StateLen,
+        InstanceField::StateCrc,
+        InstanceField::InputArity,
+        InstanceField::OutputArity,
+    ] {
+        assert!(seen.contains(&BlobError::InstanceMismatch { block: 1, field }));
+    }
+    assert_eq!(
+        count(&|e| matches!(e, BlobError::UnknownEnumClass { .. })),
+        1
+    );
+    assert_eq!(
+        count(&|e| matches!(e, BlobError::EnumOrdinalOutOfRange { ordinal: 0, .. })),
+        1
+    );
+    assert!(seen.contains(&BlobError::InvalidConnector {
+        connector: 0,
+        fault: ConnectorFault::Duplicated
+    }));
+    assert!(seen.contains(&BlobError::InvalidInput {
+        input: 0,
+        fault: InputFault::NoTargets
+    }));
+    assert!(seen.contains(&BlobError::InvalidInput {
+        input: 0,
+        fault: InputFault::TargetTypeMismatch
+    }));
+    assert!(seen.contains(&BlobError::InvalidConnection {
+        connection: 0,
+        fault: ConnectionFault::ProducerNotOutput
+    }));
+    assert!(seen.contains(&BlobError::InvalidOutput {
+        output: 0,
+        fault: OutputFault::SourceNotOutput
+    }));
+    assert!(seen.contains(&BlobError::InvalidSchedule {
+        position: 1,
+        fault: ScheduleFault::BlockOutOfRange
+    }));
+    assert!(seen.contains(&BlobError::InvalidSchedule {
+        position: 1,
+        fault: ScheduleFault::Duplicate
+    }));
+    assert!(seen.contains(&BlobError::StateTooLarge {
+        block: 0,
+        requested: MAX_STATE_WORDS as u64 + 1
+    }));
+}
+
+#[test]
+fn a_summary_refusal_is_never_reported_as_a_decode_refusal() {
+    // The two checks the summary makes itself, and every refusal of the framing and structural
+    // pass, are `Err`s of the summary: `decode_refusal` never carries one, because bytes refused
+    // that way have no summary to carry it. Each of these blobs has such a defect together with
+    // one a later decoder step would report.
+    let mut unknown = chain();
+    unknown.classes[0].0 = b"CDL.Reals.Abz".to_vec();
+    unknown.schedule = vec![1, 0];
+    assert_eq!(
+        summarise_with_refusal(&unknown.to_bytes()),
+        Err(BlobError::UnknownClass { class: 0 })
+    );
+    let mut index = chain();
+    index.instances[1].class = 2;
+    index.schedule = vec![];
+    assert_eq!(
+        summarise_with_refusal(&index.to_bytes()),
+        Err(BlobError::InstanceMismatch {
+            block: 1,
+            field: InstanceField::ClassIndex
+        })
+    );
+    let mut flagged = chain();
+    flagged.flags = 1;
+    flagged.connections.clear();
+    assert_eq!(
+        summarise_with_refusal(&flagged.to_bytes()),
+        Err(BlobError::NonzeroFlags { flags: 1 })
+    );
 }
 
 #[test]

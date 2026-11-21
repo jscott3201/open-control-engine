@@ -15,7 +15,9 @@
 //!
 //! [`inspect()`] reads what a blob records about itself (its header facts, class table,
 //! per-instance initial-state CRCs and I/O paths) through the same framing and structural pass,
-//! without building it: a [`Summary`] is for comparing blobs and is not acceptance.
+//! for comparing blobs, including one this build refuses. Its [`Summary`] also carries the
+//! decoder's verdict on the bytes ([`Summary::decode_refusal`]): the refusal of the same building
+//! pass [`decode()`] runs, whose result is dropped.
 //!
 //! This one module owns the format in both directions (the tag tables, the section layout, the
 //! checks), so the encoder and decoder cannot drift. The user-facing contract is

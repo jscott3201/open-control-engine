@@ -13,6 +13,8 @@
 mod blob_corpus;
 #[path = "support/blob_image.rs"]
 mod blob_image;
+#[path = "support/blob_models.rs"]
+mod blob_models;
 #[path = "support/dual_entry.rs"]
 mod dual_entry;
 #[path = "../../oce-graph/tests/support/frame_schedule.rs"]
