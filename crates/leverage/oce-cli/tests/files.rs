@@ -142,9 +142,9 @@ fn emit_refusal_writes_no_output_file() {
     let dir = scratch("emit_refusal");
     let stage_one = crate_dir().join("tests/fixtures/inputs/stage_one.oce");
     std::fs::copy(stage_one, dir.join("stage_one.oce")).expect("copy");
-    let run = oce_in(&dir, &["emit", "stage_one.oce", "-o", "out.json"], b"");
+    let run = oce_in(&dir, &["emit", "stage_one.oce", "-o", "out.cxf.json"], b"");
     assert_eq!(run.code, 1);
-    assert!(!Path::new(&dir.join("out.json")).exists());
+    assert!(!Path::new(&dir.join("out.cxf.json")).exists());
 }
 
 #[test]

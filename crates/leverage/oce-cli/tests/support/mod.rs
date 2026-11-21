@@ -82,6 +82,28 @@ pub fn oce_in(dir: &Path, args: &[&str], stdin: &[u8]) -> Run {
     }
 }
 
+/// Run `oce` with `args` in `dir` with `stdin` opened on the file `stdin_file` (as a shell's
+/// `< file` does), not on a pipe.
+pub fn oce_in_with_stdin_file(dir: &Path, args: &[&str], stdin_file: &Path) -> Run {
+    let output = Command::new(env!("CARGO_BIN_EXE_oce"))
+        .args(args)
+        .current_dir(dir)
+        .env_remove(BLESS_VAR)
+        .stdin(Stdio::from(
+            std::fs::File::open(stdin_file).expect("the stdin file opens"),
+        ))
+        .output()
+        .expect("the oce binary runs");
+    Run {
+        code: output
+            .status
+            .code()
+            .expect("the binary exits with a status"),
+        stdout: output.stdout,
+        stderr: output.stderr,
+    }
+}
+
 /// Run `oce` with `args` in `dir`, killing it if it has not finished after `guard`. The guard
 /// catches a run that would never return (a regression that blocks on a named pipe, say) so the
 /// test fails instead of hanging; it is a hang guard, never an assertion on speed, and is meant to

@@ -519,7 +519,9 @@ reads flat CXF and writes canonical text or the wire form. It has one input form
 importer refuses or a sequence the output form cannot spell. *(Owner rulings of 2026-11-21,
 GitHub #688:)* `emit -o` and `import -o` refuse an output that is the input file itself
 (`output-is-input`), and `import -o` a name `oce` would read as another form than the one
-written (`output-form-mismatch`); both are exit 2 before anything is read.
+written (`output-form-mismatch`), for `emit` the CXF form (`.oce` and `.json` are refused,
+issue #697); both are exit 2 before anything is read. On Unix a regular file the shell opened as
+stdin counts as the input.
 
 **Binaries above the facade.** The architecture page says the engine is library-only, with no binary
 target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage
