@@ -14,7 +14,9 @@
 //! - either of those only once surrounding whitespace is trimmed: `malformed-document`.
 //!
 //! Every refusal is pinned as the complete diagnostic list, with each message stated by hand, on
-//! every node of the shared composite and not only where a unit is read.
+//! every node of the shared composite and not only where a unit is read. A message holds the key
+//! and the namespace as written, each an escaped excerpt, and no other text of the document's:
+//! the node is the subject.
 
 use oce_diag::{DiagCode, Diagnostic};
 use serde_json::{Value as Json, json};
@@ -67,9 +69,9 @@ fn unbound(node: &str, key: &str) -> Diagnostic {
     Diagnostic::error(
         DiagCode::MalformedDocument,
         format!(
-            "property `{key}` on node `{node}` reads as `qudt:hasUnit` under a `qudt` prefix the \
-             document's `@context` does not bind, so it names no property and the unit it carries \
-             would be left unread; bind `qudt` to `http://qudt.org/schema/qudt#` or \
+            "property `{key}` reads as `qudt:hasUnit` under a `qudt` prefix the document's \
+             `@context` does not bind, so it names no property and the unit it carries would be \
+             left unread; bind `qudt` to `http://qudt.org/schema/qudt#` or \
              `http://qudt.org/schema/qudt/`, or write the unit as `S231:unit`"
         ),
     )
@@ -81,10 +83,9 @@ fn wrong_namespace(node: &str, key: &str, written: &str) -> Diagnostic {
     Diagnostic::error(
         DiagCode::VocabularyNamespaceMismatch,
         format!(
-            "property `{key}` on node `{node}` names `hasUnit` in `{written}`; the QUDT schema \
-             property `hasUnit` is read only in `http://qudt.org/schema/qudt#` and \
-             `http://qudt.org/schema/qudt/`; write it in one of them, or write the unit as \
-             `S231:unit`"
+            "property `{key}` names `hasUnit` in `{written}`; the QUDT schema property `hasUnit` \
+             is read only in `http://qudt.org/schema/qudt#` and `http://qudt.org/schema/qudt/`; \
+             write it in one of them, or write the unit as `S231:unit`"
         ),
     )
     .with_subject(node)
@@ -96,9 +97,9 @@ fn padded(node: &str, key: &str, without: &str) -> Diagnostic {
     Diagnostic::error(
         DiagCode::MalformedDocument,
         format!(
-            "property key `{key}` on node `{node}` carries surrounding whitespace; without it, \
-             {without}; write the unit as `S231:unit`, or as `hasUnit` in \
-             `http://qudt.org/schema/qudt#` or `http://qudt.org/schema/qudt/`"
+            "property key `{key}` carries surrounding whitespace; without it, {without}; write \
+             the unit as `S231:unit`, or as `hasUnit` in `http://qudt.org/schema/qudt#` or \
+             `http://qudt.org/schema/qudt/`"
         ),
     )
     .with_subject(node)
@@ -400,6 +401,37 @@ fn a_megabyte_of_key_is_quoted_in_at_most_64_bytes() {
     let diags = refusal(&with(upstream(), PORT, &key, json!("K")));
     assert_eq!(diags, vec![wrong_namespace(PORT, &cut, &cut)]);
     assert!(diags[0].message.len() < 512, "{}", diags[0].message.len());
+}
+
+#[test]
+fn a_megabyte_node_id_is_the_subject_and_is_not_copied_into_the_message() {
+    // The message holds the key and the namespace and no other authored text, so a long `@id`
+    // does not set its size: the same bytes as for a short one.
+    let long = format!("http://example.org#U.{}", "n".repeat(1 << 20));
+    for (context, key, expected) in [
+        (
+            unbound_context(),
+            "qudt:hasUnit",
+            unbound(&long, "qudt:hasUnit"),
+        ),
+        (
+            unbound_context(),
+            " qudt:hasUnit",
+            padded(&long, " qudt:hasUnit", UNBOUND_WITHOUT),
+        ),
+        (
+            context_binding("https://qudt.org/schema/qudt#"),
+            "qudt:hasUnit",
+            wrong_namespace(&long, "qudt:hasUnit", "https://qudt.org/schema/qudt#"),
+        ),
+    ] {
+        let mut doc = document(context);
+        node_mut(&mut doc, ORPHAN).insert("@id".to_owned(), json!(long));
+        let diags = refusal(&with(doc, &long, key, json!("K")));
+        assert_eq!(diags, vec![expected], "{key:?}");
+        assert!(diags[0].message.len() < 400, "{}", diags[0].message.len());
+        assert!(!diags[0].message.contains("example.org"), "{key:?}");
+    }
 }
 
 #[test]

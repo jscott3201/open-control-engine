@@ -232,14 +232,11 @@ fn case_1_under_no_qudt_binding_is_refused_where_the_gate_never_saw_the_unit() {
         vec![(
             "malformed-document".to_owned(),
             Some(id("gai2.u")),
-            format!(
-                "property `qudt:hasUnit` on node `{}` reads as `qudt:hasUnit` under a `qudt` \
-                 prefix the document's `@context` does not bind, so it names no property and the \
-                 unit it carries would be left unread; bind `qudt` to \
-                 `http://qudt.org/schema/qudt#` or `http://qudt.org/schema/qudt/`, or write the \
-                 unit as `S231:unit`",
-                id("gai2.u")
-            )
+            "property `qudt:hasUnit` reads as `qudt:hasUnit` under a `qudt` prefix the \
+             document's `@context` does not bind, so it names no property and the unit it \
+             carries would be left unread; bind `qudt` to `http://qudt.org/schema/qudt#` or \
+             `http://qudt.org/schema/qudt/`, or write the unit as `S231:unit`"
+                .to_owned()
         )]
     );
 }
@@ -268,11 +265,10 @@ fn case_1_under_a_near_miss_of_a_qudt_namespace_is_refused_naming_the_namespace(
                 "vocabulary-namespace-mismatch".to_owned(),
                 Some(id("gai2.u")),
                 format!(
-                    "property `qudt:hasUnit` on node `{}` names `hasUnit` in `{binding}`; the \
-                     QUDT schema property `hasUnit` is read only in \
-                     `http://qudt.org/schema/qudt#` and `http://qudt.org/schema/qudt/`; write it \
-                     in one of them, or write the unit as `S231:unit`",
-                    id("gai2.u")
+                    "property `qudt:hasUnit` names `hasUnit` in `{binding}`; the QUDT schema \
+                     property `hasUnit` is read only in `http://qudt.org/schema/qudt#` and \
+                     `http://qudt.org/schema/qudt/`; write it in one of them, or write the unit \
+                     as `S231:unit`"
                 )
             )],
             "{binding}"

@@ -33,8 +33,9 @@
 //! unbound), and `hasQuantityKind`, which is not read under any binding.
 //!
 //! Every message quotes authored text (the key, the namespace as written) as an excerpt of at
-//! most 64 bytes with each format or control character escaped ([`visible`] of [`excerpt`]), so a
-//! document sets neither the size of a refusal nor the characters in it. The subject is the node.
+//! most 64 bytes with each format or control character escaped ([`visible`] of [`excerpt`]), and
+//! holds no other text of the document's, so a document sets neither the size of a message nor
+//! the characters in it. The node is the subject, and is not repeated in the message.
 
 use oce_diag::{DiagCode, Diagnostic};
 
@@ -104,18 +105,18 @@ impl UnreadHasUnit {
             Self::UnboundPrefix => Diagnostic::error(
                 DiagCode::MalformedDocument,
                 format!(
-                    "property `{key}` on node `{subject}` reads as `{UNBOUND_QUDT_HAS_UNIT}` under \
-                     a `qudt` prefix the document's `@context` does not bind, so it names no \
-                     property and the unit it carries would be left unread; bind `qudt` to \
-                     `{hash}` or `{slash}`, or write the unit as `S231:unit`"
+                    "property `{key}` reads as `{UNBOUND_QUDT_HAS_UNIT}` under a `qudt` prefix the \
+                     document's `@context` does not bind, so it names no property and the unit it \
+                     carries would be left unread; bind `qudt` to `{hash}` or `{slash}`, or write \
+                     the unit as `S231:unit`"
                 ),
             ),
             Self::Namespace(written) => Diagnostic::error(
                 DiagCode::VocabularyNamespaceMismatch,
                 format!(
-                    "property `{key}` on node `{subject}` names `{QUDT_HAS_UNIT}` in `{written}`; \
-                     the QUDT schema property `{QUDT_HAS_UNIT}` is read only in `{hash}` and \
-                     `{slash}`; write it in one of them, or write the unit as `S231:unit`"
+                    "property `{key}` names `{QUDT_HAS_UNIT}` in `{written}`; the QUDT schema \
+                     property `{QUDT_HAS_UNIT}` is read only in `{hash}` and `{slash}`; write it \
+                     in one of them, or write the unit as `S231:unit`"
                 ),
             ),
         }
@@ -141,9 +142,8 @@ impl UnreadHasUnit {
         Diagnostic::error(
             DiagCode::MalformedDocument,
             format!(
-                "property key `{key}` on node `{subject}` carries surrounding whitespace; without \
-                 it, {without}; write the unit as `S231:unit`, or as `{QUDT_HAS_UNIT}` in `{hash}` \
-                 or `{slash}`"
+                "property key `{key}` carries surrounding whitespace; without it, {without}; \
+                 write the unit as `S231:unit`, or as `{QUDT_HAS_UNIT}` in `{hash}` or `{slash}`"
             ),
         )
         .with_subject(subject.to_owned())
