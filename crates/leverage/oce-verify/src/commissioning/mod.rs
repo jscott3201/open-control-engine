@@ -2,9 +2,9 @@
 //! point mapping (design note `docs/design/commissioning.md`, "Test-spec file" and "Point
 //! mapping"; issue #658).
 //!
-//! Bytes in, typed values or typed refusals out. Nothing in the readers opens a file, loads an
-//! engine, reads a trend or compares a series: those are the later parts of the
-//! commissioning verifier, and each reads the types this module builds.
+//! Bytes in, typed values or typed refusals out. Nothing here opens a file, loads an engine or
+//! compares a series: those are the later parts of the commissioning verifier, and each reads
+//! the types this module builds.
 //!
 //! - **The spec** ([`CommissioningSpec`]): a strict-JSON superset of OBC §12.7 Listing 12.1.
 //!   `//` and `/* */` comments outside strings are removed, then the text is read by the crate's
@@ -27,12 +27,20 @@
 //!
 //! And what a trend's cells become (issue #659): the closed unit table `units/v1`
 //! ([`convert_unit`], [`UnitError`]), which converts a reading from its device unit to its CDL
-//! point's, and the discrete type rules of a point mapping (`type_rules`, crate-private until the
-//! trend sources call them, issue #660). Both are pure functions of a cell and the mapping: they
-//! read no file, load no engine and never touch a parameter (decision 24).
+//! point's, and the discrete type rules of a point mapping (`type_rules`, crate-private). Both
+//! are pure functions of a cell and the mapping: they read no file, load no engine and never
+//! touch a parameter (decision 24).
+//!
+//! And the trend sources (issue #660): [`TrendSources::read`] takes the bytes of a reference's
+//! files ([`SpecInputs`]), plans every column against the mapping before any row is read
+//! (`trend_plan`), reads each file (`trend_read`: `csv` through replay's `CsvSource`,
+//! `combiTimeTable` through `combi_time_table`), converts every cell once, and merges the input
+//! sources on the union of their times (`trend_merge`), under [`TrendLimits`], every refusal a
+//! [`SourceError`].
 
 mod canonical;
 mod choices;
+mod combi_time_table;
 mod comments;
 mod decode;
 mod decode_sources;
@@ -43,8 +51,15 @@ mod limits;
 mod mapping;
 mod model;
 mod selection;
+mod source_error;
 mod spec;
 mod tolerances;
+mod trend_limits;
+mod trend_merge;
+mod trend_plan;
+mod trend_read;
+mod trend_sources;
+mod trend_types;
 mod type_rules;
 mod units;
 
@@ -56,8 +71,14 @@ pub use model::{
     ComparisonWindow, IndicatorRule, OutputOverride, PointNameMapping, SourceColumn,
     SourceTimeColumn, SpecReference, TrendSource,
 };
+pub use source_error::{SOURCE_ERROR_CODES, SourceError, SourceErrorKind};
 pub use spec::{CommissioningSpec, Finding, LBL_FIELD_IGNORED, SPEC_FINDING_CODES};
 pub use tolerances::{PartialTolerances, TOLERANCE_NAMES};
+pub use trend_limits::TrendLimits;
+pub use trend_types::{
+    InputColumn, MappingRecord, SeriesValues, SourceRecord, SourceRole, SpecInputs,
+    TrendFrameSource, TrendInputs, TrendSeries, TrendSources, UnitColumn,
+};
 pub use units::{UNIT_ERROR_CODES, UNITS_TABLE, UnitError, UnitSide, convert_unit};
 
 /// The format tag a commissioning spec carries in its `schema` key. A spec without the key is an

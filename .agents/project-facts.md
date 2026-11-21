@@ -502,7 +502,10 @@ to the keys the reader knows, so a key added to a shape needs its arm in `src/de
 row in that test's `OBJECTS` table. A shape or a doc comment in `src/dto.rs` moves the schema.
 Regenerate with `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the
 switch, and say in the PR what moved and why. That switch rewrites the schema, the golden
-receipts and the funnel port's bit goldens, and nothing else.
+receipts, the funnel port's bit goldens and the two trend-source goldens under
+`tests/fixtures/commissioning/trends/` (`merged.golden.txt`, `controller_output.golden.txt`;
+issue #660), and nothing else. That directory's `trends_oracle.txt` is written by hand-run
+`derive_trends.py` and never blessed.
 
 `tests/fixtures/receipts/*.receipt.json` are the golden receipts (issue #520): the pass receipts of
 the two in-repo library rules (vector files and `rule.cxf.jsonld` subjects read in place from

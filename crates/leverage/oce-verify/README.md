@@ -22,7 +22,10 @@ The commissioning verifier (OBC §12) is being built beside it, in seven parts. 
 test spec `oce/commissioning-spec/v1` and the point mapping. The second is in too (issue #659):
 `convert_unit` over the closed unit table `units/v1`, which turns a trended reading into its CDL
 point's unit, and the discrete rules that turn a cell into its CDL point's type
-([Unit conversion](#unit-conversion-unitsv1) below). No run reads a trend yet.
+([Unit conversion](#unit-conversion-unitsv1) below). The third is in (issue #660):
+[the trend sources](#trend-sources), which read a reference's `csv` and `combiTimeTable` files,
+convert every cell, and merge the inputs on the union of their times into a `ColumnarSource`.
+No run binds them to a sequence yet (#662).
 
 It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-replay` only. It
 opens no file, runs no clock, measures nothing and is not published.
@@ -747,14 +750,14 @@ are the identity, every bit kept.
 - **One spelling per unit.** `K`, `degC`, `degF`, `Pa`, `m3/s` and `1` are the strings the
   engine's own unit reading gives (`oce_api::QUDT_UNITS`); a test holds the two together.
 
-**The type rules** read one cell as its CDL point's type. They are crate-internal until the trend
-sources (#660) call them and add the file, row and column to a refusal:
+**The type rules** read one cell as its CDL point's type. They are crate-internal; the trend
+sources call them and add the file, row and column to a refusal:
 
 | Device type → CDL type | Rule |
 | --- | --- |
 | `float` → `float` | the number as read, then the unit table |
 | `float` or `int` → `int` | integral and within `i32`, both ends included; else `not-integral` (a fraction, a NaN, an infinity) or `outside-int32` |
-| `float`, `int` or `bool` → `bool` | a number exactly `0` (`-0.0` included) is false and exactly `1` true; a text cell `true`/`false`, `active`/`inactive` or `1`/`0`, byte for byte; else `not-boolean` or `not-boolean-text`. No threshold: `0.5` is refused (decision 19) |
+| `float`, `int` or `bool` → `bool` | a number exactly `0` (`-0.0` included) is false and exactly `1` true; a text cell `true`/`false`, `active`/`inactive` or `1`/`0`, byte for byte; else `not-boolean` or `not-boolean-text`. No threshold: `0.5` is refused (decision 19). A `csv` cell reaches the rules typed, through replay's reader, so `active` and `inactive` are refused there for now (the owner's ruling of 2026-11-21) |
 | `bool` → `int` | the Boolean, then `false` 0 and `true` 1 |
 | `int` → `float` | a whole number within `i32`, widened exactly; else `not-integral` or `outside-int32` |
 | `bool` → `float` | not in the note's table: `type-pair-refused` |
@@ -772,6 +775,69 @@ rows and 140,000 seeded readings per pair, not proven). The test also derives ea
 from the inch, the foot, standard gravity and the litre as an integer ratio divided once, and
 checks closure over every ordered pair of the table's spellings, near-miss spellings,
 monotonicity over 40,000 readings and that a fused multiply-add would move golden bits.
+
+## Trend sources
+
+`TrendSources::read` reads the trend files of one reference of a commissioning spec, from bytes
+the caller hands in (`SpecInputs`: the library opens no file), into what a replay and a
+comparison need ([commissioning note](../../../docs/design/commissioning.md), "Sources, sampling
+and time" and its "As landed: the trend sources"; issue #660). No engine is loaded.
+
+```rust
+use oce_verify::{SpecInputs, TrendLimits, TrendSources};
+
+let inputs = SpecInputs { cxf, files: vec![("points.json".into(), mapping), ("data/OA_Temp.mos".into(), trend)] };
+let read = TrendSources::read(&spec, 0, &inputs, &TrendLimits::default())?;
+let map = oce_replay::InputMap::resolve(&engine.input_definitions()?, &read.inputs.column_specs(),
+    &read.inputs.column_map(), &read.inputs.missing_policy(), &read.inputs.overrides())?;
+let source = read.inputs.into_source(&map, &oce_replay::ReplayLimits::default())?;
+```
+
+- **Formats.** `csv` goes through replay's `CsvSource` (a header row, replay's caps), never a
+  second CSV reader; `combiTimeTable` through this crate's reader of OBC §12.5.1's `#1` text
+  (`double <name>(<rows>,<cols>)`, C decimal numbers, `#` comments, several matrices with `table`
+  choosing one). A UTF-8 byte-order mark before `#1` is skipped; a matrix header must start its
+  line, so an indented one is refused, a deliberate narrowing not yet tested against real
+  Modelica exports (none is vendored); after a matrix's last value a number is `size-mismatch`
+  and other text `table-syntax`. A `combiTimeTable` addresses columns by position from 1, a `csv` by header name.
+  A `controllerOutput` with no `expected` is read as OBC §12.7.3's csv: the first header is the
+  time in seconds, every other a mapped device point. Replay's reader trims no cell, so OBC
+  §12.7.3's printed examples, padded with spaces (`time, uHea`), are refused until #733.
+- **Time.** Model seconds from `time.origin`: a column of seconds, or of RFC 3339 instants in
+  `csv`, fixed by the first row; never decreasing within a file; equal times kept; `-0` read as
+  `0`.
+- **Cells.** Each converted exactly once: an infinity refused, then the point's type rule, then
+  for a Real the unit table. A missing `csv` cell (empty, `NA`, `NaN`) is missing: NaN or a
+  cleared validity flag in the merged inputs, no sample in a series.
+- **The merge.** The input sources on the union of their times; at an instant where a source has
+  `k` rows its `i`-th row fills the `i`-th frame there, and the frames there are as many as the
+  deepest source's. `hold.maxAge` becomes a `HoldLast` override for that source's columns; with
+  none, the run-level `Refuse` stands. Independent of the order of the files and of the sources'
+  declarations.
+- **Records.** `sources` (role, path, table, `fnv1a128` digest, rows, in receipt order),
+  `mapping` (path and digest of a mapping file) and `unit_columns` (sorted by device name).
+- **Refusals.** `SourceError`, with the file, row and column and the lower layer's code as its
+  cause; codes in `SOURCE_ERROR_CODES`. A unit, type, address or mapping refusal is found before
+  any file is parsed.
+- **Bounds** (`TrendLimits`): 256 sources (decision 42), 1 GiB of a reference's files together
+  (`too-many-total-bytes`, from the lengths before any parse, and so what one file of 1 GiB and
+  a byte gets under the defaults), and replay's caps on each file and on
+  the merge: 1 GiB of bytes read and of values held, 16,777,216 rows and frames, 4,096 columns,
+  256 bytes a cell, a number or a matrix name.
+- **Cost.** Reading a file holds at most about 25 bytes per byte of it. The merged inputs hold
+  `frames × (8 + Σ column widths)` bytes, which is quadratic in the number of input sources whose
+  times differ (64 sources of 100 rows, 44 KB of files, merge into 3.3 MB); that product is
+  checked against the 1 GiB cap before anything is allocated. A source that writes a switch as
+  two rows at one instant needs a `hold` (at least `maxAge: 0`) on the other input sources, or
+  the second frame there is refused for a missing sample.
+
+**Evidence.** `tests/commissioning/trend_*.rs` and the unit tests beside each module: the
+three-file fixture `tests/fixtures/commissioning/trends/` (a `combiTimeTable` with a decoy
+matrix, a CRLF `csv` of seconds, a `csv` of instants against a `-07:00` origin) merged to a
+golden, checked against `derive_trends.py`'s independent derivation and against a replay of the
+`signals` subject; a hold at exactly `maxAge` and one ulp past; every bound at its limit and one
+past; a Building 33-shaped source of 75,578 rows inside a pinned allocation bound; hostile bytes
+in every file kind within a stated memory bound; and every order of files and sources.
 
 ## Fixtures and goldens
 
@@ -833,5 +899,10 @@ monotonicity over 40,000 readings and that a fused multiply-add would move golde
   day they were read. The canonical goldens and the `spec_id` literals in
   `tests/commissioning/canonical_form.rs` are derived by `derive_canonical.py` there, outside
   this crate, and **are never blessed**.
+- `tests/fixtures/commissioning/trends/` is the trend sources' fixture: a spec, its mapping and
+  three trend files, the merged golden `merged.golden.txt` and the `controllerOutput` golden
+  `controller_output.golden.txt` (both **blessed** with `OCE_BLESS_VERIFY=1`), and
+  `trends_oracle.txt`, written by hand-run `derive_trends.py`, which shares no code with the
+  crate and is **never blessed**. `status.csv` keeps its CRLF line ends (`.gitattributes` there).
 - `tests/commissioning/` is one test binary: each file is a module of `main.rs`, and a test
   there fails on a file that is not declared.

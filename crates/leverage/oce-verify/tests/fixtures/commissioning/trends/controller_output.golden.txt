@@ -1,0 +1,13 @@
+# expected series of controller_output.csv
+source	expected	out.csv	fnv1a128:02845940d36cfab4c0fab5d0c271d588	rows=5
+units	TSup	TSup	degF	K
+units	yCoo	yCooVal	percent	1
+series	TSup	device=TSup
+times	0000000000000000	404e000000000000	404e000000000000	405e000000000000
+values	4071ded82d82d82d	4071e349f49f49f4	4071e7bbbbbbbbbb	4071f2d82d82d82d
+series	yCooVal	device=yCoo
+times	0000000000000000	404e000000000000	404e000000000000	40ac200000000000
+values	0000000000000000	3f747ae147ae147b	3f847ae147ae147b	3f847ae147ae147b
+series	yFan	device=uFan
+times	0000000000000000	404e000000000000	404e000000000000	405e000000000000	40ac200000000000
+values	true	true	false	false	true
