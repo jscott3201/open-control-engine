@@ -88,6 +88,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     build's and is `None` for every one of them, is asserted beside the comparison instead of
     being written into them. Documented in
     [inspecting a blob](docs/compiled-schedule-blob.md#whether-this-build-accepts-the-blob).
+
 - **`Topology` carries the boundary facts the content id encodes, and the root id** (GitHub
   #702, issue #701). Two loaded documents that differed only in a boundary's unit, quantity,
   display unit, type or an input's bound had different canonical content ids and equal
