@@ -1,0 +1,13 @@
+# Held supply-air setpoint: a scaled request, held one sample. Blob pair, head: the held value starts one kelvin higher.
+sequence held_setpoint
+derived_from none
+
+in uReq : Real @unit 1
+out TSupSet : Real @unit K
+
+block scale = CDL.Reals.MultiplyByParameter(k = 2.0)
+block hold = CDL.Discrete.UnitDelay(samplePeriod = 60.0, y_start = 294.15)
+
+uReq -> scale.u
+scale.y -> hold.u
+hold.y -> TSupSet

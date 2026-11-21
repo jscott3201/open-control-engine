@@ -10,9 +10,10 @@ reopened. Decisions 9 to 16 were made while drafting and accepted by the archite
 
 **As landed.** The authoring diff, the rename pass and the two renderers are built as
 `crates/leverage/oce-diff` (issue #665, GitHub #692,
-[crate README](../../crates/leverage/oce-diff/README.md)), and the CXF adapter as its
-`diff_topology` (issue #666, GitHub #715); the blob comparison and the `oce diff` verb are #667
-and #668. What building them showed is listed under [As landed](#as-landed).
+[crate README](../../crates/leverage/oce-diff/README.md)), the CXF adapter as its
+`diff_topology` (issue #666, GitHub #715) and the blob comparison as its `compare_blobs` (issue
+#667, GitHub #723); the `oce diff` verb is #668. What building them showed is listed under
+[As landed](#as-landed).
 
 The owner's work plan names the M3 deliverable as "a structural diff of two authoring models or CXF
 documents, used in receipts and bundle cards", with `oce diff` in the CLI. Its consumers are M3
@@ -807,6 +808,23 @@ Ruled by the owner on 2026-11-21, on the review of GitHub #715:
   an export against its source would read as a total rewrite. Making an engine-exported document
   diffable is GitHub #717, with two options: fall back to the content id's own names on both
   sides when either side is outside its root, or have the exporter keep the source root `@id`.
+
+What building the blob comparison (issue #667, GitHub #723) showed, under decisions 3 and 15; the
+[crate README](../../crates/leverage/oce-diff/README.md#the-blob-comparison) states each in full:
+
+- **Each side carries this build's verdict.** A blob this build refuses to run can still have a
+  summary (issue #680), so `BlobComparison` gained `base` and `head`: the recorded content id and
+  the decoder's refusal (`decode_refusal`, the facade's typed error, kept in memory and written
+  as `accepted`), and "same" on every axis is never read as "runs here". A blob with no summary
+  at all is the typed `DiffError` `unreadable-blob`, carrying the side and the facade's refusal.
+  The comparison is written, not read back.
+- **`signature-changed` needs a second registry.** One engine version gives a class one hash, and
+  `inspect_blob` reads only this version's blobs, so the case arises only from a build of the
+  same version with another registry, whose blob this build refuses; the tests make one by
+  flipping a recorded hash. A class change through a document is `added` plus `removed`.
+- **`initial_state` aligns by position**, block id by block id: a reordering of one graph's
+  blocks reads `unknown` or `different`, never `same`. A changed initial parameter also moves the
+  content id, which covers bound parameters.
 
 ## Review rulings
 

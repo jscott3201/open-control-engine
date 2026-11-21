@@ -762,6 +762,37 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **`oce-diff` compares two compiled-schedule blobs as same or different** (GitHub #723, issue
+  #667; design note `docs/design/diff.md`, decisions 3 and 15, part 3 of 4).
+  `compare_blobs(base, head)` reads each side through `oce_api::inspect_blob`, base first, and
+  returns a `BlobComparison`; this crate parses no blob byte and never diffs a blob structurally.
+  - **Axes.** `same_bytes`; `content_id`, `same` or `different` when both headers record one and
+    `unknown` when either records none; `classes`, the class-table entries that differ by class
+    path (`added`, `removed`, `signature-changed`, sorted bytewise, a hash written as `0x` and
+    16 hex digits); and `initial_state`, `unknown` unless the block lists align by class at each
+    block id, then `same` or `different` by each position's state word count and initial-state
+    CRC. New closed `#[non_exhaustive]` types `Equality`, `ClassChange`, `BlobSide`;
+    `to_json()` writes the `Diff`'s spelling. Each axis is compared in full whatever the content
+    ids say, since a header's id is never recomputed.
+  - **Each side's verdict.** `BlobSide` carries the recorded content id and this build's
+    `decode_refusal` (the facade's typed `BlobError`, issue #680), written as `accepted`: a blob
+    this build refuses to run is still compared, and the comparison says so, so "same" is never
+    "runs here". A blob with no summary (empty, truncated or corrupted bytes, another engine
+    version's blob, an unregistered class) is the new `DiffError::UnreadableBlob`
+    (`unreadable-blob`) with the side and the facade's refusal; `unexpected-refusal` keeps a facade
+    error that is not a blob refusal, which `inspect_blob` documents it never returns.
+  - **Cost.** Two summaries, each the decoder's building pass, which is not bounded by the blob
+    length until GitHub #700; the crate README says to compare untrusted bytes only under your
+    own memory limit. The comparison itself is linear, pinned in counted work.
+  - **Evidence.** Every ordered pair of the facade's 46 blobs against a second implementation over
+    the facade's checked-in summaries; every class hash of an 11-class blob flipped (exactly that
+    class `signature-changed`, the side refused with `ClassSignatureMismatch`); a compiled
+    authoring pair with a changed `y_start` (`initial_state` and the content id differ, nothing
+    else); a cleared content id; empty, truncated, corrupted, unregistered and release-0.4.0 bytes
+    on each side, and every truncation and bit flip of one blob, held to the facade's own
+    refusal; three golden comparisons; the mirror over every pair. `oce-api` and the blob format
+    are untouched, and no blob golden moves.
+
 - **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point
   mapping** (GitHub #716, issue #659, closes #714; commissioning note, "Point mapping", decisions
   5, 19 and 24, and the owner's rulings of 2026-11-21). `oce-verify` gains
