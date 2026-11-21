@@ -22,6 +22,21 @@
 | `subjects/gate.cxf.json`, `subjects/gate_multiand.cxf.json` | A `Reals.GreaterThreshold` into a `Logical.Not` that carries an Integer parameter `nin` its class does not declare, which the subject admits as settable, and a mutant of it whose `gate` is a `Logical.MultiAnd`, where `nin` is structural: `mutant-param-refused` with the cause `param-structural`. | nobody: edit it by hand |
 | `subjects/threshold.cxf.json`, `subjects/threshold_integer.cxf.json` | A `Reals.GreaterThreshold` on one Real input, and a mutant of it reading the same input through `Conversions.RealToInteger` and an `Integers.GreaterThreshold`, whose `cmp.t` is an Integer: `mutant-param-refused` with the cause `param-type`. | nobody: edit it by hand |
 | `subjects/twin_asserts.cxf.json` | Two `CDL.Utilities.Assert` instances on one Boolean input, both with the message `b is false`, so a frame with the input false emits two equal warnings: the one-to-one pairing of diagnostic expectations with warnings. | nobody: edit it by hand |
+| `funnel/` | The funnel differential fixture (issue #655): funnel's own 17 test directories with its licence files, the hostile set, what the pinned `pyfunnel==2.1.1` made of every case, glibc's `%.16g` of 4,792 doubles, the capture script with its pins and provenance, and the port's bit goldens. [`funnel/README.md`](funnel/README.md) has the file-by-file table and the SHA-256 of every vendored file. | `funnel/capture/capture.sh` by hand, on x86_64 Linux, only by an issue that says so; `funnel/golden/` by `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
+| `aligned_grid/conformance/<case>.txt` | The `aligned-grid` parity goldens: the bounds, errors and figures of `oce-conformance`'s `build_bounds` and `compare`, as hex bits, for the 59 cases of the funnel fixture whose reference has at most 41 points. `tests/aligned_grid.rs` holds the copy in `oce-verify` equal to them byte for byte. | `aligned_grid/capture/conformance_bounds.rs`, by hand, only by an issue that says so |
+| `aligned_grid/capture/conformance_bounds.rs` | The capture of those goldens: a complete example of `oce-conformance`, kept here because `oce-verify` may not depend on that crate. It is part of no build; its header says how to run it. | nobody: it is the reference |
+
+## The envelope fixtures: one blessed directory, the rest captured
+
+Only `funnel/golden/` is written by the bless switch: it is the port's own output, pinned bit for
+bit, and proves nothing about funnel by itself. Everything else under `funnel/` and
+`aligned_grid/` comes from outside the code it checks, and no switch rewrites it:
+`funnel/expected/` and `funnel/printf/glibc.tsv` from the pinned pyfunnel and glibc,
+`aligned_grid/conformance/` from `oce-conformance`. The parity goldens were taken on arm64 macOS.
+The original leaves the smaller of `+0.0` and `-0.0`, and the larger, to the platform's `min` and
+`max`, which differ between x86_64 and arm64 and between debug and release (issue #686);
+`oce-verify`'s copy fixes them (`-0.0` and `+0.0`). None of the 59 goldens depends on the choice:
+substituting each platform's behaviour for the copy's rule leaves all of them unchanged.
 
 ## The golden receipts are blessed
 

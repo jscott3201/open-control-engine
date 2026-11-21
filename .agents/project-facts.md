@@ -487,8 +487,8 @@ keywords outside the strict profile; `tests/schema_conformance.rs` holds each cl
 to the keys the reader knows, so a key added to a shape needs its arm in `src/decode.rs` and its
 row in that test's `OBJECTS` table. A shape or a doc comment in `src/dto.rs` moves the schema.
 Regenerate with `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the
-switch, and say in the PR what moved and why. That switch rewrites the schema and the golden
-receipts, and nothing else.
+switch, and say in the PR what moved and why. That switch rewrites the schema, the golden
+receipts and the funnel port's bit goldens, and nothing else.
 
 `tests/fixtures/receipts/*.receipt.json` are the golden receipts (issue #520): the pass receipts of
 the two in-repo library rules (vector files and `rule.cxf.jsonld` subjects read in place from
@@ -524,6 +524,39 @@ byte, which is why `scripts/ci/classify-changes.sh` lists `docs/design/vectors.m
 test reads (an edit to the note runs the determinism lane); copy the block again when it changes. A new `VectorErrorKind`
 does not build until `VECTOR_ERROR_CODES` lists its code in order, and needs its case in
 `tests/error_codes.rs`.
+
+## The funnel port carries funnel's licence
+
+`crates/leverage/oce-verify/src/funnel/` is a statement-by-statement port of LBNL funnel's C, so
+it is a derived work under funnel's licence (3-clause BSD with LBNL's enhancements clause), not
+only under this repository's. `crates/leverage/oce-verify/LICENSE-funnel` is that licence and
+copyright notice, verbatim; the module header and the root README's licence section point to it.
+Keep the three together when the module moves. Nothing checks it mechanically: `cargo deny check
+licenses` reads each crate's `license` field, which stays `MIT OR Apache-2.0` for this
+unpublished crate, and the package policy has no licence rule.
+
+## The funnel fixture is captured, not blessed; only its bit goldens are
+
+`crates/leverage/oce-verify/tests/fixtures/funnel/` is the differential fixture of the funnel port
+(issue #655): funnel's own 17 test directories and a hostile set, with what the pinned
+`pyfunnel==2.1.1` wrote for each under `expected/`, and glibc's `%.16g` of 4,792 doubles under
+`printf/`. Those come from `capture/capture.sh`, run by hand on x86_64 Linux (the wheel's library
+there has no fused multiply-add), and are regenerated **only by an issue that says so**; no CI job
+runs Python or installs pyfunnel, and no switch rewrites them. The comparison is `%.16g` text
+equality, byte for byte, with no numeric tolerance: if the port stops matching, the port is wrong.
+
+`funnel/golden/*.txt` are different: the port's own five curves per case as hex bits, written by
+`OCE_BLESS_VERIFY` like the receipts. A change to the port's arithmetic moves them; bless them
+only after the differential test passes, and say in the PR which cases moved and why.
+
+`tests/fixtures/aligned_grid/conformance/*.txt` are the bounds `oce-conformance` builds for the
+smaller cases, as bits, taken once with `aligned_grid/capture/conformance_bounds.rs` (run as an
+example of that crate, by hand). `oce-verify` copies that envelope and may not depend on the
+crate, so these goldens are what holds the copy to the original; they are never blessed. Adding
+a hostile case moves three pinned counts (`tests/support/funnel_cases.rs`,
+`tests/funnel_differential.rs`, `tests/aligned_grid.rs`) and the fixture README's tables. Four of
+upstream's input files end their lines with CRLF, so the fixture has a `.gitattributes` that
+marks `upstream/` and `expected/` as bytes.
 
 ## The `oce-diff` goldens move with the catalog and the diff's own surface
 

@@ -1,0 +1,7 @@
+# oce-verify funnel golden: hostile/last_x_differs
+# Hex IEEE-754 bits, `x y` per point. Written by OCE_BLESS_VERIFY, never by hand.
+[refused]
+code mismatched-endpoints
+end last
+reference 4034000000000000
+test 4034004189374bc7

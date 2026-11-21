@@ -1,0 +1,1 @@
+{"test": "test.csv", "reference": "reference.csv", "output": "results", "atolx": 5e-11, "atoly": 5e-11}

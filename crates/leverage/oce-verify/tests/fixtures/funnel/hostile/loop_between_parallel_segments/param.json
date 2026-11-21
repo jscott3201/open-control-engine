@@ -1,0 +1,1 @@
+{"test": "test.csv", "reference": "reference.csv", "output": "results", "atolx": 7513.223201215218, "ltolx": 0.0010462830632038287, "ltoly": 1.008424077201712, "rtolx": 0.0013205533361355549, "rtoly": 0.0005018068265039262}

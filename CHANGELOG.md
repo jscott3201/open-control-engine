@@ -496,6 +496,68 @@ and a gate that accepted any text would restore exactly the false assurance desc
     (issue #632).
 ### Leverage
 
+- **Tolerance mode, part 1: the envelope arithmetic, a port of LBNL funnel proven against the
+  pinned `pyfunnel`, and the `aligned-grid` envelope beside it** (GitHub #687, issue #655;
+  commissioning note, "Envelope", decisions 1, 9, 12, 13 and 22). `oce-verify` gains the
+  arithmetic a tolerance comparison is made with, as a library surface. **No format this project
+  defines changes:** the vector format, its schema, the receipt and every golden receipt are
+  byte-identical, comparison in a run is still exact, `within`, `of` and `when` are still
+  `unknown-key`, and no CLI verb reaches the new functions (#656 and #663 do that).
+  - **`funnel(reference, test, &Tolerances, &CompareLimits)`** is funnel's C library at commit
+    `a12fa96` (`pyfunnel` 2.1.1; `FUNNEL_VERSION` is `"funnel@a12fa96"`), operation for
+    operation: rectangle half-sizes by the **maximum** of the absolute, range-relative and local
+    terms with the `rtol × magnitude` and `1e-10` fallbacks, `x` normalised by its magnitude
+    above `1e-5`, corners chosen by slope signs, loops cut at the intersection of the segments
+    around them, both bounds interpolated at the test's instants and held beyond their end, and
+    funnel's `equ` (`|a - b| <= 1e-10 × max(1, |a|, |b|)`) wherever it says "equal".
+  - **`aligned_grid(...)`** is `oce-conformance`'s `build_bounds` and `compare`, copied (that
+    crate is verification-only and never a dependency): summed tolerance terms, a grid of every
+    sample and rectangle edge, errors at the bounds' breakpoints as well.
+    `ALIGNED_GRID_VERSION` is `"aligned-grid@1"`. `Envelope` names the two, spelled `funnel` and
+    `aligned-grid`, and `Envelope::version` gives the matching version string, the one a receipt
+    will carry as `envelope_version`.
+  - **Types.** `Tolerances` (the six names vectors decision 9 fixes; no default), `Series<'a>`,
+    `Curve` (with `to_csv`, pyfunnel's file form), `FunnelResult` (the five curves, `compared`,
+    `max_error` and its `x`, `first_error_x`), `CompareLimits` (1,048,576 points for `funnel`,
+    32,768 for `aligned-grid`, 2^28 work units of loop removal; lowerable, never raisable) and
+    `CompareError` (`#[non_exhaustive]`, ten stable codes in `COMPARE_ERROR_CODES`).
+  - **`format_g16`** is C's `printf("%.16g")` as glibc writes it, from the exact decimal
+    expansion of the double and this crate's own rounding; no platform `printf` and no
+    standard-library float formatting decides a digit.
+  - **The proof is a differential fixture**, `crates/leverage/oce-verify/tests/fixtures/funnel/`:
+    funnel's own 17 test directories with its licence files, a hostile set of 49, and what
+    `pyfunnel==2.1.1` (wheel pinned by SHA-256, run once on x86_64 Linux by the committed capture
+    script) made of each. The port's five curves, printed with `format_g16`, equal pyfunnel's
+    five files **byte for byte** in all 60 cases pyfunnel writes curves for; the other six
+    (upstream's `fail2` and `fail6`, which funnel itself refuses, and four hostile ones) are
+    refused by the port at the same end. The claim is textual, because `%.16g` cannot round-trip
+    a double, so the port's bits are pinned too (66 hex-bit goldens, `OCE_BLESS_VERIFY`).
+    `format_g16` reproduces glibc's `snprintf` on 4,792 captured doubles. `aligned-grid` equals
+    goldens taken from `oce-conformance` bit for bit on 59 shared cases. No CI job runs Python or
+    reaches the network.
+  - **Where the port differs from funnel, funnel defines no result or would hide one.** A
+    non-finite sample, a decreasing `x` and a negative tolerance are refused with typed errors.
+    A local `x` tolerance above one can make funnel's loop removal read outside its arrays;
+    pyfunnel then writes curves computed from what it read, or crashes, and the port returns
+    `loop-removal-undefined`. A bound or an error that overflows is `non-finite-envelope`, because
+    a NaN bound compares as "inside". Loop removal runs under a work counter, never a clock: the
+    C copies both arrays for every loop it removes, the port edits a gap buffer, and a reference
+    whose searches are quadratic is refused with `work-limit-exceeded`.
+  - **Licence.** `src/funnel/` is a port of funnel's C and a derived work of it; funnel's
+    3-clause BSD licence with LBNL's enhancements clause and its copyright notice are reproduced
+    verbatim in `crates/leverage/oce-verify/LICENSE-funnel`, named in the module header and in the
+    root README's licence section. The crate's `license` field is unchanged (`publish = false`).
+  - **What a caller should know.** The work of loop removal grows with the `x` tolerance's width
+    in samples (9 units per point at one sample, 123 at 1,000 on a random walk), so a series near
+    the point cap under a tolerance thousands of samples wide is refused. On a tick grid from
+    `x = 0` a series is inside its own funnel for every `x` tolerance; funnel itself rejects an
+    identical series when several samples share an instant and there is no `x` tolerance, and
+    when `x` is more than about 1e10 times its step. pyfunnel's own output differs between its
+    x86_64 Linux and arm64 macOS libraries in 38 of the fixture's 306 files; the port pins the
+    x86_64 Linux result. The grid statements are tests.
+  - **Not here:** the Building 33 day of the differential set, captured with the same script in
+    #664 once the trends (#661) and an engine series (#663) exist.
+
 - **`oce import` turns a flat CXF document into the authoring form** (GitHub #688, issue #514).
   `oce_author::import_cxf` had no command-line surface, and the library converts its corpus by
   importing each committed rule. `oce import <FILE> [-o <OUT>] [--wire]` prints the sequence as
