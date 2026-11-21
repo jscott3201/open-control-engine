@@ -55,18 +55,6 @@ impl<'a> Iri<'a> {
         self.head.is_empty() && self.tail.is_empty()
     }
 
-    /// The IRI as one piece of document text, when it is one: `None` for a compact IRI with a
-    /// suffix, which exists whole only once it is joined.
-    pub(super) fn as_whole(self) -> Option<&'a str> {
-        if self.tail.is_empty() {
-            Some(self.head)
-        } else if self.head.is_empty() {
-            Some(self.tail)
-        } else {
-            None
-        }
-    }
-
     /// Whether the IRI is exactly `text`. Texts of different lengths are told apart without
     /// reading either.
     pub(super) fn is(self, text: &str) -> bool {
@@ -102,8 +90,12 @@ impl<'a> Iri<'a> {
         }
     }
 
-    /// Whether any character of the IRI is whitespace.
+    /// Whether any character of the IRI is whitespace. Work is linear in the IRI, so a caller
+    /// asks it only of text the document wrote out: what a prefix or a term binds holds no
+    /// whitespace ([`PrefixTable`]), and neither does what [`expand_token`] joins to it.
     pub(super) fn contains_whitespace(self) -> bool {
+        #[cfg(test)]
+        SCANNED.with(|scanned| scanned.set(scanned.get() + self.len() as u64));
         self.head.contains(char::is_whitespace) || self.tail.contains(char::is_whitespace)
     }
 
@@ -254,6 +246,22 @@ pub(super) fn expand_curie<'a>(token: &'a str, table: &'a PrefixTable) -> Expans
         },
         None => Expansion::Relative,
     }
+}
+
+#[cfg(test)]
+thread_local! {
+    /// The bytes [`Iri::contains_whitespace`] was asked to read on this thread, counted in test
+    /// builds only.
+    static SCANNED: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// Run `run` and return how many bytes it asked [`Iri::contains_whitespace`] to read on this
+/// thread, with its result: a count, the same on every run and every host, never elapsed time.
+#[cfg(test)]
+pub(super) fn whitespace_bytes_scanned_by<R>(run: impl FnOnce() -> R) -> (u64, R) {
+    SCANNED.with(|scanned| scanned.set(0));
+    let result = run();
+    (SCANNED.with(std::cell::Cell::get), result)
 }
 
 #[cfg(test)]

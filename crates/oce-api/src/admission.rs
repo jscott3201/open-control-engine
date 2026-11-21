@@ -9,8 +9,9 @@ use crate::{Engine, OcError};
 /// rather than a panic or allocation abort (issue #365): lowering visits each `containsBlock`
 /// composite and leaf at most once (`shared-instance`); inherited parameter scopes are shared,
 /// not copied per leaf; array parameters total at most 1,048,576 elements per document, run
-/// state at most 4,194,304 words, and what `@context` expansion adds to a document's tokens at
-/// most 8,388,608 bytes (`resource-limit-exceeded`; issue #709 for the last); and binding
+/// state at most 4,194,304 words, what the constructed blocks hold outside their state at most
+/// 4,194,304 words (issue #700), and what `@context` expansion adds to a document's tokens at
+/// most 8,388,608 bytes (issue #709), each `resource-limit-exceeded`; and binding
 /// evaluation spends at most 2^24 work units per expression and 2^26 per document
 /// (`grounding-failed`). These bound
 /// growth, not absolute footprint or time: a maximal admissible document can still need

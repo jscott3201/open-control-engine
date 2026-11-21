@@ -828,14 +828,15 @@ so far, and no tag is cut by the bump.
   - **The bound.** Expanding a document's tokens adds at most 8,388,608 bytes to it. An
     expansion is counted as its length less the length of the token as written, over every
     node `@id`, reference, `@type`, `isOfDataType` and `unit` or `displayUnit` IRI node, and
-    every property key that ends in `hasUnit` and is read through a prefix. A token written as
+    every property key that ends in `hasUnit` and is read through the `@context`, by a prefix
+    or as a term. A token written as
     an absolute IRI is not expanded and adds nothing, so the identity and typing text the
     reader works on is at most the document's own plus 8 MiB. The bound is on what expansion
     adds, not on the length of a binding: one long namespace IRI read by a few tokens loads.
   - **The refusal.** The first expansion that does not fit is not made, and the document is
     refused with one `resource-limit-exceeded` error whose subject is the node the token is
-    written on (the token as written for a node's own `@id`, `@graph[i]` for a key on a node
-    with no `@id`). Its message quotes at most 64 bytes of the token, escaped, and states the
+    written on (the token as written for a node's own `@id`; for a key, the node's `@id` as
+    written, or `@graph[i]` where it has none, as every refusal of a key names it). Its message quotes at most 64 bytes of the token, escaped, and states the
     sizes: ``@type `p:T` expands to 65547 bytes through the document's @context, 65544 more
     than it is written in; expansion had added 8324709 bytes, and may add at most 8388608 to
     one document``. Nothing after that token is read, so the list holds that error and
@@ -849,8 +850,14 @@ so far, and no tag is cut by the bump.
     66,275 bytes (the vendored `CXF-Core.jsonld`, 682,615 bytes), 126 times under the bound;
     the longest IRI any of them binds is 51 bytes, and expansion adds at most 0.31 bytes for
     each byte of a document, so a document at the 8 MiB admission limit would have to more than
-    double under expansion to be refused. A document that fills the bound exactly loads (17.3 MB
-    at its peak, for 137 KB), and one byte more is refused.
+    double under expansion to be refused. A document that fills the bound exactly loads, and one
+    byte more is refused.
+  - **The bound is on what expansion adds, not on what a load holds.** A document within it
+    costs no more than the same document with every token written out as an absolute IRI,
+    which is a multiple of the bound because the loader keeps an identity in more than one
+    place: typing tokens that fill the bound peak at 17.3 MB for 137 KB of document, and node
+    `@id`s and references that fill it at 30.6 MB (71.9 MB requested) for 166 KB, 3.6 times
+    the bound and the most measured.
   - **Nothing a format defines changes, and the workspace version is not bumped:** tightening
     accepted input is not a format change (unit-spellings ruling 7; the ruling on #647).
   - **One pinned document is such a document.** The edge GitHub #713 measured for "warnings
@@ -877,7 +884,17 @@ so far, and no tag is cut by the bump.
     sizes and now request 0.6 to 7.2 MB. A `@context` term spelled through a prefix that binds
     another IRI is compared in place too, and its refusal, which names the term's expansion
     whole, is built only while the diagnostic list has room: 59 MB at every size where it was
-    160 to 614 MB. The same documents took 81 s to measure before and take under 5 s.
+    160 to 614 MB. The same documents took 81 s to measure before and take under 6 s.
+  - **Reading a token reads nothing of a long binding either.** Two readers allocated nothing
+    and still read the bound IRI once for each token, which no allocation count shows: a
+    typing token in surrounding whitespace had its whole expansion read for whitespace
+    (100,000 tokens under a 1 MiB binding, a 1.75 MB document, took 107 s), and a key that is a
+    `@context` term bound to an IRI ending in `hasUnit` had it read by four near-miss checks
+    uncharged (20,000 spellings of one key under a 1 MiB binding, 1.4 MB, took 22.9 s and
+    loaded). What the `@context` binds holds no whitespace, so only text the document wrote is
+    read for it; and such a key is charged to the bound as a compact one is, so the second
+    document is refused at its ninth key. Both are pinned by counts of the work, never time
+    (`crates/oce-cxf/src/expansion_budget_tests.rs`).
   - **A document within the bound is read as it was.** Every load outcome, loaded model,
     content id and diagnostic (severity, code, message, subject, order) of the tracked and
     library documents, as written and with the retired namespace rewritten, is byte-identical

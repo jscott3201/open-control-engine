@@ -22,8 +22,10 @@
 //!
 //! Measured with `allocation-counter`, whose counters are local to the measuring thread. The
 //! ceilings have headroom over what was measured (in brackets). What this cannot see: work that
-//! allocates nothing; the readers that only compare are held to work that does not grow with the
-//! binding by `oce-cxf`'s own tests of the two-piece IRI.
+//! allocates nothing. The readers that only compare are held to work that does not grow with the
+//! binding by `oce-cxf`'s own tests, which count it: the two-piece IRI's, the bytes read for
+//! whitespace in a typing token, and the near-miss checks a `hasUnit` key is given
+//! (`expansion_budget_tests.rs`).
 
 use allocation_counter::{AllocationInfo, measure};
 use oce_api::{Engine, OcError};
@@ -466,6 +468,78 @@ fn a_document_within_the_budget_loads_as_its_spelling_in_absolute_iris_does() {
         })
         .collect();
     assert_eq!(ids[0], ids[1]);
+}
+
+#[test]
+fn identities_that_fill_the_budget_cost_no_more_than_their_spelling_in_absolute_iris() {
+    // The budget is on what expansion adds, and an identity is kept in more than one place once
+    // it is read (the node, each reference to it, the resolved model's tables), so a document
+    // whose identities fill the budget holds a multiple of it. What bounds that multiple is the
+    // same document with every identity written out: expansion makes the first into the second
+    // and then costs nothing the second does not.
+    let written = "\"@id\": \"http://example.org#";
+    let identities = MODEL.matches(written).count();
+    assert_eq!(identities, 52);
+    // Each `e:…` adds the binding less the two bytes of `e:`.
+    let binding = long_iri((BUDGET - MODEL_ADDS) / identities + 2);
+    let compact = MODEL
+        .replacen(
+            "\"base\": \"http://example.org#\"",
+            &format!("\"e\": \"{binding}\""),
+            1,
+        )
+        .replace(written, "\"@id\": \"e:");
+    let absolute = MODEL.replace(written, &format!("\"@id\": \"{binding}"));
+    assert!(compact.len() < 168 * 1024, "{}", compact.len());
+    assert!(absolute.len() > BUDGET, "{}", absolute.len());
+
+    let (through_prefix, outcome) = load(compact.as_bytes());
+    assert_eq!(outcome, Ok(Vec::new()), "the budget is not passed");
+    // [measured: 30,596,310 held and 71,861,922 requested, for a document of 165,804 bytes:
+    // 3.6 and 8.6 times the budget]
+    assert!(
+        through_prefix.bytes_max <= 4 * bytes(BUDGET),
+        "{} held",
+        through_prefix.bytes_max
+    );
+    assert!(
+        through_prefix.bytes_total <= 10 * bytes(BUDGET),
+        "{} requested",
+        through_prefix.bytes_total
+    );
+
+    // The written-out spelling is past the facade's 8 MiB of admission, so the two are compared
+    // on the reader, where they are the same model.
+    let read = |document: &str| {
+        let options = oce_cxf::ResolveOptions::default();
+        let mut model = None;
+        let info = measure(|| model = Some(oce_cxf::import_cxf(document.as_bytes(), &options)));
+        let (model, report) = model.expect("the read ran").expect("the document reads");
+        assert!(report.diagnostics.is_empty(), "{:?}", report.diagnostics);
+        (info, format!("{model:?}"))
+    };
+    let (through_prefix, compact_model) = read(&compact);
+    let (written_out, absolute_model) = read(&absolute);
+    assert_eq!(compact_model, absolute_model);
+    // [measured: 30,596,310 held through the prefix, 38,500,413 written out]
+    assert!(
+        through_prefix.bytes_max <= written_out.bytes_max,
+        "{} held through the prefix, {} written out",
+        through_prefix.bytes_max,
+        written_out.bytes_max
+    );
+
+    // One more byte in the binding and the last identity does not fit.
+    let over = compact.replacen(&binding, &format!("{binding}x"), 1);
+    let (info, outcome) = load(over.as_bytes());
+    let refused = outcome.expect_err("refused");
+    assert_eq!(refused.len(), 1, "{refused:?}");
+    assert_eq!(refused[0].code, DiagCode::ResourceLimitExceeded);
+    assert!(
+        info.bytes_max <= 9 * bytes(BUDGET) / 4,
+        "{}",
+        info.bytes_max
+    );
 }
 
 #[test]

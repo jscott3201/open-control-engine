@@ -753,26 +753,33 @@ unless the reader counts it: 1,024 such tokens, a document of 78,157 bytes, load
   `@id`, every reference (`hasInput`, `hasOutput`, `hasParameter`, `hasConstant`,
   `containsBlock`, `hasInstance`, `isConnectedTo`), every `@type` and `isOfDataType`, every
   `unit` and `displayUnit` IRI node, and every property key that ends in `hasUnit` and is read
-  through a prefix. So the identity and typing text the reader works on is at most the
-  document's own plus 8 MiB.
+  through the `@context`, by a prefix or as a term. So the identity and typing text the reader
+  works on is at most the document's own plus 8 MiB.
 - **What adds nothing.** A token written as an absolute IRI is not expanded. A token that
   expands to no more bytes than it is written in adds nothing. Reading a token (to classify it,
-  to compare it with a namespace, to find it relative) copies nothing and is not counted, so a
-  property key, a relative reference or a `@context` term through a long binding costs what the
-  token costs, never the binding again.
+  to compare it with a namespace, to find it relative) copies nothing, reads none of the IRI the
+  `@context` binds past a fixed number of bytes, and is not counted, so a property key, a
+  relative reference or a token refused for its whitespace costs what the token costs through a
+  binding of any length, never the binding again. The one reading that takes a whole expansion
+  is the check of a `hasUnit` key above, which is why that key is counted.
 - **Past the bound.** The first expansion that does not fit is not made. The document is
   refused with one `resource-limit-exceeded` error whose subject is the node the token is
-  written on (the token as written, for a node's own `@id`; `@graph[i]` for a key on a node with
-  no `@id`), and whose message quotes at most 64 bytes of the token, escaped, and states the
+  written on (the token as written, for a node's own `@id`; for a key, the node's `@id` as
+  written, or `@graph[i]` where it has none, as every refusal of a key names it: keys are read
+  before any `@id` is expanded), and whose message quotes at most 64 bytes of the token, escaped, and states the
   sizes: ``@type `p:T` expands to 65547 bytes through the document's @context, 65544 more than
   it is written in; expansion had added 8324709 bytes, and may add at most 8388608 to one
   document``. Nothing after that token is read, so the list holds that error and whatever was
   raised before it, in the reader's usual sorted order.
 - **What that is in memory.** A refused document costs what it added before the refusal: the
-  issue's document now peaks at 8.6 MB. A document that fills the bound exactly loads, and
-  peaks at 17.3 MB for 137 KB of bytes, because lowering copies the expanded working copy once.
-  That is the worst case of this bound: a fixed 16 MiB or so beside what the document's own
-  bytes cost, whatever the document.
+  issue's document now peaks at 8.6 MB. A document within the bound costs no more than the same
+  document with every token written out as an absolute IRI, which the reader always accepted:
+  expansion makes the first into the second. That is a multiple of the bound, not the bound,
+  because the loader keeps an identity in more than one place. Typing tokens that fill the
+  bound exactly peak at 17.3 MB for 137 KB of document; node `@id`s and references that fill it
+  peak at 30.6 MB (71.9 MB requested over the load) for 166 KB, 3.6 times the bound and the
+  most measured. The bound removes the product of tokens and binding; it is not a memory limit
+  for a load, which stays yours to set.
 - **No real document is near it.** Over the 257 tracked documents that hold an `@graph` and the
   139 CXF documents of `open-control-library`, the most expansion adds to one document is
   66,275 bytes (the vendored `CXF-Core.jsonld`, 682,615 bytes), 126 times under the bound; the

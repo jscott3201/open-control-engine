@@ -198,9 +198,12 @@ pub(super) fn check_typing_whitespace(
     }
     // The trimmed token's expansion is read in place, never joined: a node may carry any number
     // of such tokens through a prefix bound to an IRI of any length (GitHub issue #709).
-    let iri = match expand_token(trimmed, table) {
-        Expansion::Expanded(iri) => iri,
-        Expansion::Verbatim | Expansion::Relative => Iri::whole(trimmed),
+    // What the `@context` binds holds no whitespace and neither does what is joined to it, so
+    // only a term the document wrote out is read for whitespace below: reading a bound one would
+    // cost the binding again for every token.
+    let (iri, bound) = match expand_token(trimmed, table) {
+        Expansion::Expanded(iri) => (iri, !trimmed.starts_with("S231:")),
+        Expansion::Verbatim | Expansion::Relative => (Iri::whole(trimmed), false),
     };
     let named = match trimmed.strip_prefix("S231:") {
         Some(term) => Some((S231_CONTEXT_IRI, Iri::whole(term))),
@@ -214,7 +217,7 @@ pub(super) fn check_typing_whitespace(
     diags.raise(|| {
         let (quoted, named) = (excerpt(token), term.excerpt());
         let subject = if owner.is_empty() { &quoted } else { owner };
-        let message = if term.contains_whitespace() {
+        let message = if !bound && term.contains_whitespace() {
             // No spelling of it without the surrounding whitespace names a term, so none is
             // offered.
             format!(

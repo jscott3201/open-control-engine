@@ -56,7 +56,9 @@ Enumerate the input domain and hit every boundary and degenerate case:
   expansion is counted as its length less its token's, and the first that does not fit is
   `ResourceLimitExceeded`. A new place that reads a token through a prefix compares it in place
   (`oce-cxf`'s `Iri`), joins it only through the document's `ExpansionBudget`, and gets a case in
-  `crates/oce-api/tests/cxf_context_expansion_cost.rs`.
+  `crates/oce-api/tests/cxf_context_expansion_cost.rs`. Allocation counts cannot see a reader
+  that scans the bound IRI for each token and allocates nothing, so such a reader is pinned by
+  a count of its work (`crates/oce-cxf/src/expansion_budget_tests.rs`).
   Pin each such limit
   at its boundary (the limit accepted, one past it refused) and assert cost with deterministic
   measures — allocation counts and peak bytes, fuel units — never wall-clock time. Assert the

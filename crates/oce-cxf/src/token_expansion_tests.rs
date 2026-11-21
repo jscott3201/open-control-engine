@@ -86,15 +86,13 @@ fn an_iri_in_two_pieces_answers_as_the_joined_string_does_at_every_split() {
 }
 
 #[test]
-fn an_iri_is_one_piece_of_document_text_only_when_one_of_its_pieces_is_empty() {
-    assert_eq!(Iri::whole("urn:a").as_whole(), Some("urn:a"));
+fn what_is_left_of_a_two_piece_iri_once_its_head_is_stripped_is_its_tail() {
     let (head, tail) = ("urn:", "a");
-    assert_eq!(Iri { head, tail }.as_whole(), None);
-    assert_eq!(Iri { head, tail: "" }.as_whole(), Some("urn:"));
-    assert_eq!(Iri { head: "", tail }.as_whole(), Some("a"));
-    // What is left of a two-piece IRI once its head is stripped is one piece again.
     let rest = Iri { head, tail }.strip_prefix("urn:").expect("a prefix");
-    assert_eq!(rest.as_whole(), Some("a"));
+    assert_eq!((rest.head, rest.tail), ("", "a"));
+    assert!(rest.is("a") && rest.len() == 1);
+    let rest = Iri { head, tail }.strip_prefix("ur").expect("a prefix");
+    assert_eq!((rest.head, rest.tail), ("n:", "a"));
 }
 
 #[test]
@@ -177,7 +175,7 @@ fn a_whole_token_term_match_is_the_bound_iri_in_one_piece() {
         let Expansion::Expanded(expanded) = expand_token(token, &table) else {
             panic!("{token} is a declared term");
         };
-        assert_eq!(expanded.as_whole(), Some(iri));
+        assert_eq!((expanded.head, expanded.tail), (iri, ""));
     }
     // The compact reading of a term never matches the term itself.
     assert!(matches!(expand_curie("degC", &table), Expansion::Relative));

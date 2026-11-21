@@ -282,11 +282,13 @@ enum KeyMeaning {
 impl KeyScope<'_> {
     /// Classify `key` (already trimmed by the caller when probing a near miss).
     ///
-    /// The key's expansion is read in place ([`Iri`]): a key costs no copy of the IRI its prefix
-    /// binds, whatever it turns out to mean (GitHub issue #709). The one reading that needs the
-    /// expansion whole is the near-miss check of a key that ends in `hasUnit`
-    /// ([`unread_has_unit`]); a compact one is joined for it through `budget`, and one that does
-    /// not fit is refused there and read as unrelated.
+    /// The key's expansion is read in place ([`Iri`]): a key costs no copy and no reading of the
+    /// IRI the `@context` binds, whatever it turns out to mean (GitHub issue #709). The one
+    /// reading that needs the expansion whole is the near-miss check of a key that ends in
+    /// `hasUnit` ([`unread_has_unit`]); a key expanded through the `@context`, by a prefix or as
+    /// a term, is joined for it through `budget`, and one that does not fit is refused there
+    /// and read as unrelated. A refusal names the node as the rest of this pass does, by its
+    /// `@id` as written, where a slot's names it expanded: keys are read before any `@id` is.
     fn meaning(
         &self,
         key: &str,
@@ -299,9 +301,9 @@ impl KeyScope<'_> {
         {
             return KeyMeaning::Own(term);
         }
-        let iri = match expand_token(key, self.table) {
-            Expansion::Expanded(iri) => iri,
-            Expansion::Verbatim => Iri::whole(key),
+        let (iri, written) = match expand_token(key, self.table) {
+            Expansion::Expanded(iri) => (iri, false),
+            Expansion::Verbatim => (Iri::whole(key), true),
             Expansion::Relative => return KeyMeaning::Unrelated,
         };
         if let Some(term) = modeled_term(iri, S231_CONTEXT_IRI).or_else(|| qudt_term(iri)) {
@@ -318,20 +320,22 @@ impl KeyScope<'_> {
         if !iri.ends_with(QUDT_HAS_UNIT) {
             return KeyMeaning::Unrelated;
         }
-        let unread = match iri.as_whole() {
-            Some(whole) => unread_has_unit(whole),
-            None => {
-                let site = Site {
-                    slot: "property key",
-                    reference: false,
-                    node: Some(self.subject),
-                };
-                let Some(joined) = budget.expand(iri, key, site, diags) else {
-                    return KeyMeaning::Unrelated;
-                };
-                unread_has_unit(&joined)
-            }
+        if written {
+            // The key is the IRI: the check reads what the document wrote, once.
+            return unread_has_unit(key).map_or(KeyMeaning::Unrelated, KeyMeaning::Unread);
+        }
+        // The check reads the whole expansion, bound IRI included, so each key that asks it is
+        // charged: the keys of a document cannot have it read more than the budget and
+        // themselves, whether a prefix binds the IRI or the key is a term bound to all of it.
+        let site = Site {
+            slot: "property key",
+            reference: false,
+            node: Some(self.subject),
         };
+        let Some(joined) = budget.expand(iri, key, site, diags) else {
+            return KeyMeaning::Unrelated;
+        };
+        let unread = unread_has_unit(&joined);
         unread.map_or(KeyMeaning::Unrelated, KeyMeaning::Unread)
     }
 

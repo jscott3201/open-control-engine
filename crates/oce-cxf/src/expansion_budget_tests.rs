@@ -324,14 +324,174 @@ fn a_key_ending_in_has_unit_through_a_prefix_is_charged_and_refused_past_the_bud
 }
 
 #[test]
-fn a_whole_term_key_ending_in_has_unit_is_read_where_it_is_bound_and_never_charged() {
-    let binding = format!("{}hasUnit", iri(BUDGET + 3));
-    let expanded = expand(&json!({
+fn a_whole_term_key_ending_in_has_unit_is_charged_as_a_compact_one_is() {
+    // The near-miss check reads all of what the term binds, so the key pays for it: a term
+    // bound to an IRI of any length could otherwise be read once per key at no charge.
+    let binding = format!("{}hasUnit", iri(BUDGET / 2 - 5));
+    assert_eq!(binding.len(), BUDGET / 2 + 2);
+    let adds = BUDGET / 2 + 1;
+    let one = json!({
         "@context": { "t": binding },
         "@graph": [ { "@id": "urn:n", "t": 0 } ]
-    }))
-    .expect("the bound IRI is read in place");
+    });
+    assert_eq!(expand(&one).expect("one fits").graph[0].other.len(), 1);
+
+    // The second key is the same term in surrounding whitespace, which is read without it.
+    let two = json!({
+        "@context": { "t": binding },
+        "@graph": [ { "@id": "urn:n", "t": 0, " t": 0 }, { "@id": "urn:later", "t ": 0 } ]
+    });
+    assert_eq!(
+        expand(&two).expect_err("the second does not fit"),
+        [refusal("property key", "t", BUDGET / 2 + 2, adds, "urn:n")]
+    );
+
+    // A key that is the IRI itself is document text: read where it is written, never charged.
+    let written = format!("{}hasUnit", iri(BUDGET + 3));
+    let mut node = serde_json::Map::new();
+    node.insert("@id".to_owned(), json!("urn:n"));
+    node.insert(written, json!(0));
+    let expanded = expand(&json!({ "@context": {}, "@graph": [ node ] }))
+        .expect("an absolute IRI adds nothing");
     assert_eq!(expanded.graph[0].other.len(), 1);
+}
+
+#[test]
+fn a_key_in_surrounding_whitespace_is_charged_to_the_budget_of_the_document() {
+    // Each key adds one byte more than half the budget. The second is read without its
+    // whitespace, and it is the document's budget it does not fit, not one of its own.
+    let binding = iri(BUDGET / 2 + 3);
+    let adds = BUDGET / 2 + 1;
+    for padded in [" p:khasUnit", "p:khasUnit ", "\tp:khasUnit\n"] {
+        let mut node = serde_json::Map::new();
+        node.insert("@id".to_owned(), json!("urn:n"));
+        node.insert(padded.to_owned(), json!(0));
+        let alone = json!({ "@context": { "p": binding }, "@graph": [ node.clone() ] });
+        // Alone it fits, and is refused for its whitespace only where it misses a namespace.
+        assert_eq!(expand(&alone).expect("one fits").graph[0].other.len(), 1);
+
+        // A node's keys are read in order of their bytes: leading whitespace sorts first.
+        node.insert("p:ahasUnit".to_owned(), json!(0));
+        let second = if padded.starts_with('p') {
+            "p:khasUnit"
+        } else {
+            "p:ahasUnit"
+        };
+        let both = json!({ "@context": { "p": binding }, "@graph": [ node ] });
+        assert_eq!(
+            expand(&both).expect_err("the two together pass the budget"),
+            [refusal(
+                "property key",
+                second,
+                BUDGET / 2 + 3 + 8,
+                adds,
+                "urn:n"
+            )],
+            "{padded:?}"
+        );
+    }
+}
+
+/// A document of one node typed `types` under `context`.
+fn typed(context: Json, types: &[String]) -> Json {
+    json!({ "@context": context, "@graph": [ { "@id": "urn:n", "@type": types } ] })
+}
+
+#[test]
+fn a_typing_token_in_surrounding_whitespace_never_has_its_binding_read_for_whitespace() {
+    use super::super::token_expansion::whitespace_bytes_scanned_by;
+    // Each token is refused for its surrounding whitespace, and the message depends on whether
+    // the term it names holds whitespace too. Through a prefix the term is the rest of the
+    // binding and the token's suffix; the binding holds none, so none of it is read.
+    const TOKENS: usize = 1_000;
+    for namespace in [
+        "http://data.ashrae.org/S231#",
+        "https://data.ashrae.org/S231#",
+    ] {
+        for binding_bytes in [1 << 10, 1 << 16, 1 << 20] {
+            let binding = format!("{namespace}{}", "k".repeat(binding_bytes));
+            let types: Vec<String> = (0..TOKENS).map(|i| format!(" p:T{i:04}")).collect();
+            let (scanned, refused) =
+                whitespace_bytes_scanned_by(|| expand(&typed(json!({ "p": binding }), &types)));
+            assert_eq!(refused.expect_err("every token is refused").len(), TOKENS);
+            assert_eq!(
+                scanned, 0,
+                "{namespace} bound to {binding_bytes} bytes more"
+            );
+        }
+    }
+    // A term bound whole to the long IRI, the same.
+    let binding = format!("http://data.ashrae.org/S231#{}", "k".repeat(1 << 20));
+    let types: Vec<String> = (0..TOKENS)
+        .map(|i| format!("{}t", " ".repeat(i + 1)))
+        .collect();
+    let (scanned, refused) =
+        whitespace_bytes_scanned_by(|| expand(&typed(json!({ "t": binding }), &types)));
+    assert_eq!(refused.expect_err("every token is refused").len(), TOKENS);
+    assert_eq!(scanned, 0);
+
+    // The control: a term the document wrote out is read, once for each token and no further
+    // than the token, so the zeros above are the reader's and not a counter that sees nothing.
+    let written: Vec<String> = (0..TOKENS).map(|i| format!(" S231:T{i:04}")).collect();
+    let (scanned, refused) = whitespace_bytes_scanned_by(|| expand(&typed(json!({}), &written)));
+    assert_eq!(refused.expect_err("every token is refused").len(), TOKENS);
+    assert_eq!(scanned, (TOKENS * "T0000".len()) as u64);
+    let inside = [" S231:Re al".to_owned()];
+    // Read for whitespace where the document declares `S231` and where it does not: the term
+    // after the literal prefix is the document's text either way.
+    for context in [json!({}), json!({ "S231": "http://data.ashrae.org/S231#" })] {
+        let (scanned, refused) = whitespace_bytes_scanned_by(|| expand(&typed(context, &inside)));
+        let refused = refused.expect_err("refused");
+        assert!(
+            refused[0].message.contains("whitespace inside it too"),
+            "{refused:?}"
+        );
+        assert_eq!(scanned, "Re al".len() as u64);
+    }
+}
+
+#[test]
+fn keys_bound_to_a_long_has_unit_iri_have_it_read_no_more_than_the_budget_allows() {
+    use crate::namespace_near_miss::checks_made_by;
+    // A term bound to a megabyte that ends in `hasUnit`, written as a key under 20,000
+    // spellings (the term in that much surrounding whitespace): each is one key of the node,
+    // and each would have the megabyte read by the four near-miss checks. Counted, never timed:
+    // the keys read before the refusal are the ones the budget holds.
+    const MEGABYTE: usize = 1 << 20;
+    let binding = format!("urn:{}hasUnit", "k".repeat(MEGABYTE - 11));
+    assert_eq!(binding.len(), MEGABYTE);
+    let mut node = serde_json::Map::new();
+    node.insert("@id".to_owned(), json!("urn:n"));
+    for spaces in 1..=20_000 {
+        node.insert(format!("{}t", " ".repeat(spaces)), json!(0));
+    }
+    let document = json!({ "@context": { "t": binding }, "@graph": [ node ] });
+    let (checks, refused) = checks_made_by(|| expand(&document));
+    // Each key adds the megabyte less the one byte it is written in: eight fit, the ninth does
+    // not.
+    let fit = BUDGET / (MEGABYTE - 1);
+    assert_eq!(fit, 8);
+    assert_eq!(
+        refused.expect_err("the ninth key does not fit"),
+        [refusal(
+            "property key",
+            "t",
+            MEGABYTE,
+            fit * (MEGABYTE - 1),
+            "urn:n"
+        )]
+    );
+    assert_eq!(checks, 4 * fit as u64);
+
+    // The same through a prefix, and with the keys on 20,000 nodes instead of one.
+    let binding = format!("urn:{}", "k".repeat(MEGABYTE - 4));
+    let nodes: Vec<Json> = (0..20_000)
+        .map(|i| json!({ "@id": format!("urn:n{i}"), "p:hasUnit": 0 }))
+        .collect();
+    let document = json!({ "@context": { "p": binding }, "@graph": nodes });
+    let (checks, refused) = checks_made_by(|| expand(&document));
+    assert_eq!(refused.expect_err("past the budget").len(), 1);
+    assert_eq!(checks, 4 * 8);
 }
 
 #[test]
