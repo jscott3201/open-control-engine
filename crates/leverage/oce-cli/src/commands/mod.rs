@@ -10,6 +10,7 @@ mod atomic_write;
 pub(crate) mod catalog;
 mod catalog_params;
 pub(crate) mod emit;
+mod file_identity;
 pub(crate) mod fmt;
 pub(crate) mod id;
 pub(crate) mod import;
@@ -25,6 +26,7 @@ use crate::report::Report;
 use crate::{Exit, Streams, input};
 
 pub(crate) use atomic_write::write_atomically;
+pub(crate) use file_identity::same_file;
 
 /// What one command produced.
 pub(crate) struct Outcome {

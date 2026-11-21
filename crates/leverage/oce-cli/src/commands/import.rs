@@ -12,19 +12,28 @@
 //!
 //! Order, the first refusal winning:
 //!
-//! 1. a bounded read, stdin (`-`) or a file, at `oce_api::MAX_CXF_BYTES`, a file's size from its
+//! 1. the output must not be the input (`output-is-input`): the same file by
+//!    `file_identity::same_file`, so another spelling of its path, a symbolic link to it and, on
+//!    Unix, a hard link to it are all refused, and nothing is replaced;
+//! 2. the output's name, which must not contradict the form written (`output-form-mismatch`).
+//!    The form is `--wire` or text and is never chosen by the name; but a name that `oce` would
+//!    read as another form is refused, so a file this verb writes is never one the other verbs
+//!    misread. The name is read by `id`'s own rule (`id::form_by_name`): `.oce` is text, `.json`
+//!    is wire, and `.jsonld` and `.cxf.json` are CXF, which this verb never writes. A name that
+//!    rule reads no form from is accepted for either form;
+//! 3. a bounded read, stdin (`-`) or a file, at `oce_api::MAX_CXF_BYTES`, a file's size from its
 //!    metadata before a byte is read. The input has one form, so there is no `--from` and no
 //!    name rule;
-//! 2. `oce_author::import_cxf`. A refusal is reported under the importer's own stable code
+//! 4. `oce_author::import_cxf`. A refusal is reported under the importer's own stable code
 //!    (`ImportError::code`, one of `oce_author::IMPORT_ERROR_CODES`) with its subject as the
 //!    error's `at`. No kind is matched here, so a kind `oce-author` adds is reported under its
 //!    own code;
-//! 3. the spelling: the output form's writer, then that form's own reader over what was written.
+//! 5. the spelling: the output form's writer, then that form's own reader over what was written.
 //!    The document is produced only when it reads back equal to the imported sequence, so exit
 //!    `0` means `oce` reads what it wrote. Anything else is `unspellable`: a class path the text
 //!    form cannot spell, a string past a wire bound, a wire document past the wire form's size
 //!    limit;
-//! 4. the write: stdout, or the atomic write of `-o` (`write-failed`).
+//! 6. the write: stdout, or the atomic write of `-o` (`write-failed`).
 //!
 //! The report's `dropped` and `normalised` are the importer's lists (`oce_author::ImportReport`),
 //! in reading order, written once the importer accepted the document. Its third list,
@@ -38,16 +47,29 @@ use oce_author::{
 };
 use serde_json::{Value, json};
 
-use super::{Outcome, report_for, write_atomically};
+use super::id::{form_by_name, form_name};
+use super::{Outcome, report_for, same_file, write_atomically};
 use crate::report::{Facts, Report};
-use crate::{Exit, ImportArgs, Streams, codes, input};
+use crate::{Exit, IdForm, ImportArgs, Streams, codes, input};
 
 /// Run `import`.
 pub(crate) fn run(args: &ImportArgs, streams: &mut Streams<'_>) -> Outcome {
     let mut report = report_for("import", &args.file);
-    let form = if args.wire { "wire" } else { "text" };
+    let asked = if args.wire {
+        IdForm::Wire
+    } else {
+        IdForm::Text
+    };
+    let form = form_name(asked);
     report.set("output_form", Value::from(form));
     let output = args.output.as_deref().filter(|path| !input::is_stdin(path));
+    if let Some(path) = output
+        && let Err((code, detail)) = output_accepted(&args.file, path, asked)
+    {
+        report.error(code, detail, None);
+        report.verdict("refused: nothing read, nothing written");
+        return Outcome::judged(report);
+    }
     let bytes = match input::read_named(&args.file, oce_api::MAX_CXF_BYTES, streams.stdin) {
         Ok(bytes) => bytes,
         Err((code, detail)) => {
@@ -106,6 +128,37 @@ pub(crate) fn run(args: &ImportArgs, streams: &mut Streams<'_>) -> Outcome {
             Outcome::judged(report)
         }
     }
+}
+
+/// Whether `-o output` may be written for a document read from `input` in the form `asked`: it
+/// must not be the input file, and its name must not read as another form.
+fn output_accepted(
+    input: &std::ffi::OsStr,
+    output: &std::ffi::OsStr,
+    asked: IdForm,
+) -> Result<(), (&'static str, String)> {
+    if !input::is_stdin(input) && same_file(Path::new(input), Path::new(output)) {
+        return Err((
+            codes::OUTPUT_IS_INPUT,
+            "the output is the input file; the CXF document would be replaced by its import"
+                .to_owned(),
+        ));
+    }
+    if let Some(named) = form_by_name(output)
+        && named != asked
+    {
+        return Err((
+            codes::OUTPUT_FORM_MISMATCH,
+            format!(
+                "the output is the {} form and its name reads as {}: a name ending in .oce is \
+                 read as text, in .json as wire and in .jsonld or .cxf.json as CXF; name it for \
+                 the form written (--wire chooses wire, and text otherwise)",
+                form_name(asked),
+                form_name(named),
+            ),
+        ));
+    }
+    Ok(())
 }
 
 /// Record the importer's refusal: its code, what the kind says and where it sits. A subject is
@@ -220,6 +273,58 @@ mod tests {
         assert_eq!(recorded["at"], error.subject.as_str());
         assert_eq!(recorded["detail"], error.kind.to_string());
         assert!(oce_author::IMPORT_ERROR_CODES.contains(&error.code()));
+    }
+
+    #[test]
+    fn an_accepted_output_name_is_one_every_verb_reads_in_the_form_written_or_not_at_all() {
+        use std::ffi::OsStr;
+        let names = [
+            "a.oce",
+            "a.json",
+            "a.cxf.json",
+            "a.jsonld",
+            "a.cxf.jsonld",
+            "a",
+            "a.txt",
+            "a.OCE",
+            "a.JSON",
+            "dir/a.oce",
+            "a.oce.json",
+            "a.json.oce",
+            ".oce",
+            ".json",
+            "a.cxf.oce",
+        ];
+        let mut accepted = 0;
+        for name in names {
+            for asked in [IdForm::Text, IdForm::Wire] {
+                let outcome = output_accepted(OsStr::new("-"), OsStr::new(name), asked);
+                // `id` (and `verify`) by its three-form rule, the function the guard itself reads.
+                let by_id = form_by_name(OsStr::new(name));
+                // `emit`, `validate` and `fmt` by the authored rule.
+                let by_extension = match std::path::Path::new(name)
+                    .extension()
+                    .and_then(OsStr::to_str)
+                {
+                    Some("oce") => Some(IdForm::Text),
+                    Some("json") => Some(IdForm::Wire),
+                    _ => None,
+                };
+                match outcome {
+                    Ok(()) => {
+                        assert!(by_id.is_none_or(|form| form == asked), "{name}");
+                        assert!(by_extension.is_none_or(|form| form == asked), "{name}");
+                        accepted += 1;
+                    }
+                    Err((code, _)) => {
+                        assert_eq!(code, codes::OUTPUT_FORM_MISMATCH, "{name}");
+                        assert!(by_id.is_some_and(|form| form != asked), "{name}");
+                    }
+                }
+            }
+        }
+        // Text under `.oce`, wire under `.json`, and either under a name that gives no form.
+        assert_eq!(accepted, 18);
     }
 
     #[test]

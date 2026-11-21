@@ -164,6 +164,16 @@ fn one_document_per_code() -> Vec<(&'static str, String, Vec<u8>)> {
             edited(|d| node(d, ".TOut")["S231:nominal"] = json!(1)),
         ),
         (
+            // `TOut` already writes `S231:unit`.
+            "two-spellings",
+            at(".TOut"),
+            edited(|d| {
+                d["@context"]["qudt"] = json!("http://qudt.org/schema/qudt#");
+                d["@context"]["unit"] = json!("http://qudt.org/vocab/unit#");
+                node(d, ".TOut")["qudt:hasUnit"] = json!({ "@id": "unit:K" });
+            }),
+        ),
+        (
             "driving-sink",
             at(".ecoEna"),
             edited(|d| node(d, ".ecoEna")["S231:isConnectedTo"] = json!([reference(".sub.u1")])),
@@ -259,7 +269,7 @@ fn every_code_a_cxf_document_can_earn_is_reported_under_that_code_at_its_subject
         earned.len() + NOT_EARNED.len(),
         oce_author::IMPORT_ERROR_CODES.len()
     );
-    assert_eq!((earned.len(), NOT_EARNED.len()), (26, 4));
+    assert_eq!((earned.len(), NOT_EARNED.len()), (27, 4));
     for (code, why) in NOT_EARNED {
         assert!(oce_author::IMPORT_ERROR_CODES.contains(&code), "{code}");
         assert!(!why.is_empty());
@@ -419,7 +429,7 @@ fn nothing_a_document_carries_reaches_the_rendering_as_a_control_character() {
         );
         if quoted_in == "detail" {
             assert!(
-                rendered.contains("\\u{1b}[31mred\\u{7}\\u{a}next\\u{202e}\\u{2028}"),
+                rendered.contains("\\u{001B}[31mred\\u{0007}\\u{000A}next\\u{202E}\\u{2028}"),
                 "{rendered:?}"
             );
         }

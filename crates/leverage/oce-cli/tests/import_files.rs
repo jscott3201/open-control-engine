@@ -2,10 +2,11 @@
 //! stdin, a file and `-o`; the text and the wire output are one sequence, each canonical in its
 //! form and read back by `oce`'s own readers; the verb reads and writes and judges nothing, so
 //! what the validator would refuse is carried and a sequence a form cannot spell is refused; the
-//! read is bounded at the engine's CXF limit; and a number's bits survive both forms. The one
-//! place a round trip moves a content id beside the root's name is pinned here too: an Integer
-//! literal on a Real parameter. `import_corpus.rs` runs the round trip over every tracked CXF
-//! document and `import_refusals.rs` holds one refusal per importer code.
+//! read is bounded at the engine's CXF limit; and a number's bits survive both forms. The known
+//! gap in the round trip is pinned here too: an Integer literal on a Real parameter moves the
+//! content id (issue #683). `import_corpus.rs` runs the round trip over every CXF fixture
+//! tracked under `crates/`, `import_refusals.rs` holds one refusal per importer code, and
+//! `output_guards.rs` the two `-o` guards.
 
 mod support;
 
@@ -422,11 +423,12 @@ fn a_reals_bits_survive_both_forms() {
 
 #[test]
 fn an_integer_literal_on_a_real_parameter_is_imported_as_written_and_emitted_as_a_real() {
-    // The one place beside the root's name where a round trip moves the id. The importer keeps
-    // the literal as the document wrote it (`uLow = 0`); the emitter writes a Real parameter's
-    // value as a Real; and the engine's id tells an Integer literal from a Real one, even on a
-    // Real parameter. So the round trip has the id of the document with the literal written as
-    // a Real, and not the original's.
+    // The known gap in the round trip (issue #683). The importer keeps the literal as the
+    // document wrote it (`uLow = 0`); the emitter writes a Real parameter's value as a Real;
+    // and the engine's id tells an Integer literal from a Real one, even on a Real parameter.
+    // So the round trip has the id of the document with the literal written as a Real, and
+    // not the original's. #683 is ruled "normalise at load": when it lands the two ids are
+    // one, the `assert_ne` below fails, and this test becomes the plain equality.
     let cases: [(&str, Value, &str, &str); 4] = [
         (".hys.uLow", json!(0), "uLow = 0,", "0.0"),
         (

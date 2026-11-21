@@ -12,7 +12,7 @@ Arguments:
 
 Options:
   -o, --output <OUTPUT>
-          Write the sequence here (atomically) and print the report on stdout; `-` is stdout
+          Write the sequence here (atomically) and print the report on stdout; `-` is stdout. The name must not read as another form (.oce is text, .json is wire, .jsonld and .cxf.json are CXF) and must not be the input file
 
       --render <RENDER>
           When to write a human-readable rendering of the report to stderr

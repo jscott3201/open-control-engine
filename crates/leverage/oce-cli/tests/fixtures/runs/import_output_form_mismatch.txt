@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "import",
+  "errors": [
+    {
+      "code": "output-form-mismatch",
+      "detail": "the output is the text form and its name reads as wire: a name ending in .oce is read as text, in .json as wire and in .jsonld or .cxf.json as CXF; name it for the form written (--wire chooses wire, and text otherwise)",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "econ.cxf.json",
+  "ok": false,
+  "output_form": "text",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

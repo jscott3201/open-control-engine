@@ -774,6 +774,14 @@ exit: 0
     {
       "code": "no-content-id",
       "meaning": "the facade could not name a model it loaded"
+    },
+    {
+      "code": "output-form-mismatch",
+      "meaning": "import -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)"
+    },
+    {
+      "code": "output-is-input",
+      "meaning": "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link; nothing is written"
     }
   ],
   "errors": [],
@@ -941,7 +949,7 @@ exit: 0
     },
     {
       "code": "not-strict-json",
-      "meaning": "the bytes are not UTF-8 or not JSON, an object repeats a key, or an integer is outside the 64-bit signed range"
+      "meaning": "the bytes are not UTF-8 or not JSON, nesting is deeper than 128 levels, an object repeats a key, or an integer is outside the 64-bit signed range"
     },
     {
       "code": "limit-exceeded",
@@ -1018,6 +1026,10 @@ exit: 0
     {
       "code": "connector-attribute",
       "meaning": "nominal or unbounded on a boundary (not carried)"
+    },
+    {
+      "code": "two-spellings",
+      "meaning": "one property written under two spellings on one node (S231:unit beside qudt:hasUnit)"
     },
     {
       "code": "driving-sink",

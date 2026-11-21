@@ -6,7 +6,8 @@
 //! place and named relative to the crate directory: a G36 corpus fixture, an in-repo library
 //! rule, and `oce-cxf`'s contract fixtures for the constructs the G36 corpus does not hold.
 //! Regenerate with `OCE_BLESS_CLI=1`. `import_files.rs` holds the behaviour the transcripts do
-//! not show, and `import_corpus.rs` the round trip over every tracked CXF document.
+//! not show, `import_corpus.rs` the round trip over every CXF fixture tracked under `crates/`,
+//! and `output_guards.rs` the two `-o` guards with their transcripts.
 
 mod support;
 

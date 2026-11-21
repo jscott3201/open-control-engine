@@ -191,7 +191,9 @@ pub(crate) struct IdArgs {
 pub(crate) struct ImportArgs {
     /// The flat CXF document, or `-` for stdin.
     pub(crate) file: OsString,
-    /// Write the sequence here (atomically) and print the report on stdout; `-` is stdout.
+    /// Write the sequence here (atomically) and print the report on stdout; `-` is stdout. The
+    /// name must not read as another form (.oce is text, .json is wire, .jsonld and .cxf.json
+    /// are CXF) and must not be the input file.
     #[arg(short = 'o', long = "output")]
     pub(crate) output: Option<OsString>,
     /// Write the wire form (strict JSON) instead of the text form.
@@ -211,7 +213,8 @@ enum Command {
         /// The instance namespace every IRI starts with; must end in `#`, `/` or `:`.
         #[arg(long)]
         namespace: Option<String>,
-        /// Write the CXF here (atomically) and print the report on stdout; `-` is stdout.
+        /// Write the CXF here (atomically) and print the report on stdout; `-` is stdout. It
+        /// must not be the input file.
         #[arg(short = 'o', long = "output")]
         output: Option<OsString>,
     },

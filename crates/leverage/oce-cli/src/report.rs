@@ -11,15 +11,18 @@
 //! as given (`-` for stdin). `findings` are the validator's (or the class rules') answers and make
 //! the exit `1`; `errors` are why a question could not be answered and make it `2`.
 //!
-//! The human-readable rendering ([`Report::to_human`]) goes to a terminal, and since `import` a
-//! report can quote a document's own strings (a node `@id`, a key), so every format or control
-//! character and every line or paragraph separator in it is written as a `\u{…}` escape:
-//! nothing a document carries can move the cursor, recolour the line, start a new one or reorder
-//! it. The JSON needs no such step; its writer escapes.
+//! The human-readable rendering ([`Report::to_human`]) goes to a terminal, and a report quotes
+//! strings a document wrote: a wire file's block `class` in a `class-not-found` finding, a CXF
+//! node's `@id` in an `import` refusal. So every format or control character and every line or
+//! paragraph separator in it is written as a `\u{…}` escape ([`printable`]): nothing a document
+//! carries can move the cursor, recolour the line, start a new one or reorder it. The JSON
+//! needs no such step; its writer escapes what JSON requires.
 //!
-//! An error is `{ "code", "detail", "span" }`. A `verify` refusal adds, each only when it has a
-//! value (owner rulings of 2026-11-11, vectors note "Part 4's readings"): `at`, the place it is
-//! about (`scenarios[0].inputs.u`, `mutants[2]`, `subject`, `line 3 column 7`); `path`, the
+//! An error is `{ "code", "detail", "span" }`, plus optional keys, each written only when it has
+//! a value. `at` is the place the refusal is about: a `verify` refusal's (`scenarios[0].inputs.u`,
+//! `mutants[2]`, `subject`, `line 3 column 7`; owner rulings of 2026-11-11, vectors note "Part
+//! 4's readings"), `"input"` for an `id` document the engine refuses, and an `import` refusal's
+//! subject (a node `@id`, or `document`). The others are `verify`'s and `id`'s: `path`, the
 //! canonical path
 //! it concerns; `candidates`, an ambiguous name's matches in their order; `cause`, a value from a
 //! closed table `oce-verify` owns; `diagnostic_codes`, the engine's codes of a subject that did not
@@ -236,14 +239,20 @@ impl Report {
 
 /// `text` as one terminal-safe run: every Unicode format (`Cf`) or control (`Cc`) character, a
 /// line feed and an escape included, and the line and paragraph separators (U+2028, U+2029) are
-/// written as `\u{…}` with the code point in hexadecimal. The first class is the engine's table
-/// (`oce_api::is_format_or_control`), the one the importer refuses in a term; the two
-/// separators are category `Z` and outside it.
+/// written as `\u{…}` with the code point in at least four upper-case hexadecimal digits
+/// (`\u{001B}`, `\u{202E}`), the spelling the engine's own messages use for such a character.
+/// The first class is the engine's table (`oce_api::is_format_or_control`), the one the importer
+/// refuses in a term; the two separators are category `Z` and outside it.
+///
+/// A backslash is written as it is, as the engine writes it. So the rendering does not tell a
+/// U+202E from the eight characters `\u{202E}` a document spelled out: it is advice for a
+/// person, the JSON report is the exact form, and doubling every backslash would double every
+/// separator of a Windows path in the lines a person reads.
 fn printable(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for character in text.chars() {
         if unprintable(character) {
-            out.push_str(&format!("\\u{{{:x}}}", u32::from(character)));
+            out.push_str(&format!("\\u{{{:04X}}}", u32::from(character)));
         } else {
             out.push(character);
         }
@@ -332,7 +341,8 @@ mod tests {
         report.finding_raw(hostile, hostile, hostile, "author");
         report.verdict(hostile);
         let human = report.to_human();
-        let escaped = "a\\u{1b}[31mb\\u{7}c\\u{a}d\\u{202e}e\\u{9b}f\\u{200b}g\\u{2028}h\\u{2029}i";
+        let escaped =
+            "a\\u{001B}[31mb\\u{0007}c\\u{000A}d\\u{202E}e\\u{009B}f\\u{200B}g\\u{2028}h\\u{2029}i";
         assert_eq!(printable(hostile), escaped);
         // Three lines, and the only control characters left are their own line feeds.
         assert_eq!(human.matches('\n').count(), 3, "{human:?}");
@@ -346,8 +356,11 @@ mod tests {
     }
 
     #[test]
-    fn plain_text_is_rendered_as_it_is() {
-        let plain = "rule.cxf.jsonld: `S231:max` on a block port — é, 日本";
+    fn plain_text_and_a_backslash_are_rendered_as_they_are() {
+        let plain =
+            "dir\\rule.cxf.jsonld: `S231:max` on a block port — é, 日本, \\u{202E} spelled out";
         assert_eq!(printable(plain), plain);
+        // A code point past the basic plane keeps all its digits.
+        assert_eq!(printable("\u{e0001}"), "\\u{E0001}");
     }
 }

@@ -1,8 +1,11 @@
-//! Reading one authored sequence: the form, a bounded read, and the parse.
+//! Reading one input: an authored sequence's form, the bounded read every verb shares, and the
+//! parse.
 //!
-//! The form comes from `--from` or the extension (`.oce` text, `.json` wire); stdin (`-`) needs
-//! `--from`. Every read is bounded by the form's own limit (`oce_author::MAX_TEXT_BYTES`,
-//! `oce_author::MAX_WIRE_BYTES`): a file's size is checked from its metadata **before** a byte is
+//! An authored sequence's form comes from `--from` or the extension (`.oce` text, `.json` wire);
+//! stdin (`-`) needs `--from`. Every read is bounded by the caller's limit: an authored form's
+//! own (`oce_author::MAX_TEXT_BYTES`, `oce_author::MAX_WIRE_BYTES`), or, for the CXF document
+//! `id` and `import` read through [`read_named`], `oce_api::MAX_CXF_BYTES`. A file's size is
+//! checked from its metadata **before** a byte is
 //! read, and the read itself stops one byte past the limit, so neither an over-size file nor an
 //! endless stdin is ever held in memory. Every refusal is a typed error code, never a panic, and
 //! the input is named only as it was given.

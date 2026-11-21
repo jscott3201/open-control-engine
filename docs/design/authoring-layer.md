@@ -516,7 +516,10 @@ because the verb asks for an id and such a file has none; it never exits 1. *(Am
 ([importer note](importer.md), "The `oce import` verb"): `oce import <FILE> [-o <OUT>] [--wire]`
 reads flat CXF and writes canonical text or the wire form. It has one input form, so it takes no
 `--from`, and it validates nothing, so it never exits 1 either: exit 2 is a document the
-importer refuses or a sequence the output form cannot spell.
+importer refuses or a sequence the output form cannot spell. *(Owner rulings of 2026-11-21,
+GitHub #688:)* `emit -o` and `import -o` refuse an output that is the input file itself
+(`output-is-input`), and `import -o` a name `oce` would read as another form than the one
+written (`output-form-mismatch`); both are exit 2 before anything is read.
 
 **Binaries above the facade.** The architecture page says the engine is library-only, with no binary
 target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage

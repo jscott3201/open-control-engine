@@ -1,8 +1,10 @@
-//! The round trip over every tracked CXF document (GitHub issue #514): each `.jsonld` and
-//! `.cxf.json` file git tracks under `crates/` and `third_party/` goes through `oce import`, and
-//! every one the importer accepts through `oce emit` and `oce id`. The outcome of each is one
-//! row of `tests/fixtures/import_corpus.tsv`, and the number of documents in each class is
-//! pinned below, so a fixture added anywhere in the repository has to be classified here.
+//! The round trip over the repository's own CXF fixtures (GitHub issue #514): each `.jsonld` and
+//! `.cxf.json` file git tracks under `crates/` goes through `oce import`, and every one the
+//! importer accepts through `oce emit` and `oce id`. The outcome of each is one row of
+//! `tests/fixtures/import_corpus.tsv`, a blessed table: a fixture added to any crate is
+//! classified by one `OCE_BLESS_CLI=1` run, and the row it gets is what a reviewer reads. The
+//! vendored tree under `third_party/` is left out, so a pin advance never touches this test.
+//! Nothing is counted by hand but the G36 catalog's split, which the importer note states.
 //!
 //! A document is in exactly one class:
 //!
@@ -13,15 +15,28 @@
 //! - `same-id-restamped`: the same once the original's root is re-stamped. The root's name
 //!   carries a prefix after its namespace (`http://example.org#g36.source.<name>`); the importer
 //!   keeps the trailing identifier as the sequence name, and names are inside the id. The row
-//!   names the prefix. This class and the next are the only two where the ids differ;
-//! - `same-id-real-literals`: the same once the original's Integer literals on Real parameters
-//!   are written as Reals. The importer keeps such a literal as written, the emitter writes a
-//!   Real parameter's value as a Real, and the engine's id tells the two apart;
+//!   names the prefix;
+//! - `same-id-real-literals` (and `same-id-restamped-real-literals`): the same once the
+//!   original's Integer literals on Real parameters are written as Reals. **A known gap, issue
+//!   #683**: the importer keeps such a literal as written, the emitter writes a Real
+//!   parameter's value as a Real, and the engine's id tells the two apart. #683 is ruled
+//!   "normalise at load"; when it lands these rows become `same-id` (or `same-id-restamped`)
+//!   and this class, with [`with_real_literals`], goes;
 //! - `warned`: it imports, the original loads with warnings and so has an id, and `oce emit`
 //!   answers no, because the validator counts an engine warning as an error finding. The id of
-//!   what the emitter alone writes (`oce_author::emit`, no engine stage) is still the original's;
+//!   what the emitter alone writes (`oce_author::emit`, no engine stage) is still the
+//!   original's, under the explanation the row names;
+//! - `author-refused`: it imports and the original loads, but stage 1 of the validator refuses
+//!   the sequence, so nothing is emitted and there is no second id. An Integer literal above
+//!   2^53 on a Real parameter is one (`parameter-out-of-range`): the engine loads it, and the
+//!   authoring layer will not write a Real it cannot write exactly;
 //! - `no-id`: it imports, but the original does not load in an engine, so there is no id to
 //!   keep; `oce emit` answers no with the findings the row lists.
+//!
+//! The ids of a round trip differ from the original's only in the re-stamped and the
+//! real-literal classes, and for each such document the test proves the named cause is the
+//! only difference: the original, changed in that respect alone, has the round trip's id. A
+//! difference neither explains fails the test; that is a finding, not a row.
 //!
 //! For every imported document the test also holds the text and the wire output to the
 //! sequence `oce_author::import_cxf` returns, each canonical in its form (`oce fmt --check`),
@@ -29,28 +44,28 @@
 //! `normalised` to the importer's lists.
 //!
 //! The corpus is `git ls-files`, as in `oce-cxf`'s `parameter_grounding_corpus`, so an untracked
-//! local file can neither join it nor move a pinned count.
+//! local file cannot join it: `git add` a new fixture before blessing.
 
 mod support;
 
-use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Command;
 
 use oce_api::ValueType;
 use oce_author::{EmitOptions, ImportOptions};
 use serde_json::{Value, json};
-use support::cxf_edit::{XSD_DOUBLE, XSD_INTEGER};
-use support::{Run, compare_or_bless, crate_dir, oce, scratch};
+use support::cxf_edit::{XSD_DOUBLE, XSD_INTEGER, edited, node};
+use support::{Run, author_fixture, compare_or_bless, crate_dir, oce, scratch};
 
 /// The repository root as seen from the crate directory every run starts in.
 const REPO: &str = "../../..";
 
-/// Every git-tracked `.jsonld` and `.cxf.json` under `crates/` and `third_party/`, as sorted
-/// repository-relative paths.
+/// Every git-tracked `.jsonld` and `.cxf.json` under `crates/`, as sorted repository-relative
+/// paths. `third_party/` is not walked: the vendored tree moves with a pin advance, which must
+/// not move a leverage test.
 fn corpus() -> Vec<String> {
     let output = Command::new("git")
-        .args(["ls-files", "-z", "--", "crates", "third_party"])
+        .args(["ls-files", "-z", "--", "crates"])
         .current_dir(crate_dir().join(REPO))
         .output()
         .expect("enumerate the tracked files");
@@ -147,9 +162,67 @@ fn name_prefix(root: &str, sequence: &str) -> String {
     before[namespace_end..].to_owned()
 }
 
-/// `original` with every Integer literal on a Real parameter written as a Real: a sequence
-/// parameter declared `S231:Real`, and a block parameter the catalog types Real. Returns the
-/// document and how many literals moved.
+/// `original` with its root re-stamped: every `@id` value under `root` moved under
+/// `urn:oce:import:<sequence>`. Only `@id` values are touched, so no other string of the
+/// document can be rewritten by accident.
+fn restamped(original: &[u8], root: &str, sequence: &str) -> Vec<u8> {
+    fn walk(value: &mut Value, root: &str, to: &str) {
+        match value {
+            Value::Object(map) => {
+                for (key, child) in map.iter_mut() {
+                    match child {
+                        Value::String(id) if key == "@id" => {
+                            if let Some(rest) = id.strip_prefix(root)
+                                && (rest.is_empty() || rest.starts_with('.'))
+                            {
+                                *id = format!("{to}{rest}");
+                            }
+                        }
+                        other => walk(other, root, to),
+                    }
+                }
+            }
+            Value::Array(items) => items.iter_mut().for_each(|item| walk(item, root, to)),
+            _ => {}
+        }
+    }
+    let mut document: Value = serde_json::from_slice(original).expect("JSON");
+    walk(&mut document, root, &format!("urn:oce:import:{sequence}"));
+    serde_json::to_vec(&document).expect("JSON")
+}
+
+/// An Integer literal as the Real the emitter writes for it, or `None` for any other value: a
+/// bare JSON integer, or a typed `xsd:integer`.
+fn as_real_literal(value: &Value) -> Option<Value> {
+    let integer: i64 = match value {
+        Value::Number(number) if !number.is_f64() => number.as_i64()?,
+        Value::Object(literal) if literal.get("@type") == Some(&json!(XSD_INTEGER)) => {
+            literal.get("@value")?.as_str()?.parse().ok()?
+        }
+        _ => return None,
+    };
+    Some(json!({ "@value": format!("{integer}.0"), "@type": XSD_DOUBLE }))
+}
+
+/// Write every Integer literal in `value` as a Real: the value itself, or each element of an
+/// array parameter's list, a matrix's rows included. Returns how many moved.
+fn write_as_reals(value: &mut Value) -> usize {
+    if let Value::Array(items) = value {
+        return items.iter_mut().map(write_as_reals).sum();
+    }
+    match as_real_literal(value) {
+        Some(real) => {
+            *value = real;
+            1
+        }
+        None => 0,
+    }
+}
+
+/// `original` with every Integer literal on a Real parameter written as a Real (issue #683): a
+/// sequence parameter declared `S231:Real`, and a block parameter the catalog types Real, a
+/// scalar by its name and an array (`k_<i>`, `table_<row>_<col>`) by its template's base name,
+/// each element of its list. Returns the document and how many literals moved.
 fn with_real_literals(original: &[u8]) -> (Vec<u8>, usize) {
     let mut document: Value = serde_json::from_slice(original).expect("JSON");
     let root = root_of(&document);
@@ -178,11 +251,11 @@ fn with_real_literals(original: &[u8]) -> (Vec<u8>, usize) {
         };
         for parameter in references(&block_node["S231:hasParameter"]) {
             let name = parameter.strip_prefix(&format!("{block}.")).unwrap_or("");
-            if meta
-                .parameters
-                .iter()
-                .any(|p| p.name == name && p.value_type == ValueType::Real)
-            {
+            let typed_real = meta.parameters.iter().any(|p| {
+                let base = p.name.split_once("_<").map_or(p.name, |(base, _)| base);
+                p.value_type == ValueType::Real && (p.name == name || base == name)
+            });
+            if typed_real {
                 real_parameters.push(parameter);
             }
         }
@@ -190,21 +263,10 @@ fn with_real_literals(original: &[u8]) -> (Vec<u8>, usize) {
     let mut moved = 0;
     for node in document["@graph"].as_array_mut().expect("a graph") {
         let id = node["@id"].as_str().unwrap_or("").to_owned();
-        if !real_parameters.contains(&id) {
-            continue;
-        }
-        let value = &mut node["S231:value"];
-        let integer = match &*value {
-            Value::Number(number) if !number.is_f64() => number.as_i64(),
-            Value::Object(literal) if literal.get("@type") == Some(&json!(XSD_INTEGER)) => literal
-                .get("@value")
-                .and_then(Value::as_str)
-                .and_then(|text| text.parse().ok()),
-            _ => None,
-        };
-        if let Some(integer) = integer {
-            *value = json!({ "@value": format!("{integer}.0"), "@type": XSD_DOUBLE });
-            moved += 1;
+        if real_parameters.contains(&id)
+            && let Some(value) = node.get_mut("S231:value")
+        {
+            moved += write_as_reals(value);
         }
     }
     (serde_json::to_vec(&document).expect("JSON"), moved)
@@ -212,9 +274,9 @@ fn with_real_literals(original: &[u8]) -> (Vec<u8>, usize) {
 
 /// Why `round_trip` is the id of the document: the class and its detail. Panics, naming the
 /// document, when neither the root's name nor an Integer literal on a Real parameter explains
-/// a difference.
+/// a difference: that is a finding, not a class.
 fn explained(
-    path: &str,
+    label: &str,
     original: &[u8],
     sequence: &str,
     round_trip: &str,
@@ -222,18 +284,14 @@ fn explained(
     let document: Value = serde_json::from_slice(original).expect("JSON");
     let root = root_of(&document);
     let prefix = name_prefix(&root, sequence);
-    let original_id = id_of(original);
-    if original_id == round_trip {
+    if id_of(original) == round_trip {
         // The ids agree exactly where the root's name is the sequence name alone.
-        assert!(prefix.is_empty(), "{path}: equal ids under a name prefix");
+        assert!(prefix.is_empty(), "{label}: equal ids under a name prefix");
         return ("same-id", "-".to_owned());
     }
     let mut candidate = original.to_vec();
     if !prefix.is_empty() {
-        let text = String::from_utf8(candidate).expect("UTF-8");
-        candidate = text
-            .replace(&root, &format!("urn:oce:import:{sequence}"))
-            .into_bytes();
+        candidate = restamped(original, &root, sequence);
         if id_of(&candidate) == round_trip {
             return ("same-id-restamped", prefix);
         }
@@ -241,61 +299,64 @@ fn explained(
     let (candidate, moved) = with_real_literals(&candidate);
     assert!(
         moved > 0 && id_of(&candidate) == round_trip,
-        "{path}: the round trip's id is not the original's, and neither the root's name prefix \
+        "{label}: the round trip's id is not the original's, and neither the root's name prefix \
          (`{prefix}`) nor an Integer literal on a Real parameter ({moved} found) explains it"
     );
-    assert!(
-        prefix.is_empty(),
-        "{path}: both explanations; add its class"
-    );
-    ("same-id-real-literals", moved.to_string())
+    if prefix.is_empty() {
+        ("same-id-real-literals", moved.to_string())
+    } else {
+        (
+            "same-id-restamped-real-literals",
+            format!("{prefix} {moved}"),
+        )
+    }
 }
 
-/// Run one document through the verbs and classify it. `dir` is this worker's scratch
-/// directory.
-fn classify(path: &str, dir: &Path) -> Row {
-    let relative = format!("{REPO}/{path}");
-    let original = std::fs::read(crate_dir().join(&relative)).expect("a tracked file");
+/// Run one document through the verbs and classify it. `label` names it in the row and in a
+/// failure, `file` is where it is, and `dir` is the caller's scratch directory.
+fn classify(label: &str, file: &Path, dir: &Path) -> Row {
+    let original = std::fs::read(file).expect("the document");
+    let file_arg = file.to_string_lossy().into_owned();
     let out = dir.join("out.oce");
     let _ = std::fs::remove_file(&out);
     let out_arg = out.to_string_lossy().into_owned();
-    let run = oce(&["import", &relative, "-o", &out_arg], b"");
-    assert!(run.stderr.is_empty(), "{path}: {}", run.transcript());
+    let run = oce(&["import", &file_arg, "-o", &out_arg], b"");
+    assert!(run.stderr.is_empty(), "{label}: {}", run.transcript());
     let report = run.report();
     let library = oce_author::import_cxf(&original, &ImportOptions::new());
     if run.code == 2 {
         let errors = report["errors"].as_array().expect("errors");
-        assert_eq!(errors.len(), 1, "{path}: {}", run.transcript());
+        assert_eq!(errors.len(), 1, "{label}: {}", run.transcript());
         let code = errors[0]["code"].as_str().expect("code");
         assert!(
             oce_author::IMPORT_ERROR_CODES.contains(&code),
-            "{path}: `{code}` is not an importer code"
+            "{label}: `{code}` is not an importer code"
         );
         assert_eq!(library.expect_err("the library refuses too").code(), code);
-        assert!(!out.exists(), "{path}: a refused import wrote a file");
+        assert!(!out.exists(), "{label}: a refused import wrote a file");
         return Row {
             class: "refused",
             detail: code.to_owned(),
             lists: None,
-            path: path.to_owned(),
+            path: label.to_owned(),
         };
     }
-    assert_eq!(run.code, 0, "{path}: {}", run.transcript());
+    assert_eq!(run.code, 0, "{label}: {}", run.transcript());
     let imported = library.expect("the library imports what the verb imports");
     let text = std::fs::read(&out).expect("the text output");
-    let wire = oce(&["import", &relative, "--wire"], b"");
-    assert_eq!(wire.code, 0, "{path}: {}", wire.transcript());
+    let wire = oce(&["import", &file_arg, "--wire"], b"");
+    assert_eq!(wire.code, 0, "{label}: {}", wire.transcript());
     // The oracle: both outputs are the sequence the library imports, and the lists are its.
     let text_str = std::str::from_utf8(&text).expect("UTF-8");
     assert_eq!(
         oce_author::parse_text(text_str).expect("the text parses"),
         imported.sequence,
-        "{path}"
+        "{label}"
     );
     assert_eq!(
         oce_author::from_wire_bytes(&wire.stdout).expect("the wire form reads"),
         imported.sequence,
-        "{path}"
+        "{label}"
     );
     let subjects = |key: &str| -> Vec<String> {
         report[key]
@@ -312,7 +373,7 @@ fn classify(path: &str, dir: &Path) -> Row {
             .iter()
             .map(|d| d.subject.clone())
             .collect::<Vec<_>>(),
-        "{path}"
+        "{label}"
     );
     assert_eq!(
         subjects("normalised"),
@@ -320,31 +381,31 @@ fn classify(path: &str, dir: &Path) -> Row {
             .iter()
             .map(|n| n.subject.clone())
             .collect::<Vec<_>>(),
-        "{path}"
+        "{label}"
     );
     let lists = Some((dropped.len(), normalised.len()));
     for (form, bytes) in [("text", &text), ("wire", &wire.stdout)] {
         let check = oce(&["fmt", "-", "--from", form, "--check"], bytes);
-        assert_eq!(check.code, 0, "{path} {form}: {}", check.transcript());
+        assert_eq!(check.code, 0, "{label} {form}: {}", check.transcript());
     }
     let emitted = oce(&["emit", "-", "--from", "text"], &text);
     let from_wire = oce(&["emit", "-", "--from", "wire"], &wire.stdout);
-    assert_eq!(emitted.code, from_wire.code, "{path}: the forms disagree");
+    assert_eq!(emitted.code, from_wire.code, "{label}: the forms disagree");
     let sequence = imported.sequence.name.as_str();
     let row = |class, detail| Row {
         class,
         detail,
         lists,
-        path: path.to_owned(),
+        path: label.to_owned(),
     };
     match emitted.code {
         0 => {
             assert_eq!(
                 emitted.stdout, from_wire.stdout,
-                "{path}: the forms disagree"
+                "{label}: the forms disagree"
             );
             let round_trip = id_of(&emitted.stdout);
-            let (class, detail) = explained(path, &original, sequence, &round_trip);
+            let (class, detail) = explained(label, &original, sequence, &round_trip);
             row(class, detail)
         }
         1 => {
@@ -353,28 +414,32 @@ fn classify(path: &str, dir: &Path) -> Row {
             assert_eq!(
                 finding_codes(&findings),
                 finding_codes(&from_wire.report()),
-                "{path}: the forms disagree"
+                "{label}: the forms disagree"
             );
             let codes = finding_codes(&findings);
-            if oce(&["id", &relative, "--from", "cxf"], b"").code != 0 {
+            if oce(&["id", &file_arg, "--from", "cxf"], b"").code != 0 {
                 return row("no-id", codes);
             }
-            // The original loads, so only the engine's warnings stand between the sequence
-            // and an emitted document; what the emitter alone writes still has its id.
-            assert!(
-                findings["findings"]
-                    .as_array()
-                    .expect("findings")
-                    .iter()
-                    .all(|finding| finding["origin"] == "engine"),
-                "{path}: an author-side finding on a document the engine loads"
-            );
-            let alone = oce_author::emit(&imported.sequence, &EmitOptions::new())
-                .expect("stage 1 accepts the sequence");
-            let (class, _) = explained(path, &original, sequence, &id_of(&alone));
-            row("warned", format!("{codes}; {class}"))
+            // The original loads. Where stage 1 accepts the sequence, only the engine's
+            // warnings stand between it and an emitted document, and what the emitter alone
+            // writes still has the original's id; where stage 1 refuses it, nothing is emitted.
+            match oce_author::emit(&imported.sequence, &EmitOptions::new()) {
+                Ok(alone) => {
+                    assert!(
+                        findings["findings"]
+                            .as_array()
+                            .expect("findings")
+                            .iter()
+                            .all(|finding| finding["origin"] == "engine"),
+                        "{label}: an author-side finding on a sequence stage 1 accepts"
+                    );
+                    let (class, _) = explained(label, &original, sequence, &id_of(&alone));
+                    row("warned", format!("{codes}; {class}"))
+                }
+                Err(_) => row("author-refused", codes),
+            }
         }
-        other => panic!("{path}: oce emit exited {other}: {}", emitted.transcript()),
+        other => panic!("{label}: oce emit exited {other}: {}", emitted.transcript()),
     }
 }
 
@@ -392,7 +457,9 @@ fn rows() -> Vec<Row> {
                         .iter()
                         .skip(worker)
                         .step_by(WORKERS)
-                        .map(|path| classify(path, &dir))
+                        .map(|path| {
+                            classify(path, &crate_dir().join(format!("{REPO}/{path}")), &dir)
+                        })
                         .collect::<Vec<Row>>()
                 })
             })
@@ -406,111 +473,82 @@ fn rows() -> Vec<Row> {
     rows
 }
 
-fn tally<'a>(items: impl Iterator<Item = &'a str>) -> Vec<(&'a str, usize)> {
-    let mut counts = BTreeMap::new();
-    for item in items {
-        *counts.entry(item).or_insert(0) += 1;
-    }
-    counts.into_iter().collect()
-}
-
 #[test]
-fn every_tracked_cxf_document_round_trips_or_is_refused_with_a_stable_code() {
+fn every_tracked_cxf_fixture_round_trips_or_is_refused_with_a_stable_code() {
     let rows = rows();
     let mut table = String::from(
-        "# Every tracked CXF document through `oce import`, then `oce emit` and `oce id`\n\
-         # (tests/import_corpus.rs holds the classes). Regenerate with OCE_BLESS_CLI=1.\n\
+        "# Every tracked CXF fixture under crates/ through `oce import`, then `oce emit` and\n\
+         # `oce id` (tests/import_corpus.rs holds the classes). A new fixture gets its row from\n\
+         # one run with OCE_BLESS_CLI=1; read the row before committing it.\n\
          # class<TAB>detail<TAB>dropped<TAB>normalised<TAB>path\n",
     );
     for row in &rows {
         table.push_str(&row.line());
     }
     compare_or_bless("import_corpus.tsv", &table);
+    // A walk that silently shrinks to nothing would bless an empty table.
+    assert!(rows.len() >= 200, "only {} documents", rows.len());
 
-    // Pinned, so that a CXF fixture added anywhere in the repository is classified here.
-    assert_eq!(
-        tally(rows.iter().map(|row| row.class)),
-        [
-            ("no-id", 12),
-            ("refused", 188),
-            ("same-id", 17),
-            ("same-id-real-literals", 1),
-            ("same-id-restamped", 37),
-            ("warned", 2),
-        ]
-    );
-    assert_eq!(rows.len(), 257);
-    assert_eq!(
-        tally(
-            rows.iter()
-                .filter(|row| row.class == "refused")
-                .map(|row| row.detail.as_str())
-        ),
-        [
-            ("array-connector", 1),
-            ("array-sequence-parameter", 1),
-            ("array-shape", 3),
-            ("class-outside-obc", 9),
-            ("conditional-component", 16),
-            ("constant-member", 1),
-            ("datatype-mismatch", 4),
-            ("expression-value", 6),
-            ("instance-member", 30),
-            ("invalid-name", 2),
-            ("namespace-mismatch", 2),
-            ("nested-composite", 27),
-            ("no-root", 2),
-            ("port-attribute", 15),
-            ("stray-node", 3),
-            ("unknown-datatype", 1),
-            ("unknown-key", 54),
-            ("unresolved-reference", 10),
-            ("wrong-shape", 1),
-        ]
-    );
-    // The name prefixes of the re-stamped class.
-    assert_eq!(
-        tally(
-            rows.iter()
-                .filter(|row| row.class == "same-id-restamped")
-                .map(|row| row.detail.as_str())
-        ),
-        [("ex.", 4), ("g36.profile.", 2), ("g36.source.", 31)]
-    );
-    // What the importer read and did not carry, over the 69 documents it accepts.
-    let lists = rows.iter().filter_map(|row| row.lists);
-    let (documents, dropped, normalised) = lists.fold((0, 0, 0), |sum, (dropped, normalised)| {
-        (sum.0 + 1, sum.1 + dropped, sum.2 + normalised)
-    });
-    assert_eq!((documents, dropped, normalised), (69, 397, 1));
-
-    // The 46 fixtures of the G36 catalog (importer note, "Where the corpus stands"): the 31
-    // inside the authoring subset round-trip to the id of the committed fixture re-stamped,
-    // and the other 15 are refused under the fixed precedence.
+    // The one split stated by hand: the 46 fixtures of the G36 catalog (importer note, "Where
+    // the corpus stands"). The 31 inside the authoring subset round-trip to the id of the
+    // committed fixture re-stamped, and the other 15 are refused under the fixed precedence.
     let catalog: Vec<&Row> = rows
         .iter()
         .filter(|row| row.path.starts_with("crates/oce-cxf/tests/fixtures/g36/"))
         // The interface miniature beside them is not a catalog fixture.
         .filter(|row| !row.path.ends_with("/member_list_interface.jsonld"))
         .collect();
-    assert_eq!(catalog.len(), 46);
-    assert_eq!(
-        tally(catalog.iter().map(|row| {
-            if row.class == "refused" {
-                row.detail.as_str()
-            } else {
-                row.class
-            }
-        })),
-        [
-            ("conditional-component", 7),
-            ("expression-value", 1),
-            ("nested-composite", 4),
-            ("port-attribute", 3),
-            ("same-id-restamped", 31),
-        ]
-    );
-    for row in catalog.iter().filter(|row| row.class != "refused") {
-        assert_eq!(row.detail, "g36.source.", "{}", row.path);
+    let (imported, refused): (Vec<&Row>, Vec<&Row>) =
+        catalog.iter().partition(|row| row.class != "refused");
+    assert_eq!((imported.len(), refused.len()), (31, 15));
+    for row in imported {
+        assert_eq!(
+            (row.class, row.detail.as_str()),
+            ("same-id-restamped", "g36.source."),
+            "{}",
+            row.path
+        );
     }
+}
+
+#[test]
+fn the_shapes_issue_683_names_classify_without_a_tracked_fixture() {
+    // No tracked fixture writes either shape, so each is built here and run through the same
+    // classifier: a future fixture that does gets a row, not a panic.
+    let dir = scratch("import_corpus_683");
+    let element =
+        std::fs::read_to_string(crate_dir().join(author_fixture("emit/every_element.cxf.json")))
+            .expect("fixture");
+    // An Integer element of a Real array: `sum3.k = [1.0, -2, 1e-7]`, the `-2` a bare integer.
+    let mut document: Value = serde_json::from_str(&element).expect("JSON");
+    let gains = document["@graph"]
+        .as_array_mut()
+        .expect("a graph")
+        .iter_mut()
+        .find(|node| node["@id"] == "urn:oce:author:every_element.sum3.k")
+        .expect("the array parameter");
+    assert_eq!(gains["S231:value"][1]["@value"], "-2.0");
+    gains["S231:value"][1] = json!(-2);
+    let array = dir.join("array.cxf.json");
+    std::fs::write(&array, serde_json::to_vec(&document).expect("JSON")).expect("write");
+    let row = classify("an Integer element of a Real array", &array, &dir);
+    assert_eq!(
+        (row.class, row.detail.as_str()),
+        ("same-id-real-literals", "1")
+    );
+
+    // An Integer above 2^53 on a Real parameter: the engine loads it, stage 1 refuses it.
+    let large = dir.join("large.cxf.json");
+    std::fs::write(
+        &large,
+        edited(|document| {
+            node(document, ".hys.uLow")["S231:value"] = json!(-9_007_199_254_740_993_i64);
+        }),
+    )
+    .expect("write");
+    let row = classify("an Integer above 2^53 on a Real parameter", &large, &dir);
+    assert_eq!(
+        (row.class, row.detail.as_str()),
+        ("author-refused", "parameter-out-of-range")
+    );
 }

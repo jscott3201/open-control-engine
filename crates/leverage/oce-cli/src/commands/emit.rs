@@ -5,7 +5,10 @@
 //! report on stdout). On success the CXF is stdout, or with `-o FILE` it is written atomically
 //! (`atomic_write`) and the report is stdout, with `output` and `bytes` set only once the write
 //! succeeded. A malformed namespace, an unreadable or unparsable input and a failed write are
-//! errors (exit `2`).
+//! errors (exit `2`), and so is an `-o` that is the input file (`output-is-input`, decided before
+//! anything is read: the same file by `file_identity::same_file`, so another spelling of the
+//! path, a symbolic link to it and, on Unix, a hard link to it), which would replace the authored
+//! sequence with its CXF.
 
 use std::ffi::OsStr;
 use std::path::Path;
@@ -14,7 +17,7 @@ use oce_author::{DOCUMENT_TOO_LARGE, EmitError, EmitOptions, Severity, emit, val
 use serde_json::Value;
 
 use super::validate::record;
-use super::{Outcome, report_for, write_atomically};
+use super::{Outcome, report_for, same_file, write_atomically};
 use crate::input::{self, Parsed};
 use crate::report::Report;
 use crate::{Exit, Source, Streams, codes};
@@ -28,6 +31,17 @@ pub(crate) fn run(
 ) -> Outcome {
     let mut report = report_for("emit", &source.file);
     let output = output.filter(|path| !input::is_stdin(path));
+    if let Some(path) = output
+        && !input::is_stdin(&source.file)
+        && same_file(Path::new(&source.file), Path::new(path))
+    {
+        report.error(
+            codes::OUTPUT_IS_INPUT,
+            "the output is the input file; the sequence would be replaced by its CXF",
+            None,
+        );
+        return refused(report);
+    }
     let Some(loaded) = input::load(source, streams.stdin, &mut report) else {
         return refused(report);
     };
@@ -119,7 +133,7 @@ fn emit_refused(mut report: Report, parsed: &Parsed, error: EmitError) -> Outcom
     Outcome::judged(report)
 }
 
-/// A run that stopped at the read or the parse.
+/// A run that stopped before any stage: at the output guard, the read or the parse.
 fn refused(mut report: Report) -> Outcome {
     report.set("stages", Value::Array(Vec::new()));
     report.verdict("refused");

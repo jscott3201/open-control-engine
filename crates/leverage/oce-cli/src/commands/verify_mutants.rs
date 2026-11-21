@@ -38,6 +38,7 @@ use std::path::{Path, PathBuf};
 
 use oce_verify::{VectorSet, VerifyLimits};
 
+use super::file_identity::{Identity, identity};
 use crate::codes;
 use crate::input::{io_refusal, read_bounded, too_large};
 
@@ -61,31 +62,12 @@ const DUPLICATE_MUTANT: &str = "duplicate-mutant";
 /// `oce-verify`'s word for the mutants' bytes past their bound, which the read reuses.
 const TOO_MANY_MUTANT_BYTES: &str = "too-many-mutant-bytes";
 
-/// What makes two listings one file: the device and inode of the open file.
-#[cfg(unix)]
-type Identity = (u64, u64);
-
-/// What makes two listings one file: the canonical path, the final path Windows gives.
-#[cfg(not(unix))]
-type Identity = PathBuf;
-
 /// The refusal of a path that is not a regular file.
 fn not_a_file() -> (&'static str, String) {
     (
         codes::NOT_A_FILE,
         "the path is not a regular file".to_owned(),
     )
-}
-
-#[cfg(unix)]
-fn identity(_canonical: &Path, metadata: &std::fs::Metadata) -> Identity {
-    use std::os::unix::fs::MetadataExt;
-    (metadata.dev(), metadata.ino())
-}
-
-#[cfg(not(unix))]
-fn identity(canonical: &Path, _metadata: &std::fs::Metadata) -> Identity {
-    canonical.to_path_buf()
 }
 
 /// Read every listed mutant of `set`, resolving each against the directory of `vectors` (module

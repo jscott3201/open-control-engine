@@ -87,28 +87,38 @@ fn form_of(args: &IdArgs) -> Result<IdForm, Refusal> {
             "reading stdin needs --from cxf, --from text or --from wire".to_owned(),
         ));
     }
-    let path = Path::new(&args.file);
+    form_by_name(&args.file).ok_or_else(|| {
+        (
+            codes::UNKNOWN_FORM,
+            "the file name ends in none of .jsonld, .cxf.json (CXF), .oce (text) and .json \
+             (wire); pass --from cxf, text or wire"
+                .to_owned(),
+        )
+    })
+}
+
+/// The form a file's name gives, when it gives one: CXF for a name ending in `.jsonld` or
+/// `.cxf.json` (tested before the `.json` rule), text for `.oce`, wire for any other `.json`.
+/// `import -o` reads an output's name with this same function, so a file it agrees to write is
+/// one this verb reads back in the form written, or declines to guess.
+pub(crate) fn form_by_name(file: &OsStr) -> Option<IdForm> {
+    let path = Path::new(file);
     let name = path
         .file_name()
         .map(OsStr::to_string_lossy)
         .unwrap_or_default();
     if name.ends_with(".jsonld") || name.ends_with(".cxf.json") {
-        return Ok(IdForm::Cxf);
+        return Some(IdForm::Cxf);
     }
     match path.extension().and_then(OsStr::to_str) {
-        Some("oce") => Ok(IdForm::Text),
-        Some("json") => Ok(IdForm::Wire),
-        _ => Err((
-            codes::UNKNOWN_FORM,
-            "the file name ends in none of .jsonld, .cxf.json (CXF), .oce (text) and .json \
-             (wire); pass --from cxf, text or wire"
-                .to_owned(),
-        )),
+        Some("oce") => Some(IdForm::Text),
+        Some("json") => Some(IdForm::Wire),
+        _ => None,
     }
 }
 
-/// The form as the report spells it.
-fn form_name(form: IdForm) -> &'static str {
+/// The form as a report spells it.
+pub(crate) fn form_name(form: IdForm) -> &'static str {
     match form {
         IdForm::Cxf => "cxf",
         IdForm::Text => "text",

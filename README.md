@@ -318,10 +318,12 @@ file emits, alone on stdout: the id a library card is stamped with.
 `oce import <FILE> [-o <OUT>] [--wire]` reads a flat CXF document into canonical text, or the
 wire form, and reports what the importer read and did not carry; a document outside the
 authoring subset is refused under the importer's own code. It validates nothing: `oce validate`
-or `oce emit` judges the result. Over the 257 CXF documents the repository tracks, 69 import;
-import then `emit` keeps the content id wherever `emit` accepts the sequence, except for a name
-prefix on the root (every imported G36 fixture, re-stamped) and an Integer literal on a Real
-parameter (#683).
+or `oce emit` judges the result. Import then `emit` keeps the content id wherever `emit`
+accepts the sequence, except for a name prefix on the root (every imported G36 fixture,
+re-stamped) and, until #683 lands, an Integer literal on a Real parameter; the
+[per-fixture table](crates/leverage/oce-cli/tests/fixtures/import_corpus.tsv) records what
+every CXF fixture under `crates/` does. Neither `import -o` nor `emit -o` will replace its own
+input, and `import -o` refuses a name `oce` would read as another form.
 
 Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457) and checking a
 sequence parameter's unit suffix against the block parameter it feeds (#590); `oce check` (#574)

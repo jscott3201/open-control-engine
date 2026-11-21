@@ -446,7 +446,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     (issue #632).
 ### Leverage
 
-- **`oce import` turns a flat CXF document into the authoring form** (GitHub #514).
+- **`oce import` turns a flat CXF document into the authoring form** (GitHub #688, issue #514).
   `oce_author::import_cxf` had no command-line surface, and the library converts its corpus by
   importing each committed rule. `oce import <FILE> [-o <OUT>] [--wire]` prints the sequence as
   canonical text, or the canonical wire form with `--wire`, exit 0; with `-o` it writes the
@@ -460,48 +460,79 @@ and a gate that accepted any text would restore exactly the false assurance desc
     write succeeded. Never `stages`.
   - **Refusals are exit 2.** An `ImportError` is reported under its own code
     (`oce_author::IMPORT_ERROR_CODES`) with its subject as the error's `at`; the tool matches no
-    kind. `oce vocab` lists all thirty with their meanings as `import_codes` (a new key and a
-    new section of the text listing), and its meanings of exit 0 and exit 2 name the verb. No
-    tool code is added: an over-size input is `input-too-large` (read at 8 MiB,
-    `oce_api::MAX_CXF_BYTES`, from metadata before a byte is read), and `unspellable` now also
-    covers a sequence the output form cannot spell.
+    kind. `oce vocab` lists all thirty-one with their meanings as `import_codes` (a new key and
+    a new section of the text listing), and its meanings of exit 0 and exit 2 name the verb. An
+    over-size input is `input-too-large` (read at 8 MiB, `oce_api::MAX_CXF_BYTES`, from
+    metadata before a byte is read), and `unspellable` now also covers a sequence the output
+    form cannot spell.
   - **A document is written only if `oce` reads it back.** The output form's reader runs over
     what its writer produced, and anything that does not read back equal to the imported
     sequence is `unspellable`, with nothing written. The wire writer is infallible and the CXF
     importer bounds a document only by its size, so without this a 5,000-byte class path would
     be written into a wire file the wire reader refuses.
-  - **The rendering on stderr escapes format and control characters.** An `import` report
-    quotes a document's own strings (a node `@id`, a key), the first document-controlled text
-    to reach `--render`. Every Unicode format or control character in a rendered line, and every
-    line or paragraph separator, is now written as `\u{…}`, for every command; no existing rendering had one, and no transcript
-    moves for it.
-  - **The round trip, over every tracked CXF document.** `tests/import_corpus.rs` runs
-    `oce import`, then `oce emit` and `oce id`, over the 257 `.jsonld` and `.cxf.json` files
-    git tracks under `crates/` and `third_party/`, writes one row each to
-    `tests/fixtures/import_corpus.tsv` and pins the counts: 188 refused under a stable code (19
-    codes occur), and 69 imported. Of those, 17 emit to the original's id; 37 to the id of the
-    original with its root re-stamped (a name prefix such as `g36.source.`, the importer
-    note's decision 14), all 31 importable G36 fixtures among them; 1 to the id of the original
-    with its Integer literal on a Real parameter written as a Real (issue #683, found here); 2
-    load with a warning, so `oce emit` answers no, and what the emitter alone writes has the
-    original's id; and 12 do not load in an engine and have no id to keep. A CXF fixture added
-    anywhere in the repository now fails that test until it is classified.
-  - **Tests.** `tests/import_refusals.rs` earns each of the 26 importer codes a CXF document
+  - **An `-o` name that reads as another form is refused** (owner ruling of 2026-11-21): new
+    code `output-form-mismatch`, exit 2 before anything is read, nothing written. The form is
+    still chosen by `--wire` alone. The name is read by the rule `id` reads a file's name by
+    (`id::form_by_name`, now shared; no new copy of the rule, issue #678): `.oce` is text,
+    `.json` wire, `.jsonld` and `.cxf.json` CXF. So `-o rule.json` needs `--wire`,
+    `--wire -o rule.oce` is refused, a CXF name is refused for either form, and a name that
+    gives no form is accepted. With it, a file `import` writes under a form's name is read by
+    `validate`, `emit`, `fmt` and `id` by name in the form written.
+  - **The round trip, over every CXF fixture tracked under `crates/`.**
+    `tests/import_corpus.rs` runs `oce import`, then `oce emit` and `oce id`, over each
+    `.jsonld` and `.cxf.json` file and writes one row per document to
+    `tests/fixtures/import_corpus.tsv`, a blessed table: a new fixture is classified by one
+    `OCE_BLESS_CLI=1` run (owner ruling of 2026-11-21; `third_party/` is not walked, so a pin
+    advance does not touch the test). At this change, of 212 documents: 143 are refused under
+    a stable code (19 codes occur), and 69 import. Of those, 17 emit to the original's id; 37
+    to the id of the original with its root re-stamped (a name prefix such as `g36.source.`,
+    the importer note's decision 14), all 31 importable G36 fixtures among them; 1 to the id
+    of the original with its Integer literal on a Real parameter written as a Real (issue
+    #683, found here; ruled "normalise at load", after which that class goes); 2 load with a
+    warning, so `oce emit` answers no, and what the emitter alone writes has the original's
+    id; and 12 do not load in an engine and have no id to keep. The importer dropped 397
+    properties and normalised 1 over the 69. The test asserts one split by hand, the G36
+    catalog's (31 import, 15 refused), and fails on an id difference neither known cause
+    explains.
+  - **Tests.** `tests/import_refusals.rs` earns each of the 27 importer codes a CXF document
     can earn, from a file and stdin and in both output forms, and names the 4 no run earns
     (the v0 reader's three, and `too-large`, which the bounded read pre-empts).
     `tests/import_files.rs` covers `-o`, the two forms against each other and against
     `import_cxf`, the read-back refusals, the size bound, a Real's bits (`-0.0`, a subnormal)
-    through both forms and the Integer-literal case. `tests/import_runs.rs` pins 21
-    transcripts: two in-repo fixtures and one refusal per construct outside the authoring
-    subset. Four transcripts move with the verb (`help_oce`, `usage_no_arguments`,
-    `vocab_text`, `vocab_json`).
+    through both forms and the Integer-literal case. `tests/output_guards.rs` holds the name
+    rule and feeds each written file back through `validate`, `fmt --check`, `emit` and `id`
+    by name. `tests/import_runs.rs` pins 21 transcripts (two in-repo fixtures and one refusal
+    per construct outside the authoring subset) and `tests/output_guards.rs` 3. Five existing
+    transcripts move: `help_oce` and `usage_no_arguments` list the command, `vocab_text` and
+    `vocab_json` gain the codes, and `help_emit` names the new `-o` rule.
   - `input::read_named` is the one stdin-or-file bounded read, used by the authored loaders,
-    `id` and `import` (it replaces two inline copies; the form rules of issue #678 are
-    untouched, and `import` adds none).
-  - The CLI README has the verb's contract and the corpus table; the root README, the leverage
-    README, the architecture page, the importer note ("The `oce import` verb") and the
-    authoring note's CLI section name it, and `.agents/project-facts.md` says what moves the
-    corpus table.
+    `id` and `import` (it replaces two inline copies).
+  - The CLI README has the verb's contract; the root README, the leverage README, the
+    architecture page, the importer note ("The `oce import` verb") and the authoring note's
+    CLI section name it, and `.agents/project-facts.md` says how a new fixture is classified.
+- **`oce emit -o` and `oce import -o` refuse to write over their own input** (GitHub #688;
+  owner ruling of 2026-11-21). `oce emit rule.oce -o rule.oce` replaced the authored sequence
+  with its CXF, atomically and without a word. An `-o` that is the input file is now
+  `output-is-input`, exit 2, decided before anything is read, with nothing written. One file
+  is file identity, not spelling: another spelling of the path, a symbolic link to it and, on
+  Unix, a hard link to it (one (device, inode), the rule the mutant reader already used, now
+  `commands/file_identity.rs` for both). On Windows one file is one canonical path, so a hard
+  link is not recognised there. An output that does not exist, a dangling link included, is no
+  file. `tests/output_guards.rs` covers both verbs; `oce vocab` lists the code.
+- **The rendering on stderr no longer writes a document's format, control or separator
+  characters to the terminal** (GitHub #688). `oce validate` and `oce emit` of a wire file
+  quote the file's own strings in a finding (`class-not-found` names the block's `class`), and
+  the wire reader refuses only control characters. So a class holding a right-to-left
+  override (U+202E), a zero-width space (U+200B) or a line separator (U+2028) reached the
+  terminal as it was under `--render`, where it can reorder, hide or split the line a person
+  reads. Every Unicode format (`Cf`) or control (`Cc`) character, and U+2028 and U+2029, in a
+  rendered line is now written as `\u{…}` with at least four upper-case hexadecimal digits
+  (`\u{202E}`), the spelling the engine's messages use, for every command; `import`, which
+  quotes a CXF node's `@id`, is covered by the same step. A backslash is written as it is, so
+  the rendering does not tell U+202E from the characters `\u{202E}` spelled out: the JSON
+  report is the exact form, and it is unchanged. No pinned rendering held such a character,
+  so no transcript moves. `tests/rendering.rs` is the regression test over `validate` and
+  `emit`; `tests/import_refusals.rs` covers a key and an `@id`.
 - **`oce id` prints the canonical content id of a CXF or authoring file** (GitHub #513). The
   id `Engine::content_id` mints (`oce:canon1:`, GitHub #474) had no command-line surface, and
   the library stamps every card with it and compares the stamp with the tool's output.

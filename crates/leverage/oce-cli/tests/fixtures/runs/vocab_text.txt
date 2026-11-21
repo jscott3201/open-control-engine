@@ -102,7 +102,7 @@ wire codes (exit 2):
 
 import codes (import, exit 2):
   too-large                 the document is over the importer's size limit (the tool's bounded read refuses an over-size input first, as input-too-large)
-  not-strict-json           the bytes are not UTF-8 or not JSON, an object repeats a key, or an integer is outside the 64-bit signed range
+  not-strict-json           the bytes are not UTF-8 or not JSON, nesting is deeper than 128 levels, an object repeats a key, or an integer is outside the 64-bit signed range
   limit-exceeded            v0 graph JSON: nesting, a list or a string over a read bound
   unknown-key               a property, top-level key or @context term the flat CXF subset does not define
   namespace-mismatch        the @context binds the S231 vocabulary in a namespace the engine does not read
@@ -122,6 +122,7 @@ import codes (import, exit 2):
   expression-value          a value that is an expression, or a name that is no sequence parameter (outside the subset)
   port-attribute            unit, quantity, displayUnit, min, max or nominal on a block port (not authorable)
   connector-attribute       nominal or unbounded on a boundary (not carried)
+  two-spellings             one property written under two spellings on one node (S231:unit beside qudt:hasUnit)
   driving-sink              a boundary output or a block input drives a connection
   class-outside-obc         a block class outside Buildings.Controls.OBC
   datatype-mismatch         a value, bound or connector that disagrees with its declared type
@@ -155,6 +156,8 @@ error codes (exit 2):
   namespace-needs-authored  id --namespace was given beside a CXF document; only a text or wire file is emitted
   not-loadable              id: the engine refused the document, or the sequence has error findings; it has no content id
   no-content-id             the facade could not name a model it loaded
+  output-form-mismatch      import -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)
+  output-is-input           emit -o or import -o names the input file itself, by path, link or (on Unix) hard link; nothing is written
 
 vector file codes (verify, exit 2):
   not-utf8                   the vector file is not UTF-8

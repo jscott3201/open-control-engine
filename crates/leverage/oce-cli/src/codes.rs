@@ -55,6 +55,11 @@ pub(crate) const NOT_LOADABLE: &str = "not-loadable";
 /// The facade could not name a model it loaded (never expected).
 pub(crate) const NO_CONTENT_ID: &str = "no-content-id";
 
+/// `import -o` names a file `oce` would read in another form than the one written.
+pub(crate) const OUTPUT_FORM_MISMATCH: &str = "output-form-mismatch";
+/// `emit -o` or `import -o` names the input file itself.
+pub(crate) const OUTPUT_IS_INPUT: &str = "output-is-input";
+
 /// The tool's own error codes and their meanings, as `vocab` prints them.
 pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     (MISSING_FROM, "stdin (-) was given without --from"),
@@ -121,6 +126,14 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
         "id: the engine refused the document, or the sequence has error findings; it has no content id",
     ),
     (NO_CONTENT_ID, "the facade could not name a model it loaded"),
+    (
+        OUTPUT_FORM_MISMATCH,
+        "import -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)",
+    ),
+    (
+        OUTPUT_IS_INPUT,
+        "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link; nothing is written",
+    ),
 ];
 
 /// The wire form's refusal codes (`oce_author::WIRE_CODES`, in order) and their meanings. The
@@ -181,7 +194,7 @@ pub(crate) const IMPORT_MEANINGS: &[(&str, &str)] = &[
     ),
     (
         "not-strict-json",
-        "the bytes are not UTF-8 or not JSON, an object repeats a key, or an integer is outside the 64-bit signed range",
+        "the bytes are not UTF-8 or not JSON, nesting is deeper than 128 levels, an object repeats a key, or an integer is outside the 64-bit signed range",
     ),
     (
         "limit-exceeded",
@@ -246,6 +259,10 @@ pub(crate) const IMPORT_MEANINGS: &[(&str, &str)] = &[
     (
         "connector-attribute",
         "nominal or unbounded on a boundary (not carried)",
+    ),
+    (
+        "two-spellings",
+        "one property written under two spellings on one node (S231:unit beside qudt:hasUnit)",
     ),
     (
         "driving-sink",

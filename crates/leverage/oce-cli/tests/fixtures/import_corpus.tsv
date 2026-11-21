@@ -1,5 +1,6 @@
-# Every tracked CXF document through `oce import`, then `oce emit` and `oce id`
-# (tests/import_corpus.rs holds the classes). Regenerate with OCE_BLESS_CLI=1.
+# Every tracked CXF fixture under crates/ through `oce import`, then `oce emit` and
+# `oce id` (tests/import_corpus.rs holds the classes). A new fixture gets its row from
+# one run with OCE_BLESS_CLI=1; read the row before committing it.
 # class<TAB>detail<TAB>dropped<TAB>normalised<TAB>path
 same-id	-	0	0	crates/leverage/oce-author/tests/fixtures/emit/cooling_only_system_requests.cxf.json
 same-id	-	0	0	crates/leverage/oce-author/tests/fixtures/emit/econ_enable.cxf.json
@@ -213,48 +214,3 @@ same-id-real-literals	1	0	0	crates/oce-cxf/tests/fixtures/pass_through_miniature
 refused	namespace-mismatch	-	-	crates/oce-cxf/tests/fixtures/previous_layout/minimal_loop.export.cxf.json
 refused	no-root	-	-	crates/oce-cxf/tests/fixtures/profile/parameter-gated-connector.jsonld
 same-id-restamped	g36.profile.	0	0	crates/oce-cxf/tests/fixtures/profile/small-composite.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/SeparateWithAFMS.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/SeparateWithDP.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/AHU.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/SumZone.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFanGroup.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Controller.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Alarms.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Dampers.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/SystemRequests.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Overrides.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ControlLoops.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/ControlEconomizer.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/CoolingCoil.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/EnergyStandard.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/FreezeStat.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/HeatingCoil.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/OutdoorAirSection.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/PressureControl.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/Title24ClimateZone.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/VentilationStandard.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE62_1/Setpoints.jsonld
-refused	unknown-key	-	-	third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/Title24/Setpoints.jsonld

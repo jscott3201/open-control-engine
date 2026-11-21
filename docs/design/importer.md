@@ -824,12 +824,20 @@ verb adds to this note, and the choices the issue left open:
   `-o` stdout is the document.
 - **`derived_from` is not settable from the command line.** `ImportOptions::derived_from` stays
   a library option (decision 15); the written sequence says `derived_from none`.
-- **The round trip, measured.** Over the 257 CXF documents the repository tracks
-  (`crates/leverage/oce-cli/tests/import_corpus.rs`), 69 import. Import, then `oce emit`, keeps
-  the canonical content id wherever `emit` accepts the sequence, except in two cases. The first
-  is decision 14's re-stamp: a name prefix on the root (`g36.source.`), 37 documents, each equal
-  to the original with its root re-stamped. The second this note did not know: an Integer
-  literal on a Real parameter, which the importer keeps as written, the emitter writes as a
-  Real, and the engine's id tells apart (issue #683). One tracked document has it,
-  `crates/oce-cxf/tests/fixtures/pass_through_miniature.jsonld`; no G36 fixture and neither
-  in-repo library rule does.
+- **The output guards** (owner rulings of 2026-11-21). The form written is chosen by `--wire`
+  alone, but an `-o` name `oce` would read as another form is refused (`output-form-mismatch`),
+  so that a file the verb writes is one the other verbs read by name in the form written. And
+  `-o` naming the input file itself, by path, link or (on Unix) hard link, is refused
+  (`output-is-input`), for `oce emit` as well.
+- **The round trip, measured.** `crates/leverage/oce-cli/tests/import_corpus.rs` runs import,
+  then `oce emit` and `oce id`, over every CXF fixture tracked under `crates/` and writes one
+  row each to `crates/leverage/oce-cli/tests/fixtures/import_corpus.tsv`, which is the record;
+  no count is restated here. Import, then `oce emit`, keeps the canonical content id wherever
+  `emit` accepts the sequence, except in two cases. The first is decision 14's re-stamp: a
+  name prefix on the root (`g36.source.`), each such document equal to the original with its
+  root re-stamped. The second this note did not know, and it is a gap, not a design: an
+  Integer literal on a Real parameter, which the importer keeps as written, the emitter writes
+  as a Real, and the engine's id tells apart (issue #683, ruled "normalise at load" on
+  2026-11-21 and built as its own core PR; when it lands the case is gone). One tracked
+  document has it, `crates/oce-cxf/tests/fixtures/pass_through_miniature.jsonld`; no G36
+  fixture and neither in-repo library rule does.
