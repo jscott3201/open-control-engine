@@ -44,6 +44,18 @@ fn a_closed_stdout_is_an_error_whatever_the_answer() {
             "id",
             "../oce-author/tests/fixtures/emit/econ_enable.cxf.json",
         ][..],
+        &["oce", "import", "missing.cxf.json"][..],
+        &[
+            "oce",
+            "import",
+            "../oce-author/tests/fixtures/emit/econ_enable.cxf.json",
+        ][..],
+        &[
+            "oce",
+            "import",
+            "../oce-author/tests/fixtures/emit/econ_enable.cxf.json",
+            "--wire",
+        ][..],
     ] {
         let (exit, _) = run_with(args, &mut Closed);
         assert_eq!(exit, Exit::Error, "{args:?}");

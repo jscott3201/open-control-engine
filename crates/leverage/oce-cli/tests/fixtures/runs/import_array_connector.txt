@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "import",
+  "errors": [
+    {
+      "at": "http://example.org#M.c2.u",
+      "code": "array-connector",
+      "detail": "an array connector is outside the subset",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "../../oce-cxf/tests/fixtures/composite_contract/rejected/array_connector.jsonld",
+  "ok": false,
+  "output_form": "text",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -2,10 +2,11 @@
 //! `oce-cli`: the `oce` command-line tool (authoring note `docs/design/authoring-layer.md`, "CLI",
 //! decisions 9 and 20; GitHub issue #489; vocabulary note `docs/design/vocabulary.md`, decision
 //! 12, GitHub issue #500; vectors note `docs/design/vectors.md`, "CLI", decision 34, GitHub issue
-//! #522; content-id note `docs/design/content-id.md`, GitHub issue #513).
+//! #522; content-id note `docs/design/content-id.md`, GitHub issue #513; importer note
+//! `docs/design/importer.md`, GitHub issue #514).
 //!
 //! The binary (`src/main.rs`) is a thin shell over [`run`], which parses the arguments with `clap`
-//! and dispatches to one of seven commands over `oce-author`, `oce-vocab`, `oce-verify` and the
+//! and dispatches to one of eight commands over `oce-author`, `oce-vocab`, `oce-verify` and the
 //! facade:
 //!
 //! - `emit`: an authored sequence (text or wire) to flat CXF, after both validation stages;
@@ -16,17 +17,20 @@
 //! - `vocab`: the text-form vocabulary, the unit scale factors and every code the tool can
 //!   report;
 //! - `verify`: a vector set replayed against a subject, the receipt on stdout;
-//! - `id`: the canonical content id of a CXF document or an authored sequence, alone on stdout.
+//! - `id`: the canonical content id of a CXF document or an authored sequence, alone on stdout;
+//! - `import`: a flat CXF document into the authoring form, canonical text or wire.
 //!
 //! **Exit codes** follow the one `oce` rule: `0` yes (clean, every scenario passed), `1` no (an
 //! error finding, a non-canonical file, a class whose ports do not resolve, a failed or `no_data`
 //! verdict), `2` error (a usage error, input that cannot be read or parsed, an over-size input, an
-//! I/O failure, a run that reached no verdict, an input that has no content id). **Output** is deterministic: stdout carries
-//! exactly one document — the command's product (CXF, canonical text, a catalog listing, a
-//! receipt, a content id) or its JSON report (`report.rs`, documented in the crate README) — with sorted keys, LF
+//! I/O failure, a run that reached no verdict, an input that has no content id, a document the
+//! importer refuses). **Output** is deterministic: stdout carries
+//! exactly one document — the command's product (CXF, canonical text, a wire document, a catalog
+//! listing, a receipt, a content id) or its JSON report (`report.rs`, documented in the crate README) — with sorted keys, LF
 //! line endings and no timestamps; a human-readable rendering goes to stderr only when stderr is a
-//! terminal or `--render always` asks for it. Nothing here panics on hostile input, and no path
-//! the tool prints is one it did not receive as an argument.
+//! terminal or `--render always` asks for it, with every format and control character written as
+//! an escape. Nothing here panics on hostile input, and no path the tool prints is one it did not
+//! receive as an argument.
 //!
 //! The `pub` items ([`Exit`], [`Streams`], [`run`], [`REPORT_SCHEMA`]) are exposed for the crate's
 //! own binary and integration tests; they are not a supported library API.
@@ -182,6 +186,21 @@ pub(crate) struct IdArgs {
     pub(crate) json: bool,
 }
 
+/// What `import` reads and what it writes.
+#[derive(Debug, Args)]
+pub(crate) struct ImportArgs {
+    /// The flat CXF document, or `-` for stdin.
+    pub(crate) file: OsString,
+    /// Write the sequence here (atomically) and print the report on stdout; `-` is stdout. The
+    /// name must not read as another form (.oce is text, .json is wire, .jsonld and .cxf.json
+    /// are CXF) and must not be the input file.
+    #[arg(short = 'o', long = "output")]
+    pub(crate) output: Option<OsString>,
+    /// Write the wire form (strict JSON) instead of the text form.
+    #[arg(long)]
+    pub(crate) wire: bool,
+}
+
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Validate a sequence, then write it as flat CXF.
@@ -194,7 +213,8 @@ enum Command {
         /// The instance namespace every IRI starts with; must end in `#`, `/` or `:`.
         #[arg(long)]
         namespace: Option<String>,
-        /// Write the CXF here (atomically) and print the report on stdout; `-` is stdout.
+        /// Write the CXF here (atomically) and print the report on stdout; `-` is stdout. It
+        /// must not be the input file.
         #[arg(short = 'o', long = "output")]
         output: Option<OsString>,
     },
@@ -252,6 +272,13 @@ enum Command {
     /// first, as emit does. An input that cannot be read, parsed or loaded has no id: exit 2
     /// with the JSON report.
     Id(IdArgs),
+    /// Read a flat CXF document into the authoring form.
+    ///
+    /// Stdout is the sequence as canonical text (the wire form with --wire), exit 0. With -o it
+    /// is written to a file and stdout is the JSON report, which lists what the importer read
+    /// and did not carry. A document the importer refuses is exit 2 with the report. The
+    /// sequence is not validated: run validate or emit on the result.
+    Import(ImportArgs),
 }
 
 /// The streams one run reads and writes, and whether stderr is a terminal.
@@ -317,6 +344,7 @@ where
         Command::Vocab { json } => commands::vocab::run(json),
         Command::Verify(args) => commands::verify::run(&args),
         Command::Id(args) => commands::id::run(&args, streams),
+        Command::Import(args) => commands::import::run(&args, streams),
     };
     commands::finish(outcome, render, streams)
 }

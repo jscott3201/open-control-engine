@@ -441,6 +441,24 @@ or anything that moves an `oce-verify` golden receipt, moves them too. `tests/re
 compares the binary's stdout with `oce-verify`'s golden receipts in place, so it fails until those
 are re-blessed in `oce-verify`.
 
+Since issue #514 a new CXF fixture in any crate moves this crate too. `tests/import_corpus.rs`
+runs `oce import`, then `oce emit` and `oce id`, over every `.jsonld` and `.cxf.json` file git
+tracks under `crates/` and writes one row per document (its class, the class's detail, the
+importer's dropped and normalised counts, the path) to `tests/fixtures/import_corpus.tsv`. So
+adding, removing or renaming a tracked CXF fixture in a crate fails that test until the table is
+re-blessed: `git add` the fixture (the corpus is `git ls-files`), run
+`OCE_BLESS_CLI=1 cargo nextest run -p oce-cli --test import_corpus`, run it again without the
+switch, read the new row and say in the PR what class the fixture landed in. Nothing else is
+edited by hand: the test counts only the G36 catalog's split (31 import, 15 refused), which moves
+only when the importer's subset does. `third_party/` is not walked, so a pin advance does not
+touch this test. The run fails, and a bless does not help, when a round trip's content id
+differs for a reason other than the two the test knows (the root's name prefix, and issue #683's
+Integer literal on a Real parameter): that is a finding to report, not a row. A change to what
+the importer accepts, to the emitter or to the content id moves rows the same way; #683 itself
+will turn the `same-id-real-literals` rows into `same-id`. The `import_*` transcripts read G36
+corpus fixtures and `oce-cxf` contract fixtures in place, so an edit to one of those moves its
+transcript.
+
 ## The `oce-vocab` data files move with catalog names and the vendored CXF-Core
 
 `crates/leverage/oce-vocab/data/generated.json` is regenerated and compared byte for byte by the

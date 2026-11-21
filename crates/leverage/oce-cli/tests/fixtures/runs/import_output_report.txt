@@ -1,0 +1,74 @@
+exit: 0
+--- stdout
+{
+  "bytes": 2751,
+  "command": "import",
+  "dropped": [
+    {
+      "property": "root-type",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common",
+      "value": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Limits.Common"
+    },
+    {
+      "property": "unit",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.Ti",
+      "value": "s"
+    },
+    {
+      "property": "quantity",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.Ti",
+      "value": "Time"
+    },
+    {
+      "property": "unit",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.Td",
+      "value": "s"
+    },
+    {
+      "property": "quantity",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.Td",
+      "value": "Time"
+    },
+    {
+      "property": "unit",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.uRetDam_min",
+      "value": "1"
+    },
+    {
+      "property": "unit",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPhy_max",
+      "value": "1"
+    },
+    {
+      "property": "unit",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPhy_min",
+      "value": "1"
+    },
+    {
+      "property": "unit",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPhy_max",
+      "value": "1"
+    },
+    {
+      "property": "unit",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPhy_min",
+      "value": "1"
+    }
+  ],
+  "errors": [],
+  "findings": [],
+  "input": "common.cxf.jsonld",
+  "normalised": [
+    {
+      "data_type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes",
+      "subject": "http://example.org#g36.source.multizone_vav_economizer_limits_common.uOpeMod",
+      "to": "Integer"
+    }
+  ],
+  "ok": true,
+  "output": "common.oce",
+  "output_form": "text",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

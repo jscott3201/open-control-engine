@@ -1,0 +1,79 @@
+exit: 0
+--- stdout
+sequence multizone_vav_economizer_limits_common
+derived_from none
+param controllerType : SimpleController = SimpleController.PI
+param k : Real = 0.05
+param Ti : Real = 120.0
+param Td : Real = 0.1
+param uRetDam_min : Real = 0.5
+param retDamPhy_max : Real = 1.0
+param retDamPhy_min : Real = 0.0
+param outDamPhy_max : Real = 1.0
+param outDamPhy_min : Real = 0.0
+in VOut_flow_normalized : Real @unit 1
+in VOutMinSet_flow_normalized : Real @unit 1
+in uOpeMod : Integer
+in u1SupFan : Boolean
+out yOutDam_min : Real @unit 1 @min 0.0 @max 1.0
+out yOutDam_max : Real @unit 1 @min 0.0 @max 1.0
+out yRetDam_min : Real @unit 1 @min 0.0 @max 1.0
+out yRetDam_max : Real @unit 1 @min 0.0 @max 1.0
+out yRetDamPhy_max : Real @unit 1 @min 0.0 @max 1.0
+out yEnaMinOut : Boolean
+block damLimCon = CDL.Reals.PIDWithReset(
+  controllerType = controllerType,
+  k = k,
+  Ti = Ti,
+  Td = Td,
+  yMax = 1.0,
+  yMin = 0.0,
+  y_reset = 0.0
+)
+block outDamPhyPosMinSig = CDL.Reals.Sources.Constant(k = outDamPhy_min)
+block outDamPhyPosMaxSig = CDL.Reals.Sources.Constant(k = outDamPhy_max)
+block retDamPhyPosMinSig = CDL.Reals.Sources.Constant(k = retDamPhy_min)
+block retDamPhyPosMaxSig = CDL.Reals.Sources.Constant(k = retDamPhy_max)
+block minSigLim = CDL.Reals.Sources.Constant(k = 0.0)
+block maxSigLim = CDL.Reals.Sources.Constant(k = 1.0)
+block sigFraForOutDam = CDL.Reals.Sources.Constant(k = uRetDam_min)
+block minOutDam = CDL.Reals.Line(limitBelow = true, limitAbove = true)
+block minRetDam = CDL.Reals.Line(limitBelow = true, limitAbove = true)
+block retDamPosMinSwitch = CDL.Reals.Switch
+block outDamPosMaxSwitch = CDL.Reals.Switch
+block not1 = CDL.Logical.Not
+block conInt1 = CDL.Integers.Sources.Constant(k = OperationModes.occupied)
+block intEqu = CDL.Integers.Equal
+block and3 = CDL.Logical.And
+VOut_flow_normalized -> damLimCon.u_m
+VOutMinSet_flow_normalized -> damLimCon.u_s
+uOpeMod -> intEqu.u1
+u1SupFan -> damLimCon.trigger
+u1SupFan -> and3.u1
+damLimCon.y -> minRetDam.u
+damLimCon.y -> minOutDam.u
+outDamPhyPosMinSig.y -> outDamPosMaxSwitch.u1
+outDamPhyPosMinSig.y -> minOutDam.f1
+outDamPhyPosMaxSig.y -> outDamPosMaxSwitch.u3
+retDamPhyPosMinSig.y -> retDamPosMinSwitch.u3
+retDamPhyPosMaxSig.y -> retDamPosMinSwitch.u1
+retDamPhyPosMaxSig.y -> minRetDam.f1
+retDamPhyPosMaxSig.y -> yRetDamPhy_max
+minSigLim.y -> minOutDam.x1
+maxSigLim.y -> minRetDam.x2
+sigFraForOutDam.y -> minRetDam.x1
+sigFraForOutDam.y -> minOutDam.x2
+minOutDam.y -> yOutDam_min
+minRetDam.y -> yRetDam_max
+retDamPosMinSwitch.y -> minRetDam.f2
+retDamPosMinSwitch.y -> yRetDam_min
+outDamPosMaxSwitch.y -> minOutDam.f2
+outDamPosMaxSwitch.y -> yOutDam_max
+not1.y -> retDamPosMinSwitch.u2
+not1.y -> outDamPosMaxSwitch.u2
+conInt1.y -> intEqu.u2
+intEqu.y -> and3.u2
+and3.y -> not1.u
+and3.y -> yEnaMinOut
+--- stderr
+oce import ../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_limits_common.jsonld: 2751 bytes of text on stdout; 10 dropped, 1 normalised

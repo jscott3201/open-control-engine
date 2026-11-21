@@ -1,0 +1,10 @@
+exit: 2
+--- stdout
+--- stderr
+error: unexpected argument '--from' found
+
+  tip: to pass '--from' as a value, use '-- --from'
+
+Usage: oce import <FILE>
+
+For more information, try '--help'.

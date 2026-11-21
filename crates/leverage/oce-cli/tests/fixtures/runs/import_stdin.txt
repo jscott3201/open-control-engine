@@ -1,0 +1,18 @@
+exit: 0
+--- stdout
+sequence ahu_fc_050
+derived_from none
+in htg_vlv_cmd : Real
+in clg_vlv_cmd : Real
+out yFault : Boolean
+block htgThr = CDL.Reals.GreaterThreshold(t = 5.0)
+block clgThr = CDL.Reals.GreaterThreshold(t = 5.0)
+block bothOpen = CDL.Logical.And
+block persist = CDL.Logical.TrueDelay(delayTime = 900.0, delayOnInit = true)
+htgThr.y -> bothOpen.u1
+clgThr.y -> bothOpen.u2
+bothOpen.y -> persist.u
+persist.y -> yFault
+htg_vlv_cmd -> htgThr.u
+clg_vlv_cmd -> clgThr.u
+--- stderr

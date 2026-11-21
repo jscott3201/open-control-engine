@@ -1,0 +1,115 @@
+exit: 0
+--- stdout
+{
+  "sequence": "ahu_fc_050",
+  "derived_from": "",
+  "params": [],
+  "inputs": [
+    {
+      "name": "htg_vlv_cmd",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "min": [],
+      "max": [],
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    },
+    {
+      "name": "clg_vlv_cmd",
+      "type": "Real",
+      "quantity": "",
+      "display_unit": "",
+      "min": [],
+      "max": [],
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "name": "yFault",
+      "type": "Boolean",
+      "quantity": "",
+      "display_unit": "",
+      "min": [],
+      "max": [],
+      "semantic": {
+        "name": "",
+        "label": "",
+        "unit": "",
+        "brick": "",
+        "s223": "",
+        "qudt": "",
+        "haystack": [],
+        "provisional": false
+      }
+    }
+  ],
+  "blocks": [
+    {
+      "name": "htgThr",
+      "class": "CDL.Reals.GreaterThreshold",
+      "params": [
+        {
+          "name": "t",
+          "value": 5.0
+        }
+      ]
+    },
+    {
+      "name": "clgThr",
+      "class": "CDL.Reals.GreaterThreshold",
+      "params": [
+        {
+          "name": "t",
+          "value": 5.0
+        }
+      ]
+    },
+    {
+      "name": "bothOpen",
+      "class": "CDL.Logical.And",
+      "params": []
+    },
+    {
+      "name": "persist",
+      "class": "CDL.Logical.TrueDelay",
+      "params": [
+        {
+          "name": "delayTime",
+          "value": 900.0
+        },
+        {
+          "name": "delayOnInit",
+          "value": true
+        }
+      ]
+    }
+  ],
+  "connections": [
+    "htgThr.y -> bothOpen.u1",
+    "clgThr.y -> bothOpen.u2",
+    "bothOpen.y -> persist.u",
+    "persist.y -> yFault",
+    "htg_vlv_cmd -> htgThr.u",
+    "clg_vlv_cmd -> clgThr.u"
+  ]
+}
+--- stderr

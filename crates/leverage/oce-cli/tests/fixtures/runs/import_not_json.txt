@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "import",
+  "errors": [
+    {
+      "at": "document",
+      "code": "not-strict-json",
+      "detail": "not strict JSON: expected value at line 1 column 1",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "tests/fixtures/inputs/unused_input.oce",
+  "ok": false,
+  "output_form": "text",
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr
