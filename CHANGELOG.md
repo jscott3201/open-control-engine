@@ -870,8 +870,9 @@ so far, and no tag is cut by the bump.
     documents: refusal, peak, allocations a block), `crates/oce-validate/src/tests/`
     `diagnostic_budget.rs` (both edges of the budget, warnings, errors, sorted order, one finding
     larger than the budget, a block's parameters), `source_timetable_absent_cells.rs` and
-    `routing_defaulted_selectors.rs`, and `rules/params_absent_tests.rs` (counting against
-    walking every range of a small shape).
+    `routing_defaulted_selectors.rs`, `rules/params_absent_tests.rs` (counting against walking
+    every range of a small shape) and one case in `rules/params_arrays_tests.rs` (a selector
+    range that is empty).
 
 ### Leverage
 

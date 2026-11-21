@@ -318,3 +318,45 @@ fn every_element_past_the_length_is_refused_once_and_those_inside_are_still_judg
     expected.sort();
     assert_eq!(diagnostics(class, &params), expected);
 }
+
+#[test]
+fn an_empty_selector_range_counts_each_omitted_element_once_whatever_its_lower_bound() {
+    // No registered class has a lower bound above 1; a rule with one, and an upper bound below
+    // it, puts every omitted element outside the range, each counted once (issue #726).
+    let blk = oce_model::BlockInstance {
+        id: oce_model::BlockId(0),
+        class_iri: Arc::from("X"),
+        inputs: Vec::new(),
+        outputs: Vec::new(),
+        params: ParamTable {
+            values: vec![
+                (Arc::from("n"), Value::Integer(5)),
+                (Arc::from("hi"), Value::Integer(1)),
+            ],
+        },
+        decl_order: 0,
+        instance_iri: None,
+    };
+    let mut diags = oce_diag::DiagnosticList::new();
+    super::check_integer_array_elements_in_range(
+        &blk,
+        &mut diags,
+        super::IntegerArrayRangeRule {
+            base: "s",
+            len: "n",
+            len_default: 0,
+            min: 3,
+            max: "hi",
+            max_default: 0,
+            default_to_index: true,
+        },
+    );
+    let messages: Vec<&str> = diags.iter().map(|d| d.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        [
+            "parameter `s` on block `X` omits 5 elements whose default, the element's index, is \
+          outside range 3..=1: s_1, s_2, s_3, s_4 and 1 more"
+        ]
+    );
+}

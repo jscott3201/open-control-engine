@@ -15,11 +15,12 @@
 //!   the count of absent cells and the first four;
 //! - **a peak** that does not grow with the block count: what one block's constructor probe
 //!   holds (8 MiB for the declared shape, GitHub #722) plus a multiple of the document;
-//! - **allocations** that grow by a fixed number per block, never by the declared shape.
+//! - **allocations** that grow by a fixed number per block, never by the declared shape;
+//! - **requested bytes** that grow by the two constructor probes a block and a little more.
 //!
 //! What this cannot see: work that allocates nothing. The constructor probes of the resolve and
-//! validation passes each still zero-fill 8 MiB per block and drop it (issue #722); that is
-//! requested bytes in total, which this file does not bound.
+//! validation passes each still zero-fill 8 MiB per block and drop it (issue #722), so requested
+//! bytes in total grow by 16 MiB a block; the ceiling here is that and no more.
 
 use allocation_counter::{AllocationInfo, measure};
 use oce_api::{Engine, OcError};
@@ -131,7 +132,7 @@ fn a_sparse_table_is_refused_with_one_finding_per_block_naming_the_count_and_fir
 }
 
 #[test]
-fn the_peak_does_not_grow_with_the_block_count_and_allocations_grow_by_a_fixed_number_a_block() {
+fn the_peak_is_flat_and_allocations_and_bytes_grow_by_a_fixed_amount_a_block() {
     let measured: Vec<(usize, u64, AllocationInfo)> = BLOCKS
         .iter()
         .map(|&blocks| {
@@ -158,5 +159,13 @@ fn the_peak_does_not_grow_with_the_block_count_and_allocations_grow_by_a_fixed_n
     assert!(
         per_block <= 400,
         "{per_block} allocations a block, between {few} and {many} blocks"
+    );
+    let bytes_per_block = (many_info.bytes_total - few_info.bytes_total) / (many - few) as u64;
+    // Measured: 16,806,449 bytes a block, the two constructor probes' 2 x 8,388,608 (issue
+    // #722) and 29,233 more [debug, macOS arm64]. Nothing of the validator's is sized by the
+    // shape: a vector of the table's 524,288 times is 4 MiB a block more.
+    assert!(
+        bytes_per_block <= 2 * PROBE_BYTES + 256 * 1024,
+        "{bytes_per_block} requested bytes a block, between {few} and {many} blocks"
     );
 }
