@@ -4,10 +4,11 @@ The `oce` command-line tool (M2; design note [`docs/design/authoring-layer.md`](
 "CLI", decisions 9 and 20; issue #489): `emit`, `validate`, `fmt`, `catalog` and `vocab` over
 [`oce-author`](../oce-author/README.md), [`oce-vocab`](../oce-vocab/README.md) and the facade, and
 (M3; [vectors note](../../../docs/design/vectors.md), "CLI", decision 34; issue #522) `verify`
-over [`oce-verify`](../oce-verify/README.md). A leverage crate and the first binary above the
+over [`oce-verify`](../oce-verify/README.md) and (M3; [content-id note](../../../docs/design/content-id.md),
+"Mapping table for the library re-stamp"; issue #513) `id` over the facade. A leverage crate and the first binary above the
 facade (the engine crates ship none); it depends on `oce-api` and the leverage crates
 `oce-author`, `oce-vocab` and `oce-verify` only, opens no listener, and every engine it loads is a
-throwaway of the validator's or the verifier's own. Package `oce-cli`, binary `oce`,
+throwaway: the validator's, the verifier's, or the one `id` loads to name a document. Package `oce-cli`, binary `oce`,
 `publish = false`. Arguments are parsed with `clap` (derive, no colour).
 
 ```text
@@ -19,6 +20,8 @@ oce vocab [--json]                               keywords, tags, units, scale fa
 oce verify <VECTORS> --subject <FILE> [--subject-form cxf|text|wire] [--out <DIR>]
            [--require-mutants-caught] [--deny-warnings] [--timings]
                                                  a vector set replayed; the receipt on stdout
+oce id <FILE> [--from cxf|text|wire] [--namespace <NS>] [--json]
+                                                 the canonical content id, alone on stdout
 ```
 
 `catalog` answers "what does this block take": the engine's facts (parameters, resolved ports)
@@ -31,8 +34,9 @@ factors and every code the tool reports.
 overrides the extension and is **required** for stdin. Every command takes `--render
 auto|always|never` (default `auto`: a human-readable rendering of the report on stderr only when
 **stderr** is a terminal, whatever stdout is; stdout is the same bytes whatever `--render` says),
-`--help`, and `--version` (the workspace version). `--json` exists only on `catalog` and `vocab`,
-the two commands whose default stdout is text; every other command's report is already JSON. A
+`--help`, and `--version` (the workspace version). `--json` exists only on `catalog`, `vocab` and
+`id`, the three commands whose default stdout is text; every other command's report is already
+JSON. `id` reads a third form, CXF, and has its own form rule ([below](#oce-id)). A
 failing `catalog` (an unknown class, a refused table) prints the JSON report on stdout even
 without `--json`.
 
@@ -124,13 +128,53 @@ note](../../../docs/design/vectors.md), "CLI"; the owner's rulings in "Part 4's 
   golden receipts. It runs in the leverage lane on every PR. This is the M3 "In-repo rules
   replay" evidence.
 
+## `oce id`
+
+`oce id <FILE>` prints the canonical content id of one input (`oce_api::Engine::content_id`:
+`oce:canon1:` and 64 lowercase hex digits) and one line feed, and nothing else
+([content-id note](../../../docs/design/content-id.md); issue #513). It is the id a library card
+is stamped with, so a gate can compare a stamp with this output byte for byte.
+
+```sh
+oce id rule.cxf.jsonld            # oce:canon1:fadd…2d7b
+oce id econ_enable.oce            # the id of the CXF `oce emit econ_enable.oce` writes
+oce emit econ_enable.oce | oce id - --from cxf   # the same line
+oce id rule.cxf.jsonld --json     # the report, with content_id
+```
+
+- **The form** is `--from cxf|text|wire` when given, and `--from` is required for stdin (`-`,
+  `missing-from`). Otherwise it is read from the name as `verify` reads a subject's: CXF for a
+  name ending in `.jsonld` or `.cxf.json` (tested before the `.json` rule), text for `.oce`, wire
+  for any other `.json`; else `unknown-form`. A CXF document named `rule.json` is therefore read
+  as wire and refused by the wire reader; pass `--from cxf`.
+- **A CXF document** goes to a fresh engine untouched. One the engine refuses is `not-loadable`,
+  with the engine's codes under `diagnostic_codes` and `at` `"input"`. A document that loads with
+  warnings has an id: warnings are not in the output.
+- **A text or wire file** is emitted first, exactly as `oce emit` would: the parse, the emitter,
+  then both validation stages. A file `oce emit` would refuse has no id: `not-loadable` (exit
+  `2`, not `emit`'s `1`), with the findings and `stages` in the report, a document too large for
+  an engine included (`document-too-large`). So `oce id FILE` is always the id of what
+  `oce emit FILE` writes. `tests/id_files.rs` holds the two verbs to each other over every
+  tracked authored fixture.
+- **`--namespace`** follows `emit`'s rule (a malformed one is `invalid-namespace`). A namespace
+  never moves the id, because the id leaves the instance namespace out; one whose IRIs the
+  engine refuses (`#` alone, which makes every IRI relative) leaves the document with none:
+  `not-loadable`, with the engine's codes. Beside a CXF document the flag is
+  `namespace-needs-authored`: a CXF document is never rewritten.
+- **Reads** are bounded by the form: a CXF document at 8 MiB (`oce_api::MAX_CXF_BYTES`), a text
+  or wire file at 4 MiB, a file's size from its metadata before a byte is read, stdin one byte
+  past the limit.
+- **Stdout and exit.** Exit `0` with the id line (the report under `--json`, with `content_id`
+  and `form`); exit `2` with the report for every refusal. `id` never exits `1`: it answers no
+  question that has a "no".
+
 ## Exit codes
 
 | Exit | Meaning | When |
 | --- | --- | --- |
-| `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, under `--require-mutants-caught` the set lists a mutant and none survived, under `--deny-warnings` no warning; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
+| `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, under `--require-mutants-caught` the set lists a mutant and none survived, under `--deny-warnings` no warning; `id`: the input has an id; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
 | `1` | no | an error finding (`validate`, `emit`, which then writes nothing); `fmt --check`: not canonical; `catalog`: an unknown class, or the class rules refuse the parameter table (including a required parameter with no default); `verify`: a scenario failed or the set is `no_data`, or, under their flags, a surviving mutant, a set that lists no mutant, or a warning |
-| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal |
+| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal; for `id`, also a document the engine does not load, an authored file with an error finding, or `--namespace` beside a CXF document |
 
 ## Output
 
@@ -138,9 +182,9 @@ Stdout carries **exactly one document** per run:
 
 - the command's product when it succeeds and has one — the CXF (`emit` without `-o`), the
   canonical text (`fmt`), a text listing (`catalog`, `vocab` without `--json`), the receipt
-  (`verify` without `--out`);
+  (`verify` without `--out`), the content id and a line feed (`id` without `--json`);
 - otherwise the JSON report below (every exit `1` and `2`, `emit -o`, `fmt --check`, `fmt --write`,
-  `catalog --json`, `vocab --json`, `verify --out`). **One exception:** a `verify` verdict of exit
+  `catalog --json`, `vocab --json`, `id --json`, `verify --out`). **One exception:** a `verify` verdict of exit
   `1` prints the receipt, not the report, because the receipt is the answer;
 - nothing for a clap usage error (its message is on stderr) and clap's text for `--help` and
   `--version`.
@@ -159,7 +203,7 @@ present:
 | --- | --- | --- |
 | `tool` | `"oce"` | |
 | `schema` | `"oce-report/1"` | the report contract's version; a breaking change bumps it |
-| `command` | string | `emit`, `validate`, `fmt`, `catalog`, `vocab` or `verify` |
+| `command` | string | `emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify` or `id` |
 | `input` | string or `null` | the input path as given, `-` for stdin (the vector file for `verify`); `null` for `catalog` and `vocab` |
 | `ok` | boolean | `true` exactly when the exit is `0` |
 | `findings` | array | the answers that make the exit `1` (below) |
@@ -176,8 +220,9 @@ validator's order (authored position, code, detail).
 An **error** is `{ "code", "detail", "span" }`: a text-form parse code (`oce_author::PARSE_CODES`,
 with the refusal's span), a wire-form code (`oce_author::WIRE_CODES`, with the refusal's span
 where it has one), or one of
-the tool's own codes (`span` `null`). `oce vocab` lists every code with one line of meaning. A
-`verify` refusal adds optional keys, each written only when it has a value (owner rulings of
+the tool's own codes (`span` `null`). `oce vocab` lists every code with one line of meaning. An
+`id` document the engine refuses carries `at` (`"input"`) and `diagnostic_codes` from the keys
+below. A `verify` refusal adds optional keys, each written only when it has a value (owner rulings of
 2026-11-11; pinned by `tests/report_shape.rs`):
 - `at`: the place, such as `scenarios[0].inputs.u`, `mutants[2]`, `subject` or `line 2 column 1`
   (never `subject`, which is the report's subject file);
@@ -195,13 +240,14 @@ Command keys:
 | `fmt` | `form` (`text`, `wire`, or `null` before the form is known); with `--check`, `canonical` (whether the input is already canonical **in its own form**: text against `fmt`, wire against the canonical wire writer); with `--write`, only once the file is known canonical on disk (unchanged, or rewritten), `changed` and `output` (absent from a failed write's report) |
 | `catalog` | without a class, `classes`; with one, `class` (`null` when the class is unknown or a `--param` is malformed) and `params` (the `--param` strings as given). A class is one closed object, the same in both ([below](#a-catalog-class)) |
 | `vocab` | `keywords`, `types`, `tags`, `base_units`, `scale_factors` ([below](#scale-factors)), `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `error_codes`, `vector_codes` and `verify_codes` (`oce-verify`'s load, bind and run codes, pinned to its lists), `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
+| `id` | `form` (`cxf`, `text`, `wire`, or `null` before the form is known); `content_id`, only when the input has one (so only with `--json`, exit `0`); `stages` as for `validate`, only once a validation stage of a text or wire file ran (absent after a read, parse or namespace refusal, and for a CXF document) |
 | `verify` | `subject` (the subject's path as given); with `--out`, only once the receipt is written, `passed`, `status` (`pass`, `fail`, `no_data`), `receipt_id` and `output` (`DIR/receipt.json`, with `/`); after a text or wire subject's validation, `stages` as for `validate` |
 
 The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-file`,
 `read-failed`, `input-too-large`, `invalid-namespace`, `unspellable`, `write-failed`,
 `write-needs-file`, `write-needs-text`, `malformed-param`, `unknown-param`, `duplicate-param`,
 `malformed-value`, `ports-unresolvable`, `emit-refused`, `unknown-subject-form`,
-`mutant-outside-directory`. The wire-form refusal codes are `oce-author`'s: the tool reports
+`mutant-outside-directory`, `namespace-needs-authored`, `not-loadable`, `no-content-id`. The wire-form refusal codes are `oce-author`'s: the tool reports
 `oce_author::WireError::code()` and `location()` and names no refusal itself (issue #495), so the
 sixteen codes of `oce_author::WIRE_CODES` are documented once, in the
 [`oce-author` README](../oce-author/README.md#wire-refusal-codes). `oce vocab --json` lists them
@@ -284,7 +330,8 @@ ordinal or another type's member is `malformed-value`.
 
 ## Bounds and hostile input
 
-Every read is bounded by its form's limit (`oce_author::MAX_TEXT_BYTES`, `MAX_WIRE_BYTES`, 4 MiB):
+Every read is bounded by its form's limit (`oce_author::MAX_TEXT_BYTES`, `MAX_WIRE_BYTES`, 4 MiB;
+for a CXF document given to `id`, `oce_api::MAX_CXF_BYTES`, 8 MiB):
 a file's size is checked from its metadata before a byte is read (a 100 MB file costs one `stat`),
 and every read, stdin included, stops one byte past the limit. Stdin is bounded in size, not in
 time: a pipe that never closes keeps `oce` waiting. Non-UTF-8, binary junk, an empty file, a
@@ -334,6 +381,16 @@ or file at the temporary name, permissions, a link target, a failed write's repo
   normalization twins, trailing dots and spaces, drive prefixes and `..`, each with a test or the
   platform's stated reason;
 - `tests/replay_gate.rs` is the in-repo replay gate.
+
+For `id`:
+- `tests/id_runs.rs` pins one transcript per input form and refusal class, `--json` and `--help`
+  included;
+- `tests/id_files.rs` holds every printed id to `Engine::content_id`: the 47 documents of the
+  tracked pin file (`crates/oce-api/tests/fixtures/content_id/pin.tsv`, read in place), both
+  in-repo library rules, and each `oce-author` text fixture against its committed and its
+  emitted CXF. It also covers stdin against a file, the name rule, the namespace, both size
+  bounds, hostile CXF, and the agreement of `oce emit` and `oce id` over every tracked authored
+  fixture, with their counts pinned.
 
 The transcripts regenerate only with `OCE_BLESS_CLI=1 cargo nextest run -p oce-cli` (see
 `.agents/project-facts.md`). The `verify` transcripts embed receipts, which carry the engine

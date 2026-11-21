@@ -31,7 +31,7 @@ fn binary_junk_is_refused_in_both_forms() {
         .collect();
     std::fs::write(dir.join("junk.oce"), &junk).expect("write");
     std::fs::write(dir.join("junk.json"), &junk).expect("write");
-    for command in ["validate", "emit", "fmt"] {
+    for command in ["validate", "emit", "fmt", "id"] {
         let text = refusal(&oce_in(&dir, &[command, "junk.oce"], b""));
         assert!(oce_author::PARSE_CODES.contains(&text.as_str()), "{text}");
         let wire = refusal(&oce_in(&dir, &[command, "junk.json"], b""));
@@ -45,7 +45,7 @@ fn bad_utf8_is_refused_as_not_utf8() {
     let bytes = b"sequence s\nderived_from none\nparam x : Real = \"\xff\"\n";
     std::fs::write(dir.join("bad.oce"), bytes).expect("write");
     std::fs::write(dir.join("bad.json"), b"{\"sequence\": \"\xc3\x28\"}").expect("write");
-    for command in ["validate", "emit", "fmt"] {
+    for command in ["validate", "emit", "fmt", "id"] {
         assert_eq!(
             refusal(&oce_in(&dir, &[command, "bad.oce"], b"")),
             "not-utf8"
@@ -69,7 +69,7 @@ fn a_hundred_megabyte_file_is_refused_before_it_is_read() {
         File::create(dir.join(name))
             .and_then(|file| file.set_len(100 * 1024 * 1024))
             .expect("create a sparse file");
-        for command in ["validate", "emit", "fmt"] {
+        for command in ["validate", "emit", "fmt", "id"] {
             let run = oce_in(&dir, &[command, name], b"");
             assert_eq!(refusal(&run), "input-too-large");
             // The metadata path names the size; the bounded-read path cannot know it.
@@ -131,7 +131,7 @@ fn an_over_size_stdin_is_cut_off_one_byte_past_the_bound() {
 fn a_directory_and_a_missing_path_are_refused() {
     let dir = scratch("paths");
     std::fs::create_dir_all(dir.join("folder.oce")).expect("mkdir");
-    for command in ["validate", "emit", "fmt"] {
+    for command in ["validate", "emit", "fmt", "id"] {
         assert_eq!(
             refusal(&oce_in(&dir, &[command, "folder.oce"], b"")),
             "not-a-file"
@@ -146,7 +146,7 @@ fn a_directory_and_a_missing_path_are_refused() {
 #[test]
 fn stdin_without_from_is_refused_for_every_reading_command() {
     let dir = scratch("stdin_from");
-    for command in ["validate", "emit", "fmt"] {
+    for command in ["validate", "emit", "fmt", "id"] {
         assert_eq!(
             refusal(&oce_in(&dir, &[command, "-"], b"sequence s\n")),
             "missing-from"

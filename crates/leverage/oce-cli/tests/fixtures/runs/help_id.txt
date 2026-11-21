@@ -1,0 +1,36 @@
+exit: 0
+--- stdout
+Print the canonical content id of a CXF document or an authored sequence.
+
+Stdout is the id and a line feed, exit 0. A text or wire file is validated and emitted first, as emit does. An input that cannot be read, parsed or loaded has no id: exit 2 with the JSON report.
+
+Usage: oce id [OPTIONS] <FILE>
+
+Arguments:
+  <FILE>
+          The input: CXF (`.jsonld`, `.cxf.json`), text (`.oce`) or wire (`.json`), or `-` for stdin
+
+Options:
+      --from <FROM>
+          The input form; overrides the name, and is required for stdin
+          
+          [possible values: cxf, text, wire]
+
+      --render <RENDER>
+          When to write a human-readable rendering of the report to stderr
+          
+          [default: auto]
+          [possible values: auto, always, never]
+
+      --namespace <NAMESPACE>
+          The instance namespace a text or wire file is emitted under, as for emit. A namespace never moves the id; one whose IRIs the engine refuses leaves the document with none
+
+      --json
+          Print the JSON report, with content_id, instead of the id line
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+--- stderr

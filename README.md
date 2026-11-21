@@ -175,7 +175,8 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   model in a strict-JSON wire form and a terse text form, validates it before an engine sees it,
   emits it deterministically to flat CXF and imports the library's in-subset CXF back. The `oce`
   command-line tool validates, emits and formats a sequence, serves the catalog and the vocabulary
-  and replays a vector set (`emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`), with a JSON
+  and replays a vector set (`emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`), and prints a
+  file's canonical content id (`id`), with a JSON
   report and exit codes 0 / 1 / 2; the importer is a library API today, and an `oce import` verb is
   planned (#514). See the
   [authoring layer](docs/design/authoring-layer.md) and [`oce`](crates/leverage/oce-cli/README.md).
@@ -247,8 +248,8 @@ meaning, which bumps it to the next milestone's version.
 
 M2's `oce` command-line tool
 (`crates/leverage/oce-cli`, the first binary above the facade) puts the authoring loop at a shell
-prompt: `emit`, `validate`, `fmt`, `catalog` and `vocab` (M3 adds `verify`, below), each with a
-documented JSON report on stdout for agents and the exit rule 0 yes / 1 no / 2 error
+prompt: `emit`, `validate`, `fmt`, `catalog` and `vocab` (M3 adds `verify` and `id`, below), each
+with a documented JSON report on stdout for agents and the exit rule 0 yes / 1 no / 2 error
 ([report contract](crates/leverage/oce-cli/README.md)):
 
 ```sh
@@ -309,6 +310,9 @@ no verdict could be reached. Mutant paths are resolved and kept inside the vecto
 directory. The in-repo replay gate runs that binary over both library rules on every PR, against
 their golden receipts.
 
+`oce id <FILE>` prints the canonical content id of a CXF document, or of the CXF a text or wire
+file emits, alone on stdout: the id a library card is stamped with.
+
 Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457) and checking a
 sequence parameter's unit suffix against the block parameter it feeds (#590); `oce import` (#514)
 and `oce check` (#574) are on M3.
@@ -323,7 +327,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
 | **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Released as v0.5.0: `oce-author`'s model, builder, wire form and pinned schema, two-stage validator, emitter, text form and importer; the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`); vocabulary v1 (`oce-vocab`), served through `oce catalog` and read by the text form for time-unit suffixes. The agent-usable gate row moves to the milestone that lands the benchmark harness (owner decision, 2026-11-09) |
-| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in, shipped in v0.5.0; the tolerance mode next |
+| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in, shipped in v0.5.0; the `oce id` verb, which prints the content id of a file, is in since; the tolerance mode next |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
 | **M6** Reference host | `oce-host`: cadence, staleness limits, the non-finite policy, degraded mode and safe-state outputs as tested code; BOPTEST client and a Docker runtime | Planned, in parallel with M7 |

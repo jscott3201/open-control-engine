@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "id",
+  "errors": [
+    {
+      "code": "not-a-file",
+      "detail": "the path is not a regular file",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": "cxf",
+  "input": "tests/fixtures",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

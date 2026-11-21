@@ -13,6 +13,7 @@ Commands:
   catalog   List the block classes, or describe one: its ports, parameters, units, ranges and notes
   vocab     Print the text-form vocabulary, the unit scale factors and every code oce reports
   verify    Replay a vector set against a subject and print the receipt
+  id        Print the canonical content id of a CXF document or an authored sequence
   help      Print this message or the help of the given subcommand(s)
 
 Options:
