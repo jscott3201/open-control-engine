@@ -13,7 +13,12 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
-license.workspace = true
+# Not the workspace's value: `src/funnel/` is a port of LBNL funnel's C sources, a derived work
+# under funnel's licence, whose text is `LICENSE-funnel` beside this file (SPDX
+# `BSD-3-Clause-LBNL`). The rest of the crate is under the repository's `MIT OR Apache-2.0`, so
+# the two are joined with `AND`: a recipient picks MIT or Apache-2.0 and also keeps funnel's
+# terms (issue #703). `deny.toml` allows the identifier for this crate alone.
+license = "(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL"
 repository.workspace = true
 homepage.workspace = true
 # Nothing above the facade is published yet (authoring note decision 20).

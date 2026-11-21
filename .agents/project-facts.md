@@ -531,9 +531,18 @@ does not build until `VECTOR_ERROR_CODES` lists its code in order, and needs its
 it is a derived work under funnel's licence (3-clause BSD with LBNL's enhancements clause), not
 only under this repository's. `crates/leverage/oce-verify/LICENSE-funnel` is that licence and
 copyright notice, verbatim; the module header and the root README's licence section point to it.
-Keep the three together when the module moves. Nothing checks it mechanically: `cargo deny check
-licenses` reads each crate's `license` field, which stays `MIT OR Apache-2.0` for this
-unpublished crate, and the package policy has no licence rule.
+Keep the three together when the module moves, and the fourth with them: `oce-verify`'s `license`
+field is `(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`, stated in the manifest rather than inherited
+from the workspace (issue #703), with no `license-file` beside it, since the expression is
+standard SPDX and Cargo wants one of the two. `BSD-3-Clause-LBNL` is the SPDX identifier of
+funnel's licence: `LICENSE-funnel` from "Redistribution and use" to its end is the SPDX text, with
+the sections numbered. `deny.toml` allows the identifier through `[licenses] exceptions` for the
+crate `oce-verify` alone, never in `allow`, so `cargo deny check licenses` (the `cargo-deny` job)
+fails if another crate, a registry dependency included, declares it, and fails if the exception
+is dropped while the field stays. That check reads each crate's own field and nothing transitive:
+`oce-cli`, which depends on `oce-verify`, keeps the workspace's `MIT OR Apache-2.0`. Nothing checks
+that the field matches the sources: the package policy has no licence rule, so a module that moves
+to another crate takes the field and the exception's crate name with it by hand.
 
 ## The funnel fixture is captured, not blessed; only its bit goldens are
 

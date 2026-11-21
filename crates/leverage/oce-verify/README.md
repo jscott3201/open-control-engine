@@ -596,7 +596,10 @@ network.
 funnel, which LBNL distributes under a 3-clause BSD licence with an added clause on enhancements.
 Its licence and copyright notice are reproduced verbatim in [`LICENSE-funnel`](LICENSE-funnel) at
 this crate's root, and the module's header points there. Everything else in the crate is under
-the repository's `MIT OR Apache-2.0`.
+the repository's `MIT OR Apache-2.0`. The crate's `license` field is therefore
+`(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`, `BSD-3-Clause-LBNL` being the SPDX identifier of that
+licence: whichever of MIT and Apache-2.0 a recipient takes, funnel's terms come with the crate as
+well. A crate that depends on this one keeps its own field, which describes its own sources.
 
 ## Fixtures and goldens
 

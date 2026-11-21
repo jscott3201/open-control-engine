@@ -512,6 +512,21 @@ and a gate that accepted any text would restore exactly the false assurance desc
     content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
 ### Leverage
 
+- **`oce-verify` declares the funnel port's licence in its package metadata** (GitHub #PRNUM,
+  issue #703). The crate's `license` field is now `(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`
+  and no longer inherits the workspace's `MIT OR Apache-2.0`: `src/funnel/`, the port of LBNL
+  funnel that GitHub #687 added, is a derived work under funnel's licence, whose text has shipped
+  as `crates/leverage/oce-verify/LICENSE-funnel` since then. `BSD-3-Clause-LBNL` is that
+  licence's SPDX identifier: from "Redistribution and use" to the end, `LICENSE-funnel` is the
+  SPDX text word for word once case, line breaks and the section numbers are set aside; what
+  precedes it is funnel's copyright notice with the U.S. Government rights notice LBNL attaches.
+  `deny.toml` allows the identifier through a `[licenses]` exception for the crate `oce-verify`
+  only, not in the allow-list, so any other crate that declares it is still refused. No source,
+  fixture or licence file changes, `Cargo.lock` is unchanged, and `oce-cli`, which depends on
+  `oce-verify`, keeps `MIT OR Apache-2.0` for its own sources; the package policy reads no
+  licence and needed nothing. This supersedes the last sentence of the "Licence" item of the
+  entry below.
+
 - **Tolerance mode, part 1: the envelope arithmetic, a port of LBNL funnel proven against the
   pinned `pyfunnel`, and the `aligned-grid` envelope beside it** (GitHub #687, issue #655;
   commissioning note, "Envelope", decisions 1, 9, 12, 13 and 22). `oce-verify` gains the

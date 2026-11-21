@@ -44,7 +44,13 @@ allow = [
   # open-control itself stays dual MIT/Apache-2.0 and pulls no MPL code.
   "MPL-2.0",
 ]
-exceptions = []
+# `oce-verify` alone carries LBNL's BSD variant: its `src/funnel/` is a port of LBNL funnel, whose
+# licence text is `crates/leverage/oce-verify/LICENSE-funnel` (issue #703). An exception rather
+# than an `allow` entry, so the identifier passes for that crate's own `license` expression and is
+# still refused for every other crate, a registry dependency included.
+exceptions = [
+  { allow = ["BSD-3-Clause-LBNL"], crate = "oce-verify" },
+]
 
 [bans]
 multiple-versions = "warn"
