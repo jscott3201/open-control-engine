@@ -1,0 +1,7 @@
+# oce-verify funnel golden: upstream/fail6
+# Hex IEEE-754 bits, `x y` per point. Written by OCE_BLESS_VERIFY, never by hand.
+[refused]
+code mismatched-endpoints
+end last
+reference 3ff0000000000000
+test 3fe0000000000000

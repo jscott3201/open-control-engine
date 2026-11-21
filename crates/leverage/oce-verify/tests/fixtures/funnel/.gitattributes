@@ -1,0 +1,4 @@
+# Byte-exact fixtures: four of funnel's own inputs end their lines with CRLF, and pyfunnel's
+# output is compared byte for byte. Never normalise line endings here.
+upstream/** -text
+expected/** -text

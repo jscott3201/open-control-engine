@@ -12,6 +12,11 @@ compares exactly and issues the receipt. **Mutant mode** (issue #521): it valida
 deliberately broken copies of the subject a set lists and scores which ones the vectors catch. The
 `oce verify` verb builds on it.
 
+Of the fourth part, tolerance mode, the **envelope arithmetic** is in (issue #655): a port of LBNL
+funnel and the conformance harness's grid envelope, as a library surface
+([Envelopes](#envelopes-funnel-and-aligned-grid) below). Nothing asks for it yet: comparison in a
+run is exact, a receipt's mode is `exact`, and `within`, `of` and `when` are still unknown keys.
+
 It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-replay` only. It
 opens no file, runs no clock, measures nothing and is not published.
 
@@ -428,9 +433,177 @@ satisfies the schema.
 
 Regenerate with `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it again without the
 switch, and say in the pull request why it moved (a shape, or a doc comment in `src/dto.rs`). The
-same switch rewrites the golden receipts.
+same switch rewrites the golden receipts and the funnel's bit goldens.
+
+## Envelopes: `funnel` and `aligned-grid`
+
+The arithmetic of tolerance mode (design note
+[`docs/design/commissioning.md`](../../../docs/design/commissioning.md), "Envelope"; issue #655):
+is a **test** series inside a band built around a **reference** series? It is a pure library
+surface. No vector file, receipt or CLI verb reaches it yet; how a vector file asks for a tolerance
+is #656, and the commissioning comparison that calls it is #663.
+
+```rust
+use oce_verify::{CompareLimits, Envelope, Series, Tolerances, funnel};
+
+let reference = Series::new(&trend_seconds, &trend_values);
+let test = Series::new(&engine_seconds, &engine_values);
+let tolerances = Tolerances { atolx: 1.0, rtoly: 0.01, ..Tolerances::ZERO };
+let result = funnel(reference, test, &tolerances, &CompareLimits::default())?;
+// or: Envelope::AlignedGrid.compare(reference, test, &tolerances, &limits)?
+println!("{} of {} instants compared, worst error {}", result.envelope, result.compared, result.max_error);
+std::fs::write("lowerBound.csv", result.lower_bound.to_csv())?; // pyfunnel's file, in `%.16g`
+```
+
+| Item | What it is |
+| --- | --- |
+| `Tolerances` | `atolx`, `atoly`, `rtolx`, `rtoly`, `ltolx`, `ltoly`: absolute, relative to the reference's range, relative to each point's own value. Finite and at least zero. No default; `Tolerances::ZERO` is all zeros. |
+| `Series<'a>` | Borrowed `x` and `y` of one length, at least one point, every sample finite, `x` non-decreasing (equal values mark a step). |
+| `Envelope` | `Funnel` and `AlignedGrid`, spelled `funnel` and `aligned-grid` (`as_str`, `from_name`, `Display`); `version` is the matching version string, the one a receipt carries as `envelope_version`; `compare` calls the matching function. |
+| `funnel(reference, test, &tolerances, &limits)` | LBNL funnel's comparison, `FUNNEL_VERSION = "funnel@a12fa96"`. |
+| `aligned_grid(reference, test, &tolerances, &limits)` | The conformance harness's grid envelope, `ALIGNED_GRID_VERSION = "aligned-grid@1"`. |
+| `FunnelResult` | `envelope`; the curves `reference`, `test`, `lower_bound`, `upper_bound`, `errors` (pyfunnel's five files); `compared`; `max_error` and `max_error_x`; `first_error_x`; `within_envelope()`. |
+| `Curve` | Owned points: `x()`, `y()`, `points()`, `as_series()`, and `to_csv()`, the text pyfunnel writes. |
+| `CompareLimits` | `max_funnel_points` 1,048,576, `max_aligned_grid_points` 32,768, `max_loop_removal_work` 2^28. Lowerable, never raisable, as `VerifyLimits` is. |
+| `CompareError` | `#[non_exhaustive]`, with `code()`; the codes are in `COMPARE_ERROR_CODES`. |
+| `format_g16(value)` | C's `printf("%.16g")` as glibc writes it, decided by this crate's own exact arithmetic. |
+
+**`funnel`** is funnel's C library at commit `a12fa96` (`pyfunnel` 2.1.1), operation for operation
+(`src/funnel/`, one file per step):
+
+1. A rectangle around each reference point. Its half-width is
+   `max(atolx, rtolx × range_x, ltolx × |x_i|)`, the **maximum** of the three terms, and its
+   half-height the same in `y`. A half-size of zero (at most `1e-10`) becomes `rtol × magnitude`
+   when `rtol` is not zero, where the magnitude is the larger of the largest value and the
+   absolute smallest, and then at least `1e-10`.
+2. `x` and the half-widths are divided by the magnitude of `x` when it exceeds `1e-5`.
+3. The outline of each bound is picked from the rectangles' corners by the reference's slope signs
+   before and after each point; leading points equal to the next are skipped, a vertical step has
+   the slope `±1e15`, and corners that would continue a flat run are dropped.
+4. Where an outline runs backwards in `x`, the loop is cut at the intersection of the segments
+   around it.
+5. Both bounds are interpolated at each of the test's instants, held beyond their last corner,
+   and the error is how far the test lies outside the band there.
+
+"Equal" in every step is funnel's `equ`, `|a - b| <= 1e-10 × max(1, |a|, |b|)`. The two series must
+start and end at the same `x` by that equality, which is funnel's own precondition.
+
+**`aligned-grid`** is `oce-conformance`'s `build_bounds` and `compare`, copied, because that crate
+is verification-only and never a dependency. The tolerance terms of an axis **add**; the band is
+the minimum and the maximum over every rectangle covering each point of a grid of every reference
+`x` and every rectangle edge; and the error is taken at the test's instants and at every breakpoint
+of the two bounds. It is wider than the funnel, has no `1e-10` floor and no precondition on the
+ends, and its work is quadratic in the reference's points, hence its lower cap. The two are kept
+apart on purpose: a receipt will name the one it used.
+
+**The port differs from funnel only where funnel defines no result or would hide one.** Input the C
+reads without checking is refused (a non-finite sample, a decreasing `x`, a negative tolerance).
+So are the references on which its loop removal reads outside its arrays, which a local `x`
+tolerance above one can cause (`loop-removal-undefined`; pyfunnel then writes curves computed from
+whatever it read, or crashes), and a bound or an error that overflows (`non-finite-envelope`: a NaN
+bound compares as "inside").
+
+**Loop removal is counted, never timed, and its cost grows with the width of the `x` tolerance in
+samples.** Every loop's search walks the corners a rectangle reaches back over, so a wider
+rectangle costs more per point. Measured with the port's counter on a random walk sampled once per
+unit of `x`:
+
+| `x` tolerance, in samples | 1 | 10 | 35 | 100 | 300 | 1,000 | 3,000 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Work units per reference point | 9 | 18 | 28 | 43 | 70 | 123 | 205 |
+
+White noise costs 11 to 43 units per point over the same widths, a regular sawtooth 3 to 4. The
+bound is one budget of 2^28 units for the comparison, whatever its length. A day at 5 s (17,281
+points) uses under 1 % of it at any of these widths. A series at the point cap has 256 units per
+point: the random walk of 1,048,576 points uses 27 % of the bound at 300 samples, 48 % at 1,000 and
+92 % at 4,000, and is refused `work-limit-exceeded` at 5,000. Other signals get there sooner (the
+review of GitHub #687 measured 133 to 177 units per point at 1,000 samples on its own, and refusal
+from about 1,500). So a very long trend under a very wide `x` tolerance is refused, not ground
+through: resample it or split it. Apart from width, the searches can be quadratic in the points
+themselves: a rising sawtooth under a local `x` tolerance costs about 0.7 units per point squared,
+and the default bound refuses it from about 19,400 points.
+
+Three refusals in the loop removal's code are defensive, and no input reaches them: the forward
+search for the segment before a loop stops at the corner before the segment after it (on a
+segment that is not vertical the line's value there is exactly that corner's `y`), so it cannot
+leave the list, the range it deletes is never negative, and a bound keeps at least two corners.
+The one place funnel's C does read outside its arrays is the backward search, before the first
+corner.
+
+**pyfunnel's own output depends on the platform it was built for.** The wheel's macOS library,
+on arm64, contracts `a * b + c` into a fused multiply-add: run on the fixture's 66 cases it prints
+38 of the 306 expected files differently in the last digits (in 29 of the cases). The port never contracts
+and pins the x86_64 Linux result, on every target.
+
+**On a fixed tick grid from `x = 0` with one sample per instant** (`tests/funnel_tick_grid.rs`),
+which is what a vector set's clock gives: a series is inside its own funnel for every `x`
+tolerance tried, from none to ten ticks, with no `y` tolerance at all, so on such a grid the
+construction itself does not reject an identical trace. A series
+shifted by exactly one tick is inside from an `x` tolerance of exactly one tick, and at that
+tolerance a corner of the bound sits on the sample, so the verdict is a knife edge. With no `y`
+tolerance the band is only funnel's `1e-10` floor high, and interpolating along a step of a
+million or more rounds by more than that: an identical series can then leave its own band by a
+few parts in 10^16 of the step, as pyfunnel also reports (the hostile case
+`identical_large_step_no_y_tolerance`: error `2.328306436538696e-10`). Any `y` tolerance above
+the rounding removes it. A caller that compares large values gives one.
+
+**Outside that scope funnel itself rejects an identical series**, by whole units of `y` and with a
+`y` tolerance, and the port follows it byte for byte (three hostile cases, each also a test):
+
+- **Several samples at one instant with no `x` tolerance.** The rectangles are then the `1e-10`
+  floor wide, which funnel's equality cannot tell from zero once `x` is a few units large, and
+  their corners collapse. Three samples at one instant that do not rise or fall in order leak
+  from an `x` of about 4 (`identical_spike_at_one_instant`: 0.9 outside). A step written as two
+  samples at one instant, as OBC §12.2 allows, is inside while `x` is in the hundreds of
+  thousands and leaks once it is in the millions (`identical_pulse_by_equal_times_at_large_x`: 0.9 outside). Any
+  `x` tolerance, a microsecond included, removes both.
+- **`x` more than about 1e10 times its step**, such as epoch seconds in steps under 0.17 s.
+  funnel's equality is `1e-10` relative, so it reads neighbouring instants as one
+  (`identical_epoch_seconds_tenth_steps`: up to 1.1 outside). At a ratio of 1.7e10 an `x`
+  tolerance of a tick and a half is inside again; at 1.7e11 three ticks are not. A caller keeps
+  `x` relative to the start of the comparison, as a vector clock does.
+
+| Code | Refused when |
+| --- | --- |
+| `invalid-tolerance` | a tolerance is negative, infinite or NaN |
+| `length-mismatch` | a series' `x` and `y` differ in length |
+| `empty-series` | a series has no point |
+| `too-many-points` | a series has more points than the envelope's cap, decided from its length |
+| `non-finite-sample` | a sample is infinite or NaN |
+| `x-not-non-decreasing` | a series' `x` decreases |
+| `mismatched-endpoints` | `funnel`: the two series do not start, or do not end, at the same `x` |
+| `work-limit-exceeded` | `funnel`: loop removal needs more than `max_loop_removal_work` units |
+| `loop-removal-undefined` | `funnel`: funnel's loop removal defines no result for this reference |
+| `non-finite-envelope` | a bound or an error is not finite |
+
+One input has one refusal: the tolerances first, then each series' shape (reference, then test),
+then each series' samples, then the envelope's own.
+
+**Evidence.** The port is held to the pinned `pyfunnel` by a differential test
+(`tests/funnel_differential.rs`, fixture and capture script under
+[`tests/fixtures/funnel/`](tests/fixtures/funnel/README.md)): for funnel's own 17 test directories
+and a hostile set of 49, its five curves printed with `format_g16` equal pyfunnel's five files
+**byte for byte**, and where pyfunnel refuses a case (`fail2` and `fail6` among them) the port
+refuses it at the same end. The claim is textual, because `%.16g` cannot round-trip a double, so
+the port's own bits are pinned as well (`tests/funnel_goldens.rs`, hex bits under
+`tests/fixtures/funnel/golden/`, written only by `OCE_BLESS_VERIFY`). `format_g16` is held to
+glibc's own `snprintf` over 4,792 doubles. `aligned-grid` is held bit for bit to goldens taken
+from `oce-conformance` once (`tests/aligned_grid.rs`, `tests/fixtures/aligned_grid/`). The
+Building 33 day of the differential set is captured in #664. No test runs Python or reaches the
+network.
+
+**Licence of the port.** `src/funnel/` is a port of funnel's C sources and so a derived work of
+funnel, which LBNL distributes under a 3-clause BSD licence with an added clause on enhancements.
+Its licence and copyright notice are reproduced verbatim in [`LICENSE-funnel`](LICENSE-funnel) at
+this crate's root, and the module's header points there. Everything else in the crate is under
+the repository's `MIT OR Apache-2.0`.
 
 ## Fixtures and goldens
+
+- `tests/fixtures/funnel/` is the funnel differential fixture and `tests/fixtures/aligned_grid/`
+  the `aligned-grid` parity goldens; [`tests/fixtures/funnel/README.md`](tests/fixtures/funnel/README.md)
+  and [`tests/fixtures/README.md`](tests/fixtures/README.md) say what each file is and what
+  writes it. Only `funnel/golden/` is blessed.
 
 - The two in-repo library rules are read in place from
   `crates/oce-api/tests/fixtures/library_rules/`: their `vectors.json` files

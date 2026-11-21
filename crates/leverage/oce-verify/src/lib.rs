@@ -1,10 +1,12 @@
 #![forbid(unsafe_code)]
 //! Verification over vectors for Open Control Engine sequences (design note
-//! `docs/design/vectors.md`, issues #519 to #521).
+//! `docs/design/vectors.md`, issues #519 to #521), and the envelope arithmetic of its tolerance
+//! mode (design note `docs/design/commissioning.md`, issue #655).
 //!
 //! Status: three of the four parts of the verification product (M3): the one vector format,
 //! `oce/vectors/v1`, the run that checks a set against a sequence and issues the receipt, and
-//! mutant mode. The `oce verify` verb builds on it.
+//! mutant mode. The `oce verify` verb builds on it. Of the fourth, tolerance mode, the envelope
+//! arithmetic is in as a library surface; no vector file, receipt or verb asks for it yet.
 //!
 //! A **vector set** is a strict-JSON document of scenarios, each a schedule of inputs over one
 //! clock and expectations over windows of it, to be checked against one loaded sequence, the
@@ -44,6 +46,18 @@
 //! - **Typed refusals** ([`VerifyError`], [`VerifyErrorKind`], [`VERIFY_ERROR_CODES`]): every bind
 //!   and run refusal is an error with no receipt; a failed expectation is a failed scenario
 //!   inside one.
+//!
+//! and, apart from all of the above, the **envelopes** a tolerance comparison is made with: is a
+//! test series inside a band built around a reference series?
+//!
+//! - **[`funnel()`]**: a port of LBNL funnel, the tool OBC §12 cites ([`FUNNEL_VERSION`]), held
+//!   to the pinned `pyfunnel` by a differential test: its five curves print, in C's `%.16g`
+//!   ([`format_g16`]), as pyfunnel's five files do, byte for byte.
+//! - **[`aligned_grid()`]**: the conformance harness's wider grid envelope, copied
+//!   ([`Envelope::AlignedGrid`], [`ALIGNED_GRID_VERSION`]).
+//! - Both take two [`Series`], six [`Tolerances`] and the lowerable [`CompareLimits`], return a
+//!   [`FunnelResult`] or a typed [`CompareError`] (stable codes in [`COMPARE_ERROR_CODES`]), read
+//!   no file and no clock, and give the same bits on every target.
 //!
 //! ```
 //! use oce_verify::{Expectation, Literal, VectorSet, VerifyLimits};
@@ -121,16 +135,22 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+mod aligned_grid;
 mod bind;
 mod budget;
 mod canonical;
 mod clock;
 mod compare;
+mod compare_error;
+mod compare_limits;
 mod decode;
 mod dto;
 mod edit_lists;
+mod envelope;
 mod error;
 mod fnv;
+mod funnel;
+mod g16;
 mod limits;
 mod model;
 mod mutants;
@@ -148,8 +168,14 @@ mod validate;
 mod vector_set;
 mod verify_error;
 
+pub use aligned_grid::{ALIGNED_GRID_VERSION, aligned_grid};
 pub use clock::Clock;
+pub use compare_error::{Axis, COMPARE_ERROR_CODES, CompareError, SeriesEnd, SeriesRole};
+pub use compare_limits::CompareLimits;
+pub use envelope::{Curve, Envelope, FunnelResult, Series, Tolerances};
 pub use error::{Location, VECTOR_ERROR_CODES, VectorError, VectorErrorKind};
+pub use funnel::{FUNNEL_VERSION, funnel};
+pub use g16::format_g16;
 pub use limits::{
     MAX_DEPTH, MAX_LIST_LEN, MAX_LOAD_WARNINGS, MAX_STRING_BYTES, MAX_TIME_INTEGER, VerifyLimits,
 };

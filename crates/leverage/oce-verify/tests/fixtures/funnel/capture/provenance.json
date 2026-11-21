@@ -1,0 +1,298 @@
+{
+  "cases": {
+    "atolx_alone": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "atoly_alone": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "both_ends_differ": {
+      "return_code": 1,
+      "set": "hostile"
+    },
+    "constant_series": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "constant_zero_series": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "ends_equal_within_tolerance": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "equal_times": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "equal_times_no_tolerance": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "fail1": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "fail2": {
+      "return_code": 1,
+      "set": "upstream",
+      "upstream_results": "committed, but pyfunnel refuses the case"
+    },
+    "fail3": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: test.csv, errors.csv"
+    },
+    "fail4": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "none committed"
+    },
+    "fail5": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "fail6": {
+      "return_code": 1,
+      "set": "upstream",
+      "upstream_results": "committed, but pyfunnel refuses the case"
+    },
+    "first_x_differs": {
+      "return_code": 1,
+      "set": "hostile"
+    },
+    "huge_x_magnitude": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "identical_epoch_seconds_tenth_steps": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "identical_large_step_no_y_tolerance": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "identical_pulse_by_equal_times_at_large_x": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "identical_small_step_no_y_tolerance": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "identical_spike_at_one_instant": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "large_values_both_axes": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "last_x_differs": {
+      "return_code": 1,
+      "set": "hostile"
+    },
+    "last_x_just_differs": {
+      "return_code": 1,
+      "set": "hostile"
+    },
+    "leading_duplicates": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "loop_between_parallel_segments": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "ltolx_alone": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "ltoly_alone": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "near_flat_wiggle": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "negative_x": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "negative_x_local_tolerance": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "negative_zero": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "no_tolerance_identical": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "no_tolerance_moved": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "noisy_every_tolerance": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "noisy_local_tolerance": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "noisy_narrow_rectangles": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "noisy_wide_rectangles": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "rising_sawtooth_local_tolerance": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "rtolx_alone": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "rtoly_alone": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "sawtooth_narrow_rectangles": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "sawtooth_wide_rectangles": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "series_at_one_huge_instant": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "series_at_one_instant": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "sharp_peak_wide_rectangles": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "should_succeed1": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "single_point": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "single_point_no_tolerance": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "single_reference_point": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "success1": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "success10": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: test.csv, lowerBound.csv, upperBound.csv"
+    },
+    "success2": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: test.csv, lowerBound.csv, upperBound.csv"
+    },
+    "success3": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: lowerBound.csv, upperBound.csv"
+    },
+    "success4": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "success5": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "success6": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "success7": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "success8": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "success9": {
+      "return_code": 0,
+      "set": "upstream",
+      "upstream_results": "differs: reference.csv, test.csv, lowerBound.csv, upperBound.csv, errors.csv"
+    },
+    "test_ends_beyond_the_bounds": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "tiny_x_magnitude": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "tolerance_below_floor": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "x_beyond_exact_integers": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "x_magnitude_above_threshold": {
+      "return_code": 0,
+      "set": "hostile"
+    },
+    "x_magnitude_at_threshold": {
+      "return_code": 0,
+      "set": "hostile"
+    }
+  },
+  "funnel_commit": "a12fa96917ca73b78fcb6a17a1140b3a27a61e31",
+  "library": "pyfunnel/lib/linux64/libfunnel.so",
+  "library_sha256": "fbc3103f114b98ee9c6f82e8d0b104c00b64e4e7573ed3078579df2fc7df2928",
+  "platform": {
+    "libc": "glibc 2.41",
+    "machine": "x86_64",
+    "python": "3.12.16",
+    "system": "Linux"
+  },
+  "printf_values": 4792,
+  "pyfunnel_version": "2.1.1",
+  "wheel": "pyfunnel-2.1.1-py3-none-any.whl",
+  "wheel_sha256": "cf48c95a995b21bc16df16fbf1e3b350d95e2c8ea5c5d4c4a74a840fa334752a"
+}
