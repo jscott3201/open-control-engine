@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:b7075019f095e5c669a469b69e4324a5db8240c4a0c3a7b9aeaa1b7da76c3699",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.AddParameter", "signature_hash": "e71fcfa5e45fc30d"},
+    {"class_path": "CDL.Reals.Less", "signature_hash": "5d7bb4e59af4f73f"},
+    {"class_path": "CDL.Reals.Limiter", "signature_hash": "d2c6b335d2a7176d"},
+    {"class_path": "CDL.Reals.Max", "signature_hash": "3cd368964852c20d"},
+    {"class_path": "CDL.Reals.PID", "signature_hash": "b4b36229c49f1f48"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"},
+    {"class_path": "CDL.Reals.Switch", "signature_hash": "7c9e0945494c71ac"}
+  ],
+  "instances": [
+    {"block": 0, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 4, "stateful": true, "state_words": 2, "initial_state_crc": "863f63a7"},
+    {"block": 2, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 1, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 5, "class": 5, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 6, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 7, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.vav_single_zone.cooling_setpoint",
+    "http://example.org#g36.vav_single_zone.heating_setpoint",
+    "http://example.org#g36.vav_single_zone.zone_temp"
+  ],
+  "outputs": [
+    "http://example.org#g36.vav_single_zone.airflow_setpoint",
+    "http://example.org#g36.vav_single_zone.cooling_signal",
+    "http://example.org#g36.vav_single_zone.damper_command",
+    "http://example.org#g36.vav_single_zone.heating_enabled"
+  ]
+}

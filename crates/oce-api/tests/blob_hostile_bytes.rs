@@ -29,7 +29,7 @@ fn fault(bytes: &[u8]) -> MalformedFault {
 
 /// The smallest golden with at least two classes, connections, inputs and outputs, an input with
 /// two targets and a stateful block, so every list can be put out of order.
-fn rich() -> (String, Vec<u8>) {
+pub(crate) fn rich() -> (String, Vec<u8>) {
     let mut best: Option<(String, Vec<u8>)> = None;
     for name in FIXTURES {
         let bytes = golden(name);
@@ -200,7 +200,7 @@ fn header_defects_refuse_in_the_documented_order() {
 }
 
 /// The worked example's count and length fields, at the offsets the design note's dump shows.
-const WORKED_COUNTS: &[(usize, &str, MalformedFault)] = &[
+pub(crate) const WORKED_COUNTS: &[(usize, &str, MalformedFault)] = &[
     (
         0x38,
         "classes section length",

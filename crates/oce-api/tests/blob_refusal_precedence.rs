@@ -33,7 +33,7 @@ const SHORTEST_INSPECTED: usize = HEADER_BYTES + TRAILER_BYTES;
 
 /// One defect, in the decoder's refusal order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Defect {
+pub(crate) enum Defect {
     /// One byte longer than [`MAX_BLOB_BYTES`].
     Oversized,
     /// One byte shorter than a header and a trailer.
@@ -57,7 +57,7 @@ enum Defect {
 }
 
 /// Every defect, in the order the decoder checks for it.
-const REFUSAL_ORDER: [Defect; 10] = [
+pub(crate) const REFUSAL_ORDER: [Defect; 10] = [
     Defect::Oversized,
     Defect::Short,
     Defect::Magic,
@@ -106,7 +106,7 @@ fn trailer_pair(bytes: &[u8]) -> (u32, u32) {
 /// `valid` with every defect in `defects`. The field edits come first, each in its own header
 /// bytes; then a trailer over them, broken afterwards for `Crc`; then the size edits, which leave
 /// the header bytes in place. A defect absent from the set is absent from the bytes.
-fn with_defects(valid: &[u8], defects: &[Defect]) -> Vec<u8> {
+pub(crate) fn with_defects(valid: &[u8], defects: &[Defect]) -> Vec<u8> {
     let mut bytes = valid.to_vec();
     for defect in defects {
         match defect {
@@ -178,7 +178,7 @@ fn present(defect: Defect, bytes: &[u8]) -> bool {
 }
 
 /// The refusal `defect` earns when it is the first defect of `bytes`.
-fn refusal(defect: Defect, bytes: &[u8]) -> BlobError {
+pub(crate) fn refusal(defect: Defect, bytes: &[u8]) -> BlobError {
     match defect {
         Defect::Oversized => BlobError::TooLarge {
             length: MAX_BLOB_BYTES as u64 + 1,

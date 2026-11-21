@@ -1,0 +1,35 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:913f05335f3f184916ba33e5a86bf32bb00c27d15cbbc7584a2f597659437559",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Conversions.BooleanToReal", "signature_hash": "a9c29c427fe3c4da"},
+    {"class_path": "CDL.Integers.Equal", "signature_hash": "5c04e75ea3d8bc7a"},
+    {"class_path": "CDL.Integers.Sources.Constant", "signature_hash": "059978881e33c014"},
+    {"class_path": "CDL.Logical.Or", "signature_hash": "01258b3f89b466d5"},
+    {"class_path": "CDL.Reals.Multiply", "signature_hash": "70d2724a506843ec"}
+  ],
+  "instances": [
+    {"block": 0, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 4, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 6, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 7, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 8, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 9, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 10, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.cooling_only_active_air_flow.VOccMin_flow",
+    "http://example.org#g36.source.cooling_only_active_air_flow.uOpeMod"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.cooling_only_active_air_flow.VActCooMax_flow",
+    "http://example.org#g36.source.cooling_only_active_air_flow.VActHeaMax_flow",
+    "http://example.org#g36.source.cooling_only_active_air_flow.VActMin_flow"
+  ]
+}

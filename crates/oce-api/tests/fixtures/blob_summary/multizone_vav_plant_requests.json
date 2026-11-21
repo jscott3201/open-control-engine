@@ -1,0 +1,61 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:1a27738c453b6b2671fddd6201a7437cf86d473f440a8392c7441c3a7be16c80",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Integers.Sources.Constant", "signature_hash": "059978881e33c014"},
+    {"class_path": "CDL.Integers.Switch", "signature_hash": "679571fa29becb0c"},
+    {"class_path": "CDL.Logical.Latch", "signature_hash": "25cb05da1e69944a"},
+    {"class_path": "CDL.Logical.TrueDelay", "signature_hash": "d321114ffed6027d"},
+    {"class_path": "CDL.Reals.GreaterThreshold", "signature_hash": "ff7f20680e44a176"},
+    {"class_path": "CDL.Reals.LessThreshold", "signature_hash": "ee896ae2191cc492"},
+    {"class_path": "CDL.Reals.Subtract", "signature_hash": "6978225f22e68ba8"}
+  ],
+  "instances": [
+    {"block": 0, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 4, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 2, "class": 4, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 3, "class": 3, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 4, "class": 3, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 5, "class": 4, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 6, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 7, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 8, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 9, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 10, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 11, "class": 2, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 12, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 13, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 14, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 15, "class": 2, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 16, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 17, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 18, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 19, "class": 4, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 20, "class": 4, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 21, "class": 3, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 22, "class": 3, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
+    {"block": 23, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 24, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 25, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 26, "class": 4, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 27, "class": 2, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 28, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 29, "class": 5, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
+    {"block": 30, "class": 2, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 31, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.multizone_vav_plant_requests.TAirSup",
+    "http://example.org#g36.source.multizone_vav_plant_requests.TAirSupSet",
+    "http://example.org#g36.source.multizone_vav_plant_requests.uCooCoiSet",
+    "http://example.org#g36.source.multizone_vav_plant_requests.uHeaCoiSet"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.multizone_vav_plant_requests.yChiPlaReq",
+    "http://example.org#g36.source.multizone_vav_plant_requests.yChiWatResReq",
+    "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatPlaReq",
+    "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatResReq"
+  ]
+}

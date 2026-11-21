@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:22d010e1298d0a1392a8bcc0475d9e201c2b41406bd90593c5207b60aa015a51",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.AddParameter", "signature_hash": "e71fcfa5e45fc30d"}
+  ],
+  "instances": [
+    {"block": 0, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.TRet"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.TCut"
+  ]
+}

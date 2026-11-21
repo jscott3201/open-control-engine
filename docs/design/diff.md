@@ -584,7 +584,10 @@ default. Why: `unit` reaches the CXF and the rest does not before M8; the diff n
 `parameters_equal: null`, and matches an unnamed block (`b<id>`) only through the rename pass (note
 `unnamed-blocks`). **Blob comparison needs a facade accessor** for a blob's content id, class table
 and initial-state CRCs: the decoder is `oce_graph::blob`, a core crate a leverage crate may not
-call, so the accessor is engine work, GitHub #448.
+call, so the accessor is engine work, GitHub #448. It landed as `oce_api::inspect_blob`
+([inspecting a blob](../compiled-schedule-blob.md#inspecting-a-blob)): it reports hashes and CRCs
+as the blob records them, without comparing them with the running build's, so a comparison can
+show a class whose signature changed.
 
 **16. `oce diff` exits 0 only when `equal`**, so a `reordered`-only or metadata-only diff
 exits 1 and scripts that want "same structure" read `summary.graph_equal`. For every `oce`
@@ -608,7 +611,7 @@ the same way by every subcommand; the authoring note is aligned in the same PR a
 - **Library bundle cards and agent explanations.** A card's "changes from base" section is
   `render_markdown`; an agent quotes `kind`, `subject` and the old and new values.
 - **Implementing issues.** The facade blob accessor is GitHub #448, engine work independent of M3
-  (decision 15). The `oce-diff` crate, the `oce diff` verb and the card renderer are cut from the
+  (decision 15), landed as `oce_api::inspect_blob`. The `oce-diff` crate, the `oce diff` verb and the card renderer are cut from the
   M3 tracking issue when it exists.
 
 ## Test plan

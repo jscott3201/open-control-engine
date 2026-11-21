@@ -104,7 +104,9 @@ Worked examples of the bar, and where each stands:
   matrix requires the bytes identical across architectures and across debug and release
   codegen, per PR. **Landed**:
   `crates/oce-api/tests/fixtures/blob/` (46 `.oceb` files and `class_signatures.tsv`; GitHub #400,
-  [compiled-schedule blob](docs/compiled-schedule-blob.md)). Its hostile-input suites follow the
+  [compiled-schedule blob](docs/compiled-schedule-blob.md)) and
+  `crates/oce-api/tests/fixtures/blob_summary/` (46 `.json` files, what `oce_api::inspect_blob`
+  reports for each blob, compared byte for byte by the same binary; issue #448). Its hostile-input suites follow the
   bar above: one typed refusal per defect with mutations re-checksummed to reach the check under
   test, a seeded 10,000-case byte-mutation property test, a hostile-parameter fuzz over every
   registry constructor (`crates/oce-blocks/tests/hostile_parameters.rs`), and an exact decoder

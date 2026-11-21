@@ -6,8 +6,8 @@
 //! divided by the blob length. The bounds are recorded in `oce_graph::blob`'s "Allocation"
 //! documentation and in `docs/compiled-schedule-blob.md`.
 
-#[path = "support/blob_image.rs"]
-mod blob_image;
+// Shared helper, declared once for this binary in its root `facade_allocation_census.rs`.
+use crate::blob_image;
 
 use std::sync::Arc;
 

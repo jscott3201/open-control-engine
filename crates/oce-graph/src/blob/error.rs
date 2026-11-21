@@ -5,7 +5,10 @@
 use super::EngineVersion;
 
 /// Why [`decode()`](super::decode()) refused a blob, or [`encode()`](super::encode()) refused a
-/// source.
+/// source. [`inspect()`](super::inspect()) refuses with the same type: every variant up to
+/// [`NonzeroFlags`](Self::NonzeroFlags) as the decoder does, then only
+/// [`UnknownClass`](Self::UnknownClass) and [`InstanceMismatch`](Self::InstanceMismatch) with
+/// [`InstanceField::ClassIndex`].
 ///
 /// The variants up to [`NonzeroFlags`](Self::NonzeroFlags) are listed in the decoder's refusal
 /// order, so a blob with several header defects reports the first of them in this list.

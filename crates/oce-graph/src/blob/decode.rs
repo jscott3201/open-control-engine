@@ -6,7 +6,7 @@
 
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
 
-use oce_blocks::{Block, BlockKind, RegistryEntry, class_is_target_bound, lookup};
+use oce_blocks::{Block, BlockKind, RegistryEntry, lookup};
 use oce_model::{
     BlockId, BlockInstance, Connection, ConnectorId, Dir, Model, ParamTable, Value, ValueType,
     enum_descriptor_by_path,
@@ -22,7 +22,7 @@ use super::sections::{
     instance_counts, instance_record, output_count, output_record, parameter,
 };
 use super::wire::{RawType, RawValue, state_crc};
-use super::{BlobInput, BlobOutput, Decoded};
+use super::{BlobInput, BlobOutput, Decoded, any_class_target_bound, recorded_content_id};
 use crate::{MAX_STATE_WORDS, Schedule, allocate_state, build_driver_of};
 
 /// Decode and check one `OCEB` blob into a ready-to-tick executable.
@@ -66,9 +66,7 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded<'_>, BlobError> {
         classes,
         mut owners,
     } = build_instances(&layout, &counts)?;
-    let target_bound = classes
-        .iter()
-        .any(|(_, path, _)| class_is_target_bound(path));
+    let target_bound = any_class_target_bound(classes.iter().map(|(_, path, _)| path.as_ref()));
     drop(classes);
 
     let inputs = build_inputs(&layout, &mut owners)?;
@@ -94,7 +92,7 @@ pub fn decode(bytes: &[u8]) -> Result<Decoded<'_>, BlobError> {
     };
 
     let state = build_state(&layout, &model, &blocks)?;
-    let content_id = (layout.content_id != [0u8; 32]).then_some(layout.content_id);
+    let content_id = recorded_content_id(layout.content_id);
     Ok(Decoded {
         model,
         schedule,
@@ -581,6 +579,6 @@ pub(super) fn bounds_are_valid(min: Option<&Value>, max: Option<&Value>) -> bool
 }
 
 /// An index into a list whose length the structural pass bounded by a 64 MiB input.
-fn index_u32(index: usize) -> u32 {
+pub(super) fn index_u32(index: usize) -> u32 {
     u32::try_from(index).unwrap_or(u32::MAX)
 }

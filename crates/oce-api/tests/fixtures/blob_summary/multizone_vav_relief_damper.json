@@ -1,0 +1,27 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:b36bb3f93c1304845af4cd132342d43bed05cd9c384f3be753a1f166c5963c11",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.PID", "signature_hash": "b4b36229c49f1f48"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"},
+    {"class_path": "CDL.Reals.Subtract", "signature_hash": "6978225f22e68ba8"},
+    {"class_path": "CDL.Reals.Switch", "signature_hash": "7c9e0945494c71ac"}
+  ],
+  "instances": [
+    {"block": 0, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.source.multizone_vav_relief_damper.dpBui",
+    "http://example.org#g36.source.multizone_vav_relief_damper.u1SupFan"
+  ],
+  "outputs": [
+    "http://example.org#g36.source.multizone_vav_relief_damper.yRelDam"
+  ]
+}

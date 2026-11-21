@@ -262,7 +262,11 @@ seeded threads and byte-compares every output.
 
 `crates/oce-api/tests/fixtures/blob/` holds one `OCEB` blob per G36 catalog fixture (46) and
 `class_signatures.tsv`, the per-class signature hash of every registered class (GitHub #400).
-`tests/blob_goldens.rs` re-encodes and compares them byte for byte. Four kinds of change move them,
+`tests/blob_goldens.rs` re-encodes and compares them byte for byte. Beside it,
+`tests/fixtures/blob_summary/` holds one `.json` per blob: what `oce_api::inspect_blob` reports
+for it (issue #448), compared byte for byte by the same binary. A summary moves when its blob's
+engine version, content id, class table, a class hash, a block's state length or initial-state
+CRC, or an I/O path does, and the same switch re-blesses both. Four kinds of change move them,
 deliberately:
 
 - **A workspace version bump.** The header carries the encoder's engine version and the decoder
@@ -326,7 +330,7 @@ A version bump is not a release: it cuts no tag
 and leaves `CHANGELOG.md`'s unreleased section open. It moves `Cargo.toml`
 (`workspace.package.version` and the `version` of each of the 11 workspace crates under
 `[workspace.dependencies]`) and `Cargo.lock`, the 46 blob goldens (version bytes
-and CRC), `compatibility.txt` and `compatibility_export.txt`, the content-id pin's
+and CRC) and their 46 summaries under `blob_summary/` (the `engine_version` line), `compatibility.txt` and `compatibility_export.txt`, the content-id pin's
 `# Engine version:` line (`content_id/pin.tsv`), the header table's engine-version row and the
 worked hex in `docs/design/compiled-schedule-blob.md`, the sentence in the root `README.md` that
 names the version `development` carries, and the version literals in

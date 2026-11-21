@@ -101,6 +101,11 @@ fn supported(bytes: &[u8]) -> Result<(), oce_api::OcError> {
     let _ = engine.watch(&["y"])?;
     let version: oce_api::EngineVersion = oce_api::ENGINE_VERSION;
     let _: (u16, u16, u16) = (version.major, version.minor, version.patch);
+    let summary: oce_api::BlobSummary = oce_api::inspect_blob(bytes)?;
+    let _: Option<&oce_api::ContentId> = summary.content_id.as_ref();
+    let _: Option<&oce_api::BlobClass> = summary.classes.first();
+    let _: Option<&oce_api::BlobInstance> = summary.instances.first();
+    let _: (&[String], &[String], bool) = (&summary.inputs, &summary.outputs, summary.target_bound);
     Ok(())
 }
 """

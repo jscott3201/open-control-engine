@@ -1,0 +1,29 @@
+{
+  "format_version": 1,
+  "engine_version": "0.5.0",
+  "content_id": "oce:canon1:8abbfc5c1ed1ba9cdbb68105de5554acb331986ce924e7882ab59e24cf23b0b1",
+  "target_bound": false,
+  "classes": [
+    {"class_path": "CDL.Reals.Limiter", "signature_hash": "d2c6b335d2a7176d"},
+    {"class_path": "CDL.Reals.Line", "signature_hash": "58b76f20df1446c7"},
+    {"class_path": "CDL.Reals.Sources.Constant", "signature_hash": "b9e8555971726cdf"},
+    {"class_path": "CDL.Reals.Subtract", "signature_hash": "6978225f22e68ba8"}
+  ],
+  "instances": [
+    {"block": 0, "class": 3, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 1, "class": 0, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 2, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 3, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 4, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 5, "class": 2, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
+    {"block": 6, "class": 1, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
+  ],
+  "inputs": [
+    "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint",
+    "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp"
+  ],
+  "outputs": [
+    "http://example.org#g36.ahu_supply_air_temp_reset.cooling_demand",
+    "http://example.org#g36.ahu_supply_air_temp_reset.sat_setpoint"
+  ]
+}

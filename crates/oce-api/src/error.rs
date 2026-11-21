@@ -205,7 +205,8 @@ pub enum OcError {
     #[error(transparent)]
     State(#[from] crate::state::EngineStateError),
     /// The loaded executable cannot be compiled to a compiled-schedule blob, or the blob it
-    /// produced did not decode ([`crate::Engine::compile_blob`]).
+    /// produced did not decode ([`crate::Engine::compile_blob`]); or bytes given to
+    /// [`crate::inspect_blob`] are not a blob this build reads.
     #[error("compiled-schedule blob: {0}")]
     Blob(#[from] crate::BlobError),
     /// The loaded model has no canonical content id ([`crate::Engine::content_id`]): a hand-built

@@ -20,10 +20,12 @@ pub(crate) fn sha256(bytes: &[u8]) -> [u8; 32] {
 /// One canonical content id: the SHA-256 of the `OCECANON` v1 encoding of a loaded flat graph,
 /// written `oce:canon1:<64 lowercase hex digits>` (`docs/design/content-id.md`).
 ///
-/// Minted only by [`crate::Engine::content_id`]. Re-serializing a document, permuting its arrays
-/// or moving it to another instance namespace leaves the id unchanged; any change that reaches
-/// execution or the boundary I/O definitions moves it. It is not [`crate::LoadReport::model_id`]
-/// (the authored root `@id`), not an export-bytes tag, not a build identity and not a signature.
+/// Minted only by [`crate::Engine::content_id`]; [`crate::inspect_blob`] reads back the id a
+/// compiled-schedule blob's header records and mints nothing. Re-serializing a document,
+/// permuting its arrays or moving it to another instance namespace leaves the id unchanged; any
+/// change that reaches execution or the boundary I/O definitions moves it. It is not
+/// [`crate::LoadReport::model_id`] (the authored root `@id`), not an export-bytes tag, not a
+/// build identity and not a signature.
 ///
 /// [`ContentId::parse`] is a checked parser of the exact text form, for hosts that stored an id
 /// and compare it later; it never accepts upper case, whitespace, another prefix or a digest of
