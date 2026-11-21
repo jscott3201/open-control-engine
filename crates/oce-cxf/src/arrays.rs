@@ -13,6 +13,7 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::{ArrayValue, EvalResult};
 use oce_model::Value;
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfValue, Node};
 use crate::ground::{GroundErr, ground_param_value};
 use crate::resolve::local_name;
@@ -238,7 +239,7 @@ fn collides_with_sibling(
     siblings: &HashSet<&str>,
     ename: &str,
     piri: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     if !siblings.contains(ename) {
         return false;
@@ -323,7 +324,7 @@ pub(crate) fn expand_array_param(
     table: &mut Vec<(Arc<str>, Value)>,
     siblings: &mut IndexedEntries,
     budget: &mut ArrayElementBudget,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let base = strip_array_label(local_name(piri));
     let Some(size) = pnode.size_dims.as_deref() else {

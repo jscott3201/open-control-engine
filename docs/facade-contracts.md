@@ -155,8 +155,13 @@ preserves opaque text without URI/Unicode normalization or guessing. Hosts own a
 
 `DiagnosticKey` equality/order excludes display messages. Equal machine records retain multiplicity
 and producer-relative tie order, without a prose tie-breaker or uniqueness claim. Code strings are
-extensible. There is no truncation, deduplication or stable human-message promise. The existing
-`all_diagnostics` and legacy warning order remain unchanged. The
+extensible. There is no deduplication or stable human-message promise. The receipt itself
+truncates nothing: it records every diagnostic each stage returns. One stage returns a bounded
+list: the CXF reader lists its diagnostics while their messages and subjects fit 8 MiB, and ends
+a longer list with one `resource-limit-exceeded` error that counts the diagnostics it does not
+list. That record has no subject, so it sorts first among a receipt's `Import` records
+([a refusal list is a bounded answer](host-responsibilities.md#a-refusal-list-is-a-bounded-answer)).
+The existing `all_diagnostics` and legacy warning order remain unchanged. The
 [receipt schema](../crates/oce-api/contracts/diagnostics.schema.json) describes this separate revision.
 
 ## Other contract descriptors

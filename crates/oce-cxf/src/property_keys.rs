@@ -71,6 +71,7 @@ use serde_json::{Map, Value as Json};
 use super::unread_qudt_has_unit::{UnreadHasUnit, unread_has_unit};
 use super::vocabulary_namespace::{FOREIGN_NAMESPACES, foreign_key};
 use super::{Expansion, PrefixTable, expand_token};
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
@@ -184,7 +185,7 @@ pub(super) fn normalize(
     doc: &mut CxfDocument,
     table: &PrefixTable,
     raw: Option<&[u8]>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let authored = authored_keys(raw);
     for (index, node) in doc.graph.iter_mut().enumerate() {
@@ -200,13 +201,16 @@ pub(super) fn normalize(
         let repeated = repeated_keys(keys);
         if !repeated.is_empty() {
             for (key, count) in repeated {
-                diags.push(malformed(
-                    &subject,
-                    format!(
-                        "node `{subject}` writes the key `{key}` {count} times; a key may appear \
-                         once per node, and a repeat would silently keep only one of the values"
-                    ),
-                ));
+                diags.raise(|| {
+                    malformed(
+                        &subject,
+                        format!(
+                            "node `{subject}` writes the key `{key}` {count} times; a key may \
+                             appear once per node, and a repeat would silently keep only one of \
+                             the values"
+                        ),
+                    )
+                });
             }
             continue;
         }
@@ -295,7 +299,7 @@ impl KeyScope<'_> {
     /// near-miss spellings and a `hasUnit` key that would go unread. On a node that carries a
     /// `@context` of its own, which is refused as a scoped context, an unread `hasUnit` key is
     /// not refused as well: the document-level bindings are not what that node meant its keys by.
-    fn aliases_of(&self, node: &Node, diags: &mut Vec<Diagnostic>) -> Vec<Alias> {
+    fn aliases_of(&self, node: &Node, diags: &mut DiagnosticList) -> Vec<Alias> {
         let subject = self.subject;
         let scoped = node.other.contains_key("@context");
         let mut aliases = Vec::new();
@@ -303,17 +307,19 @@ impl KeyScope<'_> {
             let trimmed = key.trim();
             if trimmed != key {
                 match self.meaning(trimmed) {
-                    KeyMeaning::Own(term) | KeyMeaning::Foreign(term, _) => diags.push(malformed(
-                        subject,
-                        format!(
-                            "property key {:?} on node `{subject}` carries surrounding \
-                             whitespace; without it, it names the modeled term `{term}`; write \
-                             it as `S231:{term}`",
-                            excerpt(key)
-                        ),
-                    )),
+                    KeyMeaning::Own(term) | KeyMeaning::Foreign(term, _) => diags.raise(|| {
+                        malformed(
+                            subject,
+                            format!(
+                                "property key {:?} on node `{subject}` carries surrounding \
+                                 whitespace; without it, it names the modeled term `{term}`; \
+                                 write it as `S231:{term}`",
+                                excerpt(key)
+                            ),
+                        )
+                    }),
                     KeyMeaning::Unread(unread) if !scoped => {
-                        diags.push(unread.whitespace_refusal(key, subject));
+                        diags.raise(|| unread.whitespace_refusal(key, subject));
                     }
                     KeyMeaning::Unread(_) | KeyMeaning::Unrelated => {}
                 }
@@ -325,10 +331,10 @@ impl KeyScope<'_> {
                     term,
                 }),
                 KeyMeaning::Foreign(term, namespace) => {
-                    diags.push(foreign_key(key, subject, term, namespace));
+                    diags.raise(|| foreign_key(key, subject, term, namespace));
                 }
                 KeyMeaning::Unread(unread) if !scoped => {
-                    diags.push(unread.refusal(key, subject));
+                    diags.raise(|| unread.refusal(key, subject));
                 }
                 KeyMeaning::Unread(_) | KeyMeaning::Unrelated => {}
             }
@@ -345,7 +351,7 @@ fn rewrite(
     aliases: &[Alias],
     subject: &str,
     explicit: &mut dyn FnMut(&str) -> bool,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let mut object = match serde_json::to_value(&*node) {
         Ok(Json::Object(object)) => object,
@@ -368,14 +374,16 @@ fn rewrite(
         };
         if let Some(first) = first {
             duplicate = true;
-            diags.push(malformed(
-                subject,
-                format!(
-                    "node `{subject}` writes `S231:{}` twice, as `{first}` and as `{}`; \
-                     a property must have exactly one spelling",
-                    alias.term, alias.key
-                ),
-            ));
+            diags.raise(|| {
+                malformed(
+                    subject,
+                    format!(
+                        "node `{subject}` writes `S231:{}` twice, as `{first}` and as `{}`; \
+                         a property must have exactly one spelling",
+                        alias.term, alias.key
+                    ),
+                )
+            });
             continue;
         }
         claimed.insert(alias.term, &alias.key);

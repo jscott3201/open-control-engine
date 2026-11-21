@@ -6,6 +6,7 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ParamTable, ValueType};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 
 use super::attrs::connector_attrs;
@@ -22,7 +23,7 @@ pub(super) fn derive_boundary_types<'a, 'e>(
     edge_groups: impl Iterator<Item = (&'e str, &'e [Arc<str>])>,
     boundary_in: &HashSet<&str>,
     boundary_out: &HashSet<&str>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> HashMap<&'a str, Option<ValueType>> {
     let mut pass_endpoints: HashSet<&str> = HashSet::new();
     for (source, targets) in edge_groups {
@@ -63,7 +64,7 @@ pub(super) fn derive_boundary_types<'a, 'e>(
 
 fn try_derive_pass_through_value_type(
     node: &Node,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Option<ValueType> {
     if let Some(datatype) = &node.is_of_data_type {
         if term_of(&datatype.id) == "String" {
@@ -90,7 +91,7 @@ pub(super) fn materialize(
     blocks: &mut Vec<BlockInstance>,
     connectors: &mut Vec<Connector>,
     external_inputs: &mut Vec<ConnectorId>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     for (input_iri, output_iri) in pairs {
         let value_type = boundary_types

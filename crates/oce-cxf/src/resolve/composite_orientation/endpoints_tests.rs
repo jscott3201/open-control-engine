@@ -6,6 +6,7 @@ use std::sync::Arc;
 use serde_json::json;
 
 use super::{EndpointIx, LoweringEndpoints};
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 use crate::resolve::composite::{LoweredCxf, lower};
 use crate::resolve::composite_orientation::CompositeOrientation;
@@ -63,7 +64,7 @@ fn by_id(doc: &CxfDocument) -> HashMap<&str, &Node> {
 }
 
 fn lowered(doc: &CxfDocument) -> (LoweredCxf, Vec<oce_diag::Diagnostic>) {
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     let lowered = lower(
         doc,
         &by_id(doc),
@@ -72,7 +73,7 @@ fn lowered(doc: &CxfDocument) -> (LoweredCxf, Vec<oce_diag::Diagnostic>) {
         &mut CheckedParameters::default(),
         &mut diags,
     );
-    (lowered, diags)
+    (lowered, diags.into_iter().collect())
 }
 
 fn rendered_edges(lowered: &LoweredCxf) -> Vec<(String, String)> {

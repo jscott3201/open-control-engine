@@ -50,6 +50,7 @@ use std::collections::{HashMap, HashSet};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockId, Dir, ValueType};
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 
 use super::composite::is_runtime_composite;
@@ -136,7 +137,7 @@ pub(super) fn orientation_port_members(node: &Node) -> Vec<(String, bool)> {
 pub(super) fn derive_member_value_type(
     node: &Node,
     fallback: ValueType,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> ValueType {
     if node.is_of_data_type.is_none() && first_type(node).is_none() {
         return fallback;
@@ -229,7 +230,7 @@ pub(super) fn derive(
     by_id: &HashMap<&str, &Node>,
     graph_pos: &HashMap<&str, usize>,
     specialization: &Specialization,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> InstanceDerivation {
     let authored_referents = contains_block_referents(authored);
     let authored_carriers: HashSet<&str> = authored
@@ -301,6 +302,31 @@ fn port_value_type(kind: oce_blocks::PortKind) -> ValueType {
     }
 }
 
+/// How a `hasInstance` member falls outside its owner's member domain (R19-12).
+enum MemberDomainViolation {
+    /// The member is not the owner's `@id`, one `.`, and one further segment.
+    NotDirect,
+    /// The member is itself a block instance.
+    BlockInstance,
+}
+
+impl MemberDomainViolation {
+    /// The refusal of `member` on `owner` for this violation. One instance may list any number
+    /// of members, each refused naming the same owner, so the caller builds this only while its
+    /// list has room for it (GitHub issue #695).
+    fn diagnostic(&self, owner: &str, member: &str) -> Diagnostic {
+        let detail = match self {
+            Self::NotDirect => format!("member is not a direct member of `{owner}`"),
+            Self::BlockInstance => format!("member `{member}` is itself a block instance"),
+        };
+        Diagnostic::error(
+            UNSUPPORTED_INSTANCE_MEMBER.code,
+            UNSUPPORTED_INSTANCE_MEMBER.message(detail),
+        )
+        .with_subject(member.to_owned())
+    }
+}
+
 /// R19-12: a member must be a **direct** member of its owner — the owner's `@id`, one `.`,
 /// one further segment — and must not itself be a block instance (a `containsBlock` referent
 /// anywhere in the authored document, or a node carrying `containsBlock` or `hasInstance`),
@@ -310,30 +336,16 @@ fn member_domain_violation(
     member: &str,
     authored_referents: &HashSet<&str>,
     authored_carriers: &HashSet<&str>,
-) -> Option<Diagnostic> {
+) -> Option<MemberDomainViolation> {
     let direct = member
         .strip_prefix(owner)
         .and_then(|rest| rest.strip_prefix('.'))
         .is_some_and(|segment| !segment.is_empty() && !segment.contains('.'));
     if !direct {
-        return Some(
-            Diagnostic::error(
-                UNSUPPORTED_INSTANCE_MEMBER.code,
-                UNSUPPORTED_INSTANCE_MEMBER
-                    .message(format!("member is not a direct member of `{owner}`")),
-            )
-            .with_subject(member.to_owned()),
-        );
+        return Some(MemberDomainViolation::NotDirect);
     }
     if authored_referents.contains(member) || authored_carriers.contains(member) {
-        return Some(
-            Diagnostic::error(
-                UNSUPPORTED_INSTANCE_MEMBER.code,
-                UNSUPPORTED_INSTANCE_MEMBER
-                    .message(format!("member `{member}` is itself a block instance")),
-            )
-            .with_subject(member.to_owned()),
-        );
+        return Some(MemberDomainViolation::BlockInstance);
     }
     None
 }
@@ -355,7 +367,7 @@ fn derive_one(
     minted: &mut HashSet<String>,
     synth_keyed: &mut Vec<((usize, usize), SynthesizedConnector)>,
     out: &mut InstanceDerivation,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let owner = node.id.as_str();
     let mut skip = false;
@@ -365,8 +377,8 @@ fn derive_one(
     let mut members: Vec<&str> = Vec::new();
     for member in node.has_instance.iter().map(|r| r.id.as_str()) {
         match member_domain_violation(owner, member, authored_referents, authored_carriers) {
-            Some(diag) => {
-                diags.push(diag);
+            Some(violation) => {
+                diags.raise(|| violation.diagnostic(owner, member));
                 skip = true;
             }
             None => members.push(member),
@@ -650,7 +662,7 @@ fn compare_declared_interfaces(
     node: &Node,
     class_path: &str,
     by_id: &HashMap<&str, &Node>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let Some(entry) = catalog_entry(class_path) else {
         return;

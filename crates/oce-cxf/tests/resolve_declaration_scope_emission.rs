@@ -302,3 +302,87 @@ fn leaf_chain_duplicate_declaration_stays_untagged_and_the_document_loads() {
     );
     assert_eq!(params[2].0, "have_hol");
 }
+
+/// A pruned composite's findings are released whole whatever the root's chain withheld beside
+/// them (GitHub issue #695). The root re-binds `k` forty times after a declaration whose `@id`
+/// is 256 KiB long, through the same forty declarations the pruned composite `sub` lists; the
+/// specialize pass finds forty duplicates on the root, each naming that long `@id`, and
+/// thirty-nine on `sub`. Lowering reads the root itself, where `sub`'s declarations are pruned,
+/// so the root's forty are never reported, and `sub`'s thirty-nine are: built when they are
+/// released, into a list that the root's findings took nothing from.
+#[test]
+fn a_pruned_composites_findings_are_released_whole_beside_a_root_chain_of_long_findings() {
+    const M: &str = "http://example.org#M";
+    let long = format!("urn:long:{}.k", "x".repeat(256 * 1024));
+    let again: Vec<String> = (0..40).map(|i| format!("{M}.sub.d{i}.k")).collect();
+    let references = |ids: &[String]| -> Vec<Json> {
+        ids.iter()
+            .map(|id| json!({ "@id": id }))
+            .collect::<Vec<_>>()
+    };
+    let mut root_parameters = vec![
+        json!({ "@id": format!("{M}.have_sub") }),
+        json!({ "@id": long }),
+    ];
+    root_parameters.extend(references(&again));
+    let mut sub_parameters = references(&again);
+    sub_parameters.push(json!({ "@id": format!("{M}.sub.have_inner") }));
+    let mut graph = vec![
+        json!({ "@id": M, "@type": "S231:Block",
+                "S231:hasParameter": root_parameters,
+                "S231:containsBlock": [ { "@id": format!("{M}.con") }, { "@id": format!("{M}.sub") } ] }),
+        json!({ "@id": format!("{M}.have_sub"), "S231:value": false }),
+        json!({ "@id": long, "S231:value": 1.0 }),
+        json!({ "@id": format!("{M}.con"),
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+                "S231:hasParameter": { "@id": format!("{M}.con.k") },
+                "S231:hasOutput": { "@id": format!("{M}.con.y") } }),
+        json!({ "@id": format!("{M}.con.k"), "S231:value": 1.0 }),
+        json!({ "@id": format!("{M}.con.y"), "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" } }),
+        json!({ "@id": format!("{M}.sub"), "@type": "http://example.org#Vendor.Sequences.Inner",
+                "S231:isConditionalComponent": true,
+                "S231:conditionalExpression": "have_sub",
+                "S231:hasParameter": sub_parameters,
+                "S231:containsBlock": [ { "@id": format!("{M}.sub.inner") } ] }),
+        json!({ "@id": format!("{M}.sub.have_inner"), "S231:value": false }),
+        json!({ "@id": format!("{M}.sub.inner"),
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+                "S231:isConditionalComponent": true,
+                "S231:conditionalExpression": "have_inner",
+                "S231:hasParameter": { "@id": format!("{M}.sub.inner.k") },
+                "S231:hasOutput": { "@id": format!("{M}.sub.inner.y") } }),
+        json!({ "@id": format!("{M}.sub.inner.k"), "S231:value": 1.0 }),
+        json!({ "@id": format!("{M}.sub.inner.y"), "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" } }),
+    ];
+    graph.extend(
+        again
+            .iter()
+            .map(|id| json!({ "@id": id, "S231:value": 1.0 })),
+    );
+    let doc = json!({
+        "@context": { "S231": "http://data.ashrae.org/S231#", "base": "http://example.org#" },
+        "@graph": graph
+    });
+
+    let diags = import_json(&doc).expect_err("the pruned composite's duplicates refuse the import");
+    let mut expected: Vec<Diagnostic> = again[1..]
+        .iter()
+        .map(|id| {
+            Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "composite/duplicate-declaration: own declaration {id} re-binds local name \
+                     `k` first declared at {}",
+                    again[0]
+                ),
+            )
+            .with_subject(id.as_str())
+        })
+        .collect();
+    assert_eq!(expected.len(), 39);
+    // The reader's order: by subject.
+    expected.sort_by(|a, b| a.subject.cmp(&b.subject));
+    assert_eq!(diags, expected);
+}

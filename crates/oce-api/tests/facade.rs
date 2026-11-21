@@ -60,6 +60,7 @@ mod content_id_worked_examples;
 mod context_expansion_identity;
 mod core_crates_hash_free;
 mod crossed_bounds;
+mod cxf_diagnostic_list_bound;
 mod cxf_namespace_and_label;
 mod cxf_property_key_spellings;
 mod cxf_unit_spellings;

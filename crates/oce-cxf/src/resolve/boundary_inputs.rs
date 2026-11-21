@@ -8,6 +8,7 @@ use oce_model::{
     Attrs, BoundaryInput, Connection, Connector, ConnectorId, Dir, ModelGraph, NoAttrs, ValueType,
 };
 
+use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 use crate::export::EXPORT_ROOT_IRI;
 use crate::export_defer::deferral_set;
@@ -86,7 +87,7 @@ impl AssignmentTracker {
         self,
         connections: &[Connection],
         connectors: &[Connector],
-        diags: &mut Vec<Diagnostic>,
+        diags: &mut DiagnosticList,
     ) {
         let wired = connections
             .iter()
@@ -125,7 +126,7 @@ pub(super) fn refuse_role_aliases<'a>(
     boundary_in: &HashSet<&str>,
     conn_of_iri: &HashMap<&str, ConnectorId>,
     insts: &[Inst<'_>],
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> HashSet<&'a str> {
     let block_iris = insts
         .iter()
@@ -194,7 +195,7 @@ pub(super) fn warn_unread(
     by_id: &HashMap<&str, &Node>,
     role_aliases: &HashSet<&str>,
     read: &HashSet<&str>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let mut seen = HashSet::new();
     for iri in top.has_input.iter().map(|reference| reference.id.as_str()) {
@@ -225,7 +226,7 @@ pub(super) fn materialize(
     graph: &ModelGraph,
     role_aliases: &HashSet<&str>,
     boundary_types: &HashMap<&str, Option<ValueType>>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Vec<BoundaryInput> {
     let represented = graph
         .external_inputs
@@ -255,7 +256,7 @@ fn refuse_minted_aliases(
     graph: &ModelGraph,
     role_aliases: &HashSet<&str>,
     deferred: &BTreeSet<usize>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let mut minted = HashSet::from([EXPORT_ROOT_IRI.to_owned()]);
     for (position, block) in graph.blocks.iter().enumerate() {
@@ -322,7 +323,7 @@ fn refuse_minted_aliases(
 fn declared_attrs(
     node: &Node,
     boundary_types: &HashMap<&str, Option<ValueType>>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Attrs {
     match boundary_types.get(node.id.as_str()).copied().flatten() {
         Some(value_type) => connector_attrs(node, value_type, diags),
