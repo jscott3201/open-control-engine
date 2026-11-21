@@ -16,7 +16,7 @@ fn judged(error: &SpecError) -> &'static str {
     // A load never gives a code that needs a sequence's outputs.
     assert!(!matches!(
         error.code(),
-        "unmatched-key" | "work-limit-exceeded"
+        "unmatched-key" | "ambiguous-output" | "conflicting-override" | "work-limit-exceeded"
     ));
     for text in [error.subject(), error.detail()] {
         assert!(

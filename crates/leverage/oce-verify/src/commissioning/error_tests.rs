@@ -35,13 +35,15 @@ fn declared_index(kind: SpecErrorKind) -> usize {
         K::InvalidHold => 25,
         K::DuplicatePoint => 26,
         K::UnmatchedKey => 27,
-        K::WorkLimitExceeded => 28,
+        K::AmbiguousOutput => 28,
+        K::ConflictingOverride => 29,
+        K::WorkLimitExceeded => 30,
     }
 }
 
 #[test]
 fn the_code_list_is_every_kind_in_declaration_order() {
-    assert_eq!(SpecErrorKind::ALL.len(), 29);
+    assert_eq!(SpecErrorKind::ALL.len(), 31);
     for (index, kind) in SpecErrorKind::ALL.iter().enumerate() {
         assert_eq!(declared_index(*kind), index, "{kind:?}");
     }

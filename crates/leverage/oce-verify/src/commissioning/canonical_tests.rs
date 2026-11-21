@@ -22,7 +22,7 @@ fn the_smallest_spec_is_its_references_and_its_tag() {
 }
 
 #[test]
-fn every_object_is_sorted_but_the_two_override_maps() {
+fn every_object_is_sorted_the_two_override_maps_included() {
     let text = written(
         r#"{"references": [{"sequence": "s", "model": "M",
             "parameters": {"z": 1, "a": 2},
@@ -35,11 +35,11 @@ fn every_object_is_sorted_but_the_two_override_maps() {
   "references": [
     {
       "indicators": {
+        "s.a": [],
         "s.z": [
           "s.q",
           "s.b"
-        ],
-        "s.a": []
+        ]
       },
       "inputs": [
         {
@@ -57,11 +57,11 @@ fn every_object_is_sorted_but_the_two_override_maps() {
       ],
       "model": "M",
       "outputs": {
+        "s.a": {},
         "s.z": {
           "atoly": 2,
           "rtoly": 1
-        },
-        "s.a": {}
+        }
       },
       "parameters": {
         "a": 2,

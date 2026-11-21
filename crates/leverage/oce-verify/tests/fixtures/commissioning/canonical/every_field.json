@@ -40,15 +40,15 @@
         }
       ],
       "indicators": {
-        "ahu.1.z": [],
+        "ahu.1.TSup": [
+          "occupied"
+        ],
         "ahu.1.y*": [
           "ahu.1.uFan",
           "fanSta.y",
           "ahu.1.uFan"
         ],
-        "ahu.1.TSup": [
-          "occupied"
-        ]
+        "ahu.1.z": []
       },
       "inputs": [
         {
@@ -80,13 +80,6 @@
       ],
       "model": "Buildings./*not a comment*/ \u00c9cole // nor this \ud83c\udf21",
       "outputs": {
-        "ahu.1.y*": {
-          "atoly": 0.5,
-          "rtoly": 0
-        },
-        "ahu.1.yFan": {
-          "atoly": 0.25
-        },
         "ahu.1.?Dam": {},
         "ahu.1.TSup": {
           "atolx": 5,
@@ -95,6 +88,13 @@
           "ltoly": 0.001,
           "rtolx": 0.0,
           "rtoly": 0.02
+        },
+        "ahu.1.y*": {
+          "atoly": 0.5,
+          "rtoly": 0
+        },
+        "ahu.1.yFan": {
+          "atoly": 0.25
         }
       },
       "parameters": {
@@ -155,7 +155,7 @@
       }
     },
     {
-      "model": "",
+      "model": "M",
       "sequence": "s"
     },
     {

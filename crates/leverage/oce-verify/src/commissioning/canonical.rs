@@ -2,16 +2,15 @@
 //! verifier always writes strict JSON with a `schema` tag, so a stored spec is canonical").
 //!
 //! It is written by the crate's one canonical writer ([`crate::canonical`]): sorted keys, one
-//! spelling per number, two-space indentation, ASCII only. Two things are this format's own:
+//! spelling per number, two-space indentation, ASCII only. One thing is this format's own:
+//! **`schema` is always written,** whether or not the document that was loaded had one, so an
+//! LBL spec and its stored form have one identity.
 //!
-//! - **`schema` is always written,** whether or not the document that was loaded had one, so an
-//!   LBL spec and its stored form have one identity.
-//! - **The keys of an `outputs` and an `indicators` map are written in declaration order,** not
-//!   sorted. "Overrides apply in declaration order, later fields winning", so the order of
-//!   those keys is part of what the spec means: a writer that sorted them would give two specs
-//!   that compare an output under different tolerances one canonical form and one `spec_id`,
-//!   and a stored spec would run differently from the file it was written from. Every other
-//!   object is sorted, a reference's `parameters` and a source's `columns` among them.
+//! **Every object's keys are sorted, those of an `outputs` and an `indicators` map included**
+//! (owner's ruling of 2026-11-21). The order of a file's keys carries no meaning: which override
+//! applies to an output is decided by what the keys are, an exact name over a glob, and two
+//! keys of one kind that disagree are refused ([`super::selection`]). So a tool that reorders a
+//! spec changes neither what it means nor its `spec_id`.
 //!
 //! Everything a spec holds is written, the fields the verifier ignores included: a key the file
 //! gave is in the canonical form, and one it did not give is not.
@@ -97,32 +96,25 @@ fn reference(reference: &SpecReference) -> Json {
                 PointNameMapping::Inline(mapping) => mapping.to_json(),
             }),
     );
-    // Declaration order, not sorted: see the module documentation.
     add(
         "outputs",
         reference.outputs.as_ref().map(|overrides| {
-            Json::Object(
+            Json::object(
                 overrides
                     .iter()
-                    .map(|each| (each.key.clone(), tolerances(&each.tolerances)))
-                    .collect(),
+                    .map(|each| (each.key.clone(), tolerances(&each.tolerances))),
             )
         }),
     );
     add(
         "indicators",
         reference.indicators.as_ref().map(|rules| {
-            Json::Object(
-                rules
-                    .iter()
-                    .map(|rule| {
-                        (
-                            rule.key.clone(),
-                            Json::List(rule.names.iter().map(|name| Json::str(name)).collect()),
-                        )
-                    })
-                    .collect(),
-            )
+            Json::object(rules.iter().map(|rule| {
+                (
+                    rule.key.clone(),
+                    Json::List(rule.names.iter().map(|name| Json::str(name)).collect()),
+                )
+            }))
         }),
     );
     add("sampling", reference.sampling.map(number));

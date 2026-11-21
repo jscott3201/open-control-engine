@@ -7,13 +7,13 @@ use std::collections::BTreeSet;
 
 use oce_verify::{
     CommissioningSpec, Location, MAX_DEPTH, MAX_LIST_LEN, MAX_SPEC_DETAIL_BYTES, MAX_STRING_BYTES,
-    SPEC_ERROR_CODES, SpecError, SpecErrorKind, SpecLimits, VECTOR_ERROR_CODES,
+    SPEC_ERROR_CODES, SpecError, SpecLimits, VECTOR_ERROR_CODES,
 };
 
-use crate::{load, loaded, one_reference, top_level};
+use crate::{load, one_reference, top_level};
 
 /// The codes, in the order `SpecErrorKind` declares them: the fourteen strict-JSON refusals,
-/// the comment's, then the format's own, then the two found at bind.
+/// the comment's, then the format's own, then the four found at bind.
 const PINNED: &[&str] = &[
     "not-utf8",
     "byte-order-mark",
@@ -43,6 +43,8 @@ const PINNED: &[&str] = &[
     "invalid-hold",
     "duplicate-point",
     "unmatched-key",
+    "ambiguous-output",
+    "conflicting-override",
     "work-limit-exceeded",
 ];
 
@@ -65,6 +67,9 @@ fn the_shared_refusals_are_spelled_as_the_vector_reader_spells_them() {
         assert!(SPEC_ERROR_CODES.contains(&shared), "{shared}");
         assert!(VECTOR_ERROR_CODES.contains(&shared), "{shared}");
     }
+    // `ambiguous-output` is the vector bind's word for a name the replay rule gives to several
+    // outputs.
+    assert!(oce_verify::VERIFY_ERROR_CODES.contains(&"ambiguous-output"));
     // A path of a spec is not a mutant's: the vector reader's word for its own list stays there.
     assert!(!SPEC_ERROR_CODES.contains(&"mutant-path-invalid"));
     let mut seen = BTreeSet::new();
@@ -145,8 +150,10 @@ fn load_cases() -> Vec<LoadCase> {
         ),
         (
             "unterminated-comment",
-            text("{\"references\": []}\n/* open"),
-            Some((2, 1)),
+            // A file with CRLF line ends: the `/*` is on line 3, and a carriage return is a
+            // byte of its line, never a line of its own.
+            text("{\r\n  \"references\": []\r\n} /* open\r\n"),
+            Some((3, 3)),
         ),
         (
             "unknown-schema",
@@ -261,44 +268,24 @@ fn every_load_code_is_produced_at_the_place_it_names() {
             format!("{}: {}", error.subject(), error.detail())
         );
     }
-    // The table and the list cover each other, but for the two codes a load never gives.
+    // The table and the list cover each other, but for the four codes a load never gives: they
+    // are found when a reference's keys are matched against a sequence's outputs, and the
+    // crate's own tests produce each of them there.
     let produced: BTreeSet<&str> = cases.iter().map(|(code, _, _)| *code).collect();
     let listed: BTreeSet<&str> = SPEC_ERROR_CODES.iter().copied().collect();
-    let at_bind: BTreeSet<&str> = ["unmatched-key", "work-limit-exceeded"].into();
+    let at_bind: BTreeSet<&str> = [
+        "unmatched-key",
+        "ambiguous-output",
+        "conflicting-override",
+        "work-limit-exceeded",
+    ]
+    .into();
     assert_eq!(
         produced.union(&at_bind).copied().collect::<BTreeSet<_>>(),
         listed
     );
     assert!(produced.is_disjoint(&at_bind));
-    assert_eq!(cases.len(), SPEC_ERROR_CODES.len() - 2, "one case per code");
-}
-
-#[test]
-fn the_two_bind_codes_are_produced_by_a_key_selection() {
-    let spec = loaded(&one_reference(
-        "\"outputs\": {\"s.yFan\": {}, \"s.TSup*\": {}}",
-    ));
-    let reference = &spec.references()[0];
-    let unmatched = reference
-        .select_output_keys(&["s.yFan", "s.yDam"], &SpecLimits::default())
-        .expect_err("the glob selects nothing");
-    assert_eq!(unmatched.code(), "unmatched-key");
-    assert_eq!(unmatched.kind(), SpecErrorKind::UnmatchedKey);
-    assert_eq!((unmatched.at(), unmatched.subject()), (None, "outputs"));
-    let starved = SpecLimits {
-        max_key_match_work: 0,
-        ..SpecLimits::MAX
-    };
-    let exhausted = reference
-        .select_output_keys(&["s.yFan", "s.TSup"], &starved)
-        .expect_err("no work is allowed");
-    assert_eq!(exhausted.code(), "work-limit-exceeded");
-    assert_eq!(exhausted.kind(), SpecErrorKind::WorkLimitExceeded);
-    assert_eq!((exhausted.at(), exhausted.subject()), (None, "outputs"));
-    assert_eq!(
-        exhausted.detail(),
-        "matching the keys against the output names needed more than 0 work units"
-    );
+    assert_eq!(cases.len(), SPEC_ERROR_CODES.len() - 4, "one case per code");
 }
 
 #[test]

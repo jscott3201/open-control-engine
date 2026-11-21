@@ -103,11 +103,12 @@ fn a_pair_has_both_sides_and_a_side_its_name_and_type() {
             "{\"name\": \"x\", \"unit\": \"K\", \"type\": \"float\"}",
             "loaded",
         ),
-        // A unit is kept as written and judged by the unit table, not here.
+        // A point without a unit writes no `unit` key: an empty unit is neither.
         (
             "{\"name\": \"x\", \"unit\": \"\", \"type\": \"float\"}",
-            "loaded",
+            "empty-name",
         ),
+        // A unit that is written is kept as written and judged by the unit table, not here.
         (
             "{\"name\": \"x\", \"unit\": \"furlongs\", \"type\": \"float\"}",
             "loaded",

@@ -110,7 +110,7 @@ fn each_top_level_key_lands_in_its_own_field() {
         &mut reader(
             r#"{"schema": "oce/commissioning-spec/v1", "time": {"origin": "2018-06-07T00:00:00Z"},
                 "tolerances": {"atoly": 3}, "sampling": 9, "modelJsonDirectory": "m",
-                "controller": "c", "references": [{"model": "", "sequence": "s"}]}"#,
+                "controller": "c", "references": [{"model": "M", "sequence": "s"}]}"#,
         ),
         &limits,
     )
@@ -137,7 +137,8 @@ fn each_top_level_key_lands_in_its_own_field() {
         max_parameters: 1,
         ..limits
     };
-    let two = r#"{"references": [{"model": "", "sequence": "s", "parameters": {"a": 1, "b": 2}}]}"#;
+    let two =
+        r#"{"references": [{"model": "M", "sequence": "s", "parameters": {"a": 1, "b": 2}}]}"#;
     assert!(spec(&mut reader(two), &limits).is_ok());
     assert_eq!(
         spec(&mut reader(two), &one).expect_err("refused").kind,

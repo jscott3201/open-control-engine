@@ -636,7 +636,9 @@ key is an LBL spec and is read as `oce/commissioning-spec/v1`; any other tag is 
   `controllerOutput`; top-level `tolerances` and `sampling`. `generateJson`,
   `modelJsonDirectory`, `runController` and `controller` take any strict JSON value, are never
   interpreted, and are each reported by `CommissioningSpec::findings` as `lbl-field-ignored`,
-  in an order that does not depend on the file's key order.
+  in an order that does not depend on the file's key order. A `controllerOutput` beside an
+  `expected` is reported the same way: `expected` is then the source, and the path is not
+  read.
 - **The added fields:** `schema`; `time.origin` (an RFC 3339 instant with an explicit offset,
   held as `oce_replay::TimeOrigin`); `ltolx` and `ltoly` in any tolerance object; per reference
   `cxf`, `parameters` (at most 256), `inputs`, `expected` and `indicatorSources` (trend
@@ -645,35 +647,45 @@ key is an LBL spec and is read as `oce/commissioning-spec/v1`; any other tag is 
   `funnelReference` (`engine` or `trend`).
 - **Rules checked at load:** every path relative and inside the spec's directory
   (`path-invalid`); a tolerance not negative; a sampling above zero; a hold not negative; a
-  window with both ends and `start <= stop`; every name non-empty; each closed choice spelled
+  window with both ends and `start <= stop`; every name non-empty, a `model` and a point's
+  unit among them; each closed choice spelled
   exactly (`unknown-value`). `window` and `cxf` are optional to load, because an LBL spec has
   neither, and required to run: that refusal is bind's.
 - **Keys.** An `outputs` or `indicators` key starts with its reference's `sequence` and a `.`.
   The rest is a glob when it holds `*` (any run of characters) or `?` (one character), matched
-  whole, and otherwise an exact name: `u` never selects `uFan`. A load cannot know a sequence's
-  outputs, so the crate supplies what bind calls: `OverrideKey`, `glob_matches`,
-  `SpecReference::select_output_keys` and `select_indicator_keys` (a key that selects nothing is
-  `unmatched-key`, and the matching is held to a work bound), `CommissioningSpec::tolerances_for`
-  ("overrides apply in declaration order, later fields winning") and
-  `SpecReference::indicators_for`.
+  whole against the last `.`-segment of an output's canonical path, and otherwise an exact name,
+  resolved by the replay name rule: `u` never selects `uFan`.
+- **Which override applies never depends on the order of the file** (owner's ruling,
+  2026-11-21). For one output: the top-level `tolerances`; over them, every glob that selects
+  the output; over those, every exact key that selects it. An exact key beats a glob, field by
+  field. Two keys of one kind that give one field different values are refused,
+  `conflicting-override`; if they give the same value, or different fields, they combine.
+  Every indicator rule that selects an output applies, ANDed, each name once.
+- **The selection is in the crate and private** (`src/commissioning/glob.rs`, `selection.rs`)
+  until the bind that calls it lands (#662): a load cannot know a sequence's outputs. It takes
+  the outputs' canonical paths, refuses a key that selects nothing (`unmatched-key`), an exact
+  name that names several outputs (`ambiguous-output`) and a conflict, and is held to a work
+  bound that is checked before anything is allocated (`work-limit-exceeded`).
 - **The canonical form** (`to_canonical_json`) always carries `schema` and no comment, and is
-  written by the writer a vector set uses, with one difference: the keys of an `outputs` and an
-  `indicators` map keep the order the file declares them in, because that order decides which
-  override wins. `spec_id` is `spec:fnv1a128:` over those bytes.
+  written by the writer a vector set uses: every object's keys sorted, `outputs` and
+  `indicators` included, so reordering a spec changes neither what it means nor its `spec_id`,
+  which is `spec:fnv1a128:` over those bytes.
 
 **The point mapping** is Listing 12.2's shape, unchanged: a list of
 `{ "cdl": { name, unit?, type }, "device": { name, unit?, type } }` with the types `float`, `int`
 and `bool`, from a file of its own (`PointMapping::from_json_bytes`, comments removed the same
 way) or inline in a spec. A name is kept exactly as written and carries no sequence prefix; a
-name twice on one side is `duplicate-point`. Whether a name exists in a sequence is bind's check,
+name twice on one side is `duplicate-point`, and a unit that is written is not empty. Whether a name exists in a sequence is bind's check,
 and whether a pair of units converts is the unit table's.
 
 **Bounds** (`SpecLimits`, lowerable, never raised): 4 MiB per document, 256 parameters per
 reference, 4,096 keys per `outputs`, `indicators` or `columns` map, 2^28 work units per key
 selection; and the strict profile's nesting of 8, strings of 4,096 bytes and lists of 65,536
-entries, shared with the vector reader. **Codes:** `SPEC_ERROR_CODES` lists the 29 refusals; the
-first fourteen are the strict-JSON codes above, spelled the same. A refusal's sentence is at most
-512 bytes of printable ASCII.
+entries, shared with the vector reader. A load holds at most 32 bytes per byte of its document
+(a test pins it on the densest shape, a long list of numbers in an ignored field), so about
+134 MB at the 4 MiB maximum. **Codes:** `SPEC_ERROR_CODES` lists the 31 refusals; the first
+fourteen are the strict-JSON codes above, spelled the same, and the last four are found only at
+bind. A refusal's sentence is at most 512 bytes of printable ASCII.
 
 ## Fixtures and goldens
 

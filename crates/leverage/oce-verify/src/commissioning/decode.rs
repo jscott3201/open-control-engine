@@ -205,7 +205,7 @@ fn reference(cursor: &mut Reader<'_>, limits: &SpecLimits) -> Read<SpecReference
     while let Some((key, at)) = cursor.next_key(&mut object)? {
         let k = key.as_str();
         match k {
-            "model" => put(&mut keys.model, text(cursor, "the model")?.0, k, at)?,
+            "model" => put(&mut keys.model, name(cursor, "the model")?, k, at)?,
             "sequence" => put(&mut keys.sequence, name(cursor, "the sequence")?, k, at)?,
             "pointNameMapping" => put(&mut keys.point_name_mapping, mapping(cursor)?, k, at)?,
             "outputs" => put(&mut keys.outputs, outputs(cursor, limits)?, k, at)?,
@@ -313,19 +313,23 @@ fn override_bound(limits: &SpecLimits, what: &'static str) -> KeyBound {
     }
 }
 
-/// `outputs`: key to tolerance object, in the order the file declares the keys.
+/// `outputs`: key to tolerance object, sorted by key bytes.
 fn outputs(cursor: &mut Reader<'_>, limits: &SpecLimits) -> Read<Vec<OutputOverride>> {
     let bound = override_bound(limits, "keys in one outputs map");
-    Ok(keyed(cursor, "the outputs", bound, tolerances)?
+    let mut all: Vec<OutputOverride> = keyed(cursor, "the outputs", bound, tolerances)?
         .into_iter()
         .map(|(key, tolerances)| OutputOverride { key, tolerances })
-        .collect())
+        .collect();
+    // The keys are unique, so an unstable sort orders them one way.
+    all.sort_unstable_by(|left, right| left.key.as_bytes().cmp(right.key.as_bytes()));
+    Ok(all)
 }
 
-/// `indicators`: key to a list of indicator names, in the order the file declares the keys.
+/// `indicators`: key to a list of indicator names, sorted by key bytes; each list keeps its
+/// order.
 fn indicators(cursor: &mut Reader<'_>, limits: &SpecLimits) -> Read<Vec<IndicatorRule>> {
     let bound = override_bound(limits, "keys in one indicators map");
-    Ok(keyed(cursor, "the indicators", bound, |cursor| {
+    let mut all: Vec<IndicatorRule> = keyed(cursor, "the indicators", bound, |cursor| {
         expect(cursor, Kind::Array, "the indicator names", "a list")?;
         let mut list = cursor.open_list()?;
         let mut names = Vec::new();
@@ -336,7 +340,10 @@ fn indicators(cursor: &mut Reader<'_>, limits: &SpecLimits) -> Read<Vec<Indicato
     })?
     .into_iter()
     .map(|(key, names)| IndicatorRule { key, names })
-    .collect())
+    .collect();
+    // The keys are unique, so an unstable sort orders them one way.
+    all.sort_unstable_by(|left, right| left.key.as_bytes().cmp(right.key.as_bytes()));
+    Ok(all)
 }
 
 /// `parameters`: parameter path to value, sorted by path bytes.

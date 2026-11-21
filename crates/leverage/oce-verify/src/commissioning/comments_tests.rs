@@ -53,6 +53,14 @@ fn reference(text: &str) -> Result<String, usize> {
     Ok(out)
 }
 
+/// The line and byte column of the byte at `offset`, counted another way than the pass counts
+/// them: the text before it is split at its line feeds, and at nothing else. A carriage return
+/// is a byte of its line.
+fn place_of(text: &str, offset: usize) -> Location {
+    let lines: Vec<&str> = text[..offset].split('\n').collect();
+    Location::new(lines.len(), lines[lines.len() - 1].len() + 1)
+}
+
 /// Every text of up to `length` characters over `alphabet`.
 fn texts(alphabet: &[char], length: usize) -> Vec<String> {
     let mut all = vec![String::new()];
@@ -94,7 +102,7 @@ fn every_short_text_is_stripped_as_the_second_implementation_strips_it() {
                 }
             }
             (Err(at), Err(offset)) => {
-                assert_eq!(at, location_of(text.as_bytes(), offset), "{text:?}");
+                assert_eq!(at, place_of(text, offset), "{text:?}");
                 assert!(text[offset..].starts_with("/*"), "{text:?}");
                 open += 1;
             }
@@ -149,6 +157,12 @@ fn a_block_comment_closes_at_the_first_star_slash_after_its_opening() {
         ("/* *", Err((1, 1))),
         ("/**", Err((1, 1))),
         ("\n\n  /*", Err((3, 3))),
+        // A carriage return is a byte of its line, never a line: a CRLF file, a lone CR, and a
+        // CR after the line's last line feed.
+        ("a\r\n\r\n  /*", Err((3, 3))),
+        ("\r\r\r/*", Err((1, 4))),
+        ("\n\r/*", Err((2, 2))),
+        ("// c\r/*", Err((1, 6))),
         ("\u{e9}/*", Err((1, 3))),
         ("/**/ /*/", Err((1, 6))),
     ] {

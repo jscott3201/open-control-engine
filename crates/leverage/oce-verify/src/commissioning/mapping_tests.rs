@@ -109,12 +109,12 @@ fn a_repeat_is_reported_once_at_the_first_place_it_occurs() {
 #[test]
 fn the_canonical_value_writes_a_unit_only_where_one_was_written() {
     let mapping = read(
-        r#"[{"cdl": {"name": "u", "type": "int"}, "device": {"name": "U", "unit": "", "type": "bool"}}]"#,
+        r#"[{"cdl": {"name": "u", "type": "int"}, "device": {"name": "U", "unit": "%", "type": "bool"}}]"#,
     )
     .expect("read");
     assert_eq!(
         mapping.to_canonical_json(),
-        "[\n  {\n    \"cdl\": {\n      \"name\": \"u\",\n      \"type\": \"int\"\n    },\n    \"device\": {\n      \"name\": \"U\",\n      \"type\": \"bool\",\n      \"unit\": \"\"\n    }\n  }\n]\n"
+        "[\n  {\n    \"cdl\": {\n      \"name\": \"u\",\n      \"type\": \"int\"\n    },\n    \"device\": {\n      \"name\": \"U\",\n      \"type\": \"bool\",\n      \"unit\": \"%\"\n    }\n  }\n]\n"
     );
     assert_eq!(mapping.to_json().to_document(), mapping.to_canonical_json());
 }

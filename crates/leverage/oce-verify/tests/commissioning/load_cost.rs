@@ -147,16 +147,73 @@ fn source_lists(references: usize, sources: usize) -> String {
     let source = r#"{"path":"t","format":"csv","timeColumn":1,"columns":{"a":"b"}}"#;
     let list = vec![source; sources].join(",");
     let all: Vec<String> = (0..references)
-        .map(|index| format!("{{\"model\":\"\",\"sequence\":\"s{index}\",\"inputs\":[{list}]}}"))
+        .map(|index| format!("{{\"model\":\"M\",\"sequence\":\"s{index}\",\"inputs\":[{list}]}}"))
         .collect();
     format!("{{\"references\":[{}]}}", all.join(","))
 }
 
+/// A spec whose ignored `controller` field holds `lists` lists of 65,536 one-digit numbers: the
+/// most values a document can put in the fewest bytes, since nothing else in the format takes a
+/// list of numbers.
+fn ignored_numbers(lists: usize) -> String {
+    let list = format!("[{}]", vec!["0"; 65_536].join(","));
+    top_level(&format!(
+        "\"controller\":[{}]",
+        vec![list.as_str(); lists].join(",")
+    ))
+}
+
+#[test]
+fn the_densest_document_holds_at_most_thirty_two_bytes_per_document_byte() {
+    // The densest shape the format has is not one it reads: a field the verifier ignores takes
+    // any strict JSON value and keeps it for the canonical form, so a document can be two bytes
+    // per value (`0,`), where every value the reader interprets sits behind a key. Each kept
+    // value is one node of the canonical writer's tree [measured: 25.6 bytes held per document
+    // byte at the byte bound, and 1.0 allocation per value]. With the 4 MiB byte bound that is
+    // the most a load can hold: about 134 MB at the ceiling pinned here.
+    let mut peaks = Vec::new();
+    for lists in [4, 31] {
+        let document = ignored_numbers(lists);
+        let (info, code) = measured(&document);
+        assert_eq!(code, "loaded");
+        assert!(
+            info.bytes_max <= 32 * length(&document),
+            "{} bytes held for {} bytes read",
+            info.bytes_max,
+            document.len()
+        );
+        let values = u64::try_from(lists * 65_536).expect("fits");
+        assert!(
+            info.count_total <= 2 * values + 1_024,
+            "{}",
+            info.count_total
+        );
+        peaks.push(info.bytes_max);
+    }
+    assert!(ignored_numbers(31).len() > 4_000_000, "near the byte bound");
+    assert!(
+        ignored_numbers(32).len() > 4 * 1024 * 1024,
+        "one more list is past it"
+    );
+    // About eight times the values hold about eight times the memory: no super-linear term.
+    let ratio = peaks[1] / peaks[0];
+    assert!((6..=10).contains(&ratio), "{peaks:?}");
+    // The same values where the format reads them are refused at the first one: nothing but
+    // an ignored field can hold them.
+    let (refused, code) = measured(&one_reference(&format!(
+        "\"indicators\":{{\"s.y\":[{}]}}",
+        vec!["0"; 65_536].join(",")
+    )));
+    assert_eq!(code, "wrong-type");
+    assert!(refused.bytes_max <= 1_024, "{refused:?}");
+}
+
 #[test]
 fn a_dense_spec_holds_a_bounded_number_of_bytes_per_document_byte() {
-    // The densest maps the format has, at their bound: 4,096 keys of empty objects [measured:
+    // The densest maps the format reads, at their bound: 4,096 keys of empty objects [measured:
     // 17.5 bytes per byte and 2.2 allocations per key], and many small sources up to the byte
-    // bound [measured: 5.4 bytes per byte and 22.0 allocations per source].
+    // bound [measured: 5.4 bytes per byte and 22.0 allocations per source]. A field the
+    // verifier ignores can be denser still; the test above pins that one.
     let keys = output_keys(4_096);
     let (info, code) = measured(&keys);
     assert_eq!(code, "loaded");

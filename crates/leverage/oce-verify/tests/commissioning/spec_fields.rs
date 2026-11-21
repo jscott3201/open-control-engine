@@ -656,10 +656,15 @@ fn a_name_is_never_empty() {
     ] {
         assert_eq!(code_of(&text), "empty-name", "{text}");
     }
-    // A model is a label: it may be empty. A sequence prefixes every key: it may not.
+    // A model names a class and a sequence prefixes every key: neither is empty.
     assert_eq!(
-        code_of("{\"references\": [{\"model\": \"\", \"sequence\": \"s\"}]}"),
-        "loaded"
+        refusal("{\"references\": [{\"model\": \"\", \"sequence\": \"s\"}]}"),
+        ("empty-name", 1, 27)
+    );
+    assert_eq!(
+        code_of("{\"references\": [{\"model\": \" \", \"sequence\": \"s\"}]}"),
+        "loaded",
+        "a space is a character"
     );
     // Both are required, and both are strings.
     assert_eq!(

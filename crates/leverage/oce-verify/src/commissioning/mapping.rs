@@ -15,8 +15,7 @@
 use super::choices::PointType;
 use super::error::{SpecError, SpecErrorKind, shown};
 use super::fields::{
-    self, Read, Reader, choice, expect, first_repeat, name, put, refuse, required, text,
-    unknown_key,
+    self, Read, Reader, choice, expect, first_repeat, name, put, refuse, required, unknown_key,
 };
 use super::limits::SpecLimits;
 use crate::canonical::Json;
@@ -42,7 +41,8 @@ impl PointSide {
     }
 
     /// The unit as written, when the point has one: "some points may not have a unit, but only
-    /// have a type" (OBC §12.7). Not checked here: the unit table decides which spellings and
+    /// have a type" (OBC §12.7), and such a point writes no `unit` key, so a unit is never
+    /// empty. Its spelling is not checked here: the unit table decides which spellings and
     /// which pairs it knows.
     #[must_use]
     pub fn unit(&self) -> Option<&str> {
@@ -249,7 +249,7 @@ fn side(cursor: &mut Reader<'_>, what: &str) -> Read<(PointSide, Location)> {
                     at,
                 )?;
             }
-            "unit" => put(&mut unit, text(cursor, "a point unit")?.0, &key, at)?,
+            "unit" => put(&mut unit, name(cursor, "a point unit")?, &key, at)?,
             "type" => put(
                 &mut kind,
                 choice(

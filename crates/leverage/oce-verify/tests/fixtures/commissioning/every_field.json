@@ -43,7 +43,7 @@
         {"path": "trends/indicator.csv", "format": "csv", "timeColumn": "time", "columns": {}}
       ]
     },
-    {"model": "", "sequence": "s"},
+    {"model": "M", "sequence": "s"},
     {"sequence": "t", "model": "N", "pointNameMapping": "maps/points.json", "outputs": {}, "indicators": {},
      "parameters": {}, "inputs": [], "envelope": "funnel", "funnelReference": "engine",
      "window": {"start": 1e-7, "stop": 1e-7}, "generateJson": [[[[["deep"]]]]]}

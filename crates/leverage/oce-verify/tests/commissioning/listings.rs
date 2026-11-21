@@ -7,8 +7,8 @@
 //! so an edit to either is a failure, not a quiet change of what "loads unchanged" means.
 
 use oce_verify::{
-    Envelope, FunnelReference, LBL_FIELD_IGNORED, Literal, OverrideKey, PointNameMapping,
-    PointType, SPEC_FINDING_CODES, SourceTimeColumn, TrendFormat, glob_matches,
+    Envelope, FunnelReference, LBL_FIELD_IGNORED, Literal, PointNameMapping, PointType,
+    SPEC_FINDING_CODES, SourceTimeColumn, TrendFormat,
 };
 
 use crate::{fixture_text, load_mapping, loaded};
@@ -118,17 +118,19 @@ fn listing_12_1s_glob_key_and_outside_indicator_load_unchanged() {
         None,
         "left to the global value"
     );
-    let key = OverrideKey::parse(output.key(), second.sequence()).expect("the prefix");
-    assert_eq!(key.rest(), "TSup*");
-    assert!(key.is_glob());
-    assert!(glob_matches(key.rest(), "TSupHeaEco") && glob_matches(key.rest(), "TSup"));
-    assert!(!glob_matches(key.rest(), "yHea"));
+    // The key starts with its reference's `sequence` and a `.`, and its rest holds a `*`: a
+    // glob, which the crate's own tests match against outputs of the sequence.
+    assert_eq!(output.key().strip_prefix("setPoiVAV1."), Some("TSup*"));
     // The indicator is a signal of another instance of the enclosing model: it carries no
     // `setPoiVAV1.` prefix, and is kept as written for an `indicatorSources` column to supply.
     assert_eq!(second.indicators().len(), 1);
     assert_eq!(second.indicators()[0].key(), "setPoiVAV1.TSup*");
     assert_eq!(second.indicators()[0].names(), ["fanSta.y"]);
-    assert_eq!(OverrideKey::parse("fanSta.y", second.sequence()), None);
+    assert!(!second.indicators()[0].names()[0].starts_with("setPoiVAV1."));
+    // `controllerOutput` is the expected-output source here, since the listing has no
+    // `expected`: it is read, so it is no finding.
+    assert_eq!(second.controller_output(), Some("test/real_outputs.csv"));
+    assert_eq!(second.expected(), None);
 }
 
 #[test]
@@ -230,6 +232,75 @@ fn the_order_of_the_findings_does_not_depend_on_the_files_key_order() {
     let only = loaded(r#"{"references": [], "controller": 1}"#).findings();
     assert_eq!(only.len(), 1);
     assert_eq!(only[0].at(), "controller");
+}
+
+#[test]
+fn a_controller_output_beside_an_expected_block_is_a_finding_and_alone_it_is_read() {
+    let source = r#"{"path": "e.csv", "format": "csv", "timeColumn": "t", "columns": {}}"#;
+    let ats = |members: &str| -> Vec<String> {
+        loaded(&crate::one_reference(members))
+            .findings()
+            .iter()
+            .map(|finding| {
+                assert_eq!(finding.code(), LBL_FIELD_IGNORED);
+                finding.at().to_owned()
+            })
+            .collect()
+    };
+    // Alone, each is the expected-output source: nothing is ignored.
+    assert!(ats("\"controllerOutput\": \"out.csv\"").is_empty());
+    assert!(ats(&format!("\"expected\": [{source}]")).is_empty());
+    // Together, `expected` is the source and the path is not read.
+    assert_eq!(
+        ats(&format!(
+            "\"controllerOutput\": \"out.csv\", \"expected\": [{source}]"
+        )),
+        ["references[0].controllerOutput"]
+    );
+    // Whichever is written first, and an `expected` that is present and empty is still given.
+    assert_eq!(
+        ats(&format!(
+            "\"expected\": [{source}], \"controllerOutput\": \"out.csv\""
+        )),
+        ["references[0].controllerOutput"]
+    );
+    assert_eq!(
+        ats("\"expected\": [], \"controllerOutput\": \"out.csv\""),
+        ["references[0].controllerOutput"]
+    );
+    // Among a reference's findings it is sorted by its name, before the two Scenario 1 fields.
+    assert_eq!(
+        ats(
+            "\"runController\": true, \"generateJson\": false, \"expected\": [], \"controllerOutput\": \"out.csv\""
+        ),
+        [
+            "references[0].controllerOutput",
+            "references[0].generateJson",
+            "references[0].runController"
+        ]
+    );
+    // It is a finding, not a refusal: the path is kept, held to the path rule, and written.
+    let spec = loaded(&crate::one_reference(
+        "\"expected\": [], \"controllerOutput\": \"out.csv\"",
+    ));
+    assert_eq!(spec.references()[0].controller_output(), Some("out.csv"));
+    assert_eq!(spec.findings_for(0).len(), 1);
+    assert!(spec.findings_for(1).is_empty());
+    let again = loaded(&spec.to_canonical_json());
+    assert_eq!(again.findings(), spec.findings());
+    assert_eq!(
+        crate::code_of(&crate::one_reference(
+            "\"expected\": [], \"controllerOutput\": \"/out.csv\""
+        )),
+        "path-invalid"
+    );
+    // The second reference's finding carries its own index.
+    let two = loaded(
+        r#"{"references": [{"model": "M", "sequence": "a", "controllerOutput": "o.csv"},
+            {"model": "M", "sequence": "b", "controllerOutput": "o.csv", "expected": []}]}"#,
+    );
+    let all: Vec<String> = two.findings().iter().map(|f| f.at().to_owned()).collect();
+    assert_eq!(all, ["references[1].controllerOutput"]);
 }
 
 #[test]
@@ -431,18 +502,23 @@ fn every_field_of_the_hand_written_spec_is_read() {
             ("\u{e9}t\u{e9}.n", Literal::Integer(-7)),
         ]
     );
-    // Override keys keep the file's order, which is not sorted order.
+    // Override keys are held sorted by their bytes, whatever order the file writes them in: the
+    // file has `y*`, `yFan`, `?Dam`, `TSup`.
     let keys: Vec<&str> = reference.outputs().iter().map(|each| each.key()).collect();
-    assert_eq!(keys, ["ahu.1.y*", "ahu.1.yFan", "ahu.1.?Dam", "ahu.1.TSup"]);
-    assert!(reference.outputs()[2].tolerances().is_empty());
+    assert_eq!(keys, ["ahu.1.?Dam", "ahu.1.TSup", "ahu.1.y*", "ahu.1.yFan"]);
+    assert!(reference.outputs()[0].tolerances().is_empty());
+    assert_eq!(reference.outputs()[3].tolerances().atoly(), Some(0.25));
     let rules: Vec<(&str, &[String])> = reference
         .indicators()
         .iter()
         .map(|rule| (rule.key(), rule.names()))
         .collect();
-    assert_eq!(rules[0], ("ahu.1.z", &[][..]));
+    // Sorted by key as well (the file has `z`, `y*`, `TSup`); each rule's names keep their
+    // order and their repeats.
+    assert_eq!(rules[0], ("ahu.1.TSup", &["occupied".to_owned()][..]));
+    assert_eq!(rules[1].0, "ahu.1.y*");
     assert_eq!(rules[1].1, ["ahu.1.uFan", "fanSta.y", "ahu.1.uFan"]);
-    assert_eq!(rules[2], ("ahu.1.TSup", &["occupied".to_owned()][..]));
+    assert_eq!(rules[2], ("ahu.1.z", &[][..]));
 
     let Some(PointNameMapping::Inline(mapping)) = reference.point_name_mapping() else {
         panic!("the mapping is inline");
@@ -492,11 +568,7 @@ fn every_field_of_the_hand_written_spec_is_read() {
     assert_eq!(reference.controller_output(), Some("trends/out.csv"));
 
     // The smallest reference, and one whose every list is present and empty.
-    assert_eq!(
-        spec.references()[1].model(),
-        "",
-        "an empty label is a label"
-    );
+    assert_eq!(spec.references()[1].model(), "M");
     assert_eq!(spec.sampling_for(&spec.references()[1]), Some(120.0));
     let third = &spec.references()[2];
     assert_eq!(third.inputs().map(<[_]>::len), Some(0));
@@ -513,6 +585,9 @@ fn every_field_of_the_hand_written_spec_is_read() {
         [
             "controller",
             "modelJsonDirectory",
+            // The first reference gives `controllerOutput` beside an `expected`, which is then
+            // the source: the path is not read, and says so.
+            "references[0].controllerOutput",
             "references[0].generateJson",
             "references[0].runController",
             "references[2].generateJson"

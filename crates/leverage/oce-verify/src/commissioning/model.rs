@@ -7,11 +7,10 @@
 //! is not after its stop. Names are kept as written: resolving them against a sequence's inputs,
 //! outputs and parameters is the work of the run that binds a reference to a CXF document.
 //!
-//! Three kinds of list are held, each in the order that carries its meaning. `outputs` and
-//! `indicators` keep the order the file declares their keys in, because overrides apply in that
-//! order. `parameters` and a source's `columns` are sorted by their keys' bytes, the order the
-//! canonical form writes. The source lists (`inputs`, `expected`, `indicatorSources`) and the
-//! references keep file order.
+//! Two kinds of list are held. A map of the file (`outputs`, `indicators`, `parameters`, a
+//! source's `columns`) is sorted by its keys' bytes, the order the canonical form writes: the
+//! order a file writes a map's keys in carries no meaning. A list of the file (the references,
+//! `inputs`, `expected`, `indicatorSources`, an indicator rule's names) keeps file order.
 
 use super::choices::{FunnelReference, TrendFormat};
 use super::mapping::PointMapping;
@@ -30,15 +29,14 @@ pub struct OutputOverride {
 
 impl OutputOverride {
     /// The key as written: `<sequence>.<name>`, an exact name or, with `*` or `?` after the
-    /// prefix, a glob ([`crate::OverrideKey`]). Never empty, and unique among its reference's
-    /// `outputs` keys.
+    /// prefix, a glob. Never empty, and unique among its reference's `outputs` keys.
     #[must_use]
     pub fn key(&self) -> &str {
         &self.key
     }
 
-    /// The tolerances the key gives, as written: the names it leaves out are left to the keys
-    /// before it and to the spec's top-level `tolerances`.
+    /// The tolerances the key gives, as written: the names it leaves out are left to the other
+    /// keys that select the same output and to the spec's top-level `tolerances`.
     #[must_use]
     pub fn tolerances(&self) -> &PartialTolerances {
         &self.tolerances
@@ -213,7 +211,7 @@ pub struct SpecReference {
 }
 
 impl SpecReference {
-    /// `model`: the Modelica class the reference names. A label only.
+    /// `model`: the Modelica class the reference names. A label only, and never empty.
     #[must_use]
     pub fn model(&self) -> &str {
         &self.model
@@ -234,16 +232,17 @@ impl SpecReference {
         self.point_name_mapping.as_ref()
     }
 
-    /// `outputs`: the tolerance overrides, in the order the file declares them, which is the
-    /// order they apply in. Empty when the reference has no `outputs` key or an empty one; the
+    /// `outputs`: the tolerance overrides, sorted by key bytes. The order says nothing about
+    /// which applies: an exact name beats a glob, and two keys of one kind may not disagree
+    /// about one output. Empty when the reference has no `outputs` key or an empty one; the
     /// canonical form keeps the difference.
     #[must_use]
     pub fn outputs(&self) -> &[OutputOverride] {
         self.outputs.as_deref().unwrap_or_default()
     }
 
-    /// `indicators`: the indicator rules, in the order the file declares them. Empty when the
-    /// reference has no `indicators` key or an empty one.
+    /// `indicators`: the indicator rules, sorted by key bytes; every rule that selects an output
+    /// applies to it. Empty when the reference has no `indicators` key or an empty one.
     #[must_use]
     pub fn indicators(&self) -> &[IndicatorRule] {
         self.indicators.as_deref().unwrap_or_default()
@@ -258,7 +257,7 @@ impl SpecReference {
 
     /// `controllerOutput`: the file of the controller's trended outputs, by a path inside the
     /// spec's directory. It is the expected-output source when the reference gives no `expected`
-    /// (decision 18).
+    /// (decision 18); beside an `expected` it is not read, and the load reports it as a finding.
     #[must_use]
     pub fn controller_output(&self) -> Option<&str> {
         self.controller_output.as_deref()

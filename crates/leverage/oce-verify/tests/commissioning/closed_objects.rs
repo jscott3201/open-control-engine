@@ -32,7 +32,8 @@ fn with_member(document: &str, anchor: &str, addition: &str) -> String {
 fn the_full_document_loads() {
     let spec = loaded(&full());
     assert_eq!(spec.references().len(), 1);
-    assert_eq!(spec.findings().len(), 4);
+    // The four Scenario 1 fields, and a `controllerOutput` beside an `expected`.
+    assert_eq!(spec.findings().len(), 5);
 }
 
 #[test]

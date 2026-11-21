@@ -50,9 +50,8 @@ crate:
 - it reads the rest with `json.loads`, keeping an integer token and a real apart (`parse_int`,
   `parse_float`);
 - it gives a spec its `schema` tag when it has none;
-- it writes every object's keys sorted by `key.encode("utf-8")`, **except** the keys of a
-  reference's `outputs` and `indicators` maps, which keep the order of the file, because overrides
-  apply in declaration order;
+- it writes every object's keys sorted by `key.encode("utf-8")`, at every depth, the `outputs`
+  and `indicators` maps included: the order of a file's keys is no part of a spec;
 - strings, integers, reals and the layout are written as
   [`../derive_canonical.py`](../derive_canonical.py) writes a vector set's, and the bytes are
   hashed with FNV-1a-128 over Python integers.

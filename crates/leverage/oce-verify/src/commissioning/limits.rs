@@ -15,7 +15,10 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SpecLimits {
     /// Bytes in the document, comments included. Maximum 4 MiB; past it the refusal is
-    /// `input-too-large`, decided from the length before a byte is examined.
+    /// `input-too-large`, decided from the length before a byte is examined. It is also the
+    /// bound on a load's memory: a load holds at most 32 bytes per byte of the document (the
+    /// worst case is a long list of one-digit numbers inside a field the verifier ignores and
+    /// keeps), so about 134 MB at the maximum, and less in proportion when this is lowered.
     pub max_bytes: u64,
     /// Entries in one reference's `parameters` map. Maximum 256; past it the refusal is
     /// `too-many-parameters`. It bounds the passes that apply the edits (commissioning note,
@@ -25,10 +28,13 @@ pub struct SpecLimits {
     /// run compares and the most columns a replay source has; past it the refusal is
     /// `too-many-keys`.
     pub max_keys: u32,
-    /// Work units one selection of a reference's keys against a sequence's output names may
-    /// spend ([`crate::SpecReference::select_output_keys`]): one unit per step of the matcher,
-    /// so the count depends on the keys and the names alone, never on a clock. Maximum
-    /// 2^28 = 268,435,456; past it the refusal is `work-limit-exceeded`.
+    /// Work units one selection of a reference's `outputs` or `indicators` keys against a
+    /// sequence's outputs may spend, when a run binds the reference: one unit for every key and
+    /// output compared, and one per step of the glob matcher, so the count depends on the keys
+    /// and the outputs alone, never on a clock. Maximum 2^28 = 268,435,456; past it the refusal
+    /// is `work-limit-exceeded`, and a selection whose keys times outputs alone pass it is
+    /// refused before anything is allocated. A selection holds one bit per key and output, so
+    /// this bound is also its memory: at most an eighth of it in bytes.
     pub max_key_match_work: u64,
 }
 

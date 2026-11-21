@@ -15,8 +15,10 @@
 //!   ([`crate::Envelope`], the comparison's own type) and the time origin.
 //! - **The point mapping** ([`PointMapping`]): Listing 12.2's shape, unchanged, from a file of
 //!   its own or inline in a spec.
-//! - **Keys** ([`OverrideKey`], [`glob_matches`], [`KeySelection`]): which outputs an `outputs`
-//!   or `indicators` key selects, and the tolerances and indicators that follow.
+//! - **Keys** (`glob`, `selection`; crate-private until the bind that calls them lands, issue
+//!   #662): which outputs an `outputs` or `indicators` key selects, as a glob or as an exact
+//!   name, and the tolerances and indicators that follow, by a precedence that does not depend
+//!   on the order of the file.
 //! - **The canonical form** ([`CommissioningSpec::to_canonical_json`]) and the spec's identity
 //!   over it ([`CommissioningSpec::spec_id`]).
 //! - **Typed refusals** ([`SpecError`], [`SpecErrorKind`], [`SPEC_ERROR_CODES`]): one closed
@@ -30,16 +32,16 @@ mod decode;
 mod decode_sources;
 mod error;
 mod fields;
-mod keys;
+mod glob;
 mod limits;
 mod mapping;
 mod model;
+mod selection;
 mod spec;
 mod tolerances;
 
 pub use choices::{FunnelReference, PointType, TrendFormat};
 pub use error::{MAX_SPEC_DETAIL_BYTES, SPEC_ERROR_CODES, SpecError, SpecErrorKind};
-pub use keys::{KeySelection, OverrideKey, glob_matches, unmatched_key};
 pub use limits::SpecLimits;
 pub use mapping::{PointMapping, PointPair, PointSide};
 pub use model::{

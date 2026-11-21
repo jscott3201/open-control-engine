@@ -13,7 +13,6 @@ mod closed_objects;
 mod comment_stripping;
 mod error_codes;
 mod hostile_bytes;
-mod key_selection;
 mod limit_boundaries;
 mod listings;
 mod load_cost;
@@ -81,6 +80,10 @@ fn every_test_file_of_this_directory_is_compiled_into_this_binary() {
     for entry in std::fs::read_dir(&directory).expect("read the directory") {
         let name = entry.expect("an entry").file_name();
         let name = name.to_str().expect("a UTF-8 file name").to_owned();
+        // What a file manager or an editor leaves behind (`.DS_Store`) is no test file.
+        if name.starts_with('.') {
+            continue;
+        }
         if let Some(module) = name.strip_suffix(".rs")
             && module != "main"
         {
@@ -90,7 +93,7 @@ fn every_test_file_of_this_directory_is_compiled_into_this_binary() {
         }
     }
     files.sort();
-    assert!(files.len() >= 11, "{files:?}");
+    assert!(files.len() >= 10, "{files:?}");
     let declared: Vec<String> = root
         .lines()
         .filter_map(|line| line.strip_prefix("mod ")?.strip_suffix(';'))

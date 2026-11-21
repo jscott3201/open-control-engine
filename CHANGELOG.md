@@ -575,32 +575,37 @@ and a gate that accepted any text would restore exactly the false assurance desc
     `runController` and `controller` take any strict JSON value, are never interpreted, and are
     reported by `findings()` and `findings_for(reference)` as `lbl-field-ignored` (`Finding`:
     `code`, `at`), top-level fields sorted by name and then each reference's, whatever the
-    file's key order. Added: `time.origin` (`oce_replay::TimeOrigin`), `ltolx` and `ltoly`, and
-    per reference `cxf`, `parameters`, `inputs`, `expected` and `indicatorSources`
+    file's key order. A `controllerOutput` beside an `expected` is reported the same way.
+    Added: `time.origin` (`oce_replay::TimeOrigin`), `ltolx` and `ltoly`, and per reference
+    `cxf`, `parameters`, `inputs`, `expected` and `indicatorSources`
     (`TrendSource`: `path`, `format`, `table`, `timeColumn`, `columns`, `hold.maxAge`), `window`,
     `envelope` (read as `oce_verify::Envelope`, the comparison's own type) and
     `funnelReference` (`FunnelReference`, default `engine`). `window` and `cxf` are optional to
     load and required to run, which is bind's refusal (#662).
-  - **Keys.** `OverrideKey`, `glob_matches` (`*` any run, `?` one character, anchored at both
-    ends, nothing else special), `SpecReference::select_output_keys` and
-    `select_indicator_keys` over the output names a run passes in, with the `unmatched-key`
-    refusal, `CommissioningSpec::tolerances_for` (overrides in declaration order, later fields
-    winning; `PartialTolerances::resolved` gives the comparison's `Tolerances`) and
-    `SpecReference::indicators_for`. A selection is held to a work bound counted in steps of
-    the matcher (`work-limit-exceeded`).
+  - **Keys and precedence.** An `outputs` or `indicators` key is its reference's `sequence`, a
+    `.`, and a glob (`*` any run, `?` one character, anchored at both ends, nothing else
+    special, matched against the last `.`-segment of an output's canonical path) or an exact
+    name (resolved by `oce_replay::resolve_path`). Which override applies never depends on the
+    order of the file (owner's ruling, 2026-11-21): an exact key beats a glob field by field;
+    two keys of one kind that give one output's field different values are refused,
+    `conflicting-override`; the same value, or different fields, combine. Every indicator rule
+    that selects an output applies, each name once. The selection (`unmatched-key`,
+    `ambiguous-output`, `conflicting-override`, and a work bound checked before anything is
+    allocated, `work-limit-exceeded`) is in the crate and private until bind calls it (#662);
+    `PartialTolerances::overlaid` and `resolved` (the comparison's `Tolerances`) are public.
   - **The canonical form** (`to_canonical_json`) always carries `schema`, and `spec_id` is
-    `spec:fnv1a128:` over it. It sorts every object's keys except those of an `outputs` and an
-    `indicators` map, which keep declaration order, because that order decides which override
-    wins: sorted, two specs with different meanings would share an id.
+    `spec:fnv1a128:` over it. Every object's keys are sorted, `outputs` and `indicators`
+    included, so a tool that reorders a spec changes neither its meaning nor its id.
   - **`PointMapping`**: Listing 12.2's shape, from a file's bytes or inline, names kept as
-    written with no sequence prefix, `float`, `int` and `bool`, and `duplicate-point` for a name
-    twice on one side.
+    written with no sequence prefix, `float`, `int` and `bool`, `duplicate-point` for a name
+    twice on one side, and no empty unit.
   - **Bounds and codes.** `SpecLimits` (lowerable, never raised): 4 MiB, 256 parameters per
     reference, 4,096 keys per `outputs`, `indicators` or `columns` map, 2^28 work units per key
     selection; with the strict profile's nesting 8, strings 4,096 bytes and lists 65,536, which
-    the design note now records as landed. `SpecError` and `SpecErrorKind` with 29 kebab-case
-    codes (`SPEC_ERROR_CODES`), the strict-JSON ones spelled as the vector reader spells them;
-    every sentence is at most 512 bytes of printable ASCII.
+    the design note now records as landed. A load holds at most 32 bytes per document byte.
+    `SpecError` and `SpecErrorKind` with 31 kebab-case codes (`SPEC_ERROR_CODES`), the
+    strict-JSON ones spelled as the vector reader spells them and the last four found only at
+    bind; every sentence is at most 512 bytes of printable ASCII.
   - **Inside the crate.** The strict cursor is generic over the kind it reports
     (`strict::StrictKind`), so the two readers share one profile and each keeps its own codes;
     no vector code, sentence or place moves. The path rule a mutant path is held to is one

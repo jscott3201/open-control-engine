@@ -71,9 +71,12 @@
 //!   ([`Finding`]), writes a canonical form and names it with a `spec_id`.
 //! - **The point mapping** ([`PointMapping`]): Listing 12.2's shape, from a file of its own or
 //!   inline in a spec.
-//! - **Keys** ([`OverrideKey`], [`glob_matches`], [`KeySelection`]): which outputs an `outputs`
-//!   or `indicators` key selects, exactly or as a glob, and the tolerances
-//!   ([`PartialTolerances`]) and indicators that follow in declaration order.
+//! - **Keys**: an `outputs` or `indicators` key is its reference's `sequence`, a `.`, and an
+//!   exact name or a glob. Which outputs each selects, and the tolerances
+//!   ([`PartialTolerances`]) and indicators that follow, are decided when a run binds a
+//!   reference to a sequence, by rules that do not depend on the order of the file: an exact
+//!   name beats a glob, and two keys of one kind that disagree are refused. That code is in the
+//!   crate and private until the bind that calls it lands.
 //! - **Typed refusals** ([`SpecError`], [`SpecErrorKind`], [`SPEC_ERROR_CODES`]), each with the
 //!   line and column of the text as written, comments included.
 //!
@@ -174,11 +177,10 @@
 //! let reference = &spec.references()[0];
 //! assert_eq!(spec.findings()[0].at(), "references[0].runController");
 //!
-//! // Which outputs the glob selects is decided against a sequence's output names.
-//! let names = ["setPoiVAV1.TSupHeaEco", "setPoiVAV1.y"];
-//! let selection = reference.select_output_keys(&names, &SpecLimits::default())?;
-//! assert_eq!(spec.tolerances_for(reference, &selection, 0).resolved().atoly, 0.5);
-//! assert_eq!(spec.tolerances_for(reference, &selection, 1).resolved().atoly, 0.0);
+//! // The key is kept as written; which outputs its glob selects is decided at bind.
+//! assert_eq!(reference.outputs()[0].key(), "setPoiVAV1.TSup*");
+//! assert_eq!(reference.outputs()[0].tolerances().atoly(), Some(0.5));
+//! assert_eq!(spec.tolerances().map(|global| global.resolved().atolx), Some(10.0));
 //! assert!(spec.spec_id().starts_with("spec:fnv1a128:"));
 //!
 //! // A trailing comma is still refused, at its place in the text as written.
@@ -227,11 +229,10 @@ pub use aligned_grid::{ALIGNED_GRID_VERSION, aligned_grid};
 pub use clock::Clock;
 pub use commissioning::{
     COMMISSIONING_SPEC_SCHEMA, CommissioningSpec, ComparisonWindow, Finding, FunnelReference,
-    IndicatorRule, KeySelection, LBL_FIELD_IGNORED, MAX_SPEC_DETAIL_BYTES, OutputOverride,
-    OverrideKey, PartialTolerances, PointMapping, PointNameMapping, PointPair, PointSide,
-    PointType, SPEC_ERROR_CODES, SPEC_FINDING_CODES, SourceColumn, SourceTimeColumn, SpecError,
-    SpecErrorKind, SpecLimits, SpecReference, TOLERANCE_NAMES, TrendFormat, TrendSource,
-    glob_matches, unmatched_key,
+    IndicatorRule, LBL_FIELD_IGNORED, MAX_SPEC_DETAIL_BYTES, OutputOverride, PartialTolerances,
+    PointMapping, PointNameMapping, PointPair, PointSide, PointType, SPEC_ERROR_CODES,
+    SPEC_FINDING_CODES, SourceColumn, SourceTimeColumn, SpecError, SpecErrorKind, SpecLimits,
+    SpecReference, TOLERANCE_NAMES, TrendFormat, TrendSource,
 };
 pub use compare_error::{Axis, COMPARE_ERROR_CODES, CompareError, SeriesEnd, SeriesRole};
 pub use compare_limits::CompareLimits;

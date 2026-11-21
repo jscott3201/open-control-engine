@@ -72,9 +72,9 @@ pub enum SpecErrorKind {
     /// An `outputs`, `indicators` or `columns` map has more keys than
     /// [`crate::SpecLimits::max_keys`].
     TooManyKeys,
-    /// A name is empty: a `sequence`, an `outputs` or `indicators` key, an indicator name, a
-    /// parameter path, a point name, a `table`, a named `timeColumn`, or a key or a value of a
-    /// `columns` map.
+    /// A name is empty: a `model`, a `sequence`, an `outputs` or `indicators` key, an indicator
+    /// name, a parameter path, a point's name or its unit, a `table`, a named `timeColumn`, or
+    /// a key or a value of a `columns` map.
     EmptyName,
     /// A string that must be one of a closed list is not: a source's `format`, an `envelope`, a
     /// `funnelReference` or a point's `type`.
@@ -94,10 +94,20 @@ pub enum SpecErrorKind {
     InvalidHold,
     /// Two points of one mapping share a name on the same side, `cdl` or `device`.
     DuplicatePoint,
-    /// An `outputs` or `indicators` key that selects no output of the sequence. Found when the
-    /// keys are matched against a sequence's output names, at bind, never by a load.
+    /// An `outputs` or `indicators` key that selects no output of the sequence: it lacks the
+    /// reference's prefix, it is a glob that matches nothing, or it is an exact name that names
+    /// nothing. Found when the keys are matched against a sequence's outputs, at bind, never by
+    /// a load.
     UnmatchedKey,
-    /// Matching a reference's keys against a sequence's output names needed more than
+    /// An exact `outputs` or `indicators` key whose rest names more than one output of the
+    /// sequence by the replay name rule. Found at bind, never by a load; the vector bind's word
+    /// for the same ambiguity.
+    AmbiguousOutput,
+    /// Two `outputs` keys of one kind (two globs, or two exact names) select one output and
+    /// give one tolerance field different values, so neither takes precedence. Found at bind,
+    /// never by a load.
+    ConflictingOverride,
+    /// Matching a reference's keys against a sequence's outputs needs more than
     /// [`crate::SpecLimits::max_key_match_work`] units. Found at bind, never by a load.
     WorkLimitExceeded,
 }
@@ -133,6 +143,8 @@ impl SpecErrorKind {
         Self::InvalidHold,
         Self::DuplicatePoint,
         Self::UnmatchedKey,
+        Self::AmbiguousOutput,
+        Self::ConflictingOverride,
         Self::WorkLimitExceeded,
     ];
 
@@ -168,6 +180,8 @@ impl SpecErrorKind {
             Self::InvalidHold => "invalid-hold",
             Self::DuplicatePoint => "duplicate-point",
             Self::UnmatchedKey => "unmatched-key",
+            Self::AmbiguousOutput => "ambiguous-output",
+            Self::ConflictingOverride => "conflicting-override",
             Self::WorkLimitExceeded => "work-limit-exceeded",
         }
     }
@@ -215,6 +229,8 @@ pub const SPEC_ERROR_CODES: &[&str] = &[
     "invalid-hold",
     "duplicate-point",
     "unmatched-key",
+    "ambiguous-output",
+    "conflicting-override",
     "work-limit-exceeded",
 ];
 
@@ -336,8 +352,8 @@ impl SpecError {
 
     /// Where in the text the reader stopped: a 1-based line and byte column of the document as
     /// written, its comments included. `None` for a refusal of the bytes as a whole (`not-utf8`,
-    /// `byte-order-mark`, `input-too-large`) and for the two found at bind (`unmatched-key`,
-    /// `work-limit-exceeded`).
+    /// `byte-order-mark`, `input-too-large`) and for the four found at bind (`unmatched-key`,
+    /// `ambiguous-output`, `conflicting-override`, `work-limit-exceeded`).
     #[must_use]
     pub fn at(&self) -> Option<Location> {
         self.at

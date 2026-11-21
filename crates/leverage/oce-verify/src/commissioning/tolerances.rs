@@ -1,6 +1,6 @@
 //! A tolerance object of a commissioning spec, and how several of them combine (commissioning
-//! note, "Test-spec file": "key an output name or a glob, value partial tolerances" and
-//! "overrides apply in declaration order, later fields winning").
+//! note, "Test-spec file": "key an output name or a glob, value partial tolerances"; the
+//! owner's ruling of 2026-11-21 on which override applies).
 //!
 //! A spec writes tolerances in two places: once at the top level, for every output, and once per
 //! `outputs` key, for the outputs that key selects. Each object gives any of six names and
@@ -84,8 +84,9 @@ impl PartialTolerances {
     }
 
     /// This object with `later` laid over it: every name `later` gives takes `later`'s value,
-    /// and every other name keeps this object's. Applying a spec's objects to one output in
-    /// declaration order, the top-level `tolerances` first, is "later fields winning".
+    /// and every other name keeps this object's. One output's tolerances are the spec's
+    /// top-level `tolerances`, with the globs that select it laid over them, and the exact keys
+    /// that select it laid over those.
     #[must_use]
     pub fn overlaid(&self, later: &Self) -> Self {
         let mut written = self.written;

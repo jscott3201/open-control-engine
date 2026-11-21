@@ -34,8 +34,11 @@ use crate::fnv;
 use crate::number::Number;
 use crate::strict::Kind;
 
-/// The code of the one finding a spec load reports: a field of OBC §12.7 Scenario 1 that the
-/// spec gives and the verifier does not act on (commissioning note, decision 18).
+/// The code of the one finding a spec load reports: a field of OBC §12.7 that the spec gives
+/// and the verifier does not act on (commissioning note, decision 18). The four Scenario 1
+/// fields always are (`controller`, `modelJsonDirectory`, `generateJson`, `runController`), and
+/// so is a reference's `controllerOutput` when the reference also gives `expected`, which is
+/// then the expected-output source.
 pub const LBL_FIELD_IGNORED: &str = "lbl-field-ignored";
 
 /// Every finding code a spec load can report, in declaration order.
@@ -70,8 +73,8 @@ impl Finding {
 /// Built only by a load, so every rule of the format holds for a value of this type. Two specs
 /// are equal when they write the same canonical document: the kind each number was written as is
 /// part of the spec (`60` is not `60.0`), and so are the difference between an absent list and
-/// an empty one, the order of a reference's `outputs` and `indicators` keys, and the values of
-/// the fields the verifier ignores.
+/// an empty one and the values of the fields the verifier ignores. The order of an object's keys
+/// is not.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommissioningSpec {
     pub(crate) time_origin: Option<TimeOrigin>,
@@ -196,8 +199,11 @@ impl CommissioningSpec {
         let Some(reference) = self.references.get(index) else {
             return Vec::new();
         };
-        // In byte order of the field names.
+        // In byte order of the field names. `controllerOutput` is read when it is the only
+        // expected-output source; beside an `expected` it is not, and is reported like the rest.
+        let unread_output = reference.controller_output.is_some() && reference.expected.is_some();
         [
+            ("controllerOutput", unread_output),
             ("generateJson", reference.generate_json.is_some()),
             ("runController", reference.run_controller.is_some()),
         ]
@@ -211,9 +217,8 @@ impl CommissioningSpec {
     }
 
     /// The canonical document of this spec: always with its `schema` tag, every object's keys
-    /// sorted by their UTF-8 bytes at every depth except the keys of an `outputs` and an
-    /// `indicators` map, which keep the order the file declares them in because overrides apply
-    /// in that order; two-space indentation, line feeds, one final line feed, ASCII only, an
+    /// sorted by their UTF-8 bytes at every depth, those of an `outputs` and an `indicators` map
+    /// included; two-space indentation, line feeds, one final line feed, ASCII only, an
     /// integer token as a decimal integer and a real in the one canonical spelling. No comment
     /// survives. Deterministic, and a fixed point: loading the result and writing it again
     /// gives the same bytes, and the same spec.
@@ -230,9 +235,8 @@ impl CommissioningSpec {
 
     /// The identity of this spec: `spec:fnv1a128:` and the 32 lowercase hex digits of the
     /// FNV-1a-128 hash of [`Self::to_canonical_json`]. Two documents that differ only in
-    /// spelling (comments, whitespace, escapes, the key order of any object but `outputs` and
-    /// `indicators`, a missing `schema`) have one id; it is an identity, not a cryptographic
-    /// digest.
+    /// spelling (comments, whitespace, escapes, the key order of any object, a missing `schema`)
+    /// have one id; it is an identity, not a cryptographic digest.
     #[must_use]
     pub fn spec_id(&self) -> String {
         fnv::tagged("spec:", self.to_canonical_json().as_bytes())

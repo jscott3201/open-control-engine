@@ -16,9 +16,8 @@ What it does, for a document whose root is an object (a spec) or a list (a point
   whole string, a whole line comment or a whole block comment at a time;
 - reads the rest with `json.loads`, keeping an integer token and a real apart;
 - gives a spec its `schema` tag when it has none;
-- writes every object's keys sorted by `key.encode("utf-8")`, except the keys of a reference's
-  `outputs` and `indicators` maps, which keep the order of the file: overrides apply in
-  declaration order, so that order is part of the spec.
+- writes every object's keys sorted by `key.encode("utf-8")`, at every depth: the order of a
+  file's keys is no part of a spec, the `outputs` and `indicators` maps included.
 
 It trusts its input: it does not check the format's rules, a repeated key or a bound. The Rust
 reader does; give it only documents that load.
@@ -91,8 +90,7 @@ def spell_string(text):
     return "".join(out)
 
 
-def write(value, depth, out, declared_order=False):
-    """Write `value`; `declared_order` keeps an object's keys as the file has them."""
+def write(value, depth, out):
     pad = "  " * depth
     if value is None:
         out.append("null")
@@ -118,9 +116,8 @@ def write(value, depth, out, declared_order=False):
         if not value:
             out.append("{}")
             return
-        keys = list(value) if declared_order else sorted(value, key=lambda k: k.encode("utf-8"))
         out.append("{")
-        for index, key in enumerate(keys):
+        for index, key in enumerate(sorted(value, key=lambda k: k.encode("utf-8"))):
             out.append("\n" if index == 0 else ",\n")
             out.append(pad + "  " + spell_string(key) + ": ")
             write(value[key], depth + 1, out)
@@ -129,34 +126,10 @@ def write(value, depth, out, declared_order=False):
         raise TypeError(type(value))
 
 
-def write_reference(reference, depth, out):
-    """A reference: sorted keys, with `outputs` and `indicators` written in declared order."""
-    pad = "  " * depth
-    out.append("{")
-    for index, key in enumerate(sorted(reference, key=lambda k: k.encode("utf-8"))):
-        out.append("\n" if index == 0 else ",\n")
-        out.append(pad + "  " + spell_string(key) + ": ")
-        write(reference[key], depth + 1, out, declared_order=key in ("outputs", "indicators"))
-    out.append("\n" + pad + "}")
-
-
-def write_spec(spec, out):
+def with_schema(spec):
     spec = dict(spec)
     spec.setdefault("schema", SCHEMA)
-    out.append("{")
-    for index, key in enumerate(sorted(spec, key=lambda k: k.encode("utf-8"))):
-        out.append("\n" if index == 0 else ",\n")
-        out.append("  " + spell_string(key) + ": ")
-        if key == "references" and spec[key]:
-            out.append("[")
-            for position, reference in enumerate(spec[key]):
-                out.append("\n" if position == 0 else ",\n")
-                out.append("    ")
-                write_reference(reference, 2, out)
-            out.append("\n  ]")
-        else:
-            write(spec[key], 1, out)
-    out.append("\n}")
+    return spec
 
 
 def fnv1a128(data):
@@ -174,10 +147,7 @@ def main():
         text = without_comments(handle.read())
     document = json.loads(text, parse_int=Integer, parse_float=Real)
     out = []
-    if isinstance(document, dict):
-        write_spec(document, out)
-    else:
-        write(document, 0, out)
+    write(with_schema(document) if isinstance(document, dict) else document, 0, out)
     data = ("".join(out) + "\n").encode("ascii")
     with open(target, "wb") as handle:
         handle.write(data)

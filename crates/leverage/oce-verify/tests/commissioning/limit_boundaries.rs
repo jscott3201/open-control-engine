@@ -267,7 +267,7 @@ fn a_list_is_bounded_at_65536_entries() {
     let references = |count: usize| {
         format!(
             "{{\"references\": [{}]}}",
-            vec!["{\"model\":\"\",\"sequence\":\"s\"}"; count].join(",")
+            vec!["{\"model\":\"M\",\"sequence\":\"s\"}"; count].join(",")
         )
     };
     assert_eq!(code_of(&references(MAX_LIST_LEN)), "loaded");
@@ -319,76 +319,4 @@ fn a_string_is_bounded_at_4096_bytes_as_written() {
     // A comment is not a string: it may be longer than any string.
     let comment = format!("{}/*{}*/", top_level(""), "c".repeat(MAX_STRING_BYTES * 4));
     assert_eq!(code_of(&comment), "loaded");
-}
-
-#[test]
-fn the_key_match_work_bound_is_met_exactly() {
-    let spec = crate::loaded(&one_reference(
-        "\"outputs\": {\"s.yFan\": {}, \"s.T*p\": {}}, \"indicators\": {\"s.*\": []}",
-    ));
-    let reference = &spec.references()[0];
-    let names = ["s.yFan", "s.TSup", "s.TSupHeaEco"];
-    assert_eq!(MAX.max_key_match_work, 1 << 28);
-    assert!(reference.select_output_keys(&names, &MAX).is_ok());
-    // Find the work the selection needs: the least limit that admits it.
-    let needed = (0..10_000_u64)
-        .find(|work| {
-            let limits = SpecLimits {
-                max_key_match_work: *work,
-                ..MAX
-            };
-            reference.select_output_keys(&names, &limits).is_ok()
-        })
-        .expect("a small selection needs little work");
-    // One unit per key and name compared (2 * 3), and the matcher's steps for the glob's three
-    // names: `T*p` against `yFan` stops at its first byte (1); against `TSup` it takes `T`, the
-    // `*`, two characters into the `*` and the `p` (5); against `TSupHeaEco` it does the same,
-    // finds text after the `p`, gives the `*` the other seven characters one at a time and is
-    // left with a `p` that nothing matches (5 + 7 + 1).
-    assert_eq!(needed, 6 + 1 + 5 + 13);
-    let at = SpecLimits {
-        max_key_match_work: needed,
-        ..MAX
-    };
-    let below = SpecLimits {
-        max_key_match_work: needed - 1,
-        ..MAX
-    };
-    assert!(reference.select_output_keys(&names, &at).is_ok());
-    let refused = reference
-        .select_output_keys(&names, &below)
-        .expect_err("refused");
-    assert_eq!(refused.code(), "work-limit-exceeded");
-    assert_eq!(
-        refused.detail(),
-        format!(
-            "matching the keys against the output names needed more than {} work units",
-            needed - 1
-        )
-    );
-    // The same selection costs the same work every time, and a raised limit is the maximum.
-    assert!(reference.select_output_keys(&names, &at).is_ok());
-    let raised = SpecLimits {
-        max_key_match_work: u64::MAX,
-        ..MAX
-    };
-    assert_eq!(
-        reference.select_output_keys(&names, &raised),
-        reference.select_output_keys(&names, &MAX)
-    );
-    // No key, no work: a reference without overrides is selected under a limit of zero.
-    let none = SpecLimits {
-        max_key_match_work: 0,
-        ..MAX
-    };
-    let bare = crate::loaded(&one_reference(""));
-    assert!(
-        bare.references()[0]
-            .select_output_keys(&names, &none)
-            .is_ok()
-    );
-    assert!(
-        reference.select_indicator_keys(&[], &none).is_err(),
-        "a key and no name"
-    );
 }

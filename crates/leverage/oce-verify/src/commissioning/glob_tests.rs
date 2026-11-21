@@ -1,5 +1,5 @@
 //! The glob matcher against a second implementation, exhaustively over short patterns and
-//! texts, and its cost in steps.
+//! texts, its cost in steps, and a key's prefix.
 
 use super::*;
 
@@ -167,23 +167,143 @@ fn a_work_counter_refuses_one_unit_past_its_limit() {
 }
 
 #[test]
-fn a_selection_holds_one_bit_per_key_and_name() {
-    let mut selection = KeySelection::new(130, 3);
-    assert_eq!((selection.key_count(), selection.name_count()), (130, 3));
-    for (key, name) in [(0, 0), (63, 0), (64, 0), (129, 0), (1, 2), (65, 2)] {
-        selection.set(key, name);
+fn a_glob_is_anchored_at_both_ends_and_nothing_else_is_special() {
+    for (pattern, text, expected) in [
+        // `*` is any run, the empty run included.
+        ("TSup*", "TSup", true),
+        ("TSup*", "TSupHeaEco", true),
+        ("TSup*", "xTSup", false),
+        ("TSup*", "TSu", false),
+        ("*Fan", "uFan", true),
+        ("*Fan", "Fan", true),
+        ("*Fan", "uFanSta", false),
+        ("y*Val", "yCooVal", true),
+        ("y*Val", "yVal", true),
+        ("y*Val", "yCooValve", false),
+        ("*", "", true),
+        ("*", "anything.at all", true),
+        ("**", "x", true),
+        ("*a*", "a", true),
+        ("*a*", "bab", true),
+        ("*a*", "bbb", false),
+        // `?` is exactly one character.
+        ("y?", "y1", true),
+        ("y?", "y", false),
+        ("y?", "y12", false),
+        ("?", "", false),
+        ("?", "y", true),
+        ("??", "y", false),
+        ("?*", "", false),
+        ("?*", "y", true),
+        ("*?", "y", true),
+        ("y?oo*", "yCooVal", true),
+        ("y?oo*", "yoo", false),
+        // One character is one character, whatever its width in bytes.
+        ("t?", "t\u{e9}", true),
+        ("t?", "t\u{1f321}", true),
+        ("t??", "t\u{1f321}", false),
+        ("?\u{e9}", "\u{1f321}\u{e9}", true),
+        ("*\u{e9}", "caf\u{e9}", true),
+        ("*\u{e9}", "cafe", false),
+        ("caf?", "cafe\u{301}", false),
+        // Nothing else is special: no class, no escape, no separator, no case folding.
+        ("[ab]", "a", false),
+        ("[ab]", "[ab]", true),
+        ("a.b", "a.b", true),
+        ("a.b", "axb", false),
+        ("a\\*", "a\\x", true),
+        ("a\\*", "a*", false),
+        ("{a,b}", "a", false),
+        ("tsup*", "TSup", false),
+        ("a*", "a/b.c", true),
+        ("~", "x", false),
+        // A pattern with neither wildcard matches only itself.
+        ("yCooVal", "yCooVal", true),
+        ("yCooVal", "yCooVa", false),
+        ("u", "uFan", false),
+        ("", "", true),
+        ("", "a", false),
+        // Backtracking: the last `*` gives way until the tail fits, or the text runs out.
+        ("a*b*c", "abcbc", true),
+        ("a*b*c", "abcbd", false),
+        ("*aab", "aaaaab", true),
+        ("a*a*a*b", "aaaaaaaa", false),
+    ] {
+        assert_eq!(
+            glob_matches(pattern, text),
+            expected,
+            "{pattern:?} against {text:?}"
+        );
+        assert_eq!(glob_matches(pattern, text), reference(pattern, text));
     }
-    assert_eq!(selection.keys_for(0).collect::<Vec<_>>(), [0, 63, 64, 129]);
-    assert_eq!(selection.keys_for(1).count(), 0);
-    assert_eq!(selection.keys_for(2).collect::<Vec<_>>(), [1, 65]);
-    assert!(selection.selects(64, 0) && !selection.selects(64, 1) && !selection.selects(62, 0));
-    // Out of range: no bit, no panic, and a write past the end is dropped.
-    assert!(!selection.selects(130, 0) && !selection.selects(0, 3));
-    selection.set(0, 3);
-    selection.set(usize::MAX / 2, 2);
-    assert_eq!(selection.keys_for(3).count(), 0);
-    // No key: no word, and nothing selects.
-    let none = KeySelection::new(0, 5);
-    assert_eq!(none.keys_for(0).count(), 0);
-    assert!(!none.selects(0, 0));
+}
+
+#[test]
+fn the_prefix_is_literal_and_the_rest_is_a_glob_only_with_a_wildcard() {
+    // The sequence's name is not a pattern: its `*` is a `*`.
+    let key = OverrideKey::parse("a*b.y", "a*b").expect("the prefix");
+    assert_eq!(key.rest(), "y");
+    assert!(
+        !key.is_glob(),
+        "the wildcard is in the prefix, which is literal"
+    );
+    assert_eq!(OverrideKey::parse("axb.y", "a*b"), None);
+    for (key, sequence) in [
+        ("y", "s"),
+        ("s", "s"),
+        ("sy", "s"),
+        ("S.y", "s"),
+        ("s2.y", "s"),
+        (" s.y", "s"),
+        ("t.s.y", "s"),
+        ("fanSta.y", "setPoiVAV1"),
+        ("setPoiVAV.TSup*", "setPoiVAV1"),
+    ] {
+        assert_eq!(
+            OverrideKey::parse(key, sequence),
+            None,
+            "{key} under {sequence}"
+        );
+    }
+    // A sequence whose name holds a dot is one prefix; an empty rest is an exact name.
+    let dotted = OverrideKey::parse("ahu.1.y*", "ahu.1").expect("the prefix");
+    assert_eq!((dotted.rest(), dotted.is_glob()), ("y*", true));
+    let empty = OverrideKey::parse("s.", "s").expect("the prefix");
+    assert_eq!((empty.rest(), empty.is_glob()), ("", false));
+    // Either wildcard makes a glob; a dotted rest without one is an exact name.
+    for (rest, glob) in [
+        ("y*", true),
+        ("y?", true),
+        ("*", true),
+        ("a.b?", true),
+        ("a.b", false),
+    ] {
+        let key = format!("s.{rest}");
+        assert_eq!(
+            OverrideKey::parse(&key, "s").map(|key| key.is_glob()),
+            Some(glob),
+            "{rest}"
+        );
+    }
+    // Listing 12.1's key, as published.
+    let listing = OverrideKey::parse("setPoiVAV1.TSup*", "setPoiVAV1").expect("the prefix");
+    assert_eq!((listing.rest(), listing.is_glob()), ("TSup*", true));
+}
+
+#[test]
+fn the_last_segment_is_what_follows_the_last_dot() {
+    for (path, expected) in [
+        (
+            "http://example.org#Buildings.Utilities.CoolingCoilValve.yCooVal",
+            "yCooVal",
+        ),
+        ("urn:x#top.ahu.uDam", "uDam"),
+        ("urn:x#top", "urn:x#top"),
+        ("y", "y"),
+        ("a.", ""),
+        (".y", "y"),
+        ("", ""),
+    ] {
+        assert_eq!(last_segment(path), expected, "{path:?}");
+    }
 }

@@ -43,7 +43,7 @@ const GOLDENS: &[Golden] = &[
     Golden {
         source: "every_field.json",
         canonical: "canonical/every_field.json",
-        spec_id: "spec:fnv1a128:74ca54f3289d9f00d0ddcd63f6c131b7",
+        spec_id: "spec:fnv1a128:6c63445203167bda177e703930f3c888",
     },
 ];
 
@@ -165,7 +165,7 @@ fn spelling_does_not_move_an_id() {
     );
     let id = loaded(&plain).spec_id();
     for respelled in [
-        // Key order of a sorted object, whitespace and comments.
+        // Key order of an object, whitespace and comments.
         "{\"references\": [{ \"window\": {\"stop\": 60, \"start\": 0},\n\t\"parameters\": {\"a.k\": 2, \"b.k\": 1.5}, // edits\n \"cxf\": \"a/b.json\", \"sequence\": \"s\", \"model\": \"M\" }] /* end */ }".to_owned(),
         // Escapes, and another spelling of the same real.
         one_reference(
@@ -209,18 +209,20 @@ fn what_a_spec_says_moves_its_id() {
 }
 
 #[test]
-fn the_declaration_order_of_override_keys_is_kept_and_is_part_of_the_id() {
-    // Overrides apply in declaration order, so two orders are two specs: the canonical form
-    // writes these two maps as declared, where it sorts every other object.
+fn the_order_of_a_files_keys_is_no_part_of_a_spec_the_override_maps_included() {
+    // Which override applies is decided by what the keys are, never by where the file writes
+    // them, so the canonical form sorts the two override maps like every other object, and two
+    // files that differ only in key order are one spec with one id.
     let forward = one_reference(
         "\"outputs\": {\"s.y*\": {\"atoly\": 1}, \"s.a\": {\"atoly\": 2}}, \"indicators\": {\"s.z\": [\"s.u\"], \"s.b\": []}",
     );
     let backward = one_reference(
-        "\"outputs\": {\"s.a\": {\"atoly\": 2}, \"s.y*\": {\"atoly\": 1}}, \"indicators\": {\"s.z\": [\"s.u\"], \"s.b\": []}",
+        "\"indicators\": {\"s.b\": [], \"s.z\": [\"s.u\"]}, \"outputs\": {\"s.a\": {\"atoly\": 2}, \"s.y*\": {\"atoly\": 1}}",
     );
     let (first, second) = (loaded(&forward), loaded(&backward));
-    assert_ne!(first, second);
-    assert_ne!(first.spec_id(), second.spec_id());
+    assert_eq!(first, second);
+    assert_eq!(first.spec_id(), second.spec_id());
+    assert_eq!(first.to_canonical_json(), second.to_canonical_json());
     let keys = |spec: &oce_verify::CommissioningSpec| -> Vec<String> {
         spec.references()[0]
             .outputs()
@@ -228,25 +230,27 @@ fn the_declaration_order_of_override_keys_is_kept_and_is_part_of_the_id() {
             .map(|each| each.key().to_owned())
             .collect()
     };
-    assert_eq!(keys(&first), ["s.y*", "s.a"]);
+    assert_eq!(keys(&first), ["s.a", "s.y*"], "sorted by bytes");
     assert_eq!(keys(&second), ["s.a", "s.y*"]);
     let written = first.to_canonical_json();
-    let glob = written.find("\"s.y*\"").expect("the glob key");
     let exact = written.find("\"s.a\"").expect("the exact key");
+    let glob = written.find("\"s.y*\"").expect("the glob key");
     assert!(
-        glob < exact,
-        "declared order, though `s.a` sorts first\n{written}"
+        exact < glob,
+        "`s.a` sorts first, though the file writes it second\n{written}"
     );
-    let indicators = written.find("\"s.z\"").expect("the first indicator key");
-    assert!(indicators < written.find("\"s.b\"").expect("the second"));
-    // The order survives the round trip, so a stored spec runs as its file did.
-    assert_eq!(keys(&loaded(&written)), ["s.y*", "s.a"]);
-    // The order of the indicators map alone moves the id as well.
-    let swapped = one_reference(
-        "\"outputs\": {\"s.y*\": {\"atoly\": 1}, \"s.a\": {\"atoly\": 2}}, \"indicators\": {\"s.b\": [], \"s.z\": [\"s.u\"]}",
+    let rules = written.find("\"s.b\"").expect("a rule's key");
+    assert!(
+        rules < written.find("\"s.z\"").expect("the other"),
+        "{written}"
     );
-    assert_ne!(loaded(&swapped).spec_id(), first.spec_id());
-    // A sorted map's order does not: parameters and columns are sets of entries.
+    assert_eq!(keys(&loaded(&written)), ["s.a", "s.y*"]);
+    // A list is not a map: the order of an indicator rule's names, of the sources and of the
+    // references is the file's, and is part of the id.
+    let one = one_reference("\"indicators\": {\"s.y\": [\"a\", \"b\"]}");
+    let other = one_reference("\"indicators\": {\"s.y\": [\"b\", \"a\"]}");
+    assert_ne!(loaded(&one).spec_id(), loaded(&other).spec_id());
+    // Every other map is a set of entries too.
     let one = one_reference("\"parameters\": {\"b\": 1, \"a\": 2}");
     let other = one_reference("\"parameters\": {\"a\": 2, \"b\": 1}");
     assert_eq!(loaded(&one).spec_id(), loaded(&other).spec_id());
