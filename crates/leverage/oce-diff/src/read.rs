@@ -13,6 +13,11 @@
 //! - **The summary follows the sections.** `equal` must be "every section is empty", and each
 //!   section flag "no entry other than `reordered`" (`null` only beside an empty section), so a
 //!   reader that branches on a flag is never told something the entries contradict.
+//! - **A CXF diff's flags are the level's.** It cannot tell its parameters apart, so
+//!   `parameters_equal` is `null`; the only metadata it sees is a renamed root, so its metadata
+//!   holds at most `sequence-renamed` entries and `metadata_equal` is `false` beside one and
+//!   `null` without one (owner ruling of 2026-11-21). An authoring diff is held to the rule
+//!   above only.
 //!
 //! Two things are taken as written: the block counts, and the order of the entries.
 
@@ -103,6 +108,23 @@ impl TryFrom<RawDiff> for Diff {
                 }
                 _ => {}
             }
+        }
+        let known = match raw.source {
+            Source::Authoring => true,
+            Source::Cxf => {
+                summary.parameters_equal.is_none()
+                    && summary.metadata_equal == (!raw.metadata.is_empty()).then_some(false)
+                    && raw
+                        .metadata
+                        .iter()
+                        .all(|entry| matches!(entry, MetadataChange::SequenceRenamed { .. }))
+            }
+        };
+        if !known {
+            return Err(
+                "summary.parameters_equal, summary.metadata_equal or the metadata section are not what a cxf diff writes"
+                    .to_owned(),
+            );
         }
         Ok(Self {
             schema: raw.schema,

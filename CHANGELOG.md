@@ -619,23 +619,27 @@ and a gate that accepted any text would restore exactly the false assurance desc
   facade's `Topology` views of two documents the caller loaded and returns the same `Diff` data
   as the authoring diff, with `source: cxf`; it loads nothing and reads no CXF bytes.
   - **Identity.** A block or boundary is its path with the root prefix (`model_id` and a `.`)
-    stripped; a block is matched, renamed and rewired as at the authoring level, its ports named
-    by index through `oce_api::class_ports`. A path not under its side's root is refused with
-    the new typed `DiffError` (`#[non_exhaustive]`, `code()`, `DiffError::CODES`):
-    `outside-root`, which also refuses a document the engine exported, and `unresolved-ports`
-    for a block whose ports cannot be named. A block with no instance IRI (`b<id>`) is matched
+    stripped, the name holding no `#`, `/` or `:`; a block is matched, renamed and rewired as at
+    the authoring level, its ports named by index through `oce_api::class_ports`. A path not so
+    named is refused with the new typed `DiffError` (`#[non_exhaustive]`, `code()`,
+    `DiffError::CODES`): `outside-root`, which also refuses a document the engine exported
+    (issue #717 is to make one diffable), and `unresolved-ports` for a block whose ports cannot
+    be named. A block with no instance IRI (`b<id>`) is matched
     only by the rename pass and adds the new note `unnamed-blocks`.
   - **Sections.** A changed ground parameter is `reparameterized` on its leaf, so a
-    sequence-parameter retune is one entry per leaf it reaches and `parameters_equal` and
-    `metadata_equal` are `null`; a one-sided value is `parameter-defaulted` against the
+    sequence-parameter retune is one entry per leaf it reaches and `parameters_equal` is
+    `null`; a one-sided value is `parameter-defaulted` against the
     catalog's literal default; an Integer against the equal Real is a change of value until
     issue #683. The interface compares each boundary's type, labels and, for an input, its
-    effective bounds. Order is never compared and nothing is `reordered`. A renamed root leaves
-    every section empty and shows in the two sequence names.
+    effective bounds. Order is never compared and nothing is `reordered`. A renamed root is a
+    `sequence-renamed` metadata entry, the one metadata a topology holds, so `metadata_equal` is
+    `false` beside it and `null` otherwise (owner ruling of 2026-11-21); the strict reader takes
+    a CXF diff in exactly those shapes.
   - **Content ids.** `diff_topology_with_ids` takes the two documents' content ids beside the
-    topologies (decision 8's fast path) and gives the same result whatever ids it is given.
-    Equal ids never coexist with a graph or interface entry, held over every pair of the
-    content-id pin's 47 documents and four re-spelled copies of each.
+    topologies and gives the same result whatever ids it is given. Equal content ids and equal
+    sequence names never coexist with a graph or interface entry, held over every pair of the
+    content-id pin's 47 documents, four re-spelled copies of each and a re-rooted copy, which
+    keeps the id under another sequence name.
   - **Across the levels.** For two authoring models that emit and load, the CXF diff equals the
     authoring diff of the models as loaded, held over every ordered pair of the 42 tracked
     authoring fixtures that load and eleven edits of each; the note's worked examples have

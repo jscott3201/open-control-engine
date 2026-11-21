@@ -25,7 +25,7 @@ use oce_api::{
     EnumerationKind, MemberValue, ValueType, class_metadata, enumeration_member_value, enumerations,
 };
 use oce_author::{Bound, Endpoint, Literal, ParamValue, ParameterType, Sequence, SignalType};
-use oce_diff::{Diff, GraphChange, InterfaceChange};
+use oce_diff::{Diff, GraphChange, InterfaceChange, MetadataChange};
 
 /// Whether the catalog types the parameter `name` of `class_path` (a scalar or an array element
 /// `k_2` of `k_<i>`) as a Real.
@@ -153,7 +153,8 @@ pub fn grounded(model: &Sequence) -> Sequence {
 
 /// The part of a diff both levels see: the graph and interface sections without `reordered`
 /// entries and with every block's assignments sorted, the two section flags, the block counts,
-/// the notes and the two sequence names.
+/// the notes, the two sequence names, the `sequence-renamed` entry, and whether the diff is
+/// equal on all of these (`seen_equal`), which at the CXF level is `summary.equal` itself.
 pub fn seen_by_both(diff: &Diff) -> serde_json::Value {
     let graph: Vec<GraphChange> = diff
         .graph
@@ -167,6 +168,13 @@ pub fn seen_by_both(diff: &Diff) -> serde_json::Value {
         .filter(|entry| !matches!(entry, InterfaceChange::Reordered { .. }))
         .cloned()
         .collect();
+    let renamed: Vec<MetadataChange> = diff
+        .metadata
+        .iter()
+        .filter(|entry| matches!(entry, MetadataChange::SequenceRenamed { .. }))
+        .cloned()
+        .collect();
+    let seen_equal = graph.is_empty() && interface.is_empty() && renamed.is_empty();
     let mut graph = serde_json::to_value(graph).expect("JSON");
     for entry in graph.as_array_mut().into_iter().flatten() {
         if let Some(params) = entry.get_mut("params").and_then(|p| p.as_array_mut()) {
@@ -181,5 +189,7 @@ pub fn seen_by_both(diff: &Diff) -> serde_json::Value {
         "blocks": serde_json::to_value(diff.summary.blocks).expect("JSON"),
         "notes": serde_json::to_value(&diff.notes).expect("JSON"),
         "sequences": [diff.base.sequence, diff.head.sequence],
+        "sequence_renamed": serde_json::to_value(renamed).expect("JSON"),
+        "seen_equal": seen_equal,
     })
 }

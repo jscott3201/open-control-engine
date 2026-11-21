@@ -7,9 +7,10 @@
 //! of it; a sixteenfold topology costing less than forty times the work is the control that no
 //! step is quadratic.
 //!
-//! What the count cannot see is bounded per block, not by the topologies: the facade's
-//! `class_ports` validates and builds each block once from its own parameters, and the catalog
-//! lookups are bounded by the catalog.
+//! What the count cannot see: the facade's `class_ports` validates and builds each block once,
+//! which when the diff succeeds costs as much as the counted ports and before a refusal is one
+//! build of at most `MAX_RESOLVED_ARITY` (2^21) ports; and the catalog lookups, bounded by the
+//! catalog.
 
 use oce_api::{Engine, Topology};
 use oce_author::{

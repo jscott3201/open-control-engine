@@ -131,7 +131,7 @@ fn an_exported_document_keeps_its_id_and_is_refused_as_outside_its_root() {
 }
 
 #[test]
-fn a_name_is_what_follows_the_root_and_one_dot_and_is_never_empty() {
+fn a_name_is_what_follows_the_root_and_one_dot_and_is_never_empty_nor_delimited() {
     let good = load(&emitted(&plant())).topology;
     let root = good.model_id.as_str().to_owned();
     for path in [
@@ -140,6 +140,10 @@ fn a_name_is_what_follows_the_root_and_one_dot_and_is_never_empty() {
         format!("{root}x.sel"),
         format!("{root}/sel"),
         format!("x{root}.sel"),
+        format!("{root}.x/sel"),
+        format!("{root}.x#sel"),
+        format!("{root}.x:sel"),
+        format!("{root}.sel/"),
     ] {
         let mut bad = good.clone();
         bad.blocks[4].instance_path.clone_from(&path);
@@ -433,4 +437,87 @@ fn a_side_s_sequence_is_its_root_id_after_the_namespace() {
         assert_eq!(diff.base.sequence, sequence, "{root}");
         assert_eq!(diff.head.sequence, "", "{root}");
     }
+}
+
+/// The emitted document of a sequence `s` with a gain block `g`, under `namespace`, with every
+/// occurrence of `s.g` (the block and its ports) spelled `s.{name}`.
+fn gain_named(namespace: &str, names: &[(&str, &str)]) -> Loaded {
+    let mut statements = String::from(
+        "sequence s\nderived_from none\n\nin u : Real\nout y : Real\nout z : Real\n\n",
+    );
+    statements.push_str("block a = CDL.Reals.MultiplyByParameter(k = 2.0)\n");
+    statements.push_str("block b = CDL.Reals.MultiplyByParameter(k = 3.0)\n\n");
+    statements.push_str("u -> a.u\nu -> b.u\na.y -> y\nb.y -> z\n");
+    let mut text =
+        String::from_utf8(emitted_under(&support::parse(&statements), namespace)).expect("UTF-8");
+    for (from, to) in names {
+        text = text.replace(
+            &format!("{namespace}s.{from}"),
+            &format!("{namespace}s.{to}"),
+        );
+    }
+    load(text.as_bytes())
+}
+
+#[test]
+fn a_delimiter_in_a_name_is_refused_where_the_id_would_name_another_element() {
+    // `s.x/a` and `s.y/a`: the id names both `a` and keeps one id; a name here would be `x/a`
+    // and `y/a`, a rename. Refused on both sides.
+    let ns = "urn:oce:author:";
+    let (x, y) = (
+        gain_named(ns, &[("a", "x/a")]),
+        gain_named(ns, &[("a", "y/a")]),
+    );
+    assert_eq!(x.id, y.id);
+    let error = refusal(&x.topology, &y.topology);
+    assert_eq!(
+        error,
+        DiffError::OutsideRoot {
+            side: Side::Base,
+            root: "urn:oce:author:s".to_owned(),
+            path: "urn:oce:author:s.x/a".to_owned(),
+        }
+    );
+    // `s.a/k` and `s.b/k` under one namespace and under another: the id names the two blocks
+    // `k` (twice, so each keeps its whole IRI) and the ids differ, while names here would be
+    // equal. Refused.
+    let renamed = [("a", "a/k"), ("b", "b/k")];
+    let (here, there) = (
+        gain_named(ns, &renamed),
+        gain_named("http://other.org#", &renamed),
+    );
+    assert_ne!(here.id, there.id);
+    assert_eq!(
+        refusal(&here.topology, &there.topology).code(),
+        "outside-root"
+    );
+    // The same documents with plain names: one sequence, one graph, the two ids equal.
+    let (plain, plain_there) = (gain_named(ns, &[]), gain_named("http://other.org#", &[]));
+    assert_eq!(plain.id, plain_there.id);
+    assert!(compare_loaded(&plain, &plain_there).summary.equal);
+}
+
+#[test]
+fn a_root_moved_to_a_shorter_prefix_keeps_the_id_and_is_another_sequence() {
+    // The id never encodes the root id; this level names every element by it. Equal ids do not
+    // make an empty diff unless the sequence names are equal too.
+    let path = "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld";
+    let bytes = support::loaded::corpus_bytes(path);
+    let original = load(&bytes);
+    let root = original.topology.model_id.as_str().to_owned();
+    let moved = load(&support::loaded::rerooted(
+        &bytes,
+        &root,
+        "http://example.org#g36.source",
+    ));
+    assert_eq!(moved.id, original.id);
+    let diff = compare_loaded(&original, &moved);
+    assert_eq!(
+        (diff.base.sequence.as_str(), diff.head.sequence.as_str()),
+        ("g36.source.multizone_vav_relief_fan_group", "g36.source")
+    );
+    assert_eq!(diff.metadata.len(), 1);
+    assert_eq!((diff.graph.len(), diff.interface.len()), (470, 40));
+    assert_eq!(diff.notes, [Note::NamesDisjoint]);
+    assert!(!diff.summary.equal);
 }

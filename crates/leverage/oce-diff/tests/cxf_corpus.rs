@@ -10,10 +10,11 @@
 
 mod support;
 
-use oce_diff::{Diff, Source, render_markdown, render_text};
+use oce_diff::{Diff, DiffError, Side, Source, render_markdown, render_text};
 
 use support::loaded::{
-    Loaded, compacted, compare_loaded, corpus, corpus_bytes, expanded, load, namespace, reordered,
+    Loaded, compacted, compare_loaded, corpus, corpus_bytes, expanded, load, namespace,
+    ports_reversed, refusal, reordered, rerooted, shorter_root,
 };
 
 #[path = "../../../oce-api/tests/support/blob_corpus.rs"]
@@ -146,17 +147,22 @@ fn a_reordered_copy_moves_the_loader_order_and_still_diffs_empty() {
 }
 
 #[test]
-fn equal_content_ids_never_coexist_with_a_graph_or_interface_entry() {
-    // Each document with its four copies is a family of one id; every pair inside a family, and
-    // every pair of two families' originals, is diffed.
+fn equal_ids_and_equal_sequence_names_never_coexist_with_a_graph_or_interface_entry() {
+    // Each document with its four re-spelled copies and one re-rooted copy is a family of one
+    // id; every pair inside a family, and every pair of two families' originals, is diffed.
     let families: Vec<Vec<(String, Loaded)>> = loaded_corpus()
         .into_iter()
         .map(|(path, original)| {
             let bytes = corpus_bytes(&path);
+            let root = original.topology.model_id.as_str().to_owned();
             let mut family: Vec<(String, Loaded)> = copies(&bytes, &namespace(&original.topology))
                 .into_iter()
                 .map(|(spelling, copy)| (format!("{path} {spelling}"), load(&copy)))
                 .collect();
+            let shorter = shorter_root(&root).expect("every corpus root has a dotted name");
+            let rerooted = load(&rerooted(&bytes, &root, shorter));
+            assert_eq!(rerooted.id, original.id, "{path} re-rooted keeps its id");
+            family.push((format!("{path} re-rooted"), rerooted));
             family.insert(0, (path, original));
             family
         })
@@ -177,35 +183,43 @@ fn equal_content_ids_never_coexist_with_a_graph_or_interface_entry() {
             }
         }
     }
-    let (mut equal_ids, mut unequal_ids, mut roots_only) = (0, 0, Vec::new());
+    let (mut equal, mut rerooted_pairs, mut unequal_ids) = (0, 0, 0);
+    let mut roots_only = Vec::new();
     for ((base_name, base), (head_name, head)) in pairs {
         let diff = compare_loaded(base, head);
-        if base.id == head.id {
-            equal_ids += 1;
+        let context = format!("{base_name} against {head_name}");
+        let same_names = diff.base.sequence == diff.head.sequence;
+        // A renamed root is the metadata entry, and only it.
+        assert_eq!(diff.metadata.is_empty(), same_names, "{context}");
+        if base.id == head.id && same_names {
+            equal += 1;
             assert!(
                 diff.graph.is_empty() && diff.interface.is_empty(),
-                "{base_name} against {head_name}: equal ids, and\n{}",
+                "{context}: equal ids and names, and\n{}",
                 diff.to_json()
             );
-            assert!(diff.summary.equal, "{base_name} against {head_name}");
+            assert!(diff.summary.equal, "{context}");
+        } else if base.id == head.id {
+            // The id never encodes the root id: a root moved to a shorter dot-prefix of the
+            // instance IRIs keeps the id and names every element differently here.
+            rerooted_pairs += 1;
+            assert!(!diff.summary.equal, "{context}");
         } else {
             unequal_ids += 1;
-            // The converse does not hold, and only a root tells them apart: the id covers each
-            // name's root, which this level strips.
-            if diff.summary.equal {
-                assert_ne!(
-                    diff.base.sequence, diff.head.sequence,
-                    "{base_name} against {head_name}"
-                );
+            assert!(!diff.summary.equal || same_names, "{context}");
+            if diff.graph.is_empty() && diff.interface.is_empty() {
+                assert!(!same_names, "{context}: unequal ids and nothing seen");
                 roots_only.push(diff.base.sequence.clone());
             }
         }
     }
-    // 47 families of five; no two corpus documents share an id.
-    assert_eq!(equal_ids, 47 * 25);
+    // 47 families of six; no two corpus documents share an id. Inside a family, the re-rooted
+    // copy against each of the five others, both ways round, has another sequence name.
+    assert_eq!(equal, 47 * 26);
+    assert_eq!(rerooted_pairs, 47 * 10);
     assert_eq!(unequal_ids, 47 * 46);
     // Two of the one-block economizer high-limit documents bind the same block to the same
-    // values under two roots: the one pair, both ways round.
+    // values under two roots: the one pair, both ways round, a `sequence-renamed` entry alone.
     assert_eq!(
         roots_only,
         [
@@ -213,6 +227,55 @@ fn equal_content_ids_never_coexist_with_a_graph_or_interface_entry() {
             "g36.source.generic_air_economizer_high_limits_title24_differential_offset_0"
         ]
     );
+}
+
+#[test]
+fn a_name_holding_a_delimiter_is_refused_in_every_corpus_document() {
+    // The id names an IRI after its last `#`, `/` or `:`, so a name holding one is not the
+    // name the id gives the element: the first block of each document, renamed so, is refused.
+    for (path, original) in loaded_corpus() {
+        let root = original.topology.model_id.as_str();
+        let first = &original.topology.blocks[0].instance_path;
+        let name = first
+            .strip_prefix(&format!("{root}."))
+            .expect("under the root");
+        let moved = format!("{root}.x/{name}");
+        let text = String::from_utf8(corpus_bytes(&path)).expect("UTF-8");
+        let copy = load(
+            text.replace(&format!("\"{first}"), &format!("\"{moved}"))
+                .as_bytes(),
+        );
+        match refusal(&original.topology, &copy.topology) {
+            DiffError::OutsideRoot {
+                side,
+                path: refused,
+                ..
+            } => {
+                assert_eq!(side, Side::Head, "{path}");
+                assert!(refused.starts_with(&moved), "{path}: {refused}");
+            }
+            other => panic!("{path}: {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn reversing_every_port_list_moves_the_id_exactly_when_the_diff_sees_a_change() {
+    // Named ports bind in class-signature order whatever the list order; unnamed (vector) ports
+    // bind by position, so reversing them rewires. The diff and the id agree on which is which.
+    let (mut kept, mut moved) = (Vec::new(), Vec::new());
+    for (path, original) in loaded_corpus() {
+        let copy = load(&ports_reversed(&corpus_bytes(&path)));
+        let diff = compare_loaded(&original, &copy);
+        assert_eq!(diff.summary.equal, copy.id == original.id, "{path}");
+        if diff.summary.equal {
+            kept.push(path);
+        } else {
+            assert!(!diff.graph.is_empty(), "{path}");
+            moved.push(path);
+        }
+    }
+    assert_eq!((kept.len(), moved.len()), (44, 3), "{moved:?}");
 }
 
 #[test]

@@ -153,7 +153,9 @@ pub struct Summary {
     pub parameters_equal: Option<bool>,
     /// True when the interface section holds no entry other than `reordered`.
     pub interface_equal: bool,
-    /// True when the metadata section is empty; `None` at a level that carries no metadata.
+    /// True when the metadata section is empty; `None` where the level cannot tell. The CXF
+    /// level sees one metadata fact, a renamed root: `Some(false)` beside its `sequence-renamed`
+    /// entry, `None` without it.
     #[serde(deserialize_with = "crate::read::nullable")]
     pub metadata_equal: Option<bool>,
     /// How the blocks of the two sides matched.

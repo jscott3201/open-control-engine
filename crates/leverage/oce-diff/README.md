@@ -104,14 +104,20 @@ side the authoring diff lowers into (`src/wiring`), so a block is matched, renam
 exactly as at the authoring level, and it builds a `Diff` with `source: cxf`.
 
 - **Names.** A block or boundary is named by its path with the root prefix stripped: the root id
-  (`Topology::model_id`), a `.`, and a non-empty name, which may hold dots of its own (a flattened
-  nested block is `sub.block`). That is the modelica-json convention the emitter and the corpus
-  follow; the loader does not check it, and the adapter never guesses a root from the paths (the
-  blocks of a one-block document share that block's whole path). A path not under its side's root
-  is refused with `DiffError::OutsideRoot` (`outside-root`): a block or boundary named in another
-  namespace, every block of a document the engine exported (whose root is the exporter's fixed
-  `@id` while its instance IRIs keep their own, so it has the original's content id and is still
-  refused), and any block or boundary of a model with a synthetic root key. Base is checked first.
+  (`Topology::model_id`), a `.`, and a non-empty name with no `#`, `/` or `:`, which may hold
+  dots of its own (a flattened nested block is `sub.block`). That is the modelica-json convention
+  the emitter and the corpus follow; the loader does not check it, and the adapter never guesses a
+  root from the paths (the blocks of a one-block document share that block's whole path). The
+  delimiters are excluded because the content id names an IRI by what follows its last `#`, `/`
+  or `:`: without one in the name, the id names the element `{sequence}.{name}` and this level
+  names it `name`, so the two agree. A path that breaks the rule is refused with
+  `DiffError::OutsideRoot` (`outside-root`): a block or boundary named in another namespace or
+  with a delimiter in its name, every block of a document the engine exported (whose root is the
+  exporter's fixed `@id` while its instance IRIs keep their own, so it has the original's content
+  id and is still refused; [#717](https://github.com/jscott3201/open-control-engine/issues/717)
+  is to make it diffable), and any block or boundary of a model with a synthetic root key. Diffing
+  by whole path instead is rejected: an export against its source would read as a total rewrite
+  (owner ruling of 2026-11-21). Base is checked first.
 - **Unnamed blocks.** A path that is `b` and decimal digits is the facade's spelling of a block
   with no instance IRI. It is loader order, no identity across two documents, so such a block is
   never matched by name, only by the rename pass, its entries carry that spelling, and the diff
@@ -131,20 +137,28 @@ exactly as at the authoring level, and it builds a `Diff` with `source: cxf`.
   declaration's intersected with every port it feeds; an Integer input left open is the `i32`
   range). An output carries no bounds: the engine enforces none and the id leaves them out.
 - **Not seen.** Comments, semantic fields other than `unit`, `derived_from` (always `null`) and
-  authored order are not in a loaded graph: `metadata` is empty, `metadata_equal` is `null`, and
-  no entry is `reordered`.
+  authored order are not in a loaded graph, so no entry is `reordered`. Neither are a `unit`,
+  `quantity` or `displayUnit` on a boundary that is not a Real, the spelling of an
+  Integer-written bound on a Real boundary (held as the Real), or a member of an Integer constant
+  package (held as its Integer).
 - **The sequence** of each side is its root id after the namespace (the IRI after its last `#`,
-  `/` or `:`, as the content id names an IRI). A renamed root moves the content id, because the
-  root is inside every name the id covers, and leaves every section empty: every name is stripped
-  of it, so the rename shows only in `base.sequence` and `head.sequence`, and `equal` is true.
+  `/` or `:`, as the content id names an IRI). Every name is stripped of the root, so a renamed
+  root is no graph entry. It is reported as at the authoring level, a `sequence-renamed` metadata
+  entry, so the diff is not `equal` and `oce diff` will exit 1 for it (owner ruling of
+  2026-11-21). That entry is the only metadata this level sees: `metadata_equal` is `false` beside
+  it and `null` (unknown) without it, and the strict reader accepts a CXF diff in exactly those two
+  shapes, with `parameters_equal` `null`.
 
-**Content ids.** Equal canonical content ids never coexist with a graph or interface entry: a
-topology holds every fact the id encodes. The converse does not hold: a renamed root moves the id
-and nothing else (two corpus documents differ only so), and an interface-only change moves it
-with the graph section empty. `diff_topology_with_ids` takes the two ids beside the two
-topologies, the form of decision 8's fast path: with equal ids every block matches by name and
-class, so the rename pass has nothing to do, which `diff_topology` already finds by itself. The
-ids are recorded as `DiffOptions::canonical_ids_equal` and never change the result.
+**Content ids.** Equal canonical content ids and equal sequence names never coexist with a graph
+or interface entry: a topology holds every fact the id encodes, and under the name rule above
+the id names every element `{sequence}.{name}`. Equal ids alone are not enough: the id never
+encodes the root id, so a document whose root `@id` alone moved to a shorter dot-prefix of its
+instance IRIs keeps its id, has another sequence name, and names every element differently here.
+The converse does not hold either: a renamed root moves the id and is a `sequence-renamed` entry
+alone (two corpus documents differ only so), and an interface-only change moves the id with the
+graph section empty. `diff_topology_with_ids` takes the two ids beside the two topologies and
+records whether they are equal as `DiffOptions::canonical_ids_equal`, a hint that never changes a
+result: it returns exactly what `diff_topology` returns, whatever ids it is given.
 
 **Across the levels.** For two authoring models that emit and load, the CXF diff of the two
 loaded documents equals the authoring diff of the two models *as loaded*: references replaced by
@@ -152,7 +166,8 @@ the values they ground to and sequence parameters dropped, an Integer on a Real 
 as the emitter writes it, constant-package members as their Integers, an input nothing reads and
 an output nothing drives dropped, output bounds dropped, Integer inputs at their effective domain.
 They agree on the graph and interface sections (`reordered` aside), their two flags, the block
-counts, the notes and the sequence names, with the rename pass on and off.
+counts, the notes, the sequence names, the `sequence-renamed` entry and `equal` once those are
+the only entries counted, with the rename pass on and off.
 `tests/cxf_cross_level.rs` holds it over every ordered pair of the 42 tracked authoring fixtures
 that load and over eleven edits of each.
 
@@ -267,8 +282,10 @@ form's statement limits and a bucket at the pair cap to bounds a scan per lookup
 pair by pair would break. A CXF diff stays within 16 units per topology element (block, port,
 ground parameter, connection, boundary) and bit of their count, the rename pass's rounds included
 (`src/topology/topology_tests.rs`, chains at the rename cap, one past it and a sixteenth of it);
-the facade's naming of each block's ports, bounded by the block's own parameters, is outside the
-count.
+the facade's naming of each block's ports is outside the count. When the diff succeeds that
+naming costs as much as the counted ports, since each named port is one; before a refusal it is
+one block build of at most `MAX_RESOLVED_ARITY` (2^21) ports, the bound every block constructor
+holds.
 
 ## Tests and goldens
 
@@ -293,10 +310,12 @@ the model one at a time and requires each edit to be reported in the section it 
 
 The CXF adapter's tests: `tests/cxf_examples.rs` (the note's adapter test and the goldens),
 `tests/cxf_cross_level.rs` (the agreement above), `tests/cxf_corpus.rs` (every document of the
-content-id pin, the 46 G36 catalog fixtures among them, against itself, a second load and four
-re-spelled copies, and equal ids against every entry over the corpus's pairs),
-`tests/cxf_identity.rs` (roots, refusals, the unnamed block, topologies no load writes) and
-`tests/cxf_values.rs` (each value kind and entry kind).
+content-id pin, the 46 G36 catalog fixtures among them, against itself, a second load, four
+re-spelled copies and a re-rooted copy; equal ids and names against every entry over the
+corpus's pairs; a delimiter in a name refused in every document; every port list reversed, the
+id and the diff agreeing on each of the 47), `tests/cxf_identity.rs` (roots, refusals, the
+unnamed block, topologies no load writes), `tests/cxf_values.rs` (each value kind and entry
+kind) and `tests/cxf_metadata.rs` (the renamed root and what the reader accepts).
 
 ## Parts 3 and 4
 

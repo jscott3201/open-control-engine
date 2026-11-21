@@ -9,19 +9,23 @@
 //! by name and the interface section.
 //!
 //! **What this level cannot see.** A topology holds the loaded flat graph, the facts the
-//! canonical content id encodes, and nothing else:
+//! canonical content id encodes, the root id and nothing else:
 //!
 //! - sequence parameters, which are grounded into the leaves that reference them: a retune is
 //!   `reparameterized` on each affected leaf, so `parameters_equal` is `None`;
-//! - a reference against a literal of the same value, and an Integer literal the emitter widened
-//!   to the Real of a Real parameter;
+//! - a reference against a literal of the same value, an Integer literal the emitter widened to
+//!   the Real of a Real parameter, an Integer-spelled bound of a Real boundary (held as the
+//!   Real), and a member of an Integer constant package (held as its Integer);
 //! - comments, semantic fields other than `unit`, `derived_from` and authored order, so
-//!   `metadata_equal` is `None`, `derived_from` is `None` and no entry is `reordered`;
+//!   `derived_from` is `None` and no entry is `reordered`;
+//! - a `unit`, `quantity` or `displayUnit` on a boundary that is not a Real;
 //! - a boundary input nothing reads, an output nothing drives, and an output's bounds.
 //!
 //! The sequence name of each side is the root id's name after its namespace (the IRI after its
-//! last `#`, `/` or `:`, as the content id names an IRI), so a renamed root shows in the two
-//! names and in no section: every name under the root is stripped of it.
+//! last `#`, `/` or `:`, as the content id names an IRI). Names under the root are stripped of
+//! it, so a renamed root is no graph entry: it is the one metadata entry this level makes,
+//! `sequence-renamed` (owner ruling of 2026-11-21), and `metadata_equal` is `Some(false)` beside
+//! it and `None` otherwise, since nothing else of the metadata is seen.
 
 mod lower;
 mod sections;
@@ -29,7 +33,7 @@ mod sections;
 use oce_api::{ContentId, Topology};
 
 use crate::catalog;
-use crate::changes::{same_but_for_order, sort_section};
+use crate::changes::{MetadataChange, same_but_for_order, sort_section};
 use crate::data::{DIFF_SCHEMA, Diff, DiffOptions, Note, SequenceRef, Side, Source, Summary};
 use crate::error::DiffError;
 use crate::wiring;
@@ -45,14 +49,19 @@ use crate::wiring;
 ///   the diff carries [`Note::UnnamedBlocks`];
 /// - blocks are matched, renamed and rewired as at the authoring level, ports named by index;
 /// - a changed ground parameter is `reparameterized` on its block, so a sequence-parameter
-///   retune is one entry per affected leaf, and `parameters_equal` and `metadata_equal` are
-///   `None`;
+///   retune is one entry per affected leaf, and `parameters_equal` is `None`;
+/// - two sequence names that differ are a `sequence-renamed` metadata entry, with
+///   `metadata_equal` `Some(false)`; otherwise `metadata_equal` is `None`;
 /// - order is never compared and no entry is `reordered`.
 ///
-/// Equal canonical content ids prove equal loaded graphs, and a topology holds every fact the id
-/// encodes, so two documents with equal ids give empty graph and interface sections. The
-/// converse does not hold: the id also covers each name's root, which this level strips, so a
-/// renamed root moves the id and leaves every section empty.
+/// **Content ids.** Equal canonical content ids and equal sequence names never coexist with a
+/// graph or interface entry. A topology holds every fact the id encodes, and a name here is
+/// what follows the root and a `.`, with no `#`, `/` or `:`, so the id names the same element
+/// `{sequence}.{name}`. The sequence names are needed: the id never encodes the root id, so a
+/// document whose root `@id` alone moved to a shorter dot-prefix of its instance IRIs keeps its
+/// id and names every element differently here. The converse does not hold either: a renamed
+/// root moves the id and is only a `sequence-renamed` entry, and an interface-only change moves
+/// it with the graph section empty.
 ///
 /// # Errors
 ///
@@ -89,38 +98,48 @@ pub fn diff_topology(
     notes.sort_unstable();
     notes.dedup();
 
+    let (base_ref, head_ref) = (reference(base.topology), reference(head.topology));
+    // The one metadata fact a topology holds is its root (owner ruling of 2026-11-21): a renamed
+    // root is reported as the authoring level reports it, and nothing else of the metadata is
+    // seen, so the flag is `false` beside the entry and unknown without it.
+    let mut metadata = Vec::new();
+    if base_ref.sequence != head_ref.sequence {
+        metadata.push(MetadataChange::SequenceRenamed {
+            subject: "sequence".to_owned(),
+            old: Some(base_ref.sequence.clone()),
+            new: Some(head_ref.sequence.clone()),
+        });
+    }
     let summary = Summary {
-        equal: graph.is_empty() && interface.is_empty(),
+        equal: graph.is_empty() && interface.is_empty() && metadata.is_empty(),
         graph_equal: same_but_for_order(&graph),
         parameters_equal: None,
         interface_equal: same_but_for_order(&interface),
-        metadata_equal: None,
+        metadata_equal: (!metadata.is_empty()).then_some(false),
         blocks: outcome.counts,
     };
     Ok(Diff {
         schema: DIFF_SCHEMA.to_owned(),
         source: Source::Cxf,
         catalog: catalog::content_id().to_owned(),
-        base: reference(base.topology),
-        head: reference(head.topology),
+        base: base_ref,
+        head: head_ref,
         summary,
         notes,
         parameters: Vec::new(),
         interface,
         graph,
-        metadata: Vec::new(),
+        metadata,
     })
 }
 
 /// [`diff_topology`] for a caller that holds the two documents' canonical content ids
-/// (`oce_api::Engine::content_id`), the form of decision 8's fast path.
+/// (`oce_api::Engine::content_id`).
 ///
-/// Equal ids prove equal loaded graphs, so every block matches by name and class and the rename
-/// pass has nothing to do: that is the whole fast path, and [`diff_topology`] takes it whenever
-/// no block is left unmatched on a side. The ids are recorded as
-/// [`DiffOptions::canonical_ids_equal`] and are a statement only: the result is
-/// [`diff_topology`]'s for the same topologies and options, whatever ids are given, so a wrong
-/// pair costs nothing.
+/// It sets [`DiffOptions::canonical_ids_equal`] to whether the two ids are equal and calls
+/// [`diff_topology`]. That option is a hint that never changes a result: the return value is
+/// exactly [`diff_topology`]'s for the same topologies and options, whatever ids are given, true
+/// or false. Nothing is skipped on the ids' word.
 ///
 /// # Errors
 ///

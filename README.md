@@ -359,8 +359,8 @@ bits; and two pure renderers write the text form's syntax and a Markdown table. 
 or loads an engine, so a draft can be diffed against the reference it is repairing. The CXF
 adapter, `diff_topology`, gives the same data for two loaded CXF documents through the facade's
 `Topology` views, block names taken under the document's root and ports by index; equal content
-ids never coexist with a graph or interface entry, and for documents emitted from two authoring
-models it agrees with the authoring diff of the models as loaded. The blob comparison and the
+ids and equal sequence names never coexist with a graph or interface entry, and for documents
+emitted from two authoring models it agrees with the authoring diff of the models as loaded. The blob comparison and the
 `oce diff` verb are next (#667, #668).
 
 The three one-page design passes M3 waits on are written: the

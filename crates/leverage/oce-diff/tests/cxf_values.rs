@@ -4,7 +4,6 @@
 
 mod support;
 
-use oce_diff::render_text;
 use serde_json::json;
 
 use support::loaded::{compare_loaded, corpus_bytes, load, loaded};
@@ -84,6 +83,24 @@ fn signed_zeros_are_two_values_by_their_bits() {
     assert_eq!(
         diff["graph"],
         json!([{ "kind": "reparameterized", "subject": "g.k",
+                 "old": { "real": "0.0", "bits": "0x0000000000000000" },
+                 "new": { "real": "-0.0", "bits": "0x8000000000000000" } }])
+    );
+    // A bound of each sign is another effective domain, another id and an interface entry.
+    let bounded = |min: &str| {
+        format!(
+            "in u : Real @min {min}\nout y : Real\n\nblock g = CDL.Reals.MultiplyByParameter(k = 1.0)\n\nu -> g.u\ng.y -> y\n"
+        )
+    };
+    let (positive, negative) = (
+        loaded(&model(&bounded("0.0"))),
+        loaded(&model(&bounded("-0.0"))),
+    );
+    assert_ne!(positive.id, negative.id);
+    let diff = support::json(&compare_loaded(&positive, &negative));
+    assert_eq!(
+        diff["interface"],
+        json!([{ "kind": "min-changed", "subject": "u", "direction": "in",
                  "old": { "real": "0.0", "bits": "0x0000000000000000" },
                  "new": { "real": "-0.0", "bits": "0x8000000000000000" } }])
     );
@@ -328,27 +345,6 @@ fn what_a_loaded_document_does_not_hold_is_not_reported() {
     assert_eq!(base.id, head.id);
     let diff = compare_loaded(&base, &head);
     assert!(diff.summary.equal, "{}", diff.to_json());
-}
-
-#[test]
-fn a_renamed_root_moves_the_id_and_shows_only_in_the_two_names() {
-    let statements = gain("Real", "Real");
-    let base = loaded(&model(&statements));
-    let head = loaded(&parse(&format!(
-        "sequence t\nderived_from none\n\n{statements}"
-    )));
-    assert_ne!(
-        base.id, head.id,
-        "the root's name is inside every name the id covers"
-    );
-    let diff = compare_loaded(&base, &head);
-    assert!(diff.summary.equal, "{}", diff.to_json());
-    assert_eq!(
-        (diff.base.sequence.as_str(), diff.head.sequence.as_str()),
-        ("s", "t")
-    );
-    assert_eq!(diff.base.derived_from, None);
-    assert!(render_text(&diff).starts_with("# oce diff s -> t\n"));
 }
 
 #[test]

@@ -752,16 +752,22 @@ building decisions 3, 8 and 15 against the facade as it stands, not a new decisi
 [crate README](../../crates/leverage/oce-diff/README.md#the-cxf-adapter) states each in full.
 
 - **The root is read, never guessed, and a path outside it is refused.** A name is a path with
-  the root id, a `.` and a non-empty name; the 47 documents of the content-id pin all follow the
-  convention, the twelve with one block included. A path that does not is the typed refusal
-  `outside-root`, which is how "blocks under two root prefixes" is refused. So is every block of
-  a document the engine exported, whose root is the exporter's fixed `@id`: it has the
-  original's content id and cannot be diffed at this level.
+  the root id, a `.` and a non-empty name holding no `#`, `/` or `:`; the 47 documents of the
+  content-id pin all follow the convention, the twelve with one block included. A path that does
+  not is the typed refusal `outside-root`, which is how "blocks under two root prefixes" is
+  refused. The delimiters are refused because the content id names an IRI by what follows its
+  last one: a name holding one would let two documents with equal ids differ here (`s.x/g`
+  against `s.y/g`) or two with unequal ids diff empty. So is every block of a document the
+  engine exported, whose root is the exporter's fixed `@id`: it has the original's content id
+  and cannot be diffed at this level until GitHub #717.
 - **Ports are named by index**, from `oce_api::class_ports` over the class and the ground
   parameters, never from a path; a block whose ports cannot be named so is the refusal
-  `unresolved-ports`, which no loaded document reaches. A block's `hasInput` and `hasOutput`
-  order is therefore no re-spelling: unnamed vector ports bind by position (the ordering
-  contract), and the adapter reports a reversed list as the rewiring it is.
+  `unresolved-ports`, which no loaded document reaches. Where a leaf's ports are unnamed (vector
+  ports) they bind by position under the ordering contract, so reversing that block's `hasInput`
+  or `hasOutput` rewires it and the adapter reports the rewiring; named ports bind in
+  class-signature order whatever the list order. Reversing every port list of the 47 corpus
+  documents keeps the id and an empty diff for 44 and moves both for 3, never one without the
+  other.
 - **The unnamed block.** A path of `b` and decimal digits is never matched by name, only by the
   rename pass, and adds the note `unnamed-blocks`; it is reached by editing a topology.
 - **Ground values follow the authoring level's rules.** A value on one side only is
@@ -769,17 +775,36 @@ building decisions 3, 8 and 15 against the facade as it stands, not a new decisi
   name, and an Integer against the equal Real is a change of value until #683 makes the engine
   hold the Real.
 - **An input's bounds are its effective domain** (an Integer input left open is the `i32` range);
-  an output carries none, and `derived_from` is `null`: a topology holds neither.
-- **A renamed root moves the id and leaves every section empty.** Every name is stripped of the
-  root, so the rename shows only in the two sequence names and `equal` is true; `oce diff` will
-  exit 0 for it. Two corpus documents differ only so.
-- **The fast path is a function that changes nothing.** `diff_topology_with_ids` takes the two
-  ids and records them as `canonical_ids_equal`; with equal ids the matching leaves nothing for
-  the rename pass by itself, as the authoring diff's fast path does.
+  an output carries none, and `derived_from` is `null`: a topology holds neither. Nor does it
+  hold a `unit`, `quantity` or `displayUnit` on a boundary that is not a Real, the spelling of an
+  Integer-written bound on a Real boundary, or a constant-package member as a member.
+- **How this level stands to decision 8.** The decision's text is about equal canonical ids and
+  the loaded graphs they prove equal. Every fact the id encodes is in a topology, but the id
+  never encodes the root id, and this level names every element under it. So the guarantee here
+  is: equal canonical content ids **and equal sequence names** never coexist with a graph or
+  interface entry; under the name rule the id names each element `{sequence}.{name}`, and equal
+  sequence names make the two namings one. Equal ids alone are not enough: a document whose root
+  `@id` alone moved to a shorter dot-prefix of its instance IRIs keeps its id and is another
+  sequence here, every name changed. The claim of the bullet on #701 above holds in this form.
+- **The fast path is a function that changes nothing.** `diff_topology_with_ids` records whether
+  the two ids are equal as `canonical_ids_equal`, a hint that never changes a result; it returns
+  exactly what `diff_topology` returns for any ids, and a test passes it a false one.
 - **The claim across levels holds as an equality.** For two authoring models that emit and load,
   the CXF diff equals the authoring diff of the two models as loaded (references grounded,
-  widened literals, unread inputs, undriven outputs and output bounds dropped) on the graph and
-  interface sections, their flags, the counts, the notes and the names.
+  widened literals and constant-package members, unread inputs, undriven outputs, output bounds
+  and non-Real labels dropped) on the graph and interface sections, their flags, the counts, the
+  notes, the names, the `sequence-renamed` entry and `equal`.
+
+Ruled by the owner on 2026-11-21, on the review of GitHub #715:
+
+- **A renamed root is metadata at the CXF level.** When the two sequence names differ, the CXF
+  diff carries a `sequence-renamed` metadata entry, so it is not `equal` and `oce diff` exits 1,
+  as for an authoring rename. `metadata_equal` is `false` beside that entry and `null` (unknown)
+  otherwise.
+- **A path outside its root stays refused** (`outside-root`). Diffing by whole path is rejected:
+  an export against its source would read as a total rewrite. Making an engine-exported document
+  diffable is GitHub #717, with two options: fall back to the content id's own names on both
+  sides when either side is outside its root, or have the exporter keep the source root `@id`.
 
 ## Review rulings
 

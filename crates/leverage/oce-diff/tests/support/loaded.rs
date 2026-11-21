@@ -188,3 +188,44 @@ pub fn namespace(topology: &Topology) -> String {
     let end = root.rfind(['#', '/', ':']).map_or(0, |at| at + 1);
     root[..end].to_owned()
 }
+
+/// A document with its root node's `@id` (the node whose `@id` is `root`) replaced by `to`, and
+/// nothing else changed. The canonical content id never encodes the root id, so the copy keeps
+/// the original's id whenever it loads.
+pub fn rerooted(bytes: &[u8], root: &str, to: &str) -> Vec<u8> {
+    let mut document: Value = serde_json::from_slice(bytes).expect("JSON");
+    let graph = document
+        .get_mut("@graph")
+        .and_then(Value::as_array_mut)
+        .expect("a graph");
+    let node = graph
+        .iter_mut()
+        .find(|node| node.get("@id").and_then(Value::as_str) == Some(root))
+        .expect("the root node");
+    node["@id"] = Value::String(to.to_owned());
+    serde_json::to_vec_pretty(&document).expect("JSON")
+}
+
+/// A document with every `hasInput` and `hasOutput` list in reverse order.
+pub fn ports_reversed(bytes: &[u8]) -> Vec<u8> {
+    let mut document: Value = serde_json::from_slice(bytes).expect("JSON");
+    if let Some(graph) = document.get_mut("@graph").and_then(Value::as_array_mut) {
+        for node in graph {
+            for key in ["S231:hasInput", "S231:hasOutput"] {
+                if let Some(list) = node.get_mut(key).and_then(Value::as_array_mut) {
+                    list.reverse();
+                }
+            }
+        }
+    }
+    serde_json::to_vec_pretty(&document).expect("JSON")
+}
+
+/// The root id cut back to the `.` before its last dot-separated part, when that part follows
+/// the root's last `#`, `/` or `:`: `http://example.org#g36.source.x` is
+/// `http://example.org#g36.source`.
+pub fn shorter_root(root: &str) -> Option<&str> {
+    let namespace = root.rfind(['#', '/', ':']).map_or(0, |at| at + 1);
+    let dot = root.rfind('.').filter(|&dot| dot > namespace)?;
+    Some(&root[..dot])
+}

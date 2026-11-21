@@ -50,18 +50,23 @@ fn agree(base: (&Sequence, &Loaded), head: (&Sequence, &Loaded), context: &str) 
             seen_by_both(&authoring),
             "{context}, renames {renames}"
         );
-        assert!(
-            cxf.parameters.is_empty() && cxf.metadata.is_empty(),
+        // What the CXF level reports beyond the graph and interface is a renamed root, as a
+        // `sequence-renamed` entry, and `equal` is exactly what both levels see.
+        assert!(cxf.parameters.is_empty(), "{context}");
+        assert_eq!(cxf.summary.parameters_equal, None, "{context}");
+        assert_eq!(
+            cxf.summary.metadata_equal,
+            (!cxf.metadata.is_empty()).then_some(false),
             "{context}"
         );
         assert_eq!(
-            (cxf.summary.parameters_equal, cxf.summary.metadata_equal),
-            (None, None),
+            serde_json::json!(cxf.summary.equal),
+            seen_by_both(&cxf)["seen_equal"],
             "{context}"
         );
         assert_eq!(
-            cxf.summary.equal,
-            cxf.graph.is_empty() && cxf.interface.is_empty(),
+            cxf.metadata.is_empty(),
+            cxf.base.sequence == cxf.head.sequence,
             "{context}"
         );
     }

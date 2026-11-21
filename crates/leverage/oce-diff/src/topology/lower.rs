@@ -3,12 +3,15 @@
 //! [`Side`] the `wiring` module matches.
 //!
 //! **Names.** A block or boundary path names its element when it is the root id
-//! (`Topology::model_id`), a `.` and a non-empty name; the name is what follows. That is the
-//! modelica-json convention the emitter and the corpus follow, and the only one this level reads:
-//! the root is never guessed from the paths, which in a one-block document share that block's
-//! whole path. A block path of the facade's unnamed spelling (`b` and decimal digits) is an
-//! unnamed block, matched by the rename pass only. Any other path is refused
-//! ([`DiffError::OutsideRoot`]).
+//! (`Topology::model_id`), a `.` and a non-empty name with no `#`, `/` or `:`; the name is what
+//! follows. That is the modelica-json convention the emitter and the corpus follow, and the only
+//! one this level reads: the root is never guessed from the paths, which in a one-block document
+//! share that block's whole path. The delimiters are refused because the canonical content id
+//! names an IRI by what follows its last `#`, `/` or `:`: with none in the name, the id names the
+//! path `{sequence}.{name}`, the sequence being the root id after its own last delimiter, so
+//! this level's name and the id's name say the same thing. A block path of the facade's unnamed
+//! spelling (`b` and decimal digits) is an unnamed block, matched by the rename pass only. Any
+//! other path is refused ([`DiffError::OutsideRoot`]).
 //!
 //! **Ports.** A block's input and output connector paths are positional: a boundary-fed input
 //! carries the boundary's path, not a port name. So port `i` of a block is the `i`-th name the
@@ -67,11 +70,12 @@ impl Lowered<'_> {
     }
 }
 
-/// The name a path has under `root`, if it has one.
+/// The name a path has under `root`, if it has one: what follows the root and a `.`, never empty
+/// and never holding a `#`, `/` or `:`.
 fn under<'t>(root: &str, path: &'t str) -> Option<&'t str> {
     path.strip_prefix(root)?
         .strip_prefix('.')
-        .filter(|name| !name.is_empty())
+        .filter(|name| !name.is_empty() && !name.contains(['#', '/', ':']))
 }
 
 /// Whether a block path is the facade's spelling of a block with no instance IRI: `b` and one

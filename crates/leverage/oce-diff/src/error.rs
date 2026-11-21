@@ -16,12 +16,15 @@ use crate::data::Side;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DiffError {
     /// A block or a boundary of one side is not named under that side's root: its path is not
-    /// the root id (`Topology::model_id`), a `.` and a non-empty name. Identity at this level is
-    /// the path with the root prefix stripped, so a path outside the root has no identity. A
-    /// document that names a block in another namespace, a document the engine exported (whose
-    /// root is the exporter's fixed `@id` while its instance IRIs keep their own) and a model
-    /// with a synthetic root key are refused this way. A block with no instance IRI, which the
-    /// facade spells `b<id>`, is not refused: it is matched by the rename pass only.
+    /// the root id (`Topology::model_id`), a `.` and a non-empty name with no `#`, `/` or `:`.
+    /// Identity at this level is the path with the root prefix stripped, and the canonical
+    /// content id names an IRI by what follows its last `#`, `/` or `:`, so only such a name
+    /// is the name the id gives the element. A document that names a block in another
+    /// namespace or with a delimiter in its name, a document the engine exported (whose root is
+    /// the exporter's fixed `@id` while its instance IRIs keep their own; issue #717 is to make
+    /// it diffable) and a model with a synthetic root key are refused this way. A block with no
+    /// instance IRI, which the facade spells `b<id>`, is not refused: it is matched by the
+    /// rename pass only.
     OutsideRoot {
         /// The side the path is on.
         side: Side,
