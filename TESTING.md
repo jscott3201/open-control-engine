@@ -44,9 +44,9 @@ Enumerate the input domain and hit every boundary and degenerate case:
   and boundary walks beyond 65,536 target examinations or 8 MiB of aggregate target-IRI bytes are
   rejected even if a smaller input of the same shape is accepted. Hostile *amplification* is
   bounded the same way (issue #365): a `containsBlock` child reached twice is `SharedInstance`,
-  array parameters beyond 1,048,576 elements per document and run state beyond
-  `oce_graph::MAX_STATE_WORDS` are `ResourceLimitExceeded`, and an evaluation beyond
-  `oce_expr::MAX_EVAL_FUEL` work units (or a document's bindings beyond
+  array parameters beyond 1,048,576 elements per document or 64 MiB of element paths
+  (issue #710), and run state beyond `oce_graph::MAX_STATE_WORDS` are `ResourceLimitExceeded`,
+  and an evaluation beyond `oce_expr::MAX_EVAL_FUEL` work units (or a document's bindings beyond
   `oce_cxf::MAX_DOCUMENT_EVAL_FUEL` together) is `ExpressionTooExpensive`. The CXF reader's
   diagnostics themselves are held to 8 MiB of message and subject text (issue #695), and so is
   each validator pass's list (issue #726): the first one that does not fit ends the list, and a
