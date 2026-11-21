@@ -288,6 +288,71 @@ fn a_boundary_type_change_moves_the_topology() {
     });
 }
 
+/// A second small document under the same root: one Integer input `n`, read by the
+/// `IntegerToReal` block `cnv`, which drives the Real output `y`.
+fn integer_document() -> Json {
+    let class = "http://example.org#Buildings.Controls.OBC.CDL.Conversions.IntegerToReal";
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231#" },
+        "@graph": [
+            { "@id": ROOT, "@type": "S231:Block",
+              "S231:hasInput": [{ "@id": id("n") }],
+              "S231:containsBlock": [{ "@id": id("cnv") }],
+              "S231:hasOutput": [{ "@id": id("y") }] },
+            { "@id": id("cnv"), "@type": class,
+              "S231:hasInput": [{ "@id": id("cnv.u") }],
+              "S231:hasOutput": [{ "@id": id("cnv.y") }] },
+            { "@id": id("cnv.u"), "@type": "S231:IntegerInput",
+              "S231:isOfDataType": { "@id": "S231:Integer" } },
+            { "@id": id("cnv.y"), "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" },
+              "S231:isConnectedTo": [{ "@id": id("y") }] },
+            { "@id": id("n"), "@type": "S231:IntegerInput",
+              "S231:isOfDataType": { "@id": "S231:Integer" },
+              "S231:isConnectedTo": [{ "@id": id("cnv.u") }] },
+            { "@id": id("y"), "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" } }
+        ]
+    })
+}
+
+#[test]
+fn an_integer_inputs_lower_and_upper_bound_move_the_topology() {
+    // Undeclared, an Integer input's domain is the CDL Integer range, as Integer values.
+    let unbounded = integer_document();
+    let domain = input(&loaded(&unbounded).topology(), "n").clone();
+    assert_eq!(domain.value_type, ValueType::Integer);
+    assert!(matches!(domain.min, Some(Value::Integer(n)) if n == i64::from(i32::MIN)));
+    assert!(matches!(domain.max, Some(Value::Integer(n)) if n == i64::from(i32::MAX)));
+
+    let base = with(&unbounded, "n", "S231:min", json!(0));
+    let head = with(&unbounded, "n", "S231:min", json!(1));
+    assert!(matches!(
+        input(&loaded(&base).topology(), "n").min,
+        Some(Value::Integer(0))
+    ));
+    assert!(matches!(
+        input(&loaded(&head).topology(), "n").min,
+        Some(Value::Integer(1))
+    ));
+    one_fact_moved(&base, &head, |topology, old| {
+        input_mut(topology, "n").min = input(old, "n").min.clone();
+    });
+
+    let capped = with(&unbounded, "n", "S231:max", json!(10));
+    assert!(matches!(
+        input(&loaded(&capped).topology(), "n").max,
+        Some(Value::Integer(10))
+    ));
+    one_fact_moved(&unbounded, &capped, |topology, old| {
+        input_mut(topology, "n").max = input(old, "n").max.clone();
+    });
+    let lowered = with(&capped, "n", "S231:max", json!(9));
+    one_fact_moved(&capped, &lowered, |topology, old| {
+        input_mut(topology, "n").max = input(old, "n").max.clone();
+    });
+}
+
 #[test]
 fn an_inputs_bounds_are_its_effective_domain_and_not_its_declarations() {
     // The declaration admits 0 and up; the one connector it feeds admits 5 and up.
@@ -374,6 +439,34 @@ fn topology_equality_reads_the_root_id_and_every_boundary_field() {
     third.boundary_inputs[1].min = nan(2);
     assert_eq!(first, second);
     assert_ne!(first, third);
+    // An Integer bound and an enumeration bound compare by value, on either side of the
+    // domain. No document can declare an enumeration-typed input, so that bound is set by hand.
+    let class = oce_api::enumeration("CDL.Types.SimpleController")
+        .and_then(|row| row.id)
+        .expect("a registered enumeration");
+    let integer = |n: i64| Some(Value::Integer(n));
+    let member = |ordinal: u32| Some(Value::Enum { class, ordinal });
+    for (one, same, other) in [
+        (integer(1), integer(1), integer(2)),
+        (member(1), member(1), member(2)),
+    ] {
+        for upper in [false, true] {
+            let bound = |topology: &mut Topology, value: &Option<Value>| {
+                let input = &mut topology.boundary_inputs[1];
+                *(if upper {
+                    &mut input.max
+                } else {
+                    &mut input.min
+                }) = value.clone();
+            };
+            let (mut first, mut second, mut third) = (first.clone(), first.clone(), first.clone());
+            bound(&mut first, &one);
+            bound(&mut second, &same);
+            bound(&mut third, &other);
+            assert_eq!(first, second, "{one:?}, upper {upper}");
+            assert_ne!(first, third, "{one:?} against {other:?}, upper {upper}");
+        }
+    }
 }
 
 #[test]

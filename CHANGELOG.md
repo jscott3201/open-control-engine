@@ -57,18 +57,30 @@ and a gate that accepted any text would restore exactly the false assurance desc
     output's bounds are not carried: the engine enforces neither and the id leaves both out.
   - **`Topology::model_id`** is the root identity, equal to `LoadReport::model_id` and empty
     before a load. It cannot be derived from the block paths: in the 12 one-block documents of
-    the corpus the longest prefix the blocks share is the block's own path.
+    the corpus the longest prefix the blocks share is the block's own path. That every IRI is
+    written under the root is the modelica-json convention, not something the loader checks:
+    a document may name a block anywhere, an engine export carries the exporter's fixed root,
+    and a model with no root `@id` has a synthetic key.
   - **Equality.** `Topology`'s `==` now reads `model_id` and `boundary_inputs` too, and a
     `DeclaredInput`'s bounds compare by bits like a block's Real parameters (`-0.0` is not
     `0.0`, as in the id). No derive changed and nothing is serialised: the view stays plain
-    owned data with `Debug`, `Clone` and `PartialEq`.
-  - **What it proves.** Equal topologies now imply equal content ids. The converse does not
-    hold: a topology also carries the instance namespace, the root id and the loader's order.
+    owned data with `Debug`, `Clone` and `PartialEq`. The view reads a boundary's labels
+    through the id's own extraction (`content_id::graph::labels`), so the two cannot drift.
+  - **What it proves.** Equal topologies now imply equal content ids, for the whole id. The
+    converse does not hold: a topology also carries the instance namespace, the root id and the
+    loader's order. `tests/topology_content_bytes.rs` holds the claim itself: a second
+    implementation of the `OCECANON` encoding rebuilds the id's bytes from a `Topology` alone
+    (names and collisions, fan-out, drivers, blocks, sorted parameters, class signature hashes,
+    connections) and must equal `Engine::canonical_content_bytes` for every loadable CXF
+    document under `crates/` (116 in the engine crates' fixtures, a pinned count beside the 74
+    the loader refuses; 20 more in the leverage crates', held to a floor), for a constructed
+    nested-composite fan-out and for two blocks whose names collide across namespaces.
     `src/content_id/topology_agreement_tests.rs` compares every boundary record of the id with
-    the view, field by field, over the 47 corpus documents and the four content-id examples
-    (188 inputs, 137 outputs); `tests/topology_boundary.rs` moves the topology with each named
-    boundary edit that moves the id; `tests/topology_boundary_corpus.rs` does it over the
-    corpus (449 loading variants) and holds the root id to the load report's.
+    the view, destructured exhaustively so a new id field does not compile until the view
+    carries it, over the 47 corpus documents and the four content-id examples (188 inputs, 137
+    outputs); `tests/topology_boundary.rs` moves the topology with each named boundary edit
+    that moves the id, Real and Integer bounds alike; `tests/topology_boundary_corpus.rs` does
+    it over the corpus (449 loading variants) and holds the root id to the load report's.
   - **Unchanged.** A read-only view: no content id, blob, golden, export byte or format moves,
     and the workspace version stays. One case no document reaches changed: a declared output
     whose driving connector is out of range, which the load gate refuses, is now absent from

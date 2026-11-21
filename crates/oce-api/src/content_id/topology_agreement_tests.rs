@@ -5,14 +5,17 @@
 //! record: an input's name, type, labels, effective bounds and fan-out, and an output's name,
 //! type, labels and driver. The topology spells an identity as the document's IRI and the id as
 //! the name after the namespace, a port as its position in a block's list and the id as its
-//! index, so the comparison also shows that the id's records can be read off a topology. That
-//! is what makes equal topologies imply equal ids.
+//! index, so the comparison also shows that the id's boundary records can be read off a
+//! topology. The whole claim, that equal topologies imply equal ids, is held from outside by
+//! `tests/topology_content_bytes.rs`, which rebuilds the id's bytes from a topology alone.
 
 use std::path::PathBuf;
 
 use oce_model::Value;
 
-use super::graph::{CanonicalGraph, Driver, Name, canonical_graph};
+use super::graph::{
+    CanonicalGraph, Driver, InputRecord, Labels, Name, OutputRecord, canonical_graph,
+};
 use crate::{Engine, Topology};
 
 /// The name the id gives an IRI when no two IRIs of its kind collide: what follows the last
@@ -35,32 +38,43 @@ fn same_bound(recorded: Option<&Value>, shown: Option<&Value>) -> bool {
 }
 
 /// Compare the boundary records of `graph` with `topology`; returns `(inputs, outputs)`.
+///
+/// Every record is taken apart by an exhaustive pattern, with no `..`: a field added to the
+/// id's boundary records, or a list added to the graph, does not compile here until this
+/// comparison reads it from the view too. The block and connection lists are held, with the
+/// rest of the bytes, by the rebuild in `tests/topology_content_bytes.rs`.
 fn assert_agrees(what: &str, graph: &CanonicalGraph<'_>, topology: &Topology) -> (usize, usize) {
+    let CanonicalGraph {
+        inputs,
+        outputs,
+        blocks: _,
+        connections: _,
+    } = graph;
+
     // Inputs: the id sorts by name and the topology by path; under one namespace they agree.
-    assert_eq!(graph.inputs.len(), topology.boundary_inputs.len(), "{what}");
-    for (record, input) in graph.inputs.iter().zip(&topology.boundary_inputs) {
+    assert_eq!(inputs.len(), topology.boundary_inputs.len(), "{what}");
+    for (record, input) in inputs.iter().zip(&topology.boundary_inputs) {
+        let InputRecord {
+            name: recorded_name,
+            value_type,
+            labels:
+                Labels {
+                    quantity,
+                    unit,
+                    display_unit,
+                },
+            min,
+            max,
+            targets: recorded_targets,
+        } = record;
         let at = &input.path;
-        assert_eq!(record.name, name(at), "{what}");
-        assert_eq!(record.value_type, input.value_type, "{what}: {at}");
-        assert_eq!(
-            record.labels.quantity,
-            input.quantity.as_deref(),
-            "{what}: {at}"
-        );
-        assert_eq!(record.labels.unit, input.unit.as_deref(), "{what}: {at}");
-        assert_eq!(
-            record.labels.display_unit,
-            input.display_unit.as_deref(),
-            "{what}: {at}"
-        );
-        assert!(
-            same_bound(record.min, input.min.as_ref()),
-            "{what}: {at} min"
-        );
-        assert!(
-            same_bound(record.max, input.max.as_ref()),
-            "{what}: {at} max"
-        );
+        assert_eq!(*recorded_name, name(at), "{what}");
+        assert_eq!(*value_type, input.value_type, "{what}: {at}");
+        assert_eq!(*quantity, input.quantity.as_deref(), "{what}: {at}");
+        assert_eq!(*unit, input.unit.as_deref(), "{what}: {at}");
+        assert_eq!(*display_unit, input.display_unit.as_deref(), "{what}: {at}");
+        assert!(same_bound(*min, input.min.as_ref()), "{what}: {at} min");
+        assert!(same_bound(*max, input.max.as_ref()), "{what}: {at} max");
         // The fan-out is every block input that carries the boundary's path, by position.
         let mut targets: Vec<(Name, u32)> = topology
             .blocks
@@ -75,28 +89,35 @@ fn assert_agrees(what: &str, graph: &CanonicalGraph<'_>, topology: &Topology) ->
             })
             .collect();
         targets.sort_unstable();
-        assert_eq!(record.targets, targets, "{what}: {at} targets");
+        assert_eq!(*recorded_targets, targets, "{what}: {at} targets");
     }
 
-    let mut outputs: Vec<_> = topology.boundary_outputs.iter().collect();
-    outputs.sort_unstable_by_key(|output| name(&output.path));
-    assert_eq!(graph.outputs.len(), outputs.len(), "{what}");
-    for (record, output) in graph.outputs.iter().zip(outputs) {
+    let mut shown: Vec<_> = topology.boundary_outputs.iter().collect();
+    shown.sort_unstable_by_key(|output| name(&output.path));
+    assert_eq!(outputs.len(), shown.len(), "{what}");
+    for (record, output) in outputs.iter().zip(shown) {
+        let OutputRecord {
+            name: recorded_name,
+            value_type,
+            labels:
+                Labels {
+                    quantity,
+                    unit,
+                    display_unit,
+                },
+            driver,
+        } = record;
         let at = &output.path;
-        assert_eq!(record.name, name(at), "{what}");
-        assert_eq!(record.value_type, output.value_type, "{what}: {at}");
+        assert_eq!(*recorded_name, name(at), "{what}");
+        assert_eq!(*value_type, output.value_type, "{what}: {at}");
+        assert_eq!(*quantity, output.quantity.as_deref(), "{what}: {at}");
+        assert_eq!(*unit, output.unit.as_deref(), "{what}: {at}");
         assert_eq!(
-            record.labels.quantity,
-            output.quantity.as_deref(),
-            "{what}: {at}"
-        );
-        assert_eq!(record.labels.unit, output.unit.as_deref(), "{what}: {at}");
-        assert_eq!(
-            record.labels.display_unit,
+            *display_unit,
             output.display_unit.as_deref(),
             "{what}: {at}"
         );
-        match &record.driver {
+        match driver {
             Driver::Input(input) => {
                 assert_eq!(output.driver_path, output.path, "{what}: {at}");
                 let pair = topology
@@ -121,7 +142,7 @@ fn assert_agrees(what: &str, graph: &CanonicalGraph<'_>, topology: &Topology) ->
             }
         }
     }
-    (graph.inputs.len(), graph.outputs.len())
+    (inputs.len(), outputs.len())
 }
 
 fn documents() -> Vec<PathBuf> {

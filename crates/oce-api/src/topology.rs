@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use oce_model::resolved_model::DomainKey;
 use oce_model::{Attrs, ConnectorId, ModelGraph, Value, ValueType};
 
+use crate::content_id::graph;
 use crate::engine::Engine;
 use crate::io::connector_path;
 
@@ -27,11 +28,20 @@ pub struct Topology {
     /// top-composite `@id` in expanded canonical form when the document carries one, otherwise
     /// the deterministic synthetic key of the resolved-model projection. Empty before a load.
     ///
-    /// It is the root every authored instance and boundary IRI of a flat document is written
-    /// under (`<root>.<name>`). Read the root from here: it cannot be recovered from the block
-    /// paths, because the longest prefix the blocks of a one-block document share is that
-    /// block's whole path. A document the engine exported carries the exporter's fixed root
-    /// `@id` and keeps its instance IRIs, so its paths do not start with this value.
+    /// By the modelica-json convention, which the authoring emitter and the corpus follow, a
+    /// flat document writes every instance and boundary IRI under its root, as
+    /// `<root>.<name>`. That is a convention and not something the loader checks, so a reader
+    /// that strips this value from a path must handle a path that does not start with it:
+    ///
+    /// - a document may name a block or a boundary anywhere (`http://other.org#seq.g1` under
+    ///   the root `http://example.org#seq` loads);
+    /// - a document the engine exported carries the exporter's fixed root `@id`
+    ///   (`urn:open-control:cxf-export:root`) and keeps its instance IRIs;
+    /// - a model with no top-composite `@id` has a synthetic key, which is no IRI prefix.
+    ///
+    /// Where the convention holds, read the root from here: it cannot be recovered from the
+    /// block paths, because the longest prefix the blocks of a one-block document share is
+    /// that block's whole path.
     pub model_id: DomainKey,
     /// Authored elementary blocks, excluding reserved lowering blocks.
     pub blocks: Vec<TopologyBlock>,
@@ -175,17 +185,16 @@ pub struct DeclaredOutput {
     pub display_unit: Option<String>,
 }
 
-/// A boundary's `quantity`, `unit` and `displayUnit`, which only a `Real` attribute set holds.
+/// A boundary's `quantity`, `unit` and `displayUnit`, owned, read by the content id's own
+/// extraction ([`graph::labels`]) so the view and the id cannot come to read them differently.
+/// `None` attributes (an input with no declaration) have no labels.
 fn labels(attrs: Option<&Attrs>) -> (Option<String>, Option<String>, Option<String>) {
-    attrs
-        .and_then(Attrs::as_real)
-        .map_or((None, None, None), |real| {
-            (
-                real.quantity.as_deref().map(str::to_owned),
-                real.unit.as_deref().map(str::to_owned),
-                real.display_unit.as_deref().map(str::to_owned),
-            )
-        })
+    let labels = attrs.map_or_else(graph::Labels::default, graph::labels);
+    (
+        labels.quantity.map(str::to_owned),
+        labels.unit.map(str::to_owned),
+        labels.display_unit.map(str::to_owned),
+    )
 }
 
 fn bound_equal(left: Option<&Value>, right: Option<&Value>) -> bool {

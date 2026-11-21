@@ -46,10 +46,10 @@ pub(super) enum Driver {
 
 /// A boundary's `quantity`, `unit` and `displayUnit`, each optional, as loaded.
 #[derive(Default)]
-pub(super) struct Labels<'a> {
-    pub(super) quantity: Option<&'a str>,
-    pub(super) unit: Option<&'a str>,
-    pub(super) display_unit: Option<&'a str>,
+pub(crate) struct Labels<'a> {
+    pub(crate) quantity: Option<&'a str>,
+    pub(crate) unit: Option<&'a str>,
+    pub(crate) display_unit: Option<&'a str>,
 }
 
 /// One non-reserved block record, parameters sorted by name.
@@ -108,7 +108,9 @@ fn name_all<'i>(iris: impl Iterator<Item = &'i str> + Clone) -> BTreeMap<&'i str
     .collect()
 }
 
-fn labels(attrs: &Attrs) -> Labels<'_> {
+/// The labels of a boundary's attribute set: only a `Real` set holds any. The one extraction
+/// the id and the topology view ([`crate::Topology`]) both read a boundary's labels through.
+pub(crate) fn labels(attrs: &Attrs) -> Labels<'_> {
     attrs.as_real().map_or_else(Labels::default, |real| Labels {
         quantity: real.quantity.as_deref(),
         unit: real.unit.as_deref(),
