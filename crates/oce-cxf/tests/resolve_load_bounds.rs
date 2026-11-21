@@ -1,6 +1,6 @@
 //! Resolver-level hostile-input bounds (issue #365): the single-parent `containsBlock` rule
-//! (`shared-instance`), the per-document array-element budget (`resource-limit-exceeded`), and
-//! linear-cost own-declaration chains. The full-pipeline allocation measurements live in
+//! (`shared-instance`), the per-document array-element budget and its budget of element-path
+//! bytes (`resource-limit-exceeded`, issue #710), and linear-cost own-declaration chains. The full-pipeline allocation measurements live in
 //! `oce-api/tests/hostile_load_bounds.rs`; these pin the resolver's exact diagnostics and that an
 //! accepted document's model is unaffected.
 
@@ -196,6 +196,124 @@ fn an_exhausted_budget_refuses_the_next_element_but_admits_an_empty_array() {
     assert_eq!(refused.len(), 1, "{refused:?}");
     assert_eq!(refused[0].code, DiagCode::ResourceLimitExceeded);
     assert_eq!(refused[0].subject.as_deref(), Some(id("M.a.over").as_str()));
+}
+
+/// The per-document budget of element-path bytes (`oce-cxf`'s `MAX_DOCUMENT_ARRAY_PATH_BYTES`),
+/// restated so this test fails if the budget moves without review.
+const PATH_BUDGET: usize = 64 * 1024 * 1024;
+
+/// The bytes of the paths `<instance IRI of owner>.<base>_<i>` for `i` from 1 to `len` together,
+/// added up path by path: what the facade's parameter table keys each element by.
+fn path_bytes(owner: &str, base: &str, len: usize) -> usize {
+    let prefix = id(owner).len() + 1 + base.len() + 1;
+    (1..=len).map(|i| prefix + i.to_string().len()).sum()
+}
+
+/// The element names `base` mints on `block`, in table order, and their values.
+fn minted<'g>(graph: &'g ModelGraph, block: &str, base: &str) -> Vec<(&'g str, &'g Value)> {
+    let prefix = format!("{base}_");
+    graph
+        .blocks
+        .iter()
+        .find(|b| b.instance_iri.as_deref() == Some(id(block).as_str()))
+        .expect("the block")
+        .params
+        .values
+        .iter()
+        .filter(|(name, _)| name.starts_with(&prefix))
+        .map(|(name, value)| (name.as_ref(), value))
+        .collect()
+}
+
+#[test]
+fn the_path_budget_spans_every_instance_and_admits_exactly_its_limit() {
+    // Two 1,024-element arrays of long names on two leaves, the second leaf under a 4 KB
+    // instance IRI, and a one-element array on it whose path takes what is left of the budget to
+    // the byte. The second leaf's IRI and names are multibyte, so a count of characters instead
+    // of bytes would admit the document one byte past the budget. One byte more refuses the last
+    // array, and only it, naming the bytes it needs and the bytes already used.
+    let leaf = format!("M.{}", "é".repeat(2_000));
+    let (a, b) = ("a".repeat(32_000), "β".repeat(14_737));
+    let used = path_bytes("M.a", &a, 1_024) + path_bytes(&leaf, &b, 1_024);
+    // What the last path leaves for its name: the IRI, the `.` and `_1` are fixed.
+    let rest = PATH_BUDGET - used - (id(&leaf).len() + 1 + 2);
+    assert_eq!(rest, 5_358);
+    let build = |ascii: usize| {
+        let c = format!("{}{}", "γ".repeat(1_339), "c".repeat(ascii));
+        let mut nodes = vec![composite("M", &["M.a", &leaf])];
+        nodes.extend(constant("M.a", &[broadcast("M.a", &a, 1_024)]));
+        nodes.extend(constant(
+            &leaf,
+            &[broadcast(&leaf, &b, 1_024), broadcast(&leaf, &c, 1)],
+        ));
+        (doc(nodes), c)
+    };
+
+    let (exact, c) = build(rest - 2 * 1_339);
+    assert_eq!(c.len(), rest);
+    let graph = import(&exact).expect("paths totalling exactly the budget load");
+    let mut total = 0;
+    for (block, base, len) in [("M.a", &a, 1_024), (&leaf, &b, 1_024), (&leaf, &c, 1)] {
+        let names = minted(&graph, block, base);
+        let expected: Vec<String> = (1..=len).map(|i| format!("{base}_{i}")).collect();
+        assert!(
+            names
+                .iter()
+                .map(|(name, _)| *name)
+                .eq(expected.iter().map(String::as_str)),
+            "{block}: every element is minted, in order"
+        );
+        assert!(
+            names
+                .iter()
+                .all(|(_, value)| value.bit_eq(&Value::Real(1.0)))
+        );
+        total += names
+            .iter()
+            .map(|(name, _)| id(block).len() + 1 + name.len())
+            .sum::<usize>();
+    }
+    assert_eq!(total, PATH_BUDGET);
+
+    let (over, c) = build(rest - 2 * 1_339 + 1);
+    let diags = import(&over).expect_err("one byte past the budget refuses");
+    let refused: Vec<&Diagnostic> = diags.iter().filter(|d| d.is_error()).collect();
+    assert_eq!(refused.len(), 1, "{refused:?}");
+    assert_eq!(refused[0].code, DiagCode::ResourceLimitExceeded);
+    assert_eq!(
+        refused[0].subject.as_deref(),
+        Some(id(&format!("{leaf}.{c}")).as_str())
+    );
+    assert_eq!(
+        refused[0].message,
+        format!(
+            "array parameter's 1 element path(s) (instance IRI, `.`, element name) need {} \
+             byte(s) but the element paths of the document's array parameters already use {used} \
+             of the 67108864-byte per-document budget",
+            PATH_BUDGET - used + 1
+        )
+    );
+}
+
+#[test]
+fn a_parameter_refused_for_its_paths_draws_no_element() {
+    // A 1 KiB name over 65,536 elements needs 68,998,302 bytes of paths, past the path budget on
+    // its own. The array after it takes every element the document has left with that one's
+    // 65,536 included, so it fits only if the refused one drew none: the one refusal is the long
+    // name's.
+    let long = "k".repeat(1_024);
+    assert_eq!(path_bytes("M.a", &long, 65_536), 68_998_302);
+    let rest = (1 << 20) - 65_536 + 1;
+    let mut nodes = vec![composite("M", &["M.a"])];
+    nodes.extend(constant(
+        "M.a",
+        &[broadcast("M.a", &long, 65_536), broadcast("M.a", "p", rest)],
+    ));
+    let subject = id(&format!("M.a.{long}"));
+    assert_eq!(
+        errors(&doc(nodes)),
+        [(DiagCode::ResourceLimitExceeded, Some(subject))]
+    );
 }
 
 #[test]
