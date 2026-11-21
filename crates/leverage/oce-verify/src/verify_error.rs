@@ -67,6 +67,20 @@ pub enum VerifyErrorKind {
     /// [`crate::VerifyLimits::max_total_frames`], or one scenario's `N + 1` more than the replay
     /// limits' `max_frames`. The first budget checked.
     TooManyFrames,
+    /// A `when` name matches no boundary input or output, by exact path or by suffix.
+    WhenUnknown,
+    /// A `when` suffix matches more than one boundary input or output;
+    /// [`VerifyError::candidates`] lists them.
+    WhenAmbiguous,
+    /// A `when` name resolves to a port that is not a Boolean.
+    WhenNotBoolean,
+    /// A tolerance window (`within` and `of`) on a Boolean or Integer output: the envelope is
+    /// type-blind, so a value between two levels could pass.
+    ToleranceOnDiscreteOutput,
+    /// A tolerance window holds more ticks than [`crate::CompareLimits`] allows for the set's
+    /// envelope (`max_funnel_points` or `max_aligned_grid_points`). Checked at bind's budget
+    /// step, straight after the instant budget.
+    TooManyPoints,
     /// The instants the set may compare, `(1 + mutants)` times its scenarios' window ticks and
     /// diagnostic expectations, are more than [`crate::VerifyLimits::max_total_instants`].
     TooManyInstants,
@@ -103,6 +117,10 @@ pub enum VerifyErrorKind {
     /// The engine refused a frame for a reason about the run rather than the frame
     /// (`EngineRefusal::Run`): later frames would be refused the same way.
     RunRefused,
+    /// The envelope gave a tolerance window no result: [`VerifyError::cause`] is one of
+    /// [`COMPARE_REFUSAL_CAUSES`]. Found by the self-enclosure call, the expected signal compared
+    /// against itself, so it never depends on the values of the output the window judges.
+    CompareRefused,
     /// A replay ended with an error rather than a verdict; [`VerifyError::cause`] is its class
     /// from [`REPLAY_FAILURE_CAUSES`], never a Rust variant name.
     ReplayFailed,
@@ -131,6 +149,11 @@ impl VerifyErrorKind {
         Self::EnumPortUnsupported,
         Self::UnsupportedPortType,
         Self::TooManyFrames,
+        Self::WhenUnknown,
+        Self::WhenAmbiguous,
+        Self::WhenNotBoolean,
+        Self::ToleranceOnDiscreteOutput,
+        Self::TooManyPoints,
         Self::TooManyInstants,
         Self::TooManyLoadBytes,
         Self::TooManyFrameBytes,
@@ -143,6 +166,7 @@ impl VerifyErrorKind {
         Self::MutantIdentical,
         Self::MutantParamRefused,
         Self::RunRefused,
+        Self::CompareRefused,
         Self::ReplayFailed,
         Self::WindowUncovered,
     ];
@@ -167,6 +191,11 @@ impl VerifyErrorKind {
             Self::EnumPortUnsupported => "enum-port-unsupported",
             Self::UnsupportedPortType => "unsupported-port-type",
             Self::TooManyFrames => "too-many-frames",
+            Self::WhenUnknown => "when-unknown",
+            Self::WhenAmbiguous => "when-ambiguous",
+            Self::WhenNotBoolean => "when-not-boolean",
+            Self::ToleranceOnDiscreteOutput => "tolerance-on-discrete-output",
+            Self::TooManyPoints => "too-many-points",
             Self::TooManyInstants => "too-many-instants",
             Self::TooManyLoadBytes => "too-many-load-bytes",
             Self::TooManyFrameBytes => "too-many-frame-bytes",
@@ -179,6 +208,7 @@ impl VerifyErrorKind {
             Self::MutantIdentical => "mutant-identical",
             Self::MutantParamRefused => "mutant-param-refused",
             Self::RunRefused => "run-refused",
+            Self::CompareRefused => "compare-refused",
             Self::ReplayFailed => "replay-failed",
             Self::WindowUncovered => "window-uncovered",
         }
@@ -203,6 +233,11 @@ pub const VERIFY_ERROR_CODES: &[&str] = &[
     "enum-port-unsupported",
     "unsupported-port-type",
     "too-many-frames",
+    "when-unknown",
+    "when-ambiguous",
+    "when-not-boolean",
+    "tolerance-on-discrete-output",
+    "too-many-points",
     "too-many-instants",
     "too-many-load-bytes",
     "too-many-frame-bytes",
@@ -215,6 +250,7 @@ pub const VERIFY_ERROR_CODES: &[&str] = &[
     "mutant-identical",
     "mutant-param-refused",
     "run-refused",
+    "compare-refused",
     "replay-failed",
     "window-uncovered",
 ];
@@ -254,6 +290,48 @@ pub const MUTANT_PARAM_REFUSAL_CAUSES: &[&str] = &[
     "param-structural",
     "param-path-unknown",
 ];
+
+/// The causes a `compare-refused` refusal carries ([`VerifyError::cause`]): the funnel port's
+/// ten [`crate::COMPARE_ERROR_CODES`], in their order, then `reference-outside-envelope`, a
+/// window's expected signal that leaves its own envelope (an error above zero at a tick of the
+/// self-enclosure call). A bound past 2^1000 in magnitude is `non-finite-envelope`. A loaded set
+/// can reach four: `work-limit-exceeded`, `loop-removal-undefined`, `non-finite-envelope` and
+/// `reference-outside-envelope`; load and bind refuse what would give the others.
+pub const COMPARE_REFUSAL_CAUSES: &[&str] = &[
+    "invalid-tolerance",
+    "length-mismatch",
+    "empty-series",
+    "too-many-points",
+    "non-finite-sample",
+    "x-not-non-decreasing",
+    "mismatched-endpoints",
+    "work-limit-exceeded",
+    "loop-removal-undefined",
+    "non-finite-envelope",
+    REFERENCE_OUTSIDE_ENVELOPE,
+];
+
+/// The cause of a `compare-refused` refusal whose expected signal leaves its own envelope.
+pub(crate) const REFERENCE_OUTSIDE_ENVELOPE: &str = "reference-outside-envelope";
+
+/// The `compare-refused` cause of a port refusal: its code, held to [`COMPARE_REFUSAL_CAUSES`] by
+/// an exhaustive match, so a new port refusal does not compile until the table has its row.
+pub(crate) fn compare_refusal_cause(error: &crate::CompareError) -> &'static str {
+    use crate::CompareError as E;
+    let index = match error {
+        E::InvalidTolerance { .. } => 0,
+        E::LengthMismatch { .. } => 1,
+        E::EmptySeries { .. } => 2,
+        E::TooManyPoints { .. } => 3,
+        E::NonFiniteSample { .. } => 4,
+        E::XNotNonDecreasing { .. } => 5,
+        E::MismatchedEndpoints { .. } => 6,
+        E::WorkLimitExceeded { .. } => 7,
+        E::LoopRemovalUndefined => 8,
+        E::NonFiniteEnvelope => 9,
+    };
+    COMPARE_REFUSAL_CAUSES[index]
+}
 
 /// Whether two strings are the same bytes, in a constant context.
 const fn same(left: &str, right: &str) -> bool {
@@ -388,8 +466,9 @@ impl VerifyError {
     }
 
     /// The cause of `replay-failed` (one of [`REPLAY_FAILURE_CAUSES`]), the class of
-    /// `param-refused` (one of [`PARAM_REFUSAL_CLASSES`]) or the cause of `mutant-param-refused`
-    /// (one of [`MUTANT_PARAM_REFUSAL_CAUSES`]); `None` for every other kind.
+    /// `param-refused` (one of [`PARAM_REFUSAL_CLASSES`]), the cause of `mutant-param-refused`
+    /// (one of [`MUTANT_PARAM_REFUSAL_CAUSES`]) or the cause of `compare-refused` (one of
+    /// [`COMPARE_REFUSAL_CAUSES`]); `None` for every other kind.
     #[must_use]
     pub fn cause(&self) -> Option<&'static str> {
         self.details.cause

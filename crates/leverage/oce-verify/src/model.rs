@@ -10,6 +10,7 @@
 //! Maps are held sorted by their keys' UTF-8 bytes, the order the canonical form writes; lists
 //! (scenarios, steps, expectations) keep file order.
 
+use crate::envelope::Tolerances;
 use crate::number::{Literal, Number};
 
 /// One parameter edit: a parameter path, as written, and the value to set.
@@ -121,14 +122,113 @@ impl Input {
     }
 }
 
-/// A window expectation: `output()` equals `equals()` at every tick from `first_tick()` to
-/// `last_tick()`.
+/// One step of a tolerance window's expected signal: from `time_s()` on, the signal holds
+/// `value()` (zero-order hold).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OfStep {
+    pub(crate) t: Number,
+    pub(crate) value: Number,
+}
+
+impl OfStep {
+    /// The time in seconds from which the value holds: the window's `from_s` for the first
+    /// step, each later one after the one before it, none after the window's `to_s`. It need not
+    /// be a tick; it takes effect at the first tick at or after it.
+    #[must_use]
+    pub fn time_s(&self) -> f64 {
+        self.t.seconds()
+    }
+
+    /// The value held, as written: a number.
+    #[must_use]
+    pub fn value(&self) -> Literal {
+        Literal::from(self.value)
+    }
+}
+
+/// How a tolerance window's expected signal was written: one number, or a list of steps.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum OfHeld {
+    /// One number at every tick: one step at the window's `from_s`.
+    Constant(OfStep),
+    /// A step list, in time order; never empty.
+    Steps(Vec<OfStep>),
+}
+
+/// A tolerance window's `within` and `of`: the tolerances its envelope is built with and the
+/// expected signal it is built around (vectors note decisions 38 to 40).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Within {
+    /// The tolerance names the file wrote, in byte order, each with its number as written.
+    pub(crate) written: Vec<(&'static str, Number)>,
+    pub(crate) of: OfHeld,
+}
+
+impl Within {
+    /// The six tolerances, an absent name zero. Every one is finite and not negative, and
+    /// `ltolx` is at most 1; a written `-0` or `-0.0` reads as zero.
+    #[must_use]
+    pub fn tolerances(&self) -> Tolerances {
+        let mut tolerances = Tolerances::ZERO;
+        for (name, number) in &self.written {
+            let value = number.seconds();
+            match *name {
+                "atolx" => tolerances.atolx = value,
+                "atoly" => tolerances.atoly = value,
+                "ltolx" => tolerances.ltolx = value,
+                "ltoly" => tolerances.ltoly = value,
+                "rtolx" => tolerances.rtolx = value,
+                "rtoly" => tolerances.rtoly = value,
+                // The reader admits the six names only.
+                _ => {}
+            }
+        }
+        tolerances
+    }
+
+    /// The tolerance names the file wrote, in byte order: at least one of `atolx`, `atoly`,
+    /// `ltolx`, `ltoly`, `rtolx` and `rtoly`.
+    pub fn names(&self) -> impl ExactSizeIterator<Item = &'static str> + '_ {
+        self.written.iter().map(|(name, _)| *name)
+    }
+
+    /// The expected signal's steps, in time order: at least one, the first at the window's
+    /// `from_s`. A number is one step at `from_s`.
+    #[must_use]
+    pub fn of(&self) -> &[OfStep] {
+        match &self.of {
+            OfHeld::Constant(step) => std::slice::from_ref(step),
+            OfHeld::Steps(steps) => steps,
+        }
+    }
+
+    /// Whether the set writes `of` as one number rather than as a step list.
+    #[must_use]
+    pub fn of_is_constant(&self) -> bool {
+        matches!(self.of, OfHeld::Constant(_))
+    }
+}
+
+/// What a window checks at each of its ticks.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Check {
+    /// `equals`: the output equals the value exactly.
+    Equals(Literal),
+    /// `within` and `of`: the output lies inside the envelope.
+    Within(Box<Within>),
+}
+
+/// A window expectation over the ticks from `first_tick()` to `last_tick()`: either the output
+/// equals `equals()` exactly at each tick, or it lies inside the envelope built around
+/// `within()`'s expected signal; in both, a tick counts only where every `when()` signal is
+/// true.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Window {
     pub(crate) output: String,
     pub(crate) from: Number,
     pub(crate) to: Number,
-    pub(crate) equals: Literal,
+    pub(crate) check: Check,
+    pub(crate) when: Vec<String>,
     pub(crate) first_tick: u64,
     pub(crate) last_tick: u64,
 }
@@ -152,10 +252,30 @@ impl Window {
         self.to.seconds()
     }
 
-    /// The expected value, as written. The comparison is exact; a Real compares by its bits.
+    /// The expected value of an exact window, as written; `None` for a tolerance window. The
+    /// comparison is exact; a Real compares by its bits.
     #[must_use]
-    pub fn equals(&self) -> Literal {
-        self.equals
+    pub fn equals(&self) -> Option<Literal> {
+        match &self.check {
+            Check::Equals(literal) => Some(*literal),
+            Check::Within(_) => None,
+        }
+    }
+
+    /// The tolerances and the expected signal of a tolerance window; `None` for an exact one.
+    #[must_use]
+    pub fn within(&self) -> Option<&Within> {
+        match &self.check {
+            Check::Equals(_) => None,
+            Check::Within(within) => Some(within),
+        }
+    }
+
+    /// The names of the window's mask, as written and in file order: 1 to 16 Boolean inputs or
+    /// outputs, or none when the window has no `when`.
+    #[must_use]
+    pub fn when(&self) -> &[String] {
+        &self.when
     }
 
     /// The first tick in the window: the first `k` with `from_s() <= k * step_s`.
@@ -213,7 +333,7 @@ impl DiagnosticInstant {
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expectation {
-    /// An output equals a value over a window of ticks.
+    /// An output equals a value, or lies inside an envelope, over a window of ticks.
     Window(Window),
     /// A diagnostic is emitted at one tick.
     Diagnostic(DiagnosticInstant),

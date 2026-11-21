@@ -8,6 +8,7 @@ use crate::receipt::ReceiptValue::{self, Boolean, Integer, Real};
 
 fn scenario(own: &[Edit]) -> BoundScenario {
     BoundScenario {
+        needs_inputs: false,
         steps: Vec::new(),
         edits: own.to_vec(),
         expectations: Vec::new(),

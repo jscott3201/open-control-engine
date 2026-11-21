@@ -10,18 +10,21 @@
 //!    `enum-port-unsupported`, a String port `unsupported-port-type`. These are properties of the
 //!    subject alone, so they are judged before any name.
 //! 3. **The set's `params`**, then **each scenario** in file order: its inputs in name order, then
-//!    the inputs it does not supply, then its expectations in file order, then its `params`.
+//!    the inputs it does not supply, then its expectations in file order (a window as
+//!    [`crate::bind_window`] binds it: its output, what it checks, then its `when` names), then
+//!    its `params`.
 //!    Every name resolves by replay's one rule ([`oce_replay::resolve_path`]: the exact canonical
 //!    path, or the one path the name ends at a `.` boundary): inputs against
 //!    `Engine::input_definitions()`, outputs against `FrameSlots::outputs()`, parameter keys
 //!    against `Engine::params()` sorted by path. Each of the three lists is indexed once
 //!    ([`oce_replay::PathIndex`], issue #571), so a name costs a binary search, not a scan of the
 //!    list, and every answer is `resolve_path`'s. Every value is typed by what it lands on
-//!    ([`crate::typing`]): an input by `InputDefinition::value_type`, an `equals` literal by
-//!    `FrameSlots::output_types()`, a parameter by its declared type. The set's own `params` are
+//!    ([`crate::typing`]): an input by `InputDefinition::value_type`, an `equals` literal and an
+//!    `of` value by `FrameSlots::output_types()`, a parameter by its declared type. The set's own `params` are
 //!    held once and every scenario keeps only its own map ([`crate::edit_lists`]).
-//! 4. **The work budgets** ([`crate::budget`]): frames, compared instants, bytes loaded and
-//!    byte-frames, in that order, each an upper bound on what the run may ask for. They are
+//! 4. **The work budgets** ([`crate::budget`]): frames, compared instants, each tolerance
+//!    window's points against [`crate::CompareLimits`], bytes loaded and byte-frames, in that
+//!    order, each an upper bound on what the run may ask for. They are
 //!    arithmetic on what steps 1 to 3 found, so they are checked before every load but the
 //!    subject's first (the work-budget note, ruling 6): an over-budget set is refused even when
 //!    its edits would be.
@@ -45,6 +48,7 @@ use oce_api::{
 };
 use oce_replay::PathIndex;
 
+use crate::bind_window::{Signal, Signals, bind_window};
 use crate::edit_lists::{Edit, Edits};
 use crate::limits::{MAX_LOAD_WARNINGS, VerifyLimits};
 use crate::model::{Expectation, Parameter, Scenario};
@@ -81,6 +85,9 @@ pub(crate) struct Bound<'a> {
 
 /// One scenario, resolved and typed.
 pub(crate) struct BoundScenario {
+    /// Whether a `when` of the scenario names an input, so its trace must keep the inputs
+    /// (decision 46).
+    pub(crate) needs_inputs: bool,
     /// Per input slot, the typed steps in time order.
     pub(crate) steps: Vec<Vec<(f64, Value)>>,
     /// The scenario's own parameter edits, by row of the parameter table in ascending order; its
@@ -90,28 +97,14 @@ pub(crate) struct BoundScenario {
     pub(crate) expectations: Vec<BoundExpectation>,
 }
 
+pub(crate) use crate::bind_window::{BoundCheck, BoundWindow};
+
 /// One expectation, resolved and typed.
 pub(crate) enum BoundExpectation {
-    /// An output equals a value over a window of ticks.
+    /// An output equals a value, or lies inside an envelope, over a window of ticks.
     Window(BoundWindow),
     /// A warning is emitted at one tick.
     Diagnostic(BoundDiagnostic),
-}
-
-/// A window expectation against an output slot.
-pub(crate) struct BoundWindow {
-    /// The output slot.
-    pub(crate) output: usize,
-    /// The window as written, seconds: the coverage check reads it.
-    pub(crate) from_s: f64,
-    /// The window's last second, included.
-    pub(crate) to_s: f64,
-    /// The first tick in the window.
-    pub(crate) first_tick: u64,
-    /// The last tick in the window.
-    pub(crate) last_tick: u64,
-    /// The expected value, typed by the output's declared type.
-    pub(crate) equals: ReceiptValue,
 }
 
 /// A diagnostic expectation at one tick.
@@ -176,6 +169,7 @@ pub(crate) fn bind<'a>(
     let output_types = slots.output_types().to_vec();
     boundary(&inputs, &outputs, &output_types)?;
     let params = parameter_types(&engine);
+    let signals = Signals::of(&inputs, &outputs, &output_types);
     let (set_edits, scenarios) = {
         // Each list of names is indexed once, so a name costs a binary search, not a scan
         // (issue #571).
@@ -189,6 +183,8 @@ pub(crate) fn bind<'a>(
             output_types: &output_types,
             params: &params,
             param_index: PathIndex::new(&param_paths),
+            signals: &signals,
+            signal_index: signals.index(),
         };
         let set_edits = match set.params() {
             Some(written) => edits(written, "params", &boundary)?,
@@ -206,7 +202,7 @@ pub(crate) fn bind<'a>(
     };
     let edit_lists = crate::edit_lists::distinct(&edits, &scenarios);
     let work = crate::budget::Work::of(set, &scenarios, edit_lists.len(), subject, supplied);
-    crate::budget::check(&work, limits)?;
+    crate::budget::check(&work, &scenarios, set.envelope(), limits)?;
     for (first, list) in edit_lists.resolved() {
         try_edits(subject, &list, &format!("scenarios[{first}]"))?;
     }
@@ -326,21 +322,24 @@ fn parameter_types(engine: &Engine) -> Vec<(String, ValueType)> {
 
 /// The subject's boundary and parameters, as every scenario binds against them, each list of
 /// names indexed once for the one name rule.
-struct Boundary<'a> {
+pub(crate) struct Boundary<'a> {
     inputs: &'a [InputDefinition],
     input_index: PathIndex<'a>,
-    outputs: &'a [String],
-    output_index: PathIndex<'a>,
-    output_types: &'a [ValueType],
+    pub(crate) outputs: &'a [String],
+    pub(crate) output_index: PathIndex<'a>,
+    pub(crate) output_types: &'a [ValueType],
     params: &'a [(String, ValueType)],
     param_index: PathIndex<'a>,
+    /// The inputs and outputs together, for a `when` name.
+    signals: &'a Signals,
+    signal_index: PathIndex<'a>,
 }
 
 /// The names of one kind of target, for the three refusals of the name rule.
-struct Names {
-    what: &'static str,
-    unknown: Kind,
-    ambiguous: Kind,
+pub(crate) struct Names {
+    pub(crate) what: &'static str,
+    pub(crate) unknown: Kind,
+    pub(crate) ambiguous: Kind,
 }
 
 const INPUTS: Names = Names {
@@ -349,7 +348,7 @@ const INPUTS: Names = Names {
     ambiguous: Kind::AmbiguousInput,
 };
 
-const OUTPUTS: Names = Names {
+pub(crate) const OUTPUTS: Names = Names {
     what: "boundary output",
     unknown: Kind::UnknownOutput,
     ambiguous: Kind::AmbiguousOutput,
@@ -362,7 +361,7 @@ const PARAMETERS: Names = Names {
 };
 
 /// Resolve `name` against an indexed list by the one name rule, refusing at `subject`.
-fn resolve(
+pub(crate) fn resolve(
     index: &PathIndex<'_>,
     name: &str,
     names: &Names,
@@ -395,7 +394,7 @@ fn resolve(
 }
 
 /// Type `literal` by `value_type`, refusing at `subject` about `path`.
-fn typed_at(
+pub(crate) fn typed_at(
     literal: Literal,
     value_type: ValueType,
     subject: &str,
@@ -464,28 +463,13 @@ fn bind_scenario(
     for (position, expectation) in scenario.expectations().iter().enumerate() {
         let place = format!("scenarios[{index}].expect[{position}]");
         expectations.push(match expectation {
-            Expectation::Window(window) => {
-                let slot = resolve(
-                    &boundary.output_index,
-                    window.output(),
-                    &OUTPUTS,
-                    &format!("{place}.output"),
-                )?;
-                let equals = typed_at(
-                    window.equals(),
-                    boundary.output_types[slot],
-                    &format!("{place}.equals"),
-                    &boundary.outputs[slot],
-                )?;
-                BoundExpectation::Window(BoundWindow {
-                    output: slot,
-                    from_s: window.from_s(),
-                    to_s: window.to_s(),
-                    first_tick: window.first_tick(),
-                    last_tick: window.last_tick(),
-                    equals,
-                })
-            }
+            Expectation::Window(window) => BoundExpectation::Window(bind_window(
+                window,
+                &place,
+                boundary,
+                boundary.signals,
+                &boundary.signal_index,
+            )?),
             Expectation::Diagnostic(instant) => BoundExpectation::Diagnostic(BoundDiagnostic {
                 tick: instant.tick(),
                 block: instant.block().to_owned(),
@@ -497,7 +481,12 @@ fn bind_scenario(
         Some(written) => edits(written, &format!("scenarios[{index}].params"), boundary)?,
         None => Vec::new(),
     };
+    let needs_inputs = expectations.iter().any(|expectation| {
+        matches!(expectation, BoundExpectation::Window(window)
+            if window.when.iter().any(|signal| matches!(signal, Signal::Input(_))))
+    });
     Ok(BoundScenario {
+        needs_inputs,
         steps,
         edits: own,
         expectations,

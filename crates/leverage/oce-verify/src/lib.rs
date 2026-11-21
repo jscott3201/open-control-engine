@@ -206,6 +206,7 @@
 
 mod aligned_grid;
 mod bind;
+mod bind_window;
 mod budget;
 mod canonical;
 mod clock;
@@ -222,6 +223,7 @@ mod fnv;
 mod funnel;
 mod g16;
 mod limits;
+mod mask;
 mod model;
 mod mutants;
 mod number;
@@ -234,6 +236,7 @@ mod relative_path;
 mod run;
 mod schema;
 mod strict;
+mod tolerance;
 mod typing;
 mod validate;
 mod vector_set;
@@ -263,21 +266,24 @@ pub use g16::format_g16;
 pub use limits::{
     MAX_DEPTH, MAX_LIST_LEN, MAX_LOAD_WARNINGS, MAX_STRING_BYTES, MAX_TIME_INTEGER, VerifyLimits,
 };
-pub use model::{DiagnosticInstant, Expectation, Input, Mutant, Parameter, Scenario, Step, Window};
+pub use model::{
+    DiagnosticInstant, Expectation, Input, Mutant, OfStep, Parameter, Scenario, Step, Window,
+    Within,
+};
 pub use number::Literal;
 pub use receipt::{
     Comparison, ComparisonMode, Failure, FrameCounts, InstantCounts, MutantCatch, MutantEntry,
     MutantSection, MutantStatus, ParamEdit, RECEIPT_SCHEMA, Receipt, ReceiptBody, ReceiptHeader,
     ReceiptKind, ReceiptValue, ScenarioCounts, ScenarioReceipt, ScenarioStatus, ScoreStatus,
-    Timings, Totals, UnmatchedWarning, VectorBody,
+    Timings, Totals, UnmatchedWarning, VECTOR_FUNNEL_REFERENCE, VectorBody,
 };
 pub use refusal_classes::{ENGINE_REFUSAL_CLASSES, engine_refusal_class};
 pub use run::{VectorInputs, VectorRun, VerifyOptions, run_vectors};
 pub use schema::{SCHEMA_PROFILE_KEYWORDS, VECTORS_JSON_SCHEMA, vectors_json_schema};
 pub use vector_set::VectorSet;
 pub use verify_error::{
-    MUTANT_PARAM_REFUSAL_CAUSES, PARAM_REFUSAL_CLASSES, REPLAY_FAILURE_CAUSES, VERIFY_ERROR_CODES,
-    VerifyError, VerifyErrorKind,
+    COMPARE_REFUSAL_CAUSES, MUTANT_PARAM_REFUSAL_CAUSES, PARAM_REFUSAL_CLASSES,
+    REPLAY_FAILURE_CAUSES, VERIFY_ERROR_CODES, VerifyError, VerifyErrorKind,
 };
 
 /// The format tag a vector set carries in its `schema` key. Any other tag is refused as

@@ -1,7 +1,9 @@
-//! Every object of the format is closed: an unknown key is refused at every level (the keys the
-//! format does not have yet among them, and `mutants` anywhere but the set), a required key cannot
-//! be absent, a value of another JSON type is refused, an expectation is exactly one of its two
-//! forms, and any tag but `oce/vectors/v1` is refused by name before the shape is judged.
+//! Every object of the format is closed: an unknown key is refused at every level (each key in
+//! any object but its own among them: `mutants` and `envelope` anywhere but the set, `within`,
+//! `of` and `when` anywhere but a window), a required key cannot be absent, a value of another
+//! JSON type is refused, an expectation is exactly one of its forms, and any tag but
+//! `oce/vectors/v1` is refused by name before the shape is judged. The tolerance keys' own rules
+//! are `tests/tolerance_format.rs`.
 
 mod support;
 
@@ -12,11 +14,12 @@ use support::{code_of, fixture_bytes, load, one, refusal, scenario, set_of};
 const WINDOW: &str = r#"{"output": "y", "from_s": 0, "to_s": 1800, "equals": false}"#;
 const INSTANT: &str =
     r#"{"diagnostic": {"block": "CDL.Utilities.Assert", "message": "m"}, "at_s": 60}"#;
+const TOLERANCE: &str = r#"{"output": "z", "from_s": 0, "to_s": 1800, "within": {"atoly": 0.5, "rtolx": 0.1}, "of": [{"t": 0, "value": 1.5}], "when": ["v"]}"#;
 
 /// A set with every optional key present, so each object can gain or lose a key.
 fn full() -> String {
     format!(
-        "{{\"schema\": \"oce/vectors/v1\", \"clock\": {{\"step_s\": 60, \"horizon_s\": 1800}}, \"params\": {{\"a.k\": 1}}, \"mutants\": [{{\"path\": \"m/a.cxf.json\", \"description\": \"e\"}}], \"scenarios\": [{{\"name\": \"s\", \"description\": \"d\", \"params\": {{\"b.k\": 2.5}}, \"inputs\": {{\"u\": [{{\"t\": 0, \"value\": 1}}], \"v\": true}}, \"expect\": [{WINDOW}, {INSTANT}]}}]}}"
+        "{{\"schema\": \"oce/vectors/v1\", \"envelope\": \"funnel\", \"clock\": {{\"step_s\": 60, \"horizon_s\": 1800}}, \"params\": {{\"a.k\": 1}}, \"mutants\": [{{\"path\": \"m/a.cxf.json\", \"description\": \"e\"}}], \"scenarios\": [{{\"name\": \"s\", \"description\": \"d\", \"params\": {{\"b.k\": 2.5}}, \"inputs\": {{\"u\": [{{\"t\": 0, \"value\": 1}}], \"v\": true}}, \"expect\": [{WINDOW}, {INSTANT}, {TOLERANCE}]}}]}}"
     )
 }
 
@@ -40,7 +43,8 @@ fn the_full_document_loads_with_every_optional_key() {
     assert_eq!(scenario.description(), Some("d"));
     assert_eq!(scenario.params().map(<[_]>::len), Some(1));
     assert_eq!(scenario.inputs().len(), 2);
-    assert_eq!(scenario.expectations().len(), 2);
+    assert_eq!(scenario.expectations().len(), 3);
+    assert_eq!(set.written_envelope(), Some(oce_verify::Envelope::Funnel));
 }
 
 #[test]
@@ -55,6 +59,9 @@ fn an_unknown_key_is_refused_in_every_object() {
         ("{\"diagnostic\"", "code"),
         ("{\"block\"", "instance"),
         ("{\"path\"", "digest"),
+        ("{\"output\": \"z\"", "tolerance"),
+        ("{\"atoly\"", "atolz"),
+        ("{\"t\": 0, \"value\": 1.5}", "at"),
     ];
     for (anchor, key) in objects {
         let document = with_member(&full(), anchor, &format!("\"{key}\": 1"));
@@ -75,22 +82,25 @@ fn an_unknown_key_is_refused_in_every_object() {
 }
 
 #[test]
-fn the_keys_the_format_does_not_have_yet_are_refused_never_ignored() {
-    // `within`, `of` and `when` will belong to an expectation: each is an unknown key today, in
-    // the object it will belong to and anywhere else. `mutants` belongs to the set and to no
-    // other object.
+fn each_key_is_refused_outside_the_object_it_belongs_to() {
+    // `within`, `of` and `when` belong to a window, `envelope` and `mutants` to the set: each is
+    // an unknown key in any other object, never ignored.
     for (anchor, member) in [
-        ("{\"output\"", r#""within": {"atoly": 0.5}"#),
-        ("{\"output\"", r#""of": "yRef""#),
-        ("{\"output\"", r#""when": ["occupied"]"#),
-        ("{\"diagnostic\"", r#""when": ["occupied"]"#),
-        ("{\"name\"", r#""when": ["occupied"]"#),
+        ("{\"name\"", r#""when": ["v"]"#),
+        ("{\"name\"", r#""within": {"atoly": 0.5}"#),
+        ("{\"schema\"", r#""of": 1"#),
+        ("{\"step_s\"", r#""envelope": "funnel""#),
+        ("{\"name\"", r#""envelope": "funnel""#),
+        ("{\"output\"", r#""envelope": "funnel""#),
+        ("{\"atoly\"", r#""of": 1"#),
+        ("{\"atoly\"", r#""when": ["v"]"#),
+        ("{\"block\"", r#""when": ["v"]"#),
         ("{\"name\"", r#""mutants": []"#),
         ("{\"step_s\"", r#""mutants": []"#),
         ("{\"output\"", r#""tolerance": 1e-9"#),
     ] {
         let document = with_member(&full(), anchor, member);
-        assert_eq!(code_of(&document), "unknown-key", "{member}");
+        assert_eq!(code_of(&document), "unknown-key", "{member} in {anchor}");
     }
     assert_eq!(code_of(&full()), "loaded");
 }
@@ -192,11 +202,11 @@ fn without_member(document: &str, anchor: &str, key: &str) -> String {
 #[test]
 fn a_required_key_cannot_be_absent_and_an_optional_one_can() {
     // (the object's first bytes, its required keys, its optional keys)
-    let objects: [(&str, &[&str], &[&str]); 8] = [
+    let objects: [(&str, &[&str], &[&str]); 11] = [
         (
             "{\"schema\"",
             &["schema", "clock", "scenarios"],
-            &["params", "mutants"],
+            &["params", "mutants", "envelope"],
         ),
         ("{\"step_s\"", &["step_s", "horizon_s"], &[]),
         (
@@ -209,6 +219,13 @@ fn a_required_key_cannot_be_absent_and_an_optional_one_can() {
         ("{\"diagnostic\"", &["diagnostic", "at_s"], &[]),
         ("{\"block\"", &["block"], &["message"]),
         ("{\"path\"", &["path"], &["description"]),
+        (
+            "{\"output\": \"z\"",
+            &["output", "from_s", "to_s"],
+            &["when"],
+        ),
+        ("{\"atoly\"", &[], &["atoly", "rtolx"]),
+        ("{\"t\": 0, \"value\": 1.5}", &["t", "value"], &[]),
     ];
     for (anchor, required, optional) in objects {
         for key in required {
@@ -390,7 +407,7 @@ fn an_expectation_is_exactly_one_of_its_two_forms() {
     }
     // An unknown key in an expectation is reported as that, whichever form the rest is.
     assert_eq!(
-        code_of(&one("", r#"{"output": "y", "at_s": 60, "within": {}}"#)),
+        code_of(&one("", r#"{"output": "y", "at_s": 60, "tolerance": {}}"#)),
         "unknown-key"
     );
     assert_eq!(code_of(&one("", WINDOW)), "loaded");
@@ -550,7 +567,7 @@ fn a_value_keeps_the_kind_it_was_written_as() {
         .expectations()
         .iter()
         .map(|expectation| match expectation {
-            Expectation::Window(window) => window.equals(),
+            Expectation::Window(window) => window.equals().expect("an exact window"),
             other => panic!("a window, found {other:?}"),
         })
         .collect();

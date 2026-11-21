@@ -7,9 +7,10 @@
 //! judged here: a value keeps the kind it was written as, a map keeps file order, and the clock,
 //! step and window rules are applied when a [`crate::VectorSet`] is made from these.
 //!
-//! Three small wrappers carry what a derive cannot say on its own: [`Optional`] is a key that
-//! may be absent (never `null`), [`Entries`] is an open map from names to values, and
-//! [`Seconds`] and [`ValueDto`] are a number and a value without a `format` keyword.
+//! Small wrappers carry what a derive cannot say on its own: [`Optional`] is a key that may be
+//! absent (never `null`), [`Entries`] is an open map from names to values, [`Seconds`],
+//! [`Amount`] and [`ValueDto`] are a number and a value without a `format` keyword, and
+//! [`EnvelopeName`] is a string with two allowed values.
 
 use std::borrow::Cow;
 
@@ -38,6 +39,10 @@ pub(crate) struct VectorSetDto {
     pub(crate) mutants: Optional<Vec<MutantDto>>,
     /// The scenarios, in order. At most 4,096; each runs on a freshly loaded sequence.
     pub(crate) scenarios: Vec<ScenarioDto>,
+    /// The envelope every tolerance window of the set is compared under: "funnel" (LBNL funnel,
+    /// the default when the key is absent) or "aligned-grid".
+    #[schemars(default)]
+    pub(crate) envelope: Optional<EnvelopeName>,
 }
 
 /// One mutant: where its CXF document is, relative to this file, and what defect it carries.
@@ -108,6 +113,134 @@ pub(crate) struct WindowDto {
     pub(crate) to_s: Seconds,
     /// The value the output must equal, exactly; a Real is compared by its bits.
     pub(crate) equals: ValueDto,
+    /// The window's mask: 1 to 16 names of Boolean inputs or outputs. A tick counts only where
+    /// every one is true; elsewhere it is masked, never checked.
+    #[schemars(default)]
+    pub(crate) when: Optional<Vec<String>>,
+}
+
+/// A tolerance window: a Real output lies inside the envelope built around the expected signal
+/// `of` with the tolerances `within`, at every tick from from_s to to_s, both ends included.
+#[derive(Debug, JsonSchema)]
+#[schemars(rename = "ToleranceWindow", deny_unknown_fields)]
+pub(crate) struct ToleranceWindowDto {
+    /// The output name: a Real output.
+    pub(crate) output: String,
+    /// The first second of the window: not negative, not after to_s.
+    pub(crate) from_s: Seconds,
+    /// The last second of the window: not after horizon_s. The window must hold at least one
+    /// tick.
+    pub(crate) to_s: Seconds,
+    /// The tolerances of the envelope: at least one of the six names.
+    pub(crate) within: WithinDto,
+    /// The expected signal: a number at every tick, or a step list from from_s.
+    pub(crate) of: OfDto,
+    /// The window's mask: 1 to 16 names of Boolean inputs or outputs. A tick counts only where
+    /// every one is true; elsewhere both signals are zero there and the tick is masked, never
+    /// checked.
+    #[schemars(default)]
+    pub(crate) when: Optional<Vec<String>>,
+}
+
+/// The six tolerances of a tolerance window, funnel's names: each optional, at least one
+/// present, each finite and not negative; an absent name is zero.
+#[derive(Debug, Default, JsonSchema)]
+#[schemars(rename = "Within", deny_unknown_fields)]
+pub(crate) struct WithinDto {
+    /// Absolute tolerance along time, in seconds.
+    #[schemars(default)]
+    pub(crate) atolx: Optional<Amount>,
+    /// Absolute tolerance along the value, in the output's unit.
+    #[schemars(default)]
+    pub(crate) atoly: Optional<Amount>,
+    /// Tolerance along time relative to the time of each point: a fraction, at most 1.
+    #[schemars(default)]
+    pub(crate) ltolx: Optional<Amount>,
+    /// Tolerance along the value relative to the magnitude of each point: a fraction.
+    #[schemars(default)]
+    pub(crate) ltoly: Optional<Amount>,
+    /// Tolerance along time relative to the window's span: a fraction.
+    #[schemars(default)]
+    pub(crate) rtolx: Optional<Amount>,
+    /// Tolerance along the value relative to the expected signal's range: a fraction.
+    #[schemars(default)]
+    pub(crate) rtoly: Optional<Amount>,
+}
+
+/// One step of an expected signal: from time t on, the signal holds value (zero-order hold).
+#[derive(Debug, JsonSchema)]
+#[schemars(rename = "OfStep", deny_unknown_fields)]
+pub(crate) struct OfStepDto {
+    /// The time in seconds from which the value holds. The first step is at the window's from_s
+    /// exactly, each later one is after the one before it, and none is after to_s. It need not
+    /// be a tick: it takes effect at the first tick at or after it.
+    pub(crate) t: Seconds,
+    /// The value held from t: a number.
+    pub(crate) value: Amount,
+}
+
+/// What a tolerance window expects over its ticks.
+#[derive(Debug)]
+pub(crate) enum OfDto {
+    /// One value at every tick.
+    Constant(Amount),
+    /// A step list.
+    Steps(Vec<OfStepDto>),
+}
+
+impl JsonSchema for OfDto {
+    fn schema_name() -> Cow<'static, str> {
+        "Of".into()
+    }
+
+    fn json_schema(generator: &mut SchemaGenerator) -> Schema {
+        json_schema!({
+            "description": "The expected signal of a tolerance window: one number at every tick, or a step list of at least one step (at most 65,536) whose first t is the window's from_s.",
+            "anyOf": [
+                { "type": "number" },
+                { "type": "array", "items": generator.subschema_for::<OfStepDto>() },
+            ]
+        })
+    }
+}
+
+/// The envelope's name as written.
+#[derive(Debug)]
+pub(crate) struct EnvelopeName(pub(crate) String);
+
+impl JsonSchema for EnvelopeName {
+    fn schema_name() -> Cow<'static, str> {
+        "EnvelopeName".into()
+    }
+
+    fn inline_schema() -> bool {
+        true
+    }
+
+    fn json_schema(_: &mut SchemaGenerator) -> Schema {
+        json_schema!({
+            "type": "string",
+            "enum": ["funnel", "aligned-grid"],
+        })
+    }
+}
+
+/// A number that is not a time and not a port value: a tolerance or an expected signal's value.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Amount(pub(crate) Number);
+
+impl JsonSchema for Amount {
+    fn schema_name() -> Cow<'static, str> {
+        "Amount".into()
+    }
+
+    fn inline_schema() -> bool {
+        true
+    }
+
+    fn json_schema(_: &mut SchemaGenerator) -> Schema {
+        json_schema!({ "type": "number" })
+    }
 }
 
 /// An instant expectation: the frame at at_s emitted the diagnostic.
@@ -257,11 +390,13 @@ impl JsonSchema for InputDto {
     }
 }
 
-/// One expectation, in exactly one of its two forms.
+/// One expectation, in exactly one of its three forms.
 #[derive(Debug)]
 pub(crate) enum ExpectationDto {
-    /// `output`, `from_s`, `to_s`, `equals`.
+    /// `output`, `from_s`, `to_s`, `equals`, optionally `when`.
     Window(WindowDto),
+    /// `output`, `from_s`, `to_s`, `within`, `of`, optionally `when`.
+    ToleranceWindow(ToleranceWindowDto),
     /// `diagnostic`, `at_s`.
     Instant(InstantDto),
 }
@@ -273,9 +408,10 @@ impl JsonSchema for ExpectationDto {
 
     fn json_schema(generator: &mut SchemaGenerator) -> Schema {
         json_schema!({
-            "description": "One expectation, in exactly one of two forms: a window (output, from_s, to_s, equals) or an instant (diagnostic, at_s).",
+            "description": "One expectation, in exactly one of three forms: a window (output, from_s, to_s, equals), a tolerance window (output, from_s, to_s, within, of), either with an optional when, or an instant (diagnostic, at_s).",
             "anyOf": [
                 generator.subschema_for::<WindowDto>(),
+                generator.subschema_for::<ToleranceWindowDto>(),
                 generator.subschema_for::<InstantDto>(),
             ]
         })

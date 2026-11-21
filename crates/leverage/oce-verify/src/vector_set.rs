@@ -21,15 +21,16 @@
 use crate::canonical;
 use crate::clock::Clock;
 use crate::decode;
+use crate::envelope::Envelope;
 use crate::error::{VectorError, VectorErrorKind};
 use crate::fnv;
 use crate::limits::VerifyLimits;
-use crate::model::{Mutant, Parameter, Scenario};
+use crate::model::{Expectation, Mutant, Parameter, Scenario};
 use crate::strict;
 use crate::validate;
 
-/// One vector set in the `oce/vectors/v1` format: a clock, optional set-level parameter edits
-/// and scenarios.
+/// One vector set in the `oce/vectors/v1` format: a clock, an optional envelope for its
+/// tolerance windows, optional set-level parameter edits and mutants, and scenarios.
 ///
 /// Built only by [`VectorSet::from_json_bytes`], so every rule of the format holds for a value
 /// of this type. Two sets are equal when they write the same canonical document: the kind each
@@ -38,6 +39,7 @@ use crate::validate;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VectorSet {
     clock: Clock,
+    envelope: Option<Envelope>,
     params: Option<Vec<Parameter>>,
     mutants: Option<Vec<Mutant>>,
     scenarios: Vec<Scenario>,
@@ -96,12 +98,14 @@ impl VectorSet {
     /// Put together a set whose parts `validate` has checked.
     pub(crate) fn assemble(
         clock: Clock,
+        envelope: Option<Envelope>,
         params: Option<Vec<Parameter>>,
         mutants: Option<Vec<Mutant>>,
         scenarios: Vec<Scenario>,
     ) -> Self {
         Self {
             clock,
+            envelope,
             params,
             mutants,
             scenarios,
@@ -112,6 +116,32 @@ impl VectorSet {
     #[must_use]
     pub fn clock(&self) -> &Clock {
         &self.clock
+    }
+
+    /// The envelope every tolerance window of the set is compared under: the set's `envelope`,
+    /// or [`Envelope::Funnel`] when it writes none (decision 41).
+    #[must_use]
+    pub fn envelope(&self) -> Envelope {
+        self.envelope.unwrap_or(Envelope::Funnel)
+    }
+
+    /// The envelope as the set writes it; `None` when it has no `envelope` key. The canonical
+    /// form keeps the difference.
+    #[must_use]
+    pub fn written_envelope(&self) -> Option<Envelope> {
+        self.envelope
+    }
+
+    /// Whether any window of the set is a tolerance window (`within` and `of`): then its receipt
+    /// says `tolerance`, otherwise `exact`, whatever `envelope` says (decision 42).
+    #[must_use]
+    pub fn uses_tolerance(&self) -> bool {
+        self.scenarios
+            .iter()
+            .flat_map(Scenario::expectations)
+            .any(|expectation| {
+                matches!(expectation, Expectation::Window(window) if window.within().is_some())
+            })
     }
 
     /// The set-level parameter edits, sorted by path bytes, as written and unresolved; `None`
@@ -146,7 +176,13 @@ impl VectorSet {
     /// bound may canonicalise past it.
     #[must_use]
     pub fn to_canonical_json(&self) -> String {
-        canonical::vector_set(&self.clock, self.params(), self.mutants(), &self.scenarios)
+        canonical::vector_set(
+            &self.clock,
+            self.envelope,
+            self.params(),
+            self.mutants(),
+            &self.scenarios,
+        )
     }
 
     /// The identity of this set: `spec:fnv1a128:` and the 32 lowercase hex digits of the
