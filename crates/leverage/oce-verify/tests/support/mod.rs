@@ -13,9 +13,11 @@ use oce_verify::{
 };
 
 /// The golden switch for this crate (see `.agents/project-facts.md`). It rewrites the published
-/// schema, the golden receipts under `tests/fixtures/receipts/` and the funnel port's bit goldens
-/// under `tests/fixtures/funnel/golden/`; the canonical goldens, pyfunnel's files and the
-/// `aligned-grid` parity goldens come from outside the crate and are never blessed.
+/// schema, the golden receipts under `tests/fixtures/receipts/`, the funnel port's bit goldens
+/// under `tests/fixtures/funnel/golden/` and the two trend-source goldens under
+/// `tests/fixtures/commissioning/trends/`; the canonical goldens, pyfunnel's files, the
+/// `aligned-grid` parity goldens and the trend oracle come from outside the crate and are never
+/// blessed.
 ///
 /// The mutant set and its mutants under `tests/fixtures/AHU-0016/` are hand-written, never
 /// blessed.

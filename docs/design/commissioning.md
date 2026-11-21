@@ -330,6 +330,10 @@ so they are only safe together with that check.
 | `float` → `int` | integral and within `i32` only, else refused |
 | `int` → `float` | a whole number within `i32`, widened exactly, else refused *(amended 2026-11-21, owner ruling)* |
 
+*(Amended 2026-11-21, owner's ruling on #660:)* until replay's `CsvSource` can hand a text cell
+over, a `csv` Boolean is read by its Boolean parse, `true`, `false`, `1` and `0`; `active` and
+`inactive` are refused ("As landed: the trend sources").
+
 A refused cell is a typed `SourceError` naming file, row and column, never a silent threshold: the
 upstream Modelica model turns fan enable into a Boolean with `GreaterThreshold(t = 0.5)`; the
 verifier refuses a `0.5` instead (decision 19).
@@ -418,6 +422,150 @@ which (decision 11).
 replay runs, as its own `too-many-points`, and holds the run to 16,777,216 points over all its
 outputs under the same code, so the comparison's `too-many-points` is never reached and
 `compare-refused` never carries it.
+
+### As landed: the trend sources
+
+*(GitHub #729, issue #660.)* `TrendSources::read(spec, reference, inputs, limits)` in
+`crates/leverage/oce-verify` (`src/commissioning/`: `combi_time_table.rs`, `trend_*.rs`,
+`source_error.rs`) turns the bytes of a reference's files (`SpecInputs`, decision 25) into the
+merged inputs (`TrendInputs`, which becomes a `ColumnarSource` bound to the run's `InputMap`),
+the expected and indicator series (`TrendSeries`, finite samples in CDL units and types) and the
+receipt's `sources`, `mapping` and `units.columns` records. No engine is loaded. Every refusal
+is a `SourceError` with a kebab-case code (`SOURCE_ERROR_CODES`, 39), the file as the spec
+writes its path, the data row counted from 1, the column as the spec addresses it, and the
+lower layer's code as its cause (a `UnitError`, a mapping's `SpecError`, a cell rule's).
+
+**Ruled by the owner on 2026-11-21** (the note was silent or contradicted itself):
+
+1. **A `csv` Boolean.** The type table's "CSV text → bool" row lists `active`/`inactive`, but a
+   `csv` file is read by replay's `CsvSource`, which hands a cell over typed and never as text.
+   A `bool` device column is read by its Boolean parse, so `true`, `false`, `1` and `0` are
+   read and `active`, `inactive` and every other text are `bad-cell`, with file, row and column.
+   A replay issue (#728) asks for the text, after which the row holds again.
+2. **A `csv` time column's kind** is fixed per source by its first data row's time cell: a
+   number of seconds, or an RFC 3339 instant converted against `time.origin` by replay's fixed
+   split. The two grammars share no text. A later cell of the other kind is `bad-time`; a
+   column of instants in a spec with no origin is `time-origin-required`. A `combiTimeTable` is
+   always seconds.
+3. **An infinity** is refused at read in every role and both formats (`non-finite-number`),
+   before any frame, so the engine's frame-class refusal of decision 28 never sees one from a
+   trend. NaN, an empty cell, `NA` and `NaN` stay missing in a `csv` (replay's rule).
+4. **`controllerOutput` with no `expected`** is read (decision 18), per OBC §12.7.3: a `csv`
+   whose first header column is the time in seconds and whose every other header is a device
+   point of the mapping, with no hold. A header that names no mapped device point is
+   `unmapped-point`; a file with no header row `no-header`; a header of the time alone
+   `no-point-columns`; a repeated header `duplicate-column`; an instant in its time column
+   `bad-time`. Beside an `expected` it is not read and not one of the reference's files, as
+   GitHub #704's `lbl-field-ignored` finding has it.
+
+Two more, **ruled by the owner on 2026-11-21** in the review of GitHub #729:
+
+5. **OBC §12.7.3's printed example files are refused today.** Replay's `CsvSource` neither
+   trims a cell nor a header, and §12.7.3 prints its csv files padded: a header
+   `time, uHea, uCoo, ...` and rows like `   0,    1, ...`. Read as they are printed, the time
+   cell `   0` is `bad-time`, and a header ` uHea` names no mapped device point
+   (`unmapped-point`) unless the mapping writes its space. Trimming spaces and tabs around csv
+   cells and headers belongs in replay's reader, issue #733; until it lands, such a file is
+   refused. A `combiTimeTable` is not affected: its separators include spaces.
+6. **The files of a reference together are bounded**: `TrendLimits::max_total_bytes`, 1 GiB
+   by default and lowerable, never raisable, is the summed length of the files handed in
+   (the mapping file, each trend source and the `controllerOutput`, a file named twice counted
+   once, the CXF not counted), checked from the lengths before any file is parsed, and refused
+   past it as `too-many-total-bytes`.
+
+**Decided here**, under the delegation of GitHub #704's review:
+
+- **Addressing, per format.** A `combiTimeTable` source gives `timeColumn` as a position and
+  each `columns` key as a position from 1 in canonical decimal (`"3"`; `"03"`, `"+3"` and
+  `"3.0"` are refused); a `csv` source gives both as header names, compared byte for byte (a
+  header named `3` is a name, and OBC §12.7.3's `time, uHea` header has a column ` uHea`). A
+  `table` is a `combiTimeTable`'s, and the time column is never a point. Anything else is
+  `column-reference-invalid`.
+- **One device point, one column per role.** Two columns that name one device point, in one
+  source or in two sources of one role, are `point-read-twice`: whichever the reader took, the
+  other's samples would be dropped unseen. Two roles may read one point (an input that is also
+  an indicator).
+- **Equal times across files** (the issue's recommended reading). The frames are the instants of
+  the union of the input sources' times. At an instant where a source has `k` rows, its `i`-th
+  row fills the `i`-th frame there, and there are as many frames as the source with the most
+  rows there has; a source with no `i`-th row is missing at that frame, so its hold fills it from
+  its last observed sample, its own row at that instant. Two files with one row each at `t` give
+  one frame; a file with two rows at `t` beside one with one give two. Pinned by test, by the
+  fixture's independent derivation and by a replay of it.
+
+**The `combiTimeTable` grammar** is §12.5.1's and no wider: the file starts with `#1`, after at
+most a UTF-8 byte-order mark, which is skipped; `#` comments run to the line end anywhere a
+separator may stand; a matrix is `double <name>(<rows>, <cols>)` at the start of a line
+(`float` and other types refused, and an indented header, or one on the line of the previous
+matrix's last value, is `table-syntax`: a deliberate narrowing, which real Modelica exports have
+not been tested against, as no `#1` file is vendored under `third_party/` yet); values follow in
+row order, wherever lines break, separated by spaces, tabs, line ends and comments with at most
+one `,` or `;`, and after a matrix's last value a number is `size-mismatch` while any other text
+is `table-syntax`; a number is the
+C decimal form `[+-]? (D+ ('.' D*)? | '.' D+) ([eE] [+-]? D+)?`, with no `inf`, `nan` or
+hexadecimal, converted by Rust's `f64` parser, which rounds correctly, so the same text gives
+the same bits on every target. A file with several matrices needs `table` (`table-required`);
+`table-not-found` and `duplicate-table` are refusals, and every matrix is held to the grammar
+whether chosen or not. A declared size that the values do not fill, or overfill, is
+`size-mismatch`. A `csv` number is read by Rust's `f64` grammar through `CsvSource`.
+
+**Time.** Model seconds from `time.origin`; within a file, never decreasing (`time-regression`),
+equal times kept; `-0.0` is read as `0.0`, so a time of `-0` and one of `0` in two files are one
+instant. The origin is carried once, as `TrendInputs::origin` and the frame source's.
+
+**Cells.** Each is converted exactly once: an infinity refused, then the point's cell rule (a
+`0.5` in a Boolean column is `cell-refused`, cause `not-boolean`), then, for a CDL Real, the
+unit table (an overflow is `unit-refused`, cause `overflow`). Two readings the note left open
+follow from the rules as written and are pinned: a unit conversion other than the identity on a
+CDL `int` or `bool` point is `unit-on-discrete-point`, since no row of `units/v1` preserves an
+integer; and an unknown, one-sided or empty unit pair, a refused type pair and an unmapped point
+are found from the spec and the mapping alone, before any file is parsed. A point of the mapping
+that no source reads is not an error here: an input left unsupplied is refused at bind (#662).
+
+**What #662 is handed.** The merged columns are named by the mapping's `cdl.name` and map onto
+the inputs by the replay name rule (`TrendInputs::column_specs`, `column_map`); the run-level
+policy is `Refuse` and each column of a source with `hold.maxAge` has a `HoldLast { max_age }`
+override (`overrides`); `time_base()` is `Recorded` and `duplicate_time()` `Allow`. A merged
+Real column holds NaN where its file has no sample at a frame, an Integer or Boolean column a
+cleared validity flag. The order of `files` and of the input sources' declarations changes no
+merged byte and no digest; only `sources[]` follows the declaration order, as the body table
+says.
+
+**Bounds** (`TrendLimits`, each a default and a maximum a caller may lower and never raise):
+
+| Bound | Value | Code | Why this value |
+| --- | --- | --- | --- |
+| sources per reference | 256 | `too-many-sources` | decision 42's bound on the complete `sources` list |
+| bytes of a reference's files together (mapping, sources, `controllerOutput`; each once; not the CXF) | 1 GiB | `too-many-total-bytes` | the owner's ruling of 2026-11-21; decided from the lengths before any file is parsed |
+| bytes of one file | 1 GiB | `too-many-bytes` | replay's `max_source_bytes`, decided from the length; the total below is checked first, so under the default limits one file of 1 GiB and one byte is `too-many-total-bytes` |
+| values one source keeps, and the merged inputs hold | 1 GiB | `too-many-bytes` | the same cap as a `ColumnarSource`'s bytes, checked from the counts before allocating |
+| rows of one file, frames of the merge | 16,777,216 | `too-many-rows` | replay's `max_rows`; the merge counts its frames before allocating and stops at the first past the cap |
+| columns of one file, of the merge (time included) | 4,096 | `too-many-columns` | replay's `max_columns`, the spec's `max_keys` |
+| one csv cell, one number, one matrix name | 256 bytes | `cell-too-long` | replay's `max_cell_bytes` |
+
+A line has no bound of its own: the `combiTimeTable` reader holds no line, only the number
+being converted, and replay's reader holds one record of capped cells. **What a read costs.**
+Reading one file holds at most about 25 bytes per byte of it by construction (a cell is at least
+its separator, one byte, and is held as at most 16 bytes while read and 9 once merged); the
+hostile-bytes test pins 48 per byte plus 64 KiB for one source, and a Building 33-shaped source
+of 75,578 rows peaks at 32 bytes a row as `combiTimeTable` and 36 as `csv`. Every source's
+values are held until the merge; a `csv` source's lists are shrunk to its rows once read, and an
+expected or indicator series holds its own times (8 bytes a sample) beside its values, its read
+consumed as it is built. **The merged inputs are not bounded per byte of input**: every merged
+column is as long as the whole timeline, so they hold `frames × (8 + Σ widths)` bytes (8 a Real,
+9 an Integer, 2 a Boolean), quadratic in the number of input sources whose times differ: 64
+sources of 100 rows each, 44 KB of files, merge into 3.3 MB, and at 256 sources about 4 MB of
+files reach the 1 GiB cap. That product is checked against `max_source_bytes` from the counts
+before anything is allocated, and the test that pins it shows a refused merge allocating no
+column. The walk over the sources is `O(R log S)` for `R` rows over `S` sources; filling the
+merged columns is `O(frames × columns)` more, bounded by the same cap.
+
+**A switch beside a source with no hold.** Under the equal-times rule, a source that writes a
+switch as two rows at `t` (§12.2) makes two frames at `t`, and every other input source with no
+row for the second is missing there: with no `hold`, that frame is refused for a missing sample
+(decision 28's uncovered stretch). A spec whose sources record switches should declare `hold`
+on every other input source, `{ "maxAge": 0 }` at least, which carries that source's own row at
+`t` into the second frame at `t` and holds nothing older.
 
 ## Envelope
 
