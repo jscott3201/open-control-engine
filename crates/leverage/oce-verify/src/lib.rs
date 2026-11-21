@@ -80,8 +80,14 @@
 //! - **Typed refusals** ([`SpecError`], [`SpecErrorKind`], [`SPEC_ERROR_CODES`]), each with the
 //!   line and column of the text as written, comments included.
 //!
-//! Nothing runs a commissioning spec yet: binding one to a sequence, its trend sources, the unit
-//! table and its receipt are the later parts.
+//! Nothing runs a commissioning spec yet: binding one to a sequence, its trend sources and its
+//! receipt are the later parts.
+//!
+//! Its second part (issue #659) is the closed unit table a trend's readings are converted with,
+//! device unit to CDL unit, before any comparison: [`convert_unit`] over `units/v1`
+//! ([`UNITS_TABLE`]), each row one way, temperature readings and temperature differences kept
+//! apart, spellings compared byte for byte, every refusal a typed [`UnitError`] (stable codes in
+//! [`UNIT_ERROR_CODES`]) and never a pass-through.
 //!
 //! ```
 //! use oce_verify::{Expectation, Literal, VectorSet, VerifyLimits};
@@ -232,7 +238,8 @@ pub use commissioning::{
     IndicatorRule, LBL_FIELD_IGNORED, MAX_SPEC_DETAIL_BYTES, OutputOverride, PartialTolerances,
     PointMapping, PointNameMapping, PointPair, PointSide, PointType, SPEC_ERROR_CODES,
     SPEC_FINDING_CODES, SourceColumn, SourceTimeColumn, SpecError, SpecErrorKind, SpecLimits,
-    SpecReference, TOLERANCE_NAMES, TrendFormat, TrendSource,
+    SpecReference, TOLERANCE_NAMES, TrendFormat, TrendSource, UNIT_ERROR_CODES, UNITS_TABLE,
+    UnitError, UnitSide, convert_unit,
 };
 pub use compare_error::{Axis, COMPARE_ERROR_CODES, CompareError, SeriesEnd, SeriesRole};
 pub use compare_limits::CompareLimits;

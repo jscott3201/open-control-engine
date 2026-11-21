@@ -762,6 +762,32 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point
+  mapping** (GitHub #716, issue #659, closes #714; commissioning note, "Point mapping", decisions
+  5, 19 and 24, and the owner's rulings of 2026-11-21). `oce-verify` gains
+  `convert_unit(from, to, x)`, which converts a trended reading from its device unit to its CDL
+  point's unit by a closed table of thirteen one-way pairs (`degF`, `degC` and `K` as readings;
+  `degF_delta` and `degC_delta` to `K` as temperature differences; `kPa`, the conventional
+  `inH2O` at 249.08891 Pa and `inH2O_60F` at 248.84 Pa to `Pa`; `cfm` and `L/s` to `m3/s`;
+  `percent` and `%` to `1`), each in the note's operation order with one rounding per step,
+  spellings compared byte for byte and identical spellings the identity with every bit kept.
+  Everything else is a typed `UnitError` (`unknown-pair`, `one-sided`, `empty-unit`, `overflow`,
+  `absolute-for-difference`; `UNIT_ERROR_CODES`), never a pass-through; `UNITS_TABLE` is
+  `units/v1`. A NaN or an infinity keeps its bits through every pair. A temperature difference
+  is its own unit: 2 `degF_delta` is 1.11 K where 2 `degF` is 256.48 K, so OBC Listing 12.2's
+  `setAdj` and `heaSetAdj` need `degF_delta`, and the binder (#662) refuses an absolute pair on a
+  `TemperatureDifference` port through the check this adds, and a `cdl.unit` other than the
+  port's. The note's table is corrected in place: the cfm factor is the exact `0.3048³ / 60`,
+  `0.0004719474432`, not the `0.00047194744832` it had written (#714), and `L/s` divides by
+  `1000.0`. The type rules (a number is a Boolean only when exactly 0 or 1, a text Boolean in six
+  exact spellings, an Integer only when integral and within `i32`, `false` and `true` as 0 and 1,
+  `int` to `float` widened exactly, `bool` to `float` refused) are crate-internal until the trend
+  sources (#660) call them. The goldens (`tests/fixtures/units/units_v1.txt`, 476 rows) come from
+  `derive_units.py`, which shares nothing with the crate, checks each constant against NIST SP 811
+  and SP 330's definitions in exact arithmetic and holds each pair to a bound against the exact
+  conversion; they are never blessed. No format, receipt, schema or existing golden changes, and
+  no run reads a trend yet.
+
 - **`oce-diff` compares two loaded CXF documents** (GitHub #715, issue #666;
   design note `docs/design/diff.md`, part 2 of 4). `diff_topology(base, head, options)` takes the
   facade's `Topology` views of two documents the caller loaded and returns the same `Diff` data
