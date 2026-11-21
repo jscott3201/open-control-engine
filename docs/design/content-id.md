@@ -664,7 +664,11 @@ column served; they were renamed with issue #531.
 
 **In the library** (track L3) the same format is produced by the library's own tooling: for every
 card, its stored old id and its source path, and the new id from `oce id <file>` (a one-line `oce`
-CLI verb printing `Engine::content_id`, cut with the core PR or after it). The re-stamp replaces a
+CLI verb printing `Engine::content_id`, cut with the core PR or after it). *Amended 2026-11-20
+(issue #513):* the verb is in: `oce id <FILE> [--from cxf|text|wire] [--namespace <NS>] [--json]`
+prints the id and one line feed for a CXF document, or for the CXF a text or wire file emits
+(exit 0), and the `oce-report/1` report when the input has no id (exit 2); the
+[`oce` README](../../crates/leverage/oce-cli/README.md#oce-id) is its contract. The re-stamp replaces a
 card's id only where the card's stored id equals the table's old id for that source; a card with
 no row, or whose stored id disagrees, is reported and left alone, never guessed. M3's gate row "ids
 agree" then checks every re-stamped id against the id of the emitter's output for the same

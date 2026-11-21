@@ -1,0 +1,4 @@
+exit: 0
+--- stdout
+oce:canon1:faddaaad1ed2bc2adfaece89cbc5a5bb9fa68eccc958c800678ddaf37edf2d7b
+--- stderr

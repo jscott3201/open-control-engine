@@ -506,7 +506,9 @@ work defines the load report it would print, so M2 ships `emit`, `validate`, `fm
 `vocab`. *(Amended 2026-11-11, GitHub #573, issue #522:)* M3 adds `verify` ([vectors
 note](vectors.md), "CLI"). `oce check` stays deferred (vectors note decision 36): the receipt
 defines no load report. What binding needs (inputs with types and bounds, outputs, parameters) is
-what `oce check` should print, so it is cut as its own follow-up, #574.
+what `oce check` should print, so it is cut as its own follow-up, #574. *(Amended 2026-11-20,
+issue #513:)* M3 also adds `id`, which prints the canonical content id `oce check` would have
+reported, and nothing else ([content-id note](content-id.md), "Mapping table for the library re-stamp").
 
 **Binaries above the facade.** The architecture page says the engine is library-only, with no binary
 target in `crates/`. The PR that adds this note narrows that sentence to the engine crates: leverage

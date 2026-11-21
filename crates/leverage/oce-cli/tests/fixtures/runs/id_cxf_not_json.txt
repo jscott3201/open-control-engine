@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "id",
+  "errors": [
+    {
+      "at": "input",
+      "code": "not-loadable",
+      "detail": "the engine refused to load the document: CXF ingest error: CXF JSON parse error: expected value at line 1 column 1",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": "cxf",
+  "input": "tests/fixtures/inputs/malformed.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "id",
+  "errors": [
+    {
+      "code": "invalid-namespace",
+      "detail": "namespace `urn:plant` does not end in `#`, `/` or `:`",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": "text",
+  "input": "../oce-author/tests/fixtures/text/econ_enable.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "stages": [],
+  "tool": "oce"
+}
+--- stderr

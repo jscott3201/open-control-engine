@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "id",
+  "errors": [
+    {
+      "code": "namespace-needs-authored",
+      "detail": "--namespace names what the emitter writes for a text or wire file; a CXF document is read as it is",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": "cxf",
+  "input": "../../oce-api/tests/fixtures/library_rules/AHU-0016/rule.cxf.jsonld",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

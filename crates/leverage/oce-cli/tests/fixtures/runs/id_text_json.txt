@@ -1,0 +1,18 @@
+exit: 0
+--- stdout
+{
+  "command": "id",
+  "content_id": "oce:canon1:56272e98c6bb3cb5c3f5feb92f2001ed5237f9348e28e2fe9879ae1f4d829bb1",
+  "errors": [],
+  "findings": [],
+  "form": "text",
+  "input": "../oce-author/tests/fixtures/text/econ_enable.oce",
+  "ok": true,
+  "schema": "oce-report/1",
+  "stages": [
+    "author",
+    "engine"
+  ],
+  "tool": "oce"
+}
+--- stderr

@@ -6,7 +6,8 @@
 
 /// Reading stdin (`-`) without `--from`.
 pub(crate) const MISSING_FROM: &str = "missing-from";
-/// A file whose extension is neither `.oce` nor `.json`, without `--from`.
+/// A file whose name gives no form (`.oce`, `.json`; for `id` also `.jsonld`, `.cxf.json`),
+/// without `--from`.
 pub(crate) const UNKNOWN_FORM: &str = "unknown-form";
 /// The input path does not exist.
 pub(crate) const NOT_FOUND: &str = "not-found";
@@ -17,7 +18,7 @@ pub(crate) const READ_FAILED: &str = "read-failed";
 /// The input is larger than its form's limit; refused before it is read (shared with the text
 /// form's own code).
 pub(crate) const INPUT_TOO_LARGE: &str = "input-too-large";
-/// `emit --namespace` is malformed.
+/// `--namespace` (`emit`, `id`) is malformed.
 pub(crate) const INVALID_NAMESPACE: &str = "invalid-namespace";
 /// The model cannot be spelled as text (`fmt` of a wire file).
 pub(crate) const UNSPELLABLE: &str = "unspellable";
@@ -44,13 +45,20 @@ pub(crate) const UNKNOWN_SUBJECT_FORM: &str = "unknown-subject-form";
 /// A mutant path that resolves, through a symbolic link or a drive prefix, to a file outside the
 /// vector file's directory (owner ruling of 2026-11-11).
 pub(crate) const MUTANT_OUTSIDE_DIRECTORY: &str = "mutant-outside-directory";
+/// `id --namespace` beside a CXF document, which is never emitted.
+pub(crate) const NAMESPACE_NEEDS_AUTHORED: &str = "namespace-needs-authored";
+/// The input of `id` does not load: the engine refused the document, or the authored sequence
+/// has an error finding and was not emitted.
+pub(crate) const NOT_LOADABLE: &str = "not-loadable";
+/// The facade could not name a model it loaded (never expected).
+pub(crate) const NO_CONTENT_ID: &str = "no-content-id";
 
 /// The tool's own error codes and their meanings, as `vocab` prints them.
 pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
-    (MISSING_FROM, "stdin (-) was given without --from text|wire"),
+    (MISSING_FROM, "stdin (-) was given without --from"),
     (
         UNKNOWN_FORM,
-        "the extension is neither .oce nor .json and --from was not given",
+        "the name ends in neither .oce nor .json (for id, nor .jsonld) and --from was not given",
     ),
     (NOT_FOUND, "the input path does not exist"),
     (
@@ -99,6 +107,15 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
         MUTANT_OUTSIDE_DIRECTORY,
         "a mutant path resolves, through a link or a drive prefix, outside the vector file's directory",
     ),
+    (
+        NAMESPACE_NEEDS_AUTHORED,
+        "id --namespace was given beside a CXF document; only a text or wire file is emitted",
+    ),
+    (
+        NOT_LOADABLE,
+        "id: the engine refused the document, or the sequence has error findings; it has no content id",
+    ),
+    (NO_CONTENT_ID, "the facade could not name a model it loaded"),
 ];
 
 /// The wire form's refusal codes (`oce_author::WIRE_CODES`, in order) and their meanings. The

@@ -1,0 +1,25 @@
+exit: 2
+--- stdout
+{
+  "command": "id",
+  "errors": [
+    {
+      "at": "input",
+      "code": "not-loadable",
+      "detail": "the engine refused to load the document: CXF ingest error: CXF validation failed with 1 diagnostic(s)",
+      "diagnostic_codes": [
+        "class-not-found"
+      ],
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": "cxf",
+  "input": "tests/fixtures/inputs/verify/unknown_class.cxf.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr
+tests/fixtures/inputs/verify/unknown_class.cxf.json: error[not-loadable] the engine refused to load the document: CXF ingest error: CXF validation failed with 1 diagnostic(s)
+oce id tests/fixtures/inputs/verify/unknown_class.cxf.json: refused: no content id

@@ -1,5 +1,5 @@
 # The `oce` command-line tool (authoring note docs/design/authoring-layer.md, "CLI", decisions 9 and
-# 20; issue #489): `emit`, `validate`, `fmt`, `catalog`, `vocab` and `verify` over `oce-author`,
+# 20; issue #489): `emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify` and `id` over `oce-author`,
 # `oce-verify` and the facade. The first binary above the facade: engine crates ship none
 # (docs/architecture.md). It depends on `oce-api` and the leverage crates `oce-author`, `oce-vocab`
 # and `oce-verify` only among the `oce-*` packages (crates/leverage/README.md; vocabulary note
@@ -7,7 +7,7 @@
 # for the golden switch (decision 19).
 [package]
 name = "oce-cli"
-description = "The oce command-line tool: emit, validate, fmt, catalog, vocab and verify over the Open Control Engine authoring layer and vector verification."
+description = "The oce command-line tool: emit, validate, fmt, catalog, vocab, verify and id over the Open Control Engine authoring layer and vector verification."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

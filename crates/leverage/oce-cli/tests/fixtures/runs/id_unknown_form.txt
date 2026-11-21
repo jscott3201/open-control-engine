@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "id",
+  "errors": [
+    {
+      "code": "unknown-form",
+      "detail": "the file name ends in none of .jsonld, .cxf.json (CXF), .oce (text) and .json (wire); pass --from cxf, text or wire",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": null,
+  "input": "tests/fixtures/inputs/plain.txt",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

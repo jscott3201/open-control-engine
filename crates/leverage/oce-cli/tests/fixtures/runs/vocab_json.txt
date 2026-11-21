@@ -689,11 +689,11 @@ exit: 0
   "error_codes": [
     {
       "code": "missing-from",
-      "meaning": "stdin (-) was given without --from text|wire"
+      "meaning": "stdin (-) was given without --from"
     },
     {
       "code": "unknown-form",
-      "meaning": "the extension is neither .oce nor .json and --from was not given"
+      "meaning": "the name ends in neither .oce nor .json (for id, nor .jsonld) and --from was not given"
     },
     {
       "code": "not-found",
@@ -762,6 +762,18 @@ exit: 0
     {
       "code": "mutant-outside-directory",
       "meaning": "a mutant path resolves, through a link or a drive prefix, outside the vector file's directory"
+    },
+    {
+      "code": "namespace-needs-authored",
+      "meaning": "id --namespace was given beside a CXF document; only a text or wire file is emitted"
+    },
+    {
+      "code": "not-loadable",
+      "meaning": "id: the engine refused the document, or the sequence has error findings; it has no content id"
+    },
+    {
+      "code": "no-content-id",
+      "meaning": "the facade could not name a model it loaded"
     }
   ],
   "errors": [],

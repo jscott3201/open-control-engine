@@ -2,10 +2,10 @@
 //! `oce-cli`: the `oce` command-line tool (authoring note `docs/design/authoring-layer.md`, "CLI",
 //! decisions 9 and 20; GitHub issue #489; vocabulary note `docs/design/vocabulary.md`, decision
 //! 12, GitHub issue #500; vectors note `docs/design/vectors.md`, "CLI", decision 34, GitHub issue
-//! #522).
+//! #522; content-id note `docs/design/content-id.md`, GitHub issue #513).
 //!
 //! The binary (`src/main.rs`) is a thin shell over [`run`], which parses the arguments with `clap`
-//! and dispatches to one of six commands over `oce-author`, `oce-vocab`, `oce-verify` and the
+//! and dispatches to one of seven commands over `oce-author`, `oce-vocab`, `oce-verify` and the
 //! facade:
 //!
 //! - `emit`: an authored sequence (text or wire) to flat CXF, after both validation stages;
@@ -15,14 +15,15 @@
 //!   descriptions, declared units and quantities, ranges, typed notes and upstream links;
 //! - `vocab`: the text-form vocabulary, the unit scale factors and every code the tool can
 //!   report;
-//! - `verify`: a vector set replayed against a subject, the receipt on stdout.
+//! - `verify`: a vector set replayed against a subject, the receipt on stdout;
+//! - `id`: the canonical content id of a CXF document or an authored sequence, alone on stdout.
 //!
 //! **Exit codes** follow the one `oce` rule: `0` yes (clean, every scenario passed), `1` no (an
 //! error finding, a non-canonical file, a class whose ports do not resolve, a failed or `no_data`
 //! verdict), `2` error (a usage error, input that cannot be read or parsed, an over-size input, an
-//! I/O failure, a run that reached no verdict). **Output** is deterministic: stdout carries
+//! I/O failure, a run that reached no verdict, an input that has no content id). **Output** is deterministic: stdout carries
 //! exactly one document — the command's product (CXF, canonical text, a catalog listing, a
-//! receipt) or its JSON report (`report.rs`, documented in the crate README) — with sorted keys, LF
+//! receipt, a content id) or its JSON report (`report.rs`, documented in the crate README) — with sorted keys, LF
 //! line endings and no timestamps; a human-readable rendering goes to stderr only when stderr is a
 //! terminal or `--render always` asks for it. Nothing here panics on hostile input, and no path
 //! the tool prints is one it did not receive as an argument.
@@ -153,6 +154,34 @@ pub(crate) struct VerifyArgs {
     pub(crate) timings: bool,
 }
 
+/// The forms `id` reads its input in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub(crate) enum IdForm {
+    // Flat CXF, given to the engine untouched (`.jsonld`, `.cxf.json`).
+    Cxf,
+    // The text form (`.oce`), validated and emitted first.
+    Text,
+    // The strict-JSON wire form (any other `.json`), validated and emitted first.
+    Wire,
+}
+
+/// What `id` reads and how it answers.
+#[derive(Debug, Args)]
+pub(crate) struct IdArgs {
+    /// The input: CXF (`.jsonld`, `.cxf.json`), text (`.oce`) or wire (`.json`), or `-` for stdin.
+    pub(crate) file: OsString,
+    /// The input form; overrides the name, and is required for stdin.
+    #[arg(long, value_enum)]
+    pub(crate) from: Option<IdForm>,
+    /// The instance namespace a text or wire file is emitted under, as for emit; the id is the
+    /// same under every namespace.
+    #[arg(long)]
+    pub(crate) namespace: Option<String>,
+    /// Print the JSON report, with content_id, instead of the id line.
+    #[arg(long)]
+    pub(crate) json: bool,
+}
+
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Validate a sequence, then write it as flat CXF.
@@ -217,6 +246,12 @@ enum Command {
     /// when one failed or the set checked nothing. Anything that prevents a verdict is exit 2 with
     /// the JSON report. With --out the receipt goes to DIR/receipt.json and the report to stdout.
     Verify(VerifyArgs),
+    /// Print the canonical content id of a CXF document or an authored sequence.
+    ///
+    /// Stdout is the id and a line feed, exit 0. A text or wire file is validated and emitted
+    /// first, as emit does. An input that cannot be read, parsed or loaded has no id: exit 2
+    /// with the JSON report.
+    Id(IdArgs),
 }
 
 /// The streams one run reads and writes, and whether stderr is a terminal.
@@ -281,6 +316,7 @@ where
         } => commands::catalog::run(class.as_deref(), json, &params),
         Command::Vocab { json } => commands::vocab::run(json),
         Command::Verify(args) => commands::verify::run(&args),
+        Command::Id(args) => commands::id::run(&args, streams),
     };
     commands::finish(outcome, render, streams)
 }

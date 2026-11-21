@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "id",
+  "errors": [
+    {
+      "code": "missing-from",
+      "detail": "reading stdin needs --from cxf, --from text or --from wire",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": null,
+  "input": "-",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

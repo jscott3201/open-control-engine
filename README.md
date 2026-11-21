@@ -175,7 +175,8 @@ bash .agents/gate.sh                            # the gate script CI runs; see i
   model in a strict-JSON wire form and a terse text form, validates it before an engine sees it,
   emits it deterministically to flat CXF and imports the library's in-subset CXF back. The `oce`
   command-line tool validates, emits and formats a sequence, serves the catalog and the vocabulary
-  and replays a vector set (`emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`), with a JSON
+  and replays a vector set (`emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`), and prints a
+  file's canonical content id (`id`), with a JSON
   report and exit codes 0 / 1 / 2; the importer is a library API today, and an `oce import` verb is
   planned (#514). See the
   [authoring layer](docs/design/authoring-layer.md) and [`oce`](crates/leverage/oce-cli/README.md).
@@ -306,7 +307,8 @@ compared instants, bytes loaded, and frames weighted by the bytes of the documen
 a minute in `release`, not hours. `oce verify <VECTORS> --subject <FILE>` runs it all from the
 command line: the receipt on stdout, exit 0 when every scenario passed, 1 when one failed, 2 when
 no verdict could be reached. Mutant paths are resolved and kept inside the vector file's
-directory. The in-repo replay gate runs that binary over both library rules on every PR, against
+directory. `oce id <FILE>` prints the canonical content id of a CXF document, or of a text or wire
+file's emitted CXF, alone on stdout: the id a library card is stamped with. The in-repo replay gate runs that binary over both library rules on every PR, against
 their golden receipts.
 
 Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457) and checking a

@@ -332,6 +332,38 @@ and a gate that accepted any text would restore exactly the false assurance desc
     is not bumped (owner ruling: tightening accepted CXF input is not a format change).
 ### Leverage
 
+- **`oce id` prints the canonical content id of a CXF or authoring file** (GitHub #513). The
+  id `Engine::content_id` mints (`oce:canon1:`, GitHub #474) had no command-line surface, and
+  the library stamps every card with it and compares the stamp with the tool's output.
+  `oce id <FILE> [--from cxf|text|wire] [--namespace <NS>] [--json]` prints the id and one line
+  feed on stdout and nothing else, exit 0. `crates/leverage/oce-cli` only; the facade is
+  unchanged.
+  - **Forms.** `--from` when given (required for stdin); else CXF for a name ending in `.jsonld`
+    or `.cxf.json`, text for `.oce`, wire for any other `.json`, as `verify` reads a subject's
+    name. A CXF document goes to a fresh engine untouched, read at 8 MiB
+    (`oce_api::MAX_CXF_BYTES`). A text or wire file is read at its form's 4 MiB and emitted
+    first exactly as `oce emit` would, both validation stages included, so `oce id FILE` is the
+    id of what `oce emit FILE` writes.
+  - **Refusals are exit 2 with the `oce-report/1` report; the verb never exits 1.** Three codes
+    are added to the tool's own, and `oce vocab` lists them: `not-loadable` (the engine refused
+    the document, with its codes under `diagnostic_codes`, or the authored file has an error
+    finding, with the findings in the report), `namespace-needs-authored` (`--namespace` beside
+    a CXF document, which is never rewritten) and `no-content-id` (the facade could not name a
+    loaded model; never expected). A malformed `--namespace` is `invalid-namespace`, as for
+    `emit`; a well-formed one never moves the id.
+  - **`--json`** prints the report in place of the id line, with `content_id` and `form`
+    (`stages` too after an authored file's validation). The report schema is still
+    `oce-report/1`: one more `command` value and its keys.
+  - **Two meanings in `oce vocab` are reworded** to cover the third form: `missing-from` and
+    `unknown-form`. Four transcripts move with the verb (`help_oce`, `usage_no_arguments`,
+    `vocab_text`, `vocab_json`); 25 are new.
+  - **Tests.** `tests/id_files.rs` holds every printed id to `Engine::content_id`: the 47
+    documents of the tracked pin file, both in-repo library rules, and each `oce-author` text
+    fixture against its committed CXF, the CXF `oce emit` writes and its wire form. It covers
+    stdin against a file, the name rule, the namespace, both size bounds from metadata and on
+    stdin, and hostile CXF. `tests/id_runs.rs` pins one transcript per input form and refusal.
+  - The CLI README has the verb's contract; the root README, the leverage README, the
+    architecture page and the content-id and authoring notes name it.
 - **A wire refusal names itself: `WireError::code()` and `WireError::location()`** (GitHub #654,
   issue #495). `oce-author`'s wire reader was the one layer whose refusals a host had to name
   by hand. `oce-cli` held the sixteen codes in a table of its own and matched the variants of

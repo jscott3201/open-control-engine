@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+--- stderr
+error: invalid value 'jsonld' for '--from <FROM>'
+  [possible values: cxf, text, wire]
+
+For more information, try '--help'.
