@@ -1428,10 +1428,6 @@ exit: 0
     {
       "code": "malformed-connection",
       "meaning": "a connection is not `source -> target` with exactly one ->"
-    },
-    {
-      "code": "wire-refused",
-      "meaning": "a wire refusal this version of oce does not name"
     }
   ]
 }

@@ -286,3 +286,152 @@ fn an_object_spelled_another_way_is_refused_by_every_reading_command_at_its_path
         }
     }
 }
+
+#[test]
+fn every_wire_refusal_is_reported_under_its_published_code_detail_and_span() {
+    // GitHub issue #495: the code and span of a wire refusal come from
+    // `oce_author::WireError::code` and `location`. The literals below are what the tool printed
+    // while it still derived both from the variants itself, one document per code in
+    // `oce_author::WIRE_CODES` order, so a change to either accessor that moves a report fails
+    // here. `Some((line, column))` is the span; `None` is `"span": null`.
+    let with_connections = |connections: &str| {
+        format!(
+            r#"{{"sequence":"s","derived_from":"","params":[],"inputs":[],"outputs":[],"blocks":[],"connections":{connections}}}"#
+        )
+    };
+    let with_value = |value: &str| {
+        format!(
+            r#"{{"sequence":"s","derived_from":"","params":[],"inputs":[],"outputs":[],"blocks":[{{"name":"b","class":"CDL.Reals.Sources.Constant","params":[{{"name":"k","value":{value}}}]}}],"connections":[]}}"#
+        )
+    };
+    let with_min = |min: &str| {
+        format!(
+            r#"{{"sequence":"s","derived_from":"","params":[],"inputs":[{{"name":"u","type":"Real","quantity":"","display_unit":"","min":{min},"max":[],"semantic":{{"name":"","label":"","unit":"","brick":"","s223":"","qudt":"","haystack":[],"provisional":false}}}}],"outputs":[],"blocks":[],"connections":[]}}"#
+        )
+    };
+    let plain = with_connections("[]");
+    let mut not_utf8 = plain.clone().into_bytes();
+    not_utf8[3] = 0xFF;
+    let long_list = format!(
+        "[{}]",
+        vec!["\"a -> b\""; oce_author::MAX_WIRE_LIST_LEN + 1].join(",")
+    );
+    let long_name = format!("\"{}\"", "a".repeat(oce_author::MAX_WIRE_STRING_BYTES + 1));
+    let nested = format!(
+        "{}{}",
+        "[".repeat(oce_author::MAX_WIRE_DEPTH),
+        "]".repeat(oce_author::MAX_WIRE_DEPTH)
+    );
+    type Case = (&'static str, Vec<u8>, &'static str, Option<(u32, u32)>);
+    let cases: Vec<Case> = vec![
+        ("not-utf8", not_utf8, "byte 3 is not UTF-8", None),
+        (
+            "byte-order-mark",
+            format!("\u{feff}{plain}").into_bytes(),
+            "the document starts with a byte-order mark",
+            None,
+        ),
+        (
+            // The tool's bounded read refuses an over-size input before the wire reader sees
+            // it, under the same code.
+            "input-too-large",
+            format!("{plain}{}", " ".repeat(MAX_WIRE_BYTES + 1)).into_bytes(),
+            "the input is larger than 4194304 bytes",
+            None,
+        ),
+        (
+            "nesting-too-deep",
+            with_connections(&nested).into_bytes(),
+            "nesting deeper than 8 levels at line 1 column 105",
+            Some((1, 105)),
+        ),
+        (
+            "list-too-long",
+            with_connections(&long_list).into_bytes(),
+            "the list at line 1 column 98 has more than 65536 entries",
+            Some((1, 98)),
+        ),
+        (
+            "string-too-long",
+            plain.replacen("\"s\"", &long_name, 1).into_bytes(),
+            "the string at line 1 column 13 is longer than 4096 bytes",
+            Some((1, 13)),
+        ),
+        (
+            "duplicate-key",
+            plain.replacen('{', "{\"sequence\":\"t\",", 1).into_bytes(),
+            "duplicate key `sequence` at line 1 column 17",
+            Some((1, 17)),
+        ),
+        (
+            "non-finite-number",
+            with_value("1e999").into_bytes(),
+            "a non-finite number at line 1 column 161",
+            Some((1, 161)),
+        ),
+        (
+            "integer-out-of-range",
+            with_value("9223372036854775808").into_bytes(),
+            "an integer outside the 64-bit signed range at line 1 column 161",
+            Some((1, 161)),
+        ),
+        (
+            "control-character",
+            with_value("\"a\\tb\"").into_bytes(),
+            "a control character in a string at line 1 column 164",
+            Some((1, 164)),
+        ),
+        (
+            "unknown-key",
+            plain.replacen('{', "{\"comment\":\"x\",", 1).into_bytes(),
+            "unknown key `comment` at line 1 column 10",
+            Some((1, 10)),
+        ),
+        (
+            "missing-key",
+            plain.replacen("\"derived_from\":\"\",", "", 1).into_bytes(),
+            "missing key `derived_from` at line 1 column 82",
+            Some((1, 82)),
+        ),
+        (
+            "wrong-type",
+            with_connections("{}").into_bytes(),
+            "invalid type: map, expected a sequence at connections, line 1 column 97",
+            Some((1, 97)),
+        ),
+        (
+            "json-syntax",
+            b"{".to_vec(),
+            "not JSON: EOF while parsing an object at line 1 column 1",
+            Some((1, 1)),
+        ),
+        (
+            "bound-list-too-long",
+            with_min("[0, 1]").into_bytes(),
+            "a bound list holds at most one number; a second item at line 1 column 126",
+            Some((1, 126)),
+        ),
+        (
+            "malformed-connection",
+            with_connections("[\"a.y b.u\"]").into_bytes(),
+            "connection 0 `a.y b.u` is not `source -> target` with exactly one `->`",
+            None,
+        ),
+    ];
+    let listed: Vec<&str> = cases.iter().map(|case| case.0).collect();
+    assert_eq!(listed, oce_author::WIRE_CODES, "one document per code");
+    let dir = scratch("wire_refusal_codes");
+    for (code, document, detail, span) in &cases {
+        for command in ["validate", "emit", "fmt"] {
+            let run = oce_in(&dir, &[command, "-", "--from", "wire"], document);
+            assert_eq!(refusal(&run), *code, "{command}");
+            let error = &run.report()["errors"][0];
+            assert_eq!(error["detail"], *detail, "{command} {code}");
+            let expected = span.map_or(
+                serde_json::Value::Null,
+                |(line, column)| serde_json::json!({ "column": column, "line": line }),
+            );
+            assert_eq!(error["span"], expected, "{command} {code}");
+        }
+    }
+}

@@ -1,5 +1,5 @@
-//! Every code the tool reports, with a one-line meaning: the tool's own error codes, the wire-form
-//! refusal codes, and the meaning tables `vocab` prints for `oce_author::PARSE_CODES` and
+//! Every code the tool reports, with a one-line meaning: the tool's own error codes, and the
+//! meaning tables `vocab` prints for `oce_author::WIRE_CODES`, `oce_author::PARSE_CODES` and
 //! `oce_author::STAGE_ONE_CODES` (pinned to those lists, in order, by the unit tests below).
 
 // --- The tool's own error codes (`errors[].code`, exit 2). ---
@@ -44,41 +44,6 @@ pub(crate) const UNKNOWN_SUBJECT_FORM: &str = "unknown-subject-form";
 /// A mutant path that resolves, through a symbolic link or a drive prefix, to a file outside the
 /// vector file's directory (owner ruling of 2026-11-11).
 pub(crate) const MUTANT_OUTSIDE_DIRECTORY: &str = "mutant-outside-directory";
-
-// --- Wire-form refusal codes (`errors[].code`, exit 2), one per `oce_author::WireError`. ---
-
-/// The wire bytes are not UTF-8.
-pub(crate) const WIRE_NOT_UTF8: &str = "not-utf8";
-/// The wire document starts with a byte-order mark.
-pub(crate) const WIRE_BYTE_ORDER_MARK: &str = "byte-order-mark";
-/// Objects and arrays nest too deep.
-pub(crate) const WIRE_TOO_DEEP: &str = "nesting-too-deep";
-/// A list is too long.
-pub(crate) const WIRE_LIST_TOO_LONG: &str = "list-too-long";
-/// A string is too long.
-pub(crate) const WIRE_STRING_TOO_LONG: &str = "string-too-long";
-/// An object repeats a key.
-pub(crate) const WIRE_DUPLICATE_KEY: &str = "duplicate-key";
-/// `NaN`, `Infinity` or an overflowing real.
-pub(crate) const WIRE_NON_FINITE_NUMBER: &str = "non-finite-number";
-/// An integer outside `i64`.
-pub(crate) const WIRE_INTEGER_OUT_OF_RANGE: &str = "integer-out-of-range";
-/// A control character in a string.
-pub(crate) const WIRE_CONTROL_CHARACTER: &str = "control-character";
-/// A key the schema does not define.
-pub(crate) const WIRE_UNKNOWN_KEY: &str = "unknown-key";
-/// A required key is missing.
-pub(crate) const WIRE_MISSING_KEY: &str = "missing-key";
-/// A value of the wrong JSON type or an unknown enumerator.
-pub(crate) const WIRE_WRONG_TYPE: &str = "wrong-type";
-/// Not JSON.
-pub(crate) const WIRE_SYNTAX: &str = "json-syntax";
-/// A boundary's `min` or `max` list with a second item.
-pub(crate) const WIRE_BOUND_LIST_TOO_LONG: &str = "bound-list-too-long";
-/// A connection string without exactly one `->`.
-pub(crate) const WIRE_MALFORMED_CONNECTION: &str = "malformed-connection";
-/// A wire refusal this tool does not know (a newer `WireError` variant).
-pub(crate) const WIRE_REFUSED: &str = "wire-refused";
 
 /// The tool's own error codes and their meanings, as `vocab` prints them.
 pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
@@ -136,58 +101,49 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     ),
 ];
 
-/// The wire-form refusal codes and their meanings, in `WireError` order.
-///
-/// The table lives here, not in `oce-author`, because `oce_author::WireError` has no `code()`
-/// accessor yet (GitHub issue #495); `input::wire_code` maps each variant onto it, pinned by its
-/// unit test.
-pub(crate) const WIRE_CODES: &[(&str, &str)] = &[
-    (WIRE_NOT_UTF8, "the bytes are not UTF-8"),
+/// The wire form's refusal codes (`oce_author::WIRE_CODES`, in order) and their meanings. The
+/// code of a refusal comes from `oce_author::WireError::code`; this table only says what each
+/// means.
+pub(crate) const WIRE_MEANINGS: &[(&str, &str)] = &[
+    ("not-utf8", "the bytes are not UTF-8"),
     (
-        WIRE_BYTE_ORDER_MARK,
+        "byte-order-mark",
         "the document starts with a byte-order mark",
     ),
-    (INPUT_TOO_LARGE, "the document is larger than 4 MiB"),
+    ("input-too-large", "the document is larger than 4 MiB"),
     (
-        WIRE_TOO_DEEP,
+        "nesting-too-deep",
         "objects and arrays nest deeper than 8 levels",
     ),
-    (WIRE_LIST_TOO_LONG, "a list has more than 65,536 entries"),
-    (WIRE_STRING_TOO_LONG, "a string is longer than 4,096 bytes"),
-    (WIRE_DUPLICATE_KEY, "an object repeats a key"),
+    ("list-too-long", "a list has more than 65,536 entries"),
+    ("string-too-long", "a string is longer than 4,096 bytes"),
+    ("duplicate-key", "an object repeats a key"),
     (
-        WIRE_NON_FINITE_NUMBER,
+        "non-finite-number",
         "NaN or Infinity as a number, or a real that overflows binary64",
     ),
     (
-        WIRE_INTEGER_OUT_OF_RANGE,
+        "integer-out-of-range",
         "an integer token outside the 64-bit signed range",
     ),
+    ("control-character", "a string carries a control character"),
     (
-        WIRE_CONTROL_CHARACTER,
-        "a string carries a control character",
-    ),
-    (
-        WIRE_UNKNOWN_KEY,
+        "unknown-key",
         "an object carries a key its schema does not define",
     ),
-    (WIRE_MISSING_KEY, "an object lacks a required key"),
+    ("missing-key", "an object lacks a required key"),
     (
-        WIRE_WRONG_TYPE,
+        "wrong-type",
         "a value has the wrong JSON type or an unknown enumerator",
     ),
-    (WIRE_SYNTAX, "the document is not JSON"),
+    ("json-syntax", "the document is not JSON"),
     (
-        WIRE_BOUND_LIST_TOO_LONG,
+        "bound-list-too-long",
         "a boundary's min or max list has more than one number",
     ),
     (
-        WIRE_MALFORMED_CONNECTION,
+        "malformed-connection",
         "a connection is not `source -> target` with exactly one ->",
-    ),
-    (
-        WIRE_REFUSED,
-        "a wire refusal this version of oce does not name",
     ),
 ];
 
@@ -432,6 +388,19 @@ mod tests {
     }
 
     #[test]
+    fn wire_meanings_cover_wire_codes_in_order() {
+        assert_eq!(codes(WIRE_MEANINGS), oce_author::WIRE_CODES);
+    }
+
+    #[test]
+    fn the_shared_over_size_code_is_spelled_as_the_wire_and_text_forms_spell_it() {
+        // One code for an input refused by its size, whoever refuses it: the tool before the
+        // read, the wire reader or the text parser.
+        assert_eq!(INPUT_TOO_LARGE, oce_author::INPUT_TOO_LARGE);
+        assert!(oce_author::WIRE_CODES.contains(&INPUT_TOO_LARGE));
+    }
+
+    #[test]
     fn parse_meanings_cover_parse_codes_in_order() {
         assert_eq!(codes(PARSE_MEANINGS), oce_author::PARSE_CODES);
     }
@@ -453,7 +422,7 @@ mod tests {
     fn every_meaning_is_one_nonempty_line_and_codes_are_unique_per_table() {
         for table in [
             TOOL_CODES,
-            WIRE_CODES,
+            WIRE_MEANINGS,
             PARSE_MEANINGS,
             STAGE_ONE_MEANINGS,
             STAGE_TWO_MEANINGS,

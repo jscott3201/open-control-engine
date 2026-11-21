@@ -174,7 +174,8 @@ string (a stage-1 code, an engine `DiagCode` spelling from stage 2 or the class 
 validator's order (authored position, code, detail).
 
 An **error** is `{ "code", "detail", "span" }`: a text-form parse code (`oce_author::PARSE_CODES`,
-with the refusal's span), a wire-form code (with the refusal's span where it has one), or one of
+with the refusal's span), a wire-form code (`oce_author::WIRE_CODES`, with the refusal's span
+where it has one), or one of
 the tool's own codes (`span` `null`). `oce vocab` lists every code with one line of meaning. A
 `verify` refusal adds optional keys, each written only when it has a value (owner rulings of
 2026-11-11; pinned by `tests/report_shape.rs`):
@@ -200,12 +201,13 @@ The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-
 `read-failed`, `input-too-large`, `invalid-namespace`, `unspellable`, `write-failed`,
 `write-needs-file`, `write-needs-text`, `malformed-param`, `unknown-param`, `duplicate-param`,
 `malformed-value`, `ports-unresolvable`, `emit-refused`, `unknown-subject-form`,
-`mutant-outside-directory`. The wire-form refusal codes (one per
-`oce_author::WireError`: `not-utf8`, `byte-order-mark`, `nesting-too-deep`, `list-too-long`,
-`string-too-long`, `duplicate-key`, `non-finite-number`, `integer-out-of-range`,
-`control-character`, `unknown-key`, `missing-key`, `wrong-type`, `json-syntax`,
-`bound-list-too-long`, `malformed-connection`, `wire-refused`) are listed with their meanings by `oce vocab --json` under
-`wire_codes`.
+`mutant-outside-directory`. The wire-form refusal codes are `oce-author`'s: the tool reports
+`oce_author::WireError::code()` and `location()` and names no refusal itself (issue #495), so the
+sixteen codes of `oce_author::WIRE_CODES` are documented once, in the
+[`oce-author` README](../oce-author/README.md#wire-refusal-codes). `oce vocab --json` lists them
+with their meanings under `wire_codes`, in that order. There is no fallback code: `wire-refused`,
+which named a refusal the tool did not know and which no run could produce, is gone from the
+listing.
 
 ### A catalog class
 

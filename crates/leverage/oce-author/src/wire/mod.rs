@@ -18,6 +18,7 @@
 //! `to_wire_string(&from_wire_str(d)?) == d`.
 
 mod closed;
+mod codes;
 mod dto;
 mod scan;
 
@@ -27,6 +28,7 @@ use crate::json::Json;
 pub use crate::location::Location;
 use crate::model::{Bound, Boundary, Literal, ParamValue, Sequence};
 
+pub use codes::WIRE_CODES;
 pub(crate) use dto::{WireSequence, split_connection};
 
 /// The largest wire document, in bytes (4 MiB, the text form's bound).
@@ -44,6 +46,10 @@ pub const MAX_WIRE_LIST_LEN: usize = 65_536;
 pub const MAX_WIRE_STRING_BYTES: usize = 4_096;
 
 /// Why a wire document was refused. Never a panic.
+///
+/// [`WireError::code`] is the stable kebab-case name of the refusal, one of [`WIRE_CODES`], and
+/// [`WireError::location`] its line and column where it has one. Branch on the code: the enum is
+/// `#[non_exhaustive]`, so a match on its variants outside this crate cannot be complete.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WireError {
