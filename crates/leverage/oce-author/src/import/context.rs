@@ -20,7 +20,9 @@
 //!
 //! The compact key `qudt:hasUnit` is the QUDT schema property only where the document binds
 //! `qudt` so ([`Context::reads_qudt`]). Without the binding it is no property the importer knows,
-//! as for the engine, which then leaves it unread.
+//! and is `unknown-key` on every node. The engine refuses it as well (issue #675), as it refuses
+//! `hasUnit` in a near miss of a QUDT namespace, which here is a `qudt` binding outside the closed
+//! set or a full-IRI key: neither reader leaves a declared unit unread.
 //!
 //! [`Context::unit_of`] reads a unit IRI node's `@id`: a compact IRI through `S231`, `qudt` or
 //! `unit` where the document binds the prefix (never one whose suffix starts with `//`, which

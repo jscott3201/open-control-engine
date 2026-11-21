@@ -444,6 +444,53 @@ and a gate that accepted any text would restore exactly the false assurance desc
     given graph. The 46 fixture goldens and 422 provenance goldens are byte-identical.
   - **Not in this change:** a root input's declared unit still does not meet the ports it drives
     (issue #632).
+- **A `hasUnit` key the QUDT schema reading does not reach is refused, where it was left
+  unread** (issue #675; owner ruling of 2026-11-20). `qudt:hasUnit` is read as
+  `unit` by its expanded IRI in the two QUDT schema namespaces. One edit from that, the key fell
+  into the pass-through map and the load reported nothing: the §7.10 unit gate, the point list,
+  the content id and the export went without the unit. With `qudt` unbound, `"S231:unit": "K"`
+  beside `"qudt:hasUnit": {"@id": "unit:DEG_C"}` loaded as `K`, with the content id of `K` alone.
+  - **Refused, matched on the expanded IRI,** on every `@graph` node, whether the document
+    writes a compact key, a full IRI or a `@context` term:
+    - `qudt:hasUnit` where the document binds no `qudt` prefix: `malformed-document`;
+    - `hasUnit` in a near miss of either schema namespace: `vocabulary-namespace-mismatch`. The
+      near misses are the `https:` spelling, the scheme or the host in another letter case, a
+      default or empty port (`:80` under `http`, `:443` under `https`), and a missing, repeated
+      or wrong separator (`https://qudt.org/schema/qudt#hasUnit`, `HTTP://qudt.org/…`,
+      `http://QUDT.org/…`, `http://qudt.org:80/…`, `http://qudt.org/schema/qudthasUnit`,
+      `http://qudt.org/schema/qudt/#hasUnit`);
+    - `hasUnit` in the QUDT unit vocabulary (`http://qudt.org/vocab/unit#`, `…/unit/`) or a near
+      miss of it, which is `qudt` bound to the `unit:` IRI or the key `unit:hasUnit`:
+      `vocabulary-namespace-mismatch`;
+    - any of those only once the key's surrounding whitespace is trimmed (`"qudt:hasUnit "` with
+      no `qudt` binding, which passed through before): `malformed-document`.
+  - **Still a pass-through key:** `hasUnit` under a prefix bound to a namespace that is no QUDT
+    one and no near miss of one (`http://example.org/qudt#`), which is that vocabulary's
+    property; a key that differs in its local name or its letter case (`qudt:HasUnit`, issue
+    #691); and `qudt:hasQuantityKind`, under any binding.
+  - **Codes and messages.** No new code. The description of `vocabulary-namespace-mismatch` in
+    `oce-diag` now names this case. Each message quotes the key and the namespace as written in
+    at most 64 bytes, with format and control characters written as escapes, and names the two
+    namespaces the property is read in. Each refusal is pinned as the complete diagnostic list.
+  - **One recogniser.** `oce_cxf::namespace_near_miss(iri, namespace)` decides whether an IRI is
+    a near miss of a namespace and where its local name begins
+    (`crates/oce-cxf/src/namespace_near_miss.rs`). It knows no vocabulary and refuses nothing;
+    the caller holds the local name to its own closed list. It is the piece the same rule for
+    every modeled key (#691), a typing token (#636) and a term (#647) attaches to.
+  - **Both readers.** `oce-author`'s importer already refused every one of these documents as
+    `unknown-key`, since its `@context` is closed and it reads compact keys only; its source is
+    unchanged, and each probe is now put to both readers.
+  - **Breaking, in place:** such a document is refused where it loaded without the unit. No
+    tracked or library document is one. Measured before building and after: the 257 tracked
+    documents that hold an `@graph` write 484 `hasUnit` keys, all `qudt:hasUnit` under a read
+    binding (36 documents bind `qudt`, each to a read namespace; the other 221 bind none and
+    write no `qudt:` key), and the 140 CXF documents of `open-control-library` (`development` at
+    `fe7060a`) bind no `qudt`. Loaded through `oce id` built before and after, all of them, and
+    each library document with its retired namespace rewritten, give the same outcome, content
+    id, warnings and refusal codes.
+  - **Nothing a format defines changes, and the workspace version is not bumped:** tightening
+    accepted input is not a format change (unit-spellings ruling 7; the ruling on #647). No
+    content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
 ### Leverage
 
 - **Tolerance mode, part 1: the envelope arithmetic, a port of LBNL funnel proven against the

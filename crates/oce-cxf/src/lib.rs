@@ -48,6 +48,7 @@ mod g36_catalog_package_guard;
 #[cfg(test)]
 mod g36_catalog_tests;
 mod ground;
+mod namespace_near_miss;
 mod resolve;
 mod scope_chain;
 #[cfg(test)]
@@ -59,6 +60,7 @@ mod unit_iri;
 
 pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 pub use format_controls::is_format_or_control;
+pub use namespace_near_miss::{NamespaceNearMiss, namespace_near_miss};
 pub use resolve::{ImportMode, ResolveOptions, ValidationReport};
 pub use unit_iri::{QUDT_SCHEMA_NAMESPACES, QUDT_UNIT_NAMESPACES, QUDT_UNITS, unit_of_iri};
 

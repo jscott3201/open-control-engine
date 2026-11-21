@@ -11,6 +11,10 @@
 //!
 //! Before, an upstream key was not read: cases 1 and 4 loaded, case 5 did not warn, and the
 //! `unit:K` of case 3 was a unit that equals no unit string.
+//!
+//! Case 1 is also put with `qudt` unbound and bound to a near miss of a QUDT namespace (issue
+//! #675): the key then named no property, so the load went through and the gate compared nothing.
+//! Each is a refusal of the key itself.
 
 use oce_api::{Engine, OcError, PointInfo};
 use serde_json::{Value as Json, json};
@@ -207,6 +211,73 @@ fn case_1_a_string_unit_against_another_units_qudt_iri_is_a_mismatch() {
         unit_iri("DEG_C"),
     );
     assert_eq!(refusal(&doc), unit_mismatch("gai1.y", &["K", "degC"]));
+}
+
+#[test]
+fn case_1_under_no_qudt_binding_is_refused_where_the_gate_never_saw_the_unit() {
+    // Issue #675: with `qudt` left out of the `@context`, the key of case 1 named no property.
+    // The document loaded, `gai2.u` read `K` by propagation, and the gate had nothing to compare.
+    let mut doc = with(
+        with(probe(), "gai1.y", "S231:unit", json!("K")),
+        "gai2.u",
+        "qudt:hasUnit",
+        unit_iri("DEG_C"),
+    );
+    doc["@context"]
+        .as_object_mut()
+        .expect("context")
+        .remove("qudt");
+    assert_eq!(
+        refusal(&doc),
+        vec![(
+            "malformed-document".to_owned(),
+            Some(id("gai2.u")),
+            format!(
+                "property `qudt:hasUnit` on node `{}` reads as `qudt:hasUnit` under a `qudt` \
+                 prefix the document's `@context` does not bind, so it names no property and the \
+                 unit it carries would be left unread; bind `qudt` to \
+                 `http://qudt.org/schema/qudt#` or `http://qudt.org/schema/qudt/`, or write the \
+                 unit as `S231:unit`",
+                id("gai2.u")
+            )
+        )]
+    );
+}
+
+#[test]
+fn case_1_under_a_near_miss_of_a_qudt_namespace_is_refused_naming_the_namespace() {
+    // The same document with `qudt` bound one edit from a schema namespace, or to the unit
+    // vocabulary: it loaded the same way, and is refused naming the namespace it wrote.
+    for binding in [
+        "https://qudt.org/schema/qudt#",
+        "http://QUDT.org/schema/qudt/",
+        "http://qudt.org:80/schema/qudt#",
+        "http://qudt.org/schema/qudt",
+        "http://qudt.org/vocab/unit#",
+    ] {
+        let mut doc = with(
+            with(probe(), "gai1.y", "S231:unit", json!("K")),
+            "gai2.u",
+            "qudt:hasUnit",
+            unit_iri("DEG_C"),
+        );
+        doc["@context"]["qudt"] = json!(binding);
+        assert_eq!(
+            refusal(&doc),
+            vec![(
+                "vocabulary-namespace-mismatch".to_owned(),
+                Some(id("gai2.u")),
+                format!(
+                    "property `qudt:hasUnit` on node `{}` names `hasUnit` in `{binding}`; the \
+                     QUDT schema property `hasUnit` is read only in \
+                     `http://qudt.org/schema/qudt#` and `http://qudt.org/schema/qudt/`; write it \
+                     in one of them, or write the unit as `S231:unit`",
+                    id("gai2.u")
+                )
+            )],
+            "{binding}"
+        );
+    }
 }
 
 #[test]

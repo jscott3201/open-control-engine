@@ -9,7 +9,8 @@
 //! Two spellings of one property on one node are refused even when they agree, a key that names a
 //! spelling only after trimming is refused as a near miss, and `qudt:hasQuantityKind` is not read.
 //! Every refusal is pinned as the complete diagnostic list, stated by hand. What an IRI-node value
-//! reads as is `resolve_unit_iris.rs`'s.
+//! reads as is `resolve_unit_iris.rs`'s, and the refusal of a `hasUnit` key under an unbound
+//! `qudt` prefix or in a near miss of a QUDT namespace is `resolve_unread_qudt_has_unit.rs`'s.
 
 use oce_diag::{DiagCode, Diagnostic};
 use serde_json::{Value as Json, json};
@@ -188,35 +189,24 @@ fn the_qudt_key_is_read_in_both_schema_namespaces_under_any_prefix_name() {
 }
 
 #[test]
-fn a_qudt_prefix_bound_elsewhere_or_nowhere_does_not_name_the_qudt_schema() {
-    // The key is matched by its expanded IRI alone. Bound to another namespace, or to none, the
-    // compact key `qudt:hasUnit` is some other property, and stays in the pass-through map: the
-    // node declares no unit, whatever the value.
-    let elsewhere = [
-        Some("http://example.org/qudt#"),
-        Some("https://qudt.org/schema/qudt#"),
-        Some("http://qudt.org/schema/qudt"),
-        Some("http://qudt.org/vocab/unit#"),
-        None,
-    ];
-    for binding in elsewhere {
+fn a_qudt_prefix_bound_to_an_unrelated_namespace_names_that_vocabularys_property() {
+    // The key is matched by its expanded IRI alone. Bound to a namespace that is no QUDT one and
+    // no near miss of one, the compact key `qudt:hasUnit` is some other property, and stays in the
+    // pass-through map: the node declares no unit, whatever the value. (Unbound, or bound to a
+    // near miss of a QUDT namespace, it is refused: `resolve_unread_qudt_has_unit.rs`.)
+    let context = {
         let mut context = upstream_context();
-        match binding {
-            Some(iri) => context["qudt"] = json!(iri),
-            None => {
-                context.as_object_mut().expect("context").remove("qudt");
-            }
-        }
-        let unset = rendered(&document(context.clone()));
-        for role in ROLES {
-            // The key, and its whitespace near miss: trimmed, it still names no modeled
-            // property under this binding, so it is no near miss either (issue #675 asks
-            // whether either should be refused).
-            for key in ["qudt:hasUnit", "qudt:hasUnit ", " qudt:hasUnit"] {
-                for value in [json!("K"), json!({ "@id": "unit:K" }), json!(5)] {
-                    let doc = with(document(context.clone()), role, key, value);
-                    assert_eq!(rendered(&doc), unset, "{binding:?} {role} {key:?}");
-                }
+        context["qudt"] = json!("http://example.org/qudt#");
+        context
+    };
+    let unset = rendered(&document(context.clone()));
+    for role in ROLES {
+        // The key, and its whitespace near miss: trimmed, it still names no modeled property
+        // under this binding, so it is no near miss either.
+        for key in ["qudt:hasUnit", "qudt:hasUnit ", " qudt:hasUnit"] {
+            for value in [json!("K"), json!({ "@id": "unit:K" }), json!(5)] {
+                let doc = with(document(context.clone()), role, key, value);
+                assert_eq!(rendered(&doc), unset, "{role} {key:?}");
             }
         }
     }
@@ -461,8 +451,8 @@ fn a_megabyte_of_whitespace_around_a_spelling_is_quoted_in_at_most_64_bytes() {
 #[test]
 fn a_near_miss_of_a_spelling_that_is_not_whitespace_stays_a_pass_through_key() {
     // Only surrounding whitespace is a near miss. Another case, a longer or shorter term or a
-    // spelling in a namespace that is not the property's is some other key, as for every modeled
-    // term.
+    // bare term is some other key, as for every modeled term. (`unit:hasUnit`, the property in
+    // the unit vocabulary's namespace, is refused: `resolve_unread_qudt_has_unit.rs`.)
     let unset = rendered(&base());
     for key in [
         "qudt:hasunit",
@@ -472,7 +462,7 @@ fn a_near_miss_of_a_spelling_that_is_not_whitespace_stays_a_pass_through_key() {
         "qudt:hasDisplayUnit",
         "S231:hasunit",
         "S231:hasDisplayunit",
-        "unit:hasUnit",
+        "unit:hasDisplayUnit",
         "hasUnit",
     ] {
         for role in ROLES {

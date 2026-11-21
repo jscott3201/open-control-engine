@@ -262,8 +262,10 @@ found one that both had missed, the last row below (#679).
 | a boundary term written as a typed literal, or a boundary `quantity` written as an IRI node | accepted, read as the term | `wrong-shape`: a boundary's term is a string, or for a unit an IRI node the unit table maps |
 | a `unit` or `displayUnit` IRI node the unit table does not map | `non-subset-construct` | `wrong-shape` naming the key |
 | two spellings of `unit` or `displayUnit` on one node | `malformed-document` | `two-spellings` |
-| `qudt:hasUnit` with no `qudt` binding, or `qudt:hasQuantityKind` | an unread pass-through key | `unknown-key` |
-| a `qudt` or `unit` prefix bound to another IRI | accepted; the key or identifier is then whatever it expands to (for any namespace but the S231 one, an unread key and an unmapped identifier) | `unknown-key` naming the term |
+| `qudt:hasQuantityKind` | an unread pass-through key | `unknown-key` |
+| `qudt:hasUnit` with no `qudt` binding | `malformed-document` (issue #675) | `unknown-key` |
+| `hasUnit` in a near miss of a QUDT schema namespace or in the QUDT unit vocabulary, through a `qudt` binding or by full IRI | `vocabulary-namespace-mismatch` (issue #675) | `unknown-key` naming the `@context` term, or the full-IRI key |
+| a `qudt` or `unit` prefix bound to an IRI that is no QUDT namespace and no near miss of one | accepted; the key or identifier is then whatever it expands to (for any namespace but the S231 one, an unread key and an unmapped identifier) | `unknown-key` naming the term |
 | a unit IRI node through `base` or a whole-token `@context` term (`{"@id": "base:K"}` with `base` bound to a unit namespace) | read through the table | `wrong-shape`: `base` is inert, and only `S231:`, `qudt:` and `unit:` identifiers and full IRIs are looked up |
 | a unit, in any spelling, on a block port | read | `port-attribute` (decision 8) |
 | a `unit`, `quantity` or `displayUnit` on an Integer or Boolean boundary | `malformed-document` | **imported**: the one difference in which the importer is the more lenient, found by the review of GitHub #674 and filed as #679 |
@@ -289,7 +291,8 @@ on a document modelica-json could have written:
   `S231:displayUnit` or `S231:hasDisplayUnit`. The importer still reads compact keys only.
   `qudt:hasUnit` is the QUDT property where the `@context` binds `qudt` to a QUDT schema
   namespace, `http://qudt.org/schema/qudt#` or `http://qudt.org/schema/qudt/`; without that
-  binding it is `unknown-key` on every node. `qudt:hasQuantityKind` is `unknown-key` everywhere.
+  binding it is `unknown-key` on every node, and the engine refuses it there too (issue #675).
+  `qudt:hasQuantityKind` is `unknown-key` everywhere.
 - **`@context`.** Two more terms are admitted beside `S231` and `base`: `qudt`, bound to either
   schema namespace, and `unit`, bound to either QUDT unit namespace
   (`http://qudt.org/vocab/unit#` or `http://qudt.org/vocab/unit/`). Either term bound to anything
