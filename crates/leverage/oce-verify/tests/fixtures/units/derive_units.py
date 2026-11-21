@@ -41,8 +41,9 @@ INCH_M = Fraction(254, 10000)
 # NIST SP 330 (2019), section 2.3.1 and appendix: the standard acceleration of free fall,
 # g_n = 9.80665 m/s^2 exactly (3rd CGPM, 1901).
 STANDARD_GRAVITY = Fraction(980665, 100000)
-# NIST SP 811 (2008), Appendix B.8, footnote to "inch of water, conventional": the conventional
-# units of water column take water at 1000 kg/m^3 exactly under standard gravity.
+# The conventional inch of water takes water at 1000 kg/m^3 exactly under standard gravity: the
+# conventional value of ISO 80000-3, which NIST SP 811 (2008) gives in its footnote 12 to the
+# "inch of water, conventional" entry of Appendix B.8.
 CONVENTIONAL_WATER_DENSITY = Fraction(1000)
 # NIST SP 330 (2019), section 2.3.1: the Celsius temperature is t = T - T0, T0 = 273.15 K exactly.
 KELVIN_AT_ZERO_CELSIUS = Fraction(27315, 100)
@@ -81,15 +82,15 @@ CRATE_LITERALS = {
     "PA_PER_INCH_OF_WATER": ("249.08891", PA_PER_INCH_OF_WATER),
     "PA_PER_INCH_OF_WATER_60F": ("248.84", INCH_OF_WATER_60F_PA_TABULATED),
     "M3S_PER_CFM": ("0.0004719474432", M3S_PER_CFM),
-    "M3S_PER_LITRE_PER_SECOND": ("0.001", M3S_PER_LITRE_PER_SECOND),
+    "LITRES_PER_CUBIC_METRE": ("1000.0", 1 / M3S_PER_LITRE_PER_SECOND),
     "KELVIN_AT_ZERO_CELSIUS": ("273.15", KELVIN_AT_ZERO_CELSIUS),
     "FAHRENHEIT_AT_ZERO_CELSIUS": ("32.0", FAHRENHEIT_AT_ZERO_CELSIUS),
     "PERCENT_DIVISOR": ("100.0", 1 / PERCENT),
 }
 
-# The design note's table writes the cfm factor as 0.00047194744832 beside "exact: 0.3048^3 / 60".
-# The two disagree: the exact quotient is 0.0004719474432. The crate follows the stated
-# derivation; this records the difference so a reader sees it.
+# The design note's table once wrote the cfm factor as 0.00047194744832 beside "exact: 0.3048^3
+# / 60". The two disagree: the exact quotient is 0.0004719474432, which the crate and the
+# corrected note use (#714). Kept so the old digits can never come back unseen.
 NOTE_CFM_DIGITS = Fraction("0.00047194744832")
 
 
@@ -120,6 +121,10 @@ def stated(source, target, x):
         return (x - 32.0) * FIVE_NINTHS
     if (source, target) == ("K", "degC"):
         return x - 273.15
+    if (source, target) == ("degF_delta", "K"):
+        return x * FIVE_NINTHS
+    if (source, target) == ("degC_delta", "K"):
+        return x
     if (source, target) == ("kPa", "Pa"):
         return x * 1000.0
     if (source, target) == ("inH2O", "Pa"):
@@ -129,7 +134,7 @@ def stated(source, target, x):
     if (source, target) == ("cfm", "m3/s"):
         return x * 0.0004719474432
     if (source, target) == ("L/s", "m3/s"):
-        return x * 0.001
+        return x / 1000.0
     if (source, target) in (("percent", "1"), ("%", "1")):
         return x / 100.0
     raise KeyError((source, target))
@@ -146,6 +151,10 @@ def exact(source, target, x):
         return (q - FAHRENHEIT_AT_ZERO_CELSIUS) / FAHRENHEIT_DEGREES_PER_KELVIN
     if (source, target) == ("K", "degC"):
         return q - KELVIN_AT_ZERO_CELSIUS
+    if (source, target) == ("degF_delta", "K"):
+        return q / FAHRENHEIT_DEGREES_PER_KELVIN
+    if (source, target) == ("degC_delta", "K"):
+        return q
     if (source, target) == ("kPa", "Pa"):
         return q * PA_PER_KPA
     if (source, target) == ("inH2O", "Pa"):
@@ -166,6 +175,8 @@ PAIRS = [
     ("degC", "K"),
     ("degF", "degC"),
     ("K", "degC"),
+    ("degF_delta", "K"),
+    ("degC_delta", "K"),
     ("kPa", "Pa"),
     ("inH2O", "Pa"),
     ("inH2O_60F", "Pa"),
@@ -239,6 +250,9 @@ KNOWN = {
     ("degC", "K"): [-40.0, 100.0, 25.0, 12.8],
     ("degF", "degC"): [32.0, 212.0, -40.0, -459.67, 98.6],
     ("K", "degC"): [273.15, 373.15, 0.0, 233.14999999999998, 293.15],
+    # Setpoint adjustments and deadbands: Listing 12.2's setAdj and heaSetAdj are differences.
+    ("degF_delta", "K"): [2.0, 9.0, -3.0, 1.8, 0.25],
+    ("degC_delta", "K"): [2.0, -3.0, 0.25],
     ("kPa", "Pa"): [101.325, 1.5],
     ("inH2O", "Pa"): [2.0, 0.25, 1.5],
     ("inH2O_60F", "Pa"): [2.0, 0.25, 1.5],
@@ -289,6 +303,44 @@ def ulps_apart(a, b):
     return abs(ordered(a) - ordered(b))
 
 
+# The bound each absolute temperature pair is held to: the distance from the exact conversion is
+# at most BOUND ulps of the largest magnitude in the sum, M = max(|x|, |result|, offset), where the
+# offset is 273.15 for a pair into or out of kelvin and 32 for degF -> degC. Near the offset the
+# result cancels, so a bound in ulps of the result alone cannot hold; this one can. Checked here
+# at every golden row and at 140,000 seeded readings per pair, and again by the Rust test at
+# every golden row.
+TEMPERATURE_BOUNDS = {
+    ("degF", "K"): (2, 273.15),
+    ("degC", "K"): (1, 273.15),
+    ("degF", "degC"): (2, 32.0),
+    ("K", "degC"): (1, 273.15),
+}
+
+
+def within_temperature_bound(source, target, x, result):
+    bound, offset = TEMPERATURE_BOUNDS[(source, target)]
+    scale = max(abs(x), abs(result), offset)
+    return abs(Fraction(result) - exact(source, target, x)) <= bound * Fraction(math.ulp(scale))
+
+
+def check_temperature_bounds():
+    import random
+
+    generator = random.Random(659)
+    for pair in TEMPERATURE_BOUNDS:
+        readings = [generator.uniform(-1000.0, 1000.0) for _ in range(100_000)]
+        readings += [generator.uniform(-1.0e6, 1.0e6) for _ in range(20_000)]
+        readings += [
+            math.ldexp(generator.random(), generator.randint(-1060, 1023))
+            * generator.choice((-1.0, 1.0))
+            for _ in range(20_000)
+        ]
+        for x in readings:
+            result = stated(*pair, x)
+            if math.isfinite(result) and not within_temperature_bound(*pair, x, result):
+                sys.exit(f"{pair} at {x!r}: {result!r} is outside the bound")
+
+
 def hex_bits(value):
     return f"0x{to_bits(value):016x}"
 
@@ -310,6 +362,8 @@ def rows_for(source, target):
             yield (x, "overflow", "-", "-")
             continue
         rounded = float(exact(source, target, x))
+        if (source, target) in TEMPERATURE_BOUNDS:
+            assert within_temperature_bound(source, target, x, result), (source, target, x)
         yield (x, hex_bits(result), hex_bits(rounded), str(ulps_apart(result, rounded)))
     for bits in NAN_BITS:
         yield (from_bits(bits), f"0x{bits:016x}", "-", "-")
@@ -319,6 +373,7 @@ def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__)
     check_constants()
+    check_temperature_bounds()
     lines = [
         "# units/v1 bit goldens, written by derive_units.py; never blessed, never edited by hand.",
         "# from<TAB>to<TAB>input bits<TAB>output bits or `overflow`<TAB>exact rounded once<TAB>ulps",

@@ -715,21 +715,33 @@ are the identity, every bit kept.
 | `degC` → `K` | `x + 273.15` | NIST SP 330 §2.3.1 |
 | `degF` → `degC` | `(x - 32.0) * (5.0 / 9.0)` | NIST SP 811 B.9 |
 | `K` → `degC` | `x - 273.15` | NIST SP 330 §2.3.1 |
+| `degF_delta` → `K` | `x * (5.0 / 9.0)` | a temperature difference: a degree Fahrenheit is 1/1.8 K (NIST SP 811 B.9) |
+| `degC_delta` → `K` | the reading as it is | a temperature difference: a degree Celsius is a kelvin (NIST SP 330 §2.3.1) |
 | `kPa` → `Pa` | `x * 1000.0` | NIST SP 330, table 7 |
-| `inH2O` → `Pa` | `x * 249.08891` | the conventional inch of water, 0.0254 m × 1000 kg/m³ × 9.80665 m/s² exactly (NIST SP 811 B.8, printed 2.490 889 E+02) |
+| `inH2O` → `Pa` | `x * 249.08891` | the conventional inch of water, 0.0254 m × 1000 kg/m³ × 9.80665 m/s² exactly: ISO 80000-3's conventional value, as NIST SP 811 footnote 12 gives it (SP 811 B.8 prints 2.490 889 E+02) |
 | `inH2O_60F` → `Pa` | `x * 248.84` | the inch of water at 60 °F, tabulated (NIST SP 811 B.8, 2.4884 E+02) |
 | `cfm` → `m3/s` | `x * 0.0004719474432` | 0.3048³ m³ / 60 s exactly (NIST SP 811 B.8, printed 4.719 474 E-04) |
-| `L/s` → `m3/s` | `x * 0.001` | NIST SP 811 B.8 |
+| `L/s` → `m3/s` | `x / 1000.0` | NIST SP 811 B.8 |
 | `percent`, `%` → `1` | `x / 100.0` | NIST SP 811 §7.10.2 |
 
+- **Readings and differences.** A temperature reading (`degF`, `degC`) and a temperature
+  difference (`degF_delta`, `degC_delta`: an adjustment, a deadband) are different units: 2
+  `degF` is 256.48 K, 2 `degF_delta` is 1.11 K. OBC Listing 12.2 maps its setpoint adjustments
+  `setAdj` and `heaSetAdj` from `degF`; they need `degF_delta`. At bind (#662), a port whose
+  quantity is `TemperatureDifference` refuses the four absolute pairs as
+  `absolute-for-difference`, and a `cdl.unit` other than the port's declared unit is refused as
+  `unit-refused`: the identity rule is only safe with that check.
 - **What is refused** ([`UnitError`], codes in `UNIT_ERROR_CODES`): a pair the table does not
   list, the reverse of a row included unless it is a row of its own (`degC` → `K` and `K` →
   `degC` are both rows), as `unknown-pair`; a unit on one side of a point only, as `one-sided`;
   an empty spelling, as `empty-unit`; a finite reading whose conversion overflows `f64` (a factor
-  above one, beyond about 1e305), as `overflow`. No unit on either side means no conversion. A
-  refusal quotes a spelling as an escaped excerpt of at most 64 bytes.
+  above one, beyond about ±1e305), as `overflow`; an absolute temperature pair on a
+  temperature-difference port, as `absolute-for-difference`. No unit on either side means no
+  conversion. A refusal quotes a spelling as the spec reader quotes what it reads, escaped and
+  cut at 64 bytes.
 - **Determinism.** The operations above and nothing else: no library call, no fused multiply-add,
-  one rounding per operation. A NaN (replay's missing Real cell) or an infinity is returned with
+  one rounding per operation; `L/s` and `%` divide by an exact `1000.0` and `100.0`, so they
+  round the exact quotient once. A NaN (replay's missing Real cell) or an infinity is returned with
   its bits unchanged, so no platform's NaN propagation shows. `-459.67 degF` reads as -2⁻⁴⁴ K,
   not zero: -459.67 has no exact binary form, and the note's order is the contract.
 - **One spelling per unit.** `K`, `degC`, `degF`, `Pa`, `m3/s` and `1` are the strings the
@@ -744,14 +756,17 @@ sources (#660) call them and add the file, row and column to a refusal:
 | `float` or `int` → `int` | integral and within `i32`, both ends included; else `not-integral` (a fraction, a NaN, an infinity) or `outside-int32` |
 | `float`, `int` or `bool` → `bool` | a number exactly `0` (`-0.0` included) is false and exactly `1` true; a text cell `true`/`false`, `active`/`inactive` or `1`/`0`, byte for byte; else `not-boolean` or `not-boolean-text`. No threshold: `0.5` is refused (decision 19) |
 | `bool` → `int` | the Boolean, then `false` 0 and `true` 1 |
-| `int` → `float`, `bool` → `float` | not in the note's table: `type-pair-refused` |
+| `int` → `float` | a whole number within `i32`, widened exactly; else `not-integral` or `outside-int32` |
+| `bool` → `float` | not in the note's table: `type-pair-refused` |
 
 **Evidence.** `tests/unit_table.rs` holds every pair to bit goldens at the zeros, the extremes,
 the subnormals, the infinities, five NaN payloads, a spread of magnitudes, the overflow edge and
 the note's known points (`tests/fixtures/units/units_v1.txt`). Those goldens are written by
 `tests/fixtures/units/derive_units.py`, which shares nothing with the crate: it checks every
 constant against its base definitions in exact rational arithmetic and evaluates each pair in the
-note's order in Python's binary64. The test also derives each factor again from the inch, the
+note's order in Python's binary64, and holds each pair to a bound against the exact conversion
+(a scaled pair within 1 ulp, a division or `degC_delta` exact, an absolute temperature pair
+within 2 ulps of the largest magnitude in its sum, 1 for the Celsius–kelvin rows). The test also derives each factor again from the inch, the
 foot, standard gravity and the litre as an integer ratio divided once, and checks closure over
 every ordered pair of the table's spellings, near-miss spellings, monotonicity over 40,000
 readings and that a fused multiply-add would move golden bits.

@@ -7,7 +7,8 @@
 //! | `float` or `int` → `int` | integral and within `i32`, else refused | [`CellRule::Integer`], [`integer_from_number`] |
 //! | `float`, `int` or `bool` → `bool` | a number exactly `0` is false and exactly `1` true; a text cell `true`/`false`, `active`/`inactive` (BACnet binary present value) or `0`/`1`; anything else refused | [`CellRule::Boolean`], [`boolean_from_number`], [`boolean_from_text`] |
 //! | `bool` → `int` | the Boolean, then `false` is 0 and `true` 1 (Listing 12.2's `uOccSen`) | [`CellRule::BooleanAsInteger`], [`integer_from_boolean`] |
-//! | `int` → `float`, `bool` → `float` | not listed: refused | [`CellError::TypePairRefused`] |
+//! | `int` → `float` | a whole number within `i32`, widened exactly; else refused (owner ruling, 2026-11-21) | [`CellRule::IntegerAsReal`], [`real_from_whole_number`] |
+//! | `bool` → `float` | not listed: refused | [`CellError::TypePairRefused`] |
 //!
 //! There is no threshold: a `0.5` in a Boolean column is refused, where the upstream model's
 //! `GreaterThreshold(t = 0.5)` would read it as a state and a sensor fault with it (decision 19).
@@ -27,6 +28,7 @@
 
 use std::fmt;
 
+use super::choices::PointType;
 use super::units::excerpt;
 
 /// Every [`CellError`] code, in declaration order; a test pins the list.
@@ -52,27 +54,26 @@ pub(crate) enum CellRule {
     Boolean,
     /// `bool` → `int`: the cell read as for [`Self::Boolean`], then [`integer_from_boolean`].
     BooleanAsInteger,
+    /// `int` → `float`: [`real_from_whole_number`]; the unit table converts it after.
+    IntegerAsReal,
 }
 
 impl CellRule {
-    /// The rule for a point whose device side has the type spelled `device` and whose CDL side
-    /// the type spelled `cdl`, each one of `float`, `int` and `bool` as a point mapping spells
-    /// it, compared byte for byte.
+    /// The rule for a point whose device side has the type `device` and whose CDL side the type
+    /// `cdl`, as the point mapping reads them.
     ///
     /// # Errors
     ///
-    /// [`CellError::TypePairRefused`] for `int` → `float`, `bool` → `float` and any spelling
-    /// outside the three.
-    pub(crate) fn for_types(device: &str, cdl: &str) -> Result<Self, CellError> {
+    /// [`CellError::TypePairRefused`] for `bool` → `float`, the one pair the rules do not list.
+    pub(crate) fn for_types(device: PointType, cdl: PointType) -> Result<Self, CellError> {
+        use PointType::{Bool, Float, Int};
         match (device, cdl) {
-            ("float", "float") => Ok(Self::Real),
-            ("float" | "int", "int") => Ok(Self::Integer),
-            ("float" | "int" | "bool", "bool") => Ok(Self::Boolean),
-            ("bool", "int") => Ok(Self::BooleanAsInteger),
-            _ => Err(CellError::TypePairRefused {
-                device: excerpt(device),
-                cdl: excerpt(cdl),
-            }),
+            (Float, Float) => Ok(Self::Real),
+            (Int, Float) => Ok(Self::IntegerAsReal),
+            (Float | Int, Int) => Ok(Self::Integer),
+            (Float | Int | Bool, Bool) => Ok(Self::Boolean),
+            (Bool, Int) => Ok(Self::BooleanAsInteger),
+            (Bool, Float) => Err(CellError::TypePairRefused { device, cdl }),
         }
     }
 }
@@ -133,6 +134,17 @@ pub(crate) fn integer_from_number(value: f64) -> Result<i32, CellError> {
     Ok(value as i32)
 }
 
+/// A number in an `int` device column read into a CDL Real: the whole number, checked as
+/// [`integer_from_number`] checks it, then widened to `f64`, which holds every `i32` exactly.
+/// `-0.0` reads as `0.0`, the integer zero.
+///
+/// # Errors
+///
+/// As [`integer_from_number`]: [`CellError::NotIntegral`] or [`CellError::OutsideInt32`].
+pub(crate) fn real_from_whole_number(value: f64) -> Result<f64, CellError> {
+    integer_from_number(value).map(f64::from)
+}
+
 /// Why one cell has no value of its CDL point's type. Each variant has one stable code
 /// ([`CellError::code`]); the trend source that read the cell adds where it is.
 #[derive(Clone, Debug, PartialEq)]
@@ -157,13 +169,12 @@ pub(crate) enum CellError {
         /// The number.
         value: f64,
     },
-    /// A device type and a CDL type no rule converts between, or a spelling outside `float`,
-    /// `int` and `bool`.
+    /// A device type and a CDL type no rule converts between: `bool` → `float`.
     TypePairRefused {
-        /// The device type, as an excerpt.
-        device: String,
-        /// The CDL type, as an excerpt.
-        cdl: String,
+        /// The device point's type.
+        device: PointType,
+        /// The CDL point's type.
+        cdl: PointType,
     },
 }
 

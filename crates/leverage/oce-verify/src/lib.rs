@@ -83,11 +83,11 @@
 //! Nothing runs a commissioning spec yet: binding one to a sequence, its trend sources and its
 //! receipt are the later parts.
 //!
-//! For the same verifier (OBC §12; design note `docs/design/commissioning.md`,
-//! issue #659), the closed unit table a trend's readings are converted with, device unit to CDL
-//! unit, before any comparison: [`convert_unit`] over `units/v1` ([`UNITS_TABLE`]), one
-//! direction only, spellings compared byte for byte, every refusal a typed [`UnitError`]
-//! (stable codes in [`UNIT_ERROR_CODES`]) and never a pass-through.
+//! Its second part (issue #659) is the closed unit table a trend's readings are converted with,
+//! device unit to CDL unit, before any comparison: [`convert_unit`] over `units/v1`
+//! ([`UNITS_TABLE`]), each row one way, temperature readings and temperature differences kept
+//! apart, spellings compared byte for byte, every refusal a typed [`UnitError`] (stable codes in
+//! [`UNIT_ERROR_CODES`]) and never a pass-through.
 //!
 //! ```
 //! use oce_verify::{Expectation, Literal, VectorSet, VerifyLimits};

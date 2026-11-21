@@ -3,8 +3,6 @@
 
 use super::*;
 
-const TYPES: [&str; 3] = ["float", "int", "bool"];
-
 /// Every NaN shape a trend might carry: Rust's quiet NaN, a payload, a signalling NaN, and both
 /// signs.
 const NAN_BITS: [u64; 5] = [
@@ -16,20 +14,23 @@ const NAN_BITS: [u64; 5] = [
 ];
 
 #[test]
-fn every_type_pair_has_its_rule_and_the_two_unlisted_ones_are_refused() {
-    let expected = |device: &str, cdl: &str| match (device, cdl) {
-        ("float", "float") => Some(CellRule::Real),
-        ("float" | "int", "int") => Some(CellRule::Integer),
-        ("float" | "int" | "bool", "bool") => Some(CellRule::Boolean),
-        ("bool", "int") => Some(CellRule::BooleanAsInteger),
-        _ => None,
+fn every_type_pair_has_its_rule_and_only_bool_to_float_is_refused() {
+    use PointType::{Bool, Float, Int};
+    let expected = |device: PointType, cdl: PointType| match (device, cdl) {
+        (Float, Float) => Some(CellRule::Real),
+        (Int, Float) => Some(CellRule::IntegerAsReal),
+        (Float | Int, Int) => Some(CellRule::Integer),
+        (Float | Int | Bool, Bool) => Some(CellRule::Boolean),
+        (Bool, Int) => Some(CellRule::BooleanAsInteger),
+        (Bool, Float) => None,
     };
     let mut refused = Vec::new();
-    for device in TYPES {
-        for cdl in TYPES {
+    for device in PointType::ALL {
+        for cdl in PointType::ALL {
             match (CellRule::for_types(device, cdl), expected(device, cdl)) {
                 (Ok(rule), Some(want)) => assert_eq!(rule, want, "{device} -> {cdl}"),
                 (Err(error), None) => {
+                    assert_eq!(error, CellError::TypePairRefused { device, cdl });
                     assert_eq!(error.code(), "type-pair-refused");
                     refused.push((device, cdl));
                 }
@@ -37,41 +38,60 @@ fn every_type_pair_has_its_rule_and_the_two_unlisted_ones_are_refused() {
             }
         }
     }
-    assert_eq!(refused, [("int", "float"), ("bool", "float")]);
+    assert_eq!(refused, [(Bool, Float)]);
     assert_eq!(
-        CellRule::for_types("int", "float").unwrap_err().to_string(),
-        "no rule reads a `int` device point as a `float` CDL point"
+        CellRule::for_types(Bool, Float).unwrap_err().to_string(),
+        "no rule reads a `bool` device point as a `float` CDL point"
     );
 }
 
 #[test]
-fn a_type_spelling_outside_the_three_is_refused_on_either_side() {
-    let near = [
-        "",
-        "Float",
-        "BOOL",
-        "integer",
-        "boolean",
-        "real",
-        "bool ",
-        " int",
-        "double",
-        "f64",
-        "int\u{200b}",
+fn a_whole_number_in_an_int_column_widens_exactly_into_a_real() {
+    let accepted = [
+        (0.0, 0.0),
+        (-0.0, 0.0),
+        (1.0, 1.0),
+        (-1.0, -1.0),
+        (2_147_483_646.0, 2_147_483_646.0),
+        (2_147_483_647.0, 2_147_483_647.0),
+        (-2_147_483_647.0, -2_147_483_647.0),
+        (-2_147_483_648.0, -2_147_483_648.0),
     ];
-    for spelling in near {
-        for (device, cdl) in [(spelling, "bool"), ("bool", spelling), (spelling, spelling)] {
-            let refused = CellRule::for_types(device, cdl).unwrap_err();
-            assert_eq!(
-                refused,
-                CellError::TypePairRefused {
-                    device: excerpt(device),
-                    cdl: excerpt(cdl),
-                },
-                "{device:?} -> {cdl:?}"
-            );
-        }
+    for (value, real) in accepted {
+        let got = real_from_whole_number(value).expect("a whole number inside i32");
+        assert_eq!(got.to_bits(), f64::to_bits(real), "{value:?}");
     }
+    // -0.0 is the integer zero, so it widens to +0.0.
+    assert_eq!(real_from_whole_number(-0.0).map(f64::to_bits), Ok(0));
+    for value in [
+        2_147_483_648.0,
+        -2_147_483_649.0,
+        1.0e300,
+        f64::MAX,
+        f64::MIN,
+    ] {
+        assert_eq!(
+            real_from_whole_number(value),
+            Err(CellError::OutsideInt32 { value }),
+            "{value:?}"
+        );
+    }
+    for value in [
+        0.5,
+        2_147_483_646.5,
+        -2_147_483_648.5,
+        f64::from_bits(1),
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+    ] {
+        assert_eq!(
+            real_from_whole_number(value),
+            Err(CellError::NotIntegral { value }),
+            "{value:?}"
+        );
+    }
+    let refused = real_from_whole_number(f64::NAN).unwrap_err();
+    assert_eq!(refused.code(), "not-integral");
 }
 
 #[test]
@@ -168,7 +188,7 @@ fn a_text_cell_is_a_boolean_only_in_one_of_six_exact_spellings() {
     }
     assert_eq!(
         boolean_from_text(" 1").unwrap_err().to_string(),
-        "`\\u{20}1` is not a Boolean: only `true`, `false`, `active`, `inactive`, `1` and `0` are"
+        "` 1` is not a Boolean: only `true`, `false`, `active`, `inactive`, `1` and `0` are"
     );
 }
 
@@ -289,8 +309,8 @@ fn the_cell_error_codes_are_pinned_and_each_variant_has_its_own() {
         CellError::NotIntegral { value: 0.5 },
         CellError::OutsideInt32 { value: 1.0e10 },
         CellError::TypePairRefused {
-            device: String::new(),
-            cdl: String::new(),
+            device: PointType::Bool,
+            cdl: PointType::Float,
         },
     ];
     let codes: Vec<&str> = one_of_each.iter().map(CellError::code).collect();

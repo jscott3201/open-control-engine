@@ -16,12 +16,14 @@ use oce_verify::{UNIT_ERROR_CODES, UNITS_TABLE, UnitError, convert_unit};
 
 const GOLDEN: &str = include_str!("fixtures/units/units_v1.txt");
 
-/// The eleven pairs of `units/v1`, device unit first, in the design note's order.
-const PAIRS: [(&str, &str); 11] = [
+/// The thirteen pairs of `units/v1`, device unit first, in the design note's order.
+const PAIRS: [(&str, &str); 13] = [
     ("degF", "K"),
     ("degC", "K"),
     ("degF", "degC"),
     ("K", "degC"),
+    ("degF_delta", "K"),
+    ("degC_delta", "K"),
     ("kPa", "Pa"),
     ("inH2O", "Pa"),
     ("inH2O_60F", "Pa"),
@@ -110,7 +112,7 @@ fn the_golden_covers_every_listed_pair_at_every_awkward_value() {
     let rows = golden();
     assert_eq!(
         rows.len(),
-        404,
+        476,
         "a row was added or lost: re-derive and review"
     );
     let pairs: BTreeSet<(&str, &str)> = rows
@@ -145,26 +147,50 @@ fn the_golden_covers_every_listed_pair_at_every_awkward_value() {
     }
 }
 
+/// The absolute temperature pairs, with the bound each is held to in ulps of the largest
+/// magnitude in its sum and that sum's offset (as `derive_units.py` states and checks against the
+/// exact rational at every row and 140,000 seeded readings).
+const TEMPERATURE_BOUNDS: [(&str, &str, f64, f64); 4] = [
+    ("degF", "K", 2.0, 273.15),
+    ("degC", "K", 1.0, 273.15),
+    ("degF", "degC", 2.0, 32.0),
+    ("K", "degC", 1.0, 273.15),
+];
+
 #[test]
-fn the_exact_column_is_the_true_distance_and_a_scaled_pair_is_within_one_ulp() {
+fn every_pair_is_within_its_bound_of_the_exact_conversion() {
     for row in golden() {
         let (Some(output), Some((exact, ulps))) = (row.output, row.exact) else {
             continue;
         };
-        let distance = ulps_apart(f64::from_bits(output), f64::from_bits(exact));
+        let (out, rounded) = (f64::from_bits(output), f64::from_bits(exact));
+        let distance = ulps_apart(out, rounded);
         assert_eq!(distance, ulps, "{} -> {}", row.from, row.to);
-        // One multiplication or division by a correctly rounded constant: at most one ulp from
-        // the definition. The temperature pairs add or subtract an offset, and near the offset
-        // cancellation makes any count of ulps possible, so only their bits are held.
-        let temperature = row.to == "K" || row.to == "degC";
-        if !temperature {
+        let at = format!("{} -> {} at {:?}", row.from, row.to, row.input);
+        let pair = (row.from.as_str(), row.to.as_str());
+        if let Some(&(_, _, bound, offset)) = TEMPERATURE_BOUNDS
+            .iter()
+            .find(|(from, to, _, _)| (*from, *to) == pair)
+        {
+            // An offset is added or taken away, and near it the result cancels, so the bound is
+            // in ulps of the largest magnitude in the sum. Against the exact value rounded once,
+            // half an ulp more.
+            let scale = row.input.abs().max(out.abs()).max(offset);
+            let ulp = scale.next_up() - scale;
             assert!(
-                distance <= 1,
-                "{} -> {} at {:?}: {distance} ulps",
-                row.from,
-                row.to,
-                row.input
+                (out - rounded).abs() <= (bound + 0.5) * ulp,
+                "{at}: {out:?}"
             );
+        } else if matches!(
+            pair,
+            ("L/s", _) | ("percent", _) | ("%", _) | ("degC_delta", _)
+        ) {
+            // A division by an exact `1000.0` or `100.0` rounds the exact quotient once, and a
+            // Celsius degree is a kelvin: the correctly rounded value, bit for bit.
+            assert_eq!(distance, 0, "{at}");
+        } else {
+            // One multiplication by a correctly rounded constant: at most one ulp.
+            assert!(distance <= 1, "{at}: {distance} ulps");
         }
     }
 }
@@ -303,7 +329,7 @@ fn the_known_flows_pressures_and_fractions_land_on_their_values() {
 #[test]
 fn the_table_is_closed_and_runs_one_way() {
     let spellings: BTreeSet<&str> = PAIRS.iter().flat_map(|(from, to)| [*from, *to]).collect();
-    assert_eq!(spellings.len(), 13);
+    assert_eq!(spellings.len(), 15);
     let mut listed = 0;
     for from in &spellings {
         for to in &spellings {
@@ -362,6 +388,29 @@ fn a_near_miss_spelling_is_an_unknown_pair_never_a_conversion() {
         let message = refused.to_string();
         assert!(message.is_ascii(), "{message}");
         assert!(!message.contains('\u{200b}') && !message.contains('\u{feff}'));
+    }
+}
+
+#[test]
+fn a_spelling_one_invisible_or_lookalike_character_from_the_cdl_unit_is_refused() {
+    // The identity is byte for byte: a device unit that only looks like the CDL unit is an
+    // unknown pair, never the identity and never a near match.
+    let cases: [(&str, &str); 8] = [
+        ("degF ", "degF"),
+        (" degF", "degF"),
+        ("K\u{200b}", "K"),
+        ("\u{feff}Pa", "Pa"),
+        ("Pa\u{a0}", "Pa"),
+        ("\u{212a}", "K"),
+        ("m³/s", "m3/s"),
+        ("\u{ff05}", "%"),
+    ];
+    for (from, to) in cases {
+        let refused = convert_unit(from, to, 72.5).unwrap_err();
+        assert_eq!(refused.code(), "unknown-pair", "{from:?} -> {to:?}");
+        // And the other way round, where the CDL side carries the odd character.
+        let refused = convert_unit(to, from, 72.5).unwrap_err();
+        assert_eq!(refused.code(), "unknown-pair", "{to:?} -> {from:?}");
     }
 }
 
@@ -513,7 +562,13 @@ fn the_table_is_named_and_its_codes_are_kebab_case() {
     assert_eq!(UNITS_TABLE, "units/v1");
     assert_eq!(
         UNIT_ERROR_CODES,
-        ["unknown-pair", "one-sided", "empty-unit", "overflow"]
+        [
+            "unknown-pair",
+            "one-sided",
+            "empty-unit",
+            "overflow",
+            "absolute-for-difference",
+        ]
     );
     for code in UNIT_ERROR_CODES {
         assert!(

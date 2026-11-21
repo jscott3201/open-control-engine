@@ -12,17 +12,26 @@
 //! the reverse of a listed pair (`K` to `degF`) is unknown unless it is a row of its own: `degC`
 //! to `K` and `K` to `degC` are the one such couple.
 //!
+//! A temperature is either a **reading**, a point on its scale (`degF`, `degC`), or a
+//! **difference** between two readings (`degF_delta`, `degC_delta`): a setpoint adjustment, a
+//! deadband, an approach. The two convert differently, so they are two spellings: 2 `degF` is
+//! 256.48 K, and 2 `degF_delta` is 1.11 K. OBC §12.7 Listing 12.2 maps the setpoint adjustments
+//! `setAdj` and `heaSetAdj` from `degF` to `K`; those points are differences, and their device
+//! side needs `degF_delta` (owner ruling, 2026-11-21).
+//!
 //! | Device → CDL | Operation, in this order, in `f64` | Constant's source |
 //! | --- | --- | --- |
 //! | `degF` → `K` | `(x - 32.0) * (5.0 / 9.0) + 273.15` | NIST SP 811 B.9; NIST SP 330 §2.3.1 |
 //! | `degC` → `K` | `x + 273.15` | NIST SP 330 §2.3.1 (`T0` = 273.15 K exactly) |
 //! | `degF` → `degC` | `(x - 32.0) * (5.0 / 9.0)` | NIST SP 811 B.9 |
 //! | `K` → `degC` | `x - 273.15` | NIST SP 330 §2.3.1 |
+//! | `degF_delta` → `K` | `x * (5.0 / 9.0)` | NIST SP 811 B.9: a degree Fahrenheit is 1/1.8 K |
+//! | `degC_delta` → `K` | the reading as it is | NIST SP 330 §2.3.1: a degree Celsius is one kelvin |
 //! | `kPa` → `Pa` | `x * 1000.0` | NIST SP 330, table 7 (kilo = 10³) |
-//! | `inH2O` → `Pa` | `x * 249.08891` | NIST SP 811 B.8, conventional inch of water: 0.0254 m × 1000 kg/m³ × 9.80665 m/s², exactly |
+//! | `inH2O` → `Pa` | `x * 249.08891` | the conventional inch of water, 0.0254 m × 1000 kg/m³ × 9.80665 m/s², exactly: the conventional value of ISO 80000-3, as NIST SP 811 footnote 12 gives it; SP 811 B.8 prints 2.490 889 E+02 |
 //! | `inH2O_60F` → `Pa` | `x * 248.84` | NIST SP 811 B.8, inch of water at 60 °F, tabulated to five digits |
 //! | `cfm` → `m3/s` | `x * 0.0004719474432` | NIST SP 811 B.8: 0.3048³ m³ / 60 s, exactly |
-//! | `L/s` → `m3/s` | `x * 0.001` | NIST SP 811 B.8 (litre = 10⁻³ m³ exactly) |
+//! | `L/s` → `m3/s` | `x / 1000.0` | NIST SP 811 B.8 (litre = 10⁻³ m³ exactly) |
 //! | `percent` or `%` → `1` | `x / 100.0` | NIST SP 811 §7.10.2 (% = 0.01) |
 //! | identical spellings | the identity, bits unchanged | |
 //!
@@ -42,18 +51,37 @@
 //! as missing and the platform's NaN propagation never shows; a finite reading whose converted
 //! value is not finite is refused ([`UnitError::Overflow`]).
 //!
-//! **Temperature differences.** Every pair converts a reading, a point on its scale, so the
-//! affine pairs add their offset. The note gives tolerances in CDL units ("tolerances are
-//! CDL-unit quantities"), so no difference, deadband or tolerance in a device unit ever passes
-//! through this table, and it has no difference form.
+//! **Divide, never multiply by a reciprocal.** `L/s` and `%` divide by an exact `1000.0` and
+//! `100.0`, which rounds the exact quotient once; multiplying by `0.001` or `0.01`, neither exact
+//! in binary, would round twice and be one ulp off for about one reading in eight.
+//!
+//! **What bind adds** (#662). Two checks need the sequence's ports, which this module does not
+//! see. A port whose declared quantity is `TemperatureDifference` refuses an absolute
+//! temperature pair ([`UnitError::AbsoluteForDifference`], through
+//! `UnitConversion::for_port_quantity`). And a mapping's `cdl.unit` must equal the unit the
+//! port declares (`unit-refused` at bind, owner ruling of 2026-11-21): the identity rule and
+//! every row trust `cdl.unit` to be the engine's unit, so they are only safe together with that
+//! check.
 
-use std::fmt::{self, Write as _};
+use std::fmt;
+
+use super::error::printable;
 
 /// The name and version of the unit table, as a commissioning receipt's `units.table` carries it.
 pub const UNITS_TABLE: &str = "units/v1";
 
 /// Every [`UnitError`] code, in declaration order; a test pins the list.
-pub const UNIT_ERROR_CODES: &[&str] = &["unknown-pair", "one-sided", "empty-unit", "overflow"];
+pub const UNIT_ERROR_CODES: &[&str] = &[
+    "unknown-pair",
+    "one-sided",
+    "empty-unit",
+    "overflow",
+    "absolute-for-difference",
+];
+
+/// The quantity a CDL port declares when its value is a temperature difference, as the
+/// Buildings library's CDL sequences write it (`quantity="TemperatureDifference"`).
+pub(crate) const TEMPERATURE_DIFFERENCE: &str = "TemperatureDifference";
 
 /// The most bytes of one unit spelling a [`UnitError`] quotes, its escapes and the `...` that
 /// marks a cut included.
@@ -68,7 +96,9 @@ const KELVIN_AT_ZERO_CELSIUS: f64 = 273.15;
 /// Pascals in one kilopascal (NIST SP 330, table 7).
 const PASCALS_PER_KILOPASCAL: f64 = 1000.0;
 /// Pascals in one conventional inch of water: 0.0254 m × 1000 kg/m³ × 9.80665 m/s², an exact
-/// decimal (NIST SP 811 B.8, which prints it as 2.490 889 E+02), as the nearest `f64`.
+/// decimal, as the nearest `f64`. Water at 1000 kg/m³ under standard gravity is the conventional
+/// value of ISO 80000-3, which NIST SP 811 gives in its footnote 12; SP 811 B.8 prints the
+/// factor as 2.490 889 E+02.
 const PASCALS_PER_INCH_OF_WATER: f64 = 249.08891;
 /// Pascals in one inch of water at 60 °F: NIST SP 811 B.8's tabulated 2.4884 E+02, a measured
 /// property of water to five significant digits, not a definition.
@@ -76,8 +106,8 @@ const PASCALS_PER_INCH_OF_WATER_60F: f64 = 248.84;
 /// Cubic metres a second in one cubic foot a minute: 0.3048³ / 60, the exact decimal
 /// 0.000 471 947 443 2 (NIST SP 811 B.8 prints 4.719 474 E-04), as the nearest `f64`.
 const CUBIC_METRES_PER_SECOND_PER_CFM: f64 = 0.000_471_947_443_2;
-/// Cubic metres in one litre, exactly (NIST SP 811 B.8).
-const CUBIC_METRES_PER_LITRE: f64 = 0.001;
+/// Litres in one cubic metre, exactly (NIST SP 811 B.8: the litre is 10⁻³ m³).
+const LITRES_PER_CUBIC_METRE: f64 = 1000.0;
 /// The number a percentage is divided by (NIST SP 811 §7.10.2: % is 0.01).
 const PERCENT_PER_ONE: f64 = 100.0;
 
@@ -92,6 +122,10 @@ enum Operation {
     FahrenheitToCelsius,
     /// `x - 273.15`.
     KelvinToCelsius,
+    /// `x * (5.0 / 9.0)`: a difference in degrees Fahrenheit, in kelvin.
+    FahrenheitDifferenceToKelvin,
+    /// `x`: a difference in degrees Celsius is the same number of kelvin.
+    CelsiusDifferenceToKelvin,
     /// `x * factor`.
     Multiply(f64),
     /// `x / divisor`.
@@ -99,6 +133,18 @@ enum Operation {
 }
 
 impl Operation {
+    /// Whether the operation converts a temperature reading, a point on a scale with an offset
+    /// from the kelvin's zero: the four pairs among `degF`, `degC` and `K`.
+    const fn is_absolute_temperature(self) -> bool {
+        matches!(
+            self,
+            Self::FahrenheitToKelvin
+                | Self::CelsiusToKelvin
+                | Self::FahrenheitToCelsius
+                | Self::KelvinToCelsius
+        )
+    }
+
     /// The operation on `x`, in the table's order, one rounding per operation.
     fn evaluate(self, x: f64) -> f64 {
         match self {
@@ -111,6 +157,8 @@ impl Operation {
                 (x - FAHRENHEIT_AT_ZERO_CELSIUS) * KELVIN_PER_FAHRENHEIT_DEGREE
             }
             Self::KelvinToCelsius => x - KELVIN_AT_ZERO_CELSIUS,
+            Self::FahrenheitDifferenceToKelvin => x * KELVIN_PER_FAHRENHEIT_DEGREE,
+            Self::CelsiusDifferenceToKelvin => x,
             Self::Multiply(factor) => x * factor,
             Self::Divide(divisor) => x / divisor,
         }
@@ -130,11 +178,13 @@ pub(crate) struct TableEntry {
 
 /// `units/v1`, every listed pair, in the design note's order. Closed: nothing is looked up
 /// anywhere else.
-pub(crate) const UNITS_V1: [TableEntry; 11] = [
+pub(crate) const UNITS_V1: [TableEntry; 13] = [
     entry("degF", "K", Operation::FahrenheitToKelvin),
     entry("degC", "K", Operation::CelsiusToKelvin),
     entry("degF", "degC", Operation::FahrenheitToCelsius),
     entry("K", "degC", Operation::KelvinToCelsius),
+    entry("degF_delta", "K", Operation::FahrenheitDifferenceToKelvin),
+    entry("degC_delta", "K", Operation::CelsiusDifferenceToKelvin),
     entry("kPa", "Pa", Operation::Multiply(PASCALS_PER_KILOPASCAL)),
     entry(
         "inH2O",
@@ -151,7 +201,7 @@ pub(crate) const UNITS_V1: [TableEntry; 11] = [
         "m3/s",
         Operation::Multiply(CUBIC_METRES_PER_SECOND_PER_CFM),
     ),
-    entry("L/s", "m3/s", Operation::Multiply(CUBIC_METRES_PER_LITRE)),
+    entry("L/s", "m3/s", Operation::Divide(LITRES_PER_CUBIC_METRE)),
     entry("percent", "1", Operation::Divide(PERCENT_PER_ONE)),
     entry("%", "1", Operation::Divide(PERCENT_PER_ONE)),
 ];
@@ -187,9 +237,10 @@ impl UnitSide {
 /// Why a unit pair, or one reading, has no conversion. Each variant has one stable code
 /// ([`UnitError::code`]); `#[non_exhaustive]`, so consumers branch on the code.
 ///
-/// A unit spelling in a refusal is an excerpt: printable ASCII, every other character (a space,
-/// a backtick and a backslash included) written as `\u{…}` with its hexadecimal code point, and
-/// cut with `...` at 64 bytes, so a refusal never carries a megabyte-long or invisible spelling.
+/// A unit spelling in a refusal is an excerpt, written as the spec reader writes what it quotes:
+/// printable ASCII from the space to `~` as itself, a line feed as `\n`, every other character
+/// as `\u{…}` with its hexadecimal code point, and cut with `...` at 64 bytes, so a refusal
+/// never carries a megabyte-long or invisible spelling.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum UnitError {
@@ -215,8 +266,9 @@ pub enum UnitError {
         /// The side whose unit is empty.
         side: UnitSide,
     },
-    /// A finite reading whose converted value is not finite: the product overflows `f64`. Only
-    /// a pair whose factor is above one can, and only beyond about 1e305.
+    /// A finite reading whose converted value is not finite: its magnitude is beyond `f64::MAX`,
+    /// positive or negative. Only a pair whose factor is above one can overflow, and only for a
+    /// reading beyond about ±1e305.
     Overflow {
         /// The device's unit, as the table spells it.
         from: &'static str,
@@ -224,6 +276,17 @@ pub enum UnitError {
         to: &'static str,
         /// The reading, in the device's unit.
         value: f64,
+    },
+    /// An absolute temperature pair (`degF` → `K`, `degC` → `K`, `degF` → `degC`, `K` →
+    /// `degC`) on a port whose declared quantity is `TemperatureDifference`: the offset would
+    /// turn a 2 °F adjustment into 256.48 K. The device side needs a difference unit,
+    /// `degF_delta` or `degC_delta` (owner ruling, 2026-11-21). Decided at bind (#662), where
+    /// the port's quantity is known.
+    AbsoluteForDifference {
+        /// The device's unit, as the table spells it.
+        from: &'static str,
+        /// The CDL point's unit, as the table spells it.
+        to: &'static str,
     },
 }
 
@@ -243,6 +306,7 @@ impl UnitError {
             Self::OneSided { .. } => 1,
             Self::EmptyUnit { .. } => 2,
             Self::Overflow { .. } => 3,
+            Self::AbsoluteForDifference { .. } => 4,
         }
     }
 }
@@ -268,7 +332,13 @@ impl fmt::Display for UnitError {
             Self::EmptyUnit { side } => write!(f, "the {} unit is empty", side.as_str()),
             Self::Overflow { from, to, value } => write!(
                 f,
-                "the reading {value:?} in `{from}` is beyond the largest `f64` in `{to}`"
+                "the reading {value:?} in `{from}` converts to a value in `{to}` whose magnitude \
+                 is beyond the largest `f64`"
+            ),
+            Self::AbsoluteForDifference { from, to } => write!(
+                f,
+                "`{from}` to `{to}` converts a temperature reading, but the port is a \
+                 temperature difference: write the device unit as `degF_delta` or `degC_delta`"
             ),
         }
     }
@@ -296,7 +366,7 @@ impl UnitConversion {
     /// ([`UnitError::EmptyUnit`]); a unit on one side only ([`UnitError::OneSided`]); none on
     /// either side ([`Self::Unitless`]); the same spelling on both ([`Self::Identity`]); a listed
     /// pair ([`Self::Listed`]); anything else, [`UnitError::UnknownPair`]. Work is one comparison
-    /// of the two spellings and at most eleven pairs of comparisons against the table; nothing is
+    /// of the two spellings and at most thirteen pairs of comparisons against the table; nothing is
     /// copied but the excerpts of a refusal.
     pub(crate) fn resolve(device: Option<&str>, cdl: Option<&str>) -> Result<Self, UnitError> {
         for (unit, side) in [(device, UnitSide::Device), (cdl, UnitSide::Cdl)] {
@@ -323,6 +393,39 @@ impl UnitConversion {
                     from: excerpt(from),
                     to: excerpt(to),
                 }),
+        }
+    }
+
+    /// The conversion again, for a CDL port whose declared quantity is `quantity` (the
+    /// facade's `PointInfo::quantity`): bind (#662) calls it once per mapped point, before any
+    /// frame.
+    ///
+    /// A port declared `TemperatureDifference` takes a difference, so an absolute temperature
+    /// pair, whose offset would add 273.15 K or 255.37 K to an adjustment, is refused; a
+    /// difference unit (`degF_delta`, `degC_delta`), the identity and every other row pass. Any
+    /// other quantity, or none, passes every conversion: the table then cannot tell a difference
+    /// from a reading, and the mapping's spelling decides.
+    ///
+    /// # Errors
+    ///
+    /// [`UnitError::AbsoluteForDifference`] for `degF` → `K`, `degC` → `K`, `degF` → `degC` or
+    /// `K` → `degC` on a `TemperatureDifference` port.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "bind (#662) is the first caller")
+    )]
+    pub(crate) fn for_port_quantity(self, quantity: Option<&str>) -> Result<Self, UnitError> {
+        match self {
+            Self::Listed(listed)
+                if quantity == Some(TEMPERATURE_DIFFERENCE)
+                    && listed.operation.is_absolute_temperature() =>
+            {
+                Err(UnitError::AbsoluteForDifference {
+                    from: listed.from,
+                    to: listed.to,
+                })
+            }
+            _ => Ok(self),
         }
     }
 
@@ -391,34 +494,10 @@ pub fn convert_unit(from: &str, to: &str, x: f64) -> Result<f64, UnitError> {
     UnitConversion::resolve(Some(from), Some(to))?.apply(x)
 }
 
-/// `text` as printable ASCII, at most [`MAX_UNIT_EXCERPT_BYTES`] bytes: a character from `!` to
-/// `~` as itself but for the backtick and the backslash, every other one (those two, a space, a
-/// control or format character, anything outside ASCII) as `\u{…}` with its hexadecimal code
-/// point. A text that fits is written whole; a longer one is cut between two characters and ends
-/// with `...`. It stops reading once the excerpt is full, so its work is bounded whatever the
-/// length of `text`.
+/// A unit spelling as a refusal quotes it: the spec reader's one quoting rule
+/// ([`printable`]), cut at [`MAX_UNIT_EXCERPT_BYTES`].
 pub(crate) fn excerpt(text: &str) -> String {
-    const MARK: &str = "...";
-    let mut out = String::new();
-    // The longest prefix written so far that leaves room for the mark.
-    let mut room_for_mark = 0;
-    for character in text.chars() {
-        if character.is_ascii_graphic() && character != '`' && character != '\\' {
-            out.push(character);
-        } else {
-            // Writing to a `String` cannot fail.
-            let _ = write!(out, "\\u{{{:x}}}", u32::from(character));
-        }
-        if out.len() > MAX_UNIT_EXCERPT_BYTES {
-            out.truncate(room_for_mark);
-            out.push_str(MARK);
-            return out;
-        }
-        if out.len() + MARK.len() <= MAX_UNIT_EXCERPT_BYTES {
-            room_for_mark = out.len();
-        }
-    }
-    out
+    printable(text, MAX_UNIT_EXCERPT_BYTES)
 }
 
 #[cfg(test)]

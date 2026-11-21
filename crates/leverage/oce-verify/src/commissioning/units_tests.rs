@@ -151,7 +151,7 @@ fn every_listed_pair_resolves_to_its_own_entry_and_its_reverse_is_unknown() {
 }
 
 #[test]
-fn the_table_is_the_notes_eleven_pairs_in_its_order_each_once() {
+fn the_table_is_the_notes_thirteen_pairs_in_its_order_each_once() {
     let pairs: Vec<(&str, &str)> = UNITS_V1.iter().map(|e| (e.from, e.to)).collect();
     assert_eq!(
         pairs,
@@ -160,6 +160,8 @@ fn the_table_is_the_notes_eleven_pairs_in_its_order_each_once() {
             ("degC", "K"),
             ("degF", "degC"),
             ("K", "degC"),
+            ("degF_delta", "K"),
+            ("degC_delta", "K"),
             ("kPa", "Pa"),
             ("inH2O", "Pa"),
             ("inH2O_60F", "Pa"),
@@ -198,11 +200,22 @@ fn every_spelling_is_printable_ascii_with_no_space_and_reads_back_as_itself() {
 fn a_unit_the_engine_also_reads_has_the_engines_spelling() {
     // The engine's unit reading (`oce_api::QUDT_UNITS`) gives each unit it knows one string.
     // Where the table names one of those units it must use that string: the CDL side's five
-    // and degF. The engine has no reading of the other six device spellings: it drops
-    // modelica-json's `cfm` and `inH2O` entries, whose QUDT identifiers name other units.
+    // and degF. The engine has no reading of the other device spellings: it drops
+    // modelica-json's `cfm` and `inH2O` entries, whose QUDT identifiers name other units, and
+    // has no difference spelling.
     let engine: BTreeSet<&str> = oce_api::QUDT_UNITS.iter().map(|(_, unit)| *unit).collect();
     let shared = ["K", "degC", "degF", "Pa", "m3/s", "1"];
-    let unshared = ["kPa", "inH2O", "inH2O_60F", "cfm", "L/s", "percent", "%"];
+    let unshared = [
+        "degF_delta",
+        "degC_delta",
+        "kPa",
+        "inH2O",
+        "inH2O_60F",
+        "cfm",
+        "L/s",
+        "percent",
+        "%",
+    ];
     let mut spellings = BTreeSet::new();
     for listed in &UNITS_V1 {
         spellings.insert(listed.from);
@@ -251,7 +264,8 @@ fn a_finite_reading_that_overflows_is_refused_naming_the_pair_and_the_reading() 
     assert_eq!(refused.code(), "overflow");
     assert_eq!(
         refused.to_string(),
-        "the reading 1.7976931348623157e308 in `kPa` is beyond the largest `f64` in `Pa`"
+        "the reading 1.7976931348623157e308 in `kPa` converts to a value in `Pa` whose magnitude is \
+         beyond the largest `f64`"
     );
     assert_eq!(
         convert_unit("inH2O", "Pa", f64::MIN).unwrap_err(),
@@ -308,7 +322,13 @@ fn an_unknown_pair_names_both_spellings_as_excerpts() {
 fn the_error_codes_are_pinned_and_each_variant_has_its_own() {
     assert_eq!(
         UNIT_ERROR_CODES,
-        ["unknown-pair", "one-sided", "empty-unit", "overflow"]
+        [
+            "unknown-pair",
+            "one-sided",
+            "empty-unit",
+            "overflow",
+            "absolute-for-difference",
+        ]
     );
     let one_of_each = [
         UnitError::UnknownPair {
@@ -327,6 +347,7 @@ fn the_error_codes_are_pinned_and_each_variant_has_its_own() {
             to: "",
             value: 0.0,
         },
+        UnitError::AbsoluteForDifference { from: "", to: "" },
     ];
     assert_eq!(one_of_each.len(), UNIT_ERROR_CODES.len());
     let codes: Vec<&str> = one_of_each.iter().map(UnitError::code).collect();
@@ -354,12 +375,144 @@ fn an_excerpt_is_whole_when_it_fits_and_cut_with_a_mark_when_it_does_not() {
 }
 
 #[test]
-fn an_excerpt_escapes_everything_but_printable_ascii_and_the_quoting_characters() {
+fn an_excerpt_quotes_a_spelling_as_the_spec_reader_does() {
+    // One quoting rule for the crate: printable ASCII as itself, the space included, a line
+    // feed as `\n` and everything else as an escape.
     assert_eq!(excerpt("m3/s"), "m3/s");
-    assert_eq!(excerpt("deg F"), "deg\\u{20}F");
+    assert_eq!(excerpt("deg F"), "deg F");
     assert_eq!(excerpt("K\u{200b}"), "K\\u{200b}");
     assert_eq!(excerpt("\u{feff}K"), "\\u{feff}K");
-    assert_eq!(excerpt("a`b\\c"), "a\\u{60}b\\u{5c}c");
-    assert_eq!(excerpt("\n\t\u{7f}"), "\\u{a}\\u{9}\\u{7f}");
+    assert_eq!(excerpt("Pa\u{a0}"), "Pa\\u{a0}");
+    assert_eq!(excerpt("\n\t\u{7f}"), "\\n\\u{9}\\u{7f}");
     assert_eq!(excerpt("m³/s"), "m\\u{b3}/s");
+    assert_eq!(
+        excerpt("a".repeat(1 << 20).as_str()).len(),
+        MAX_UNIT_EXCERPT_BYTES
+    );
+}
+
+#[test]
+fn a_difference_unit_converts_without_the_offset() {
+    // 2 degF_delta is 2/1.8 K, never 256.48 K; a degC_delta is a kelvin, bit for bit.
+    assert_eq!(
+        convert_unit("degF_delta", "K", 2.0).map(f64::to_bits),
+        Ok((2.0 * (5.0_f64 / 9.0)).to_bits())
+    );
+    assert_eq!(convert_unit("degF_delta", "K", 9.0), Ok(5.0));
+    assert_eq!(
+        convert_unit("degF_delta", "K", -0.0).map(f64::to_bits),
+        Ok((-0.0_f64).to_bits())
+    );
+    for x in [2.0, -0.0, 0.1, f64::MAX, f64::MIN, f64::from_bits(1)] {
+        assert_eq!(
+            convert_unit("degC_delta", "K", x).map(f64::to_bits),
+            Ok(x.to_bits()),
+            "{x:?}"
+        );
+    }
+    // The absolute pair on the same reading adds the offset: the two are not interchangeable.
+    let absolute = convert_unit("degF", "K", 2.0).expect("listed");
+    let difference = convert_unit("degF_delta", "K", 2.0).expect("listed");
+    assert!(absolute - difference > 250.0);
+    // Neither difference unit converts to degC, and neither reverses.
+    for (from, to) in [
+        ("degF_delta", "degC"),
+        ("degC_delta", "degC"),
+        ("K", "degF_delta"),
+        ("K", "degC_delta"),
+        ("degF_delta", "degC_delta"),
+        ("degF", "degF_delta"),
+    ] {
+        assert_eq!(
+            convert_unit(from, to, 1.0).unwrap_err().code(),
+            "unknown-pair"
+        );
+    }
+}
+
+#[test]
+fn a_temperature_difference_port_refuses_every_absolute_pair_and_takes_the_rest() {
+    let absolute = [
+        ("degF", "K"),
+        ("degC", "K"),
+        ("degF", "degC"),
+        ("K", "degC"),
+    ];
+    for listed in &UNITS_V1 {
+        let conversion = UnitConversion::Listed(listed);
+        let checked = conversion.for_port_quantity(Some("TemperatureDifference"));
+        if absolute.contains(&(listed.from, listed.to)) {
+            let refused = checked.unwrap_err();
+            assert_eq!(
+                refused,
+                UnitError::AbsoluteForDifference {
+                    from: listed.from,
+                    to: listed.to,
+                }
+            );
+            assert_eq!(refused.code(), "absolute-for-difference");
+        } else {
+            assert_eq!(checked, Ok(conversion), "{} -> {}", listed.from, listed.to);
+        }
+        // Any other quantity, a near miss of it, or none, takes every row.
+        for quantity in [
+            None,
+            Some("ThermodynamicTemperature"),
+            Some("Pressure"),
+            Some("temperatureDifference"),
+            Some("TemperatureDifference "),
+            Some(""),
+        ] {
+            assert_eq!(conversion.for_port_quantity(quantity), Ok(conversion));
+        }
+    }
+    for conversion in [UnitConversion::Unitless, UnitConversion::Identity] {
+        assert_eq!(
+            conversion.for_port_quantity(Some("TemperatureDifference")),
+            Ok(conversion)
+        );
+    }
+    assert_eq!(
+        UnitConversion::resolve(Some("degF"), Some("K"))
+            .and_then(|c| c.for_port_quantity(Some("TemperatureDifference")))
+            .unwrap_err()
+            .to_string(),
+        "`degF` to `K` converts a temperature reading, but the port is a temperature difference: \
+         write the device unit as `degF_delta` or `degC_delta`"
+    );
+}
+
+#[test]
+fn listing_12_2_maps_its_setpoint_adjustments_as_readings_and_a_difference_port_refuses_them() {
+    // OBC §12.7 Listing 12.2, verbatim: `setAdj` and `heaSetAdj` are written `degF` -> `K`. Both
+    // are setpoint adjustments, so on a `TemperatureDifference` port that mapping is refused, and
+    // the device side needs `degF_delta`.
+    let listing = include_str!("../../tests/fixtures/commissioning/listing_12_2.json");
+    let mapping = crate::PointMapping::from_json_str(listing, &crate::SpecLimits::default())
+        .expect("Listing 12.2 loads");
+    let mut adjustments = 0;
+    for pair in mapping.points() {
+        if !matches!(pair.cdl().name(), "setAdj" | "heaSetAdj") {
+            continue;
+        }
+        adjustments += 1;
+        let (device, cdl) = (pair.device().unit(), pair.cdl().unit());
+        assert_eq!((device, cdl), (Some("degF"), Some("K")));
+        let as_written = UnitConversion::resolve(device, cdl).expect("degF -> K is listed");
+        assert_eq!(
+            as_written.for_port_quantity(Some(TEMPERATURE_DIFFERENCE)),
+            Err(UnitError::AbsoluteForDifference {
+                from: "degF",
+                to: "K",
+            })
+        );
+        let respelled = UnitConversion::resolve(Some("degF_delta"), cdl)
+            .and_then(|c| c.for_port_quantity(Some(TEMPERATURE_DIFFERENCE)))
+            .expect("a difference on a difference port");
+        // A 2 degF adjustment is 1.11 K, where the listing's spelling would make it 256.48 K.
+        let two = respelled.apply(2.0).expect("finite");
+        assert_eq!(two.to_bits(), (2.0 * (5.0_f64 / 9.0)).to_bits());
+        assert!(as_written.apply(2.0).expect("finite") > 256.0);
+    }
+    assert_eq!(adjustments, 2);
 }

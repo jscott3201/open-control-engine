@@ -282,7 +282,7 @@ fn push_printable(out: &mut String, character: char) {
 /// `text` as printable ASCII, at most `limit` bytes: a text that fits is written whole, and a
 /// longer one is cut between two characters and ends in `...`. Never holds more than `limit`
 /// bytes and one character's spelling while it is built.
-fn printable(text: &str, limit: usize) -> String {
+pub(crate) fn printable(text: &str, limit: usize) -> String {
     let mut out = String::new();
     // The longest prefix written so far that leaves room for the three bytes of the mark.
     let mut room_for_mark = 0;

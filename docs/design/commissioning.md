@@ -297,13 +297,30 @@ no unit on both sides means no conversion. Its first content, version `units/v1`
 | `degF` → `K` | `(x - 32.0) * (5.0 / 9.0) + 273.15` |
 | `degC` → `K` | `x + 273.15` |
 | `degF` → `degC`, `K` → `degC` | `(x - 32.0) * (5.0 / 9.0)`, `x - 273.15` |
+| `degF_delta` → `K` | `x * (5.0 / 9.0)` (a temperature difference) |
+| `degC_delta` → `K` | identity (a temperature difference) |
 | `kPa` → `Pa` | `x * 1000.0` |
-| `inH2O` → `Pa` | `x * 249.08891` (conventional inch of water, NIST SP 811) |
+| `inH2O` → `Pa` | `x * 249.08891` (conventional inch of water: ISO 80000-3's conventional value, through NIST SP 811 footnote 12) |
 | `inH2O_60F` → `Pa` | `x * 248.84` (inch of water at 60 °F) |
-| `cfm` → `m3/s` | `x * 0.00047194744832` (exact: 0.3048³ / 60) |
-| `L/s` → `m3/s` | `x * 0.001` |
+| `cfm` → `m3/s` | `x * 0.0004719474432` (exact: 0.3048³ / 60) |
+| `L/s` → `m3/s` | `x / 1000.0` |
 | `percent` or `%` → `1` | `x / 100.0` |
 | identical spellings | identity, bits unchanged |
+
+*(Amended 2026-11-21, owner rulings during GitHub #716's review, and #714:)* the two difference
+rows are added; the cfm digits are the exact quotient (the table had written `0.00047194744832`,
+1.08e-8 relative too large, #714); `L/s` divides by an exact `1000.0` rather than multiplying by
+`0.001`, which is not exact in binary and rounded twice; and the inch of water cites the source
+of its 1000 kg/m³ basis. **A temperature difference is its own unit.** A setpoint adjustment, a
+deadband or an approach is a difference between two readings, and it converts without the
+offset: 2 `degF` is 256.48 K, 2 `degF_delta` is 1.11 K. Listing 12.2's `setAdj` and `heaSetAdj`
+are setpoint adjustments, so their device side needs `degF_delta`, not the `degF` the listing
+writes. Where the sequence port's declared quantity is `TemperatureDifference`, an absolute pair
+(`degF` → `K`, `degC` → `K`, `degF` → `degC`, `K` → `degC`) is refused at bind (#662) as
+`UnitError::AbsoluteForDifference`. **`cdl.unit` must be the port's unit.** A mapping's
+`cdl.unit` that disagrees with the unit the sequence port declares is refused at bind as
+`unit-refused` (#662). The identity rule and every row trust `cdl.unit` to be the engine's unit,
+so they are only safe together with that check.
 
 | Device type → CDL type | Rule |
 | --- | --- |
@@ -311,6 +328,7 @@ no unit on both sides means no conversion. Its first content, version `units/v1`
 | `float` or `int` → `bool` | exactly `0` is false, exactly `1` true; anything else refused |
 | CSV text → `bool` | `true`/`false`, `active`/`inactive` (BACnet binary present value), `0`/`1` |
 | `float` → `int` | integral and within `i32` only, else refused |
+| `int` → `float` | a whole number within `i32`, widened exactly, else refused *(amended 2026-11-21, owner ruling)* |
 
 A refused cell is a typed `SourceError` naming file, row and column, never a silent threshold: the
 upstream Modelica model turns fan enable into a Boolean with `GreaterThreshold(t = 0.5)`; the
@@ -322,26 +340,29 @@ verifier refuses a `0.5` instead (decision 19).
 (`src/commissioning/units.rs`, with `UnitError`, `UnitSide`, `UNITS_TABLE` and
 `UNIT_ERROR_CODES`), and the type rules are `src/commissioning/type_rules.rs`, crate-internal
 until the trend sources (#660) call them. Its bit goldens come from a script that shares no code
-with the crate (`tests/fixtures/units/`). These are consequences of building it; no ruled text
-above changed:
+with the crate (`tests/fixtures/units/`). These are consequences of building it:
 
-- **The cfm row's digits.** The table writes `0.00047194744832` beside "exact: 0.3048³ / 60", and
-  the exact quotient is `0.0004719474432`: the written digits are 1.08e-8 relative too large and
-  a different `f64`. The code follows the stated derivation; #714 asks the owner to confirm and
-  correct the digits.
 - **One pair is listed both ways.** `degC` → `K` and `K` → `degC` are both rows, so the reverse
   of a row is refused for every row but those two.
+- **What bind is handed.** The port-quantity rule above is
+  `UnitConversion::for_port_quantity(quantity)`, crate-internal, which #662 calls with the
+  facade's `PointInfo::quantity` for each mapped point; it refuses only on the exact quantity
+  `TemperatureDifference`. Nothing here sees a port, so the `cdl.unit` check is #662's alone.
+  A difference unit mapped onto a port whose quantity is `ThermodynamicTemperature` is not
+  refused by any rule yet.
 - **Choices the note left open.** An empty unit spelling is refused as `empty-unit`, the device
   side's first, before the one-sided rule. A finite reading whose conversion overflows `f64` is
-  refused as `overflow` (a factor above one, beyond about 1e305). A NaN, replay's missing Real
+  refused as `overflow` (a factor above one, beyond about ±1e305). A NaN, replay's missing Real
   cell, and an infinity pass through every pair with their bits unchanged, so no platform's NaN
   propagation reaches a result. Identical spellings are the identity whatever they spell (`psi`
   to `psi`). `-0.0` is zero for the Boolean and the Integer rules. A text cell is read by the
-  Boolean text rule only in a device `bool` column. `int` → `float` and `bool` → `float` are
-  not in the type table and are refused as `type-pair-refused`.
-- **No temperature difference form.** Tolerances are CDL-unit quantities, so nothing converts a
-  difference; every pair converts a reading. `-459.67 degF` converts to -2⁻⁴⁴ K, not zero, in
-  the table's operation order.
+  Boolean text rule only in a device `bool` column. `bool` → `float` is not in the type table and
+  is refused as `type-pair-refused`.
+- **The bound on the temperature rows.** In the table's operation order an absolute temperature
+  pair is within 2 ulps (1 for the two Celsius–kelvin rows) of the exact conversion, measured in
+  ulps of the largest magnitude in the sum, which the script checks against the exact rational
+  and the test at every golden row. Near the offset the result cancels: `-459.67 degF` converts
+  to -2⁻⁴⁴ K, not zero.
 
 ## Sources, sampling and time
 
