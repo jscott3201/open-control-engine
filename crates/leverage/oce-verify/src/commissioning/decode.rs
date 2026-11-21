@@ -37,11 +37,24 @@ use crate::model::Parameter;
 use crate::number::Number;
 use crate::strict::{Kind, Refusal};
 
+/// Read `text`, comments already removed, as one spec and nothing after it, under `limits`
+/// (already [`SpecLimits::effective`]). The strict pass refuses trailing text before this runs;
+/// it is refused here too, so the typed reader is strict standing alone.
+///
+/// # Errors
+/// As [`spec`], and `json-syntax` for anything after the object.
+pub(crate) fn document(text: &str, limits: &SpecLimits) -> Read<CommissioningSpec> {
+    let mut cursor = Reader::reporting(text);
+    let read = spec(&mut cursor, limits)?;
+    cursor.finish()?;
+    Ok(read)
+}
+
 /// Read the spec the cursor stands before under `limits` (already [`SpecLimits::effective`]).
 ///
 /// # Errors
 /// The first shape or rule refusal in document order; any strict-JSON refusal the cursor meets.
-pub(crate) fn spec(cursor: &mut Reader<'_>, limits: &SpecLimits) -> Read<CommissioningSpec> {
+fn spec(cursor: &mut Reader<'_>, limits: &SpecLimits) -> Read<CommissioningSpec> {
     expect(cursor, Kind::Object, "a commissioning spec", "an object")?;
     let mut object = cursor.open_object()?;
     let (mut tag, mut origin, mut global, mut sampled, mut listed) = (None, None, None, None, None);

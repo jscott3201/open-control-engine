@@ -120,6 +120,17 @@ fn the_canonical_value_writes_a_unit_only_where_one_was_written() {
 }
 
 #[test]
+fn the_typed_pass_refuses_text_after_the_mapping_standing_alone() {
+    assert!(PointMapping::document(" [] \n").is_ok());
+    for (text, column) in [("[] 1", 4), ("[][]", 3), ("[],", 3)] {
+        let refusal = PointMapping::document(text).expect_err("text after the mapping");
+        assert_eq!(refusal.kind, SpecErrorKind::JsonSyntax, "{text}");
+        assert_eq!((refusal.at.line, refusal.at.column), (1, column), "{text}");
+        assert_eq!(refusal.detail, "text after the end of the document");
+    }
+}
+
+#[test]
 fn the_file_reader_requires_the_whole_text_to_be_the_mapping() {
     let limits = SpecLimits::default();
     assert!(PointMapping::from_json_str(" [] ", &limits).is_ok());

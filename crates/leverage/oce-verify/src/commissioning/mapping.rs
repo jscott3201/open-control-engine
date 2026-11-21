@@ -110,7 +110,17 @@ impl PointMapping {
 
     fn from_text(text: &str, limits: &SpecLimits) -> Result<Self, SpecError> {
         let (stripped, _) = fields::prepared(text, limits)?;
-        let mut cursor = Reader::reporting(&stripped);
+        Ok(Self::document(&stripped)?)
+    }
+
+    /// Read `text`, comments already removed, as one mapping and nothing after it. The strict
+    /// pass refuses trailing text before this runs; it is refused here too, so the typed reader
+    /// is strict standing alone.
+    ///
+    /// # Errors
+    /// As [`Self::read`], and `json-syntax` for anything after the list.
+    fn document(text: &str) -> Read<Self> {
+        let mut cursor = Reader::reporting(text);
         let mapping = Self::read(&mut cursor)?;
         cursor.finish()?;
         Ok(mapping)

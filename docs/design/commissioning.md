@@ -149,6 +149,10 @@ left a few shapes unsaid; this is what was built.
 - **Paths.** `cxf`, `controllerOutput`, a `pointNameMapping` written as a string, and a
   source's `path` are held to the rule a vector set's mutant paths are held to
   (`path-invalid`).
+- **The envelope** a reference names is read as `oce_verify::Envelope`, the type the comparison
+  takes (GitHub #687), by its own spelling; `funnelReference` is `FunnelReference`, whose
+  default is the engine series (decision 11). `PartialTolerances::resolved` gives the
+  comparison's `Tolerances`, a name nothing gave read as zero.
 - **The Scenario 1 fields.** `generateJson`, `modelJsonDirectory`, `runController` and
   `controller` each take any one strict JSON value. The value is never interpreted and is kept:
   the canonical form writes it and `spec_id` covers it, so a spec and its stored form have the

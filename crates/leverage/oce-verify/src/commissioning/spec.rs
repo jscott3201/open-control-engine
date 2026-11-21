@@ -117,10 +117,7 @@ impl CommissioningSpec {
             let refusal = decode::unknown_schema(&tag, schema_location(&stripped));
             return Err(refusal.into());
         }
-        let mut cursor = Reader::reporting(&stripped);
-        let spec = decode::spec(&mut cursor, limits)?;
-        cursor.finish()?;
-        Ok(spec)
+        Ok(decode::document(&stripped, limits)?)
     }
 
     /// `time.origin`: the wall-clock instant the spec's model seconds count from, when it gives

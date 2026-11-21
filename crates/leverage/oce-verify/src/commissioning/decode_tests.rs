@@ -87,6 +87,23 @@ fn each_reference_key_lands_in_its_own_field() {
 }
 
 #[test]
+fn the_typed_pass_refuses_text_after_the_spec_standing_alone() {
+    let limits = SpecLimits::MAX;
+    assert!(document(" {\"references\": []} \n", &limits).is_ok());
+    for (text, column) in [
+        ("{\"references\": []} 1", 20),
+        ("{\"references\": []}{}", 19),
+        ("{\"references\": []},", 19),
+        ("{\"references\": []} x", 20),
+    ] {
+        let refusal = document(text, &limits).expect_err("text after the spec");
+        assert_eq!(refusal.kind, SpecErrorKind::JsonSyntax, "{text}");
+        assert_eq!((refusal.at.line, refusal.at.column), (1, column), "{text}");
+        assert_eq!(refusal.detail, "text after the end of the document");
+    }
+}
+
+#[test]
 fn each_top_level_key_lands_in_its_own_field() {
     let limits = SpecLimits::MAX;
     let read = spec(

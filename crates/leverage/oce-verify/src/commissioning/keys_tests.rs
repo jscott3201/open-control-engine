@@ -129,6 +129,11 @@ fn the_hostile_shapes_stay_within_the_step_bound_at_full_length() {
         // And far below it for these shapes: the last `*` alone gives way, once per character.
         assert!(steps <= 16 * 4_096 + 8_192, "{}...: {steps}", &pattern[..8]);
     }
+    // A `*` gives way one character at a time, never one byte: over two characters of four
+    // bytes each it restarts twice, so the work a selection counts is in characters.
+    assert_eq!(match_steps("*b", "\u{1f321}\u{1f321}"), 4);
+    assert_eq!(match_steps("*b", "aa"), 4);
+    assert_eq!(match_steps("*\u{e9}", "\u{20ac}\u{20ac}\u{20ac}"), 6);
     // The steps of a match are a function of the two strings, pinned here for small ones.
     assert_eq!(match_steps("T*p", "yFan"), 1);
     assert_eq!(match_steps("T*p", "TSup"), 5);
