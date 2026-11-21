@@ -1,11 +1,13 @@
 //! Hostile bytes in every file a trend read takes: never a panic, always a listed code with a
 //! bounded sentence, and memory within a stated bound of the bytes handed in.
 //!
-//! The bound: at most 48 bytes held per byte of the file, plus 64 KiB of fixed overhead (replay's
-//! 8 KiB read chunk, a matrix's slot table of two bytes per declared column, the mapping read).
-//! By construction a cell takes at least one byte of the file (its separator) and is held as at
-//! most 16 bytes while its file is read (8, in a list whose capacity at most doubles) and 9 once
-//! merged, so 25 bytes; the densest cases here hold 14.4 a byte past the overhead.
+//! The bound, for one source: at most 48 bytes held per byte of the file, plus 64 KiB of fixed
+//! overhead (replay's 8 KiB read chunk, a matrix's slot table of two bytes per declared column,
+//! the mapping read). By construction a cell takes at least one byte of the file (its separator)
+//! and is held as at most 16 bytes while its file is read (8, in a list whose capacity at most
+//! doubles) and 9 once merged, so 25 bytes; the densest cases here hold 14.4 a byte past the
+//! overhead. This is a bound per source: with many input sources the merged columns grow as
+//! frames times columns, which `trend_cost.rs` pins against `max_source_bytes`.
 
 use oce_verify::{
     MAX_SPEC_DETAIL_BYTES, SOURCE_ERROR_CODES, SpecInputs, TrendLimits, TrendSources,

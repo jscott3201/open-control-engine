@@ -56,6 +56,14 @@ impl Values {
         }
     }
 
+    fn shrink_to_fit(&mut self) {
+        match self {
+            Self::Real(values) => values.shrink_to_fit(),
+            Self::Integer(values) => values.shrink_to_fit(),
+            Self::Boolean(values) => values.shrink_to_fit(),
+        }
+    }
+
     /// The bytes a merged column of this type holds per frame, as a [`oce_replay::Column`]
     /// counts them: 8 per Real or Integer value, 1 per Boolean, 1 per validity flag.
     pub(crate) fn frame_bytes(cdl: PointType) -> u64 {
@@ -379,7 +387,14 @@ fn time_kind(
     let probe = TimeOrigin::parse(PROBE_ORIGIN)
         .map_err(|error| SourceError::new(Kind::Unreadable, error.to_string()))?;
     let mut instants = csv_source(map, bytes, time, CsvTime::Instant { origin: probe }, limits)?;
-    if matches!(instants.next_row(), Ok(Some(_))) {
+    // Replay reads a row's time before its cells, so a cell it refuses after the time means
+    // the time was read as an instant.
+    let instant = match instants.next_row() {
+        Ok(Some(_)) => true,
+        Err(ReplaySourceError::BadCell { row: 1, column }) => column != time,
+        _ => false,
+    };
+    if instant {
         return Err(SourceError::new(
             Kind::TimeOriginRequired,
             "the time column holds instants and the spec gives no `time.origin`",
@@ -436,6 +451,10 @@ fn read_csv(
                 .map_err(|error| error.at_row(rows).at_column(&column.address.label()))?;
         }
     }
+    // The lists grew by doubling, as rows arrived; give back what no row uses, so a source
+    // holds its rows and no more until the merge.
+    times.shrink_to_fit();
+    columns.iter_mut().for_each(Values::shrink_to_fit);
     Ok(ReadSource {
         times,
         columns,

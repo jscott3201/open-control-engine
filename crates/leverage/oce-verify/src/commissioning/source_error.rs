@@ -149,7 +149,11 @@ pub enum SourceErrorKind {
     TimeOriginRequired,
     /// A time earlier than the row before it, in one file.
     TimeRegression,
-    /// A refusal of the replay reader this crate has no word of its own for.
+    /// A refusal of the replay reader this crate has no word of its own for. No input reaches
+    /// it: every replay refusal a trend file can cause has a code above, and the rest (a reader
+    /// that fails, a delimiter, limits above their maxima, a map the reader builds itself) cannot
+    /// arise from bytes in memory under the limits [`crate::TrendLimits::effective`] gives. It is
+    /// kept so that a replay refusal added later is still a typed error, never a panic.
     Unreadable,
 }
 

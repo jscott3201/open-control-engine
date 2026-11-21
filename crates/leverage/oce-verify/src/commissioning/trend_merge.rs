@@ -15,12 +15,16 @@
 //! not depend on the order sources are declared or files handed in, and the columns are sorted
 //! by name afterwards.
 //!
-//! **Bounds and cost.** A first pass counts the frames, refusing past `max_rows` as soon as the
-//! count passes it, and the bytes the merged columns would hold are checked against
-//! `max_source_bytes` before anything is allocated. Both passes visit each row of each source
-//! once through a heap of one cursor per source: `O(R log S)` for `R` rows over `S` sources,
-//! and no memory beyond the heap and the result. The frames are at most the rows of all
-//! sources together, never a product of sources.
+//! **Bounds and cost.** The frames are at most the rows of all input sources together, never a
+//! product of rows; but every merged column is as long as the whole timeline, so the merged
+//! inputs hold `frames × (8 + Σ widths)` bytes (8 per Real, 9 per Integer, 2 per Boolean): one
+//! column per mapped input point and one frame per distinct instant, which for `S` sources with
+//! times of their own is quadratic in `S` (at 256 sources, about 4 MB of files fill 1 GiB). A
+//! first pass counts the frames, refusing past `max_rows` as soon as the count passes it, and
+//! that product is checked against `max_source_bytes` before anything is allocated. The walk
+//! visits each row of each source once through a heap of one cursor per source, `O(R log S)`
+//! for `R` rows; filling the merged columns is `O(frames × columns)` more, the same product the
+//! byte cap bounds (at most `max_source_bytes / 2` cells).
 
 use std::cmp::{Ordering, Reverse};
 use std::collections::BinaryHeap;

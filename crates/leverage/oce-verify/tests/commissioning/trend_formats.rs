@@ -312,6 +312,12 @@ fn the_first_row_fixes_the_time_kind_and_instants_need_an_origin() {
         place(read("time,T\n2018-06-07T00:00:01Z,1\n", None)),
         refusal("time-origin-required", 1, "time")
     );
+    // The time is read before the cells, so a bad cell beside an instant still asks for the
+    // origin first.
+    assert_eq!(
+        place(read("time,T\n2018-06-07T00:00:01Z,x\n", None)),
+        refusal("time-origin-required", 1, "time")
+    );
     // Neither kind: refused as a bad time whether or not the spec has an origin.
     for origin in [None, origin] {
         assert_eq!(

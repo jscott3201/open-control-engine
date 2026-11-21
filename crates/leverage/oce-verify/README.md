@@ -818,6 +818,12 @@ let source = read.inputs.into_source(&map, &oce_replay::ReplayLimits::default())
 - **Bounds** (`TrendLimits`): 256 sources (decision 42), and replay's caps on each file and on
   the merge: 1 GiB of bytes read and of values held, 16,777,216 rows and frames, 4,096 columns,
   256 bytes a cell, a number or a matrix name.
+- **Cost.** Reading a file holds at most about 25 bytes per byte of it. The merged inputs hold
+  `frames × (8 + Σ column widths)` bytes, which is quadratic in the number of input sources whose
+  times differ (64 sources of 100 rows, 44 KB of files, merge into 3.3 MB); that product is
+  checked against the 1 GiB cap before anything is allocated. A source that writes a switch as
+  two rows at one instant needs a `hold` (at least `maxAge: 0`) on the other input sources, or
+  the second frame there is refused for a missing sample.
 
 **Evidence.** `tests/commissioning/trend_*.rs` and the unit tests beside each module: the
 three-file fixture `tests/fixtures/commissioning/trends/` (a `combiTimeTable` with a decoy

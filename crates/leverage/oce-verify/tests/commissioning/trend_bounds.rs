@@ -289,3 +289,52 @@ fn the_sources_of_a_reference_are_held_to_their_bound() {
     let error = TrendSources::read(&sources(257), 0, &inputs, &raised).expect_err("refused");
     assert_eq!(error.code(), "too-many-sources");
 }
+
+#[test]
+fn the_values_one_source_keeps_are_held_to_the_byte_cap_in_every_role() {
+    // An `expected` source is never merged, so its own check is the one that refuses.
+    let spec = trend_spec_with(
+        None,
+        &mapping(2),
+        r#""expected": [{"path": "a.csv", "format": "csv", "timeColumn": "time",
+            "columns": {"d0": "d0", "d1": "d1"}}]"#,
+    );
+    let file = csv_file(2, 3, "1", 0);
+    // Three rows of a time and two Reals keep 72 bytes, more than the file's.
+    assert!((file.len() as u64) < 71);
+    let max = ReplayLimits::default();
+    let read = |bytes| {
+        code(read_under(
+            &spec,
+            &[("a.csv", file.clone())],
+            ReplayLimits {
+                max_source_bytes: bytes,
+                ..max
+            },
+        ))
+    };
+    assert_eq!(read(72), "read");
+    assert_eq!(read(71), "too-many-bytes");
+    // A combiTimeTable keeps 8 bytes a value of the matrix, and 9 for an Integer once read.
+    let ints = format!("[{}]", point(("n", None, "int"), ("N", None, "int")));
+    let spec = trend_spec_with(
+        None,
+        &ints,
+        r#""expected": [{"path": "a.mos", "format": "combiTimeTable", "timeColumn": 1,
+            "columns": {"2": "N"}}]"#,
+    );
+    let file = b"#1\ndouble t(2,2)\n0 1\n1 2\n".to_vec();
+    let read = |bytes| {
+        code(read_under(
+            &spec,
+            &[("a.mos", file.clone())],
+            ReplayLimits {
+                max_source_bytes: bytes,
+                ..max
+            },
+        ))
+    };
+    // The matrix's two kept columns hold 32 bytes; the converted rows 2 × (8 + 9) = 34.
+    assert_eq!(read(34), "read");
+    assert_eq!(read(33), "too-many-bytes");
+}

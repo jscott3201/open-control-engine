@@ -54,7 +54,8 @@ fn spaces_tabs_commas_semicolons_line_ends_and_comments_all_separate_numbers() {
         "#1\ndouble t(2,2)\n1\n2\n3\n4\n",
         "#1\ndouble t(2,2)\n1 ,2,\n 3 ; 4 # trailing comment\n",
         "#1 the tag line's comment\n# a\ndouble t(2,2) # after\n1#c\n2 # c\n# a line\n3,#c\n4\n# end",
-        "#1\n\n\n   double t( 2 , 2 )\n1 2 3 4\n\n",
+        "#1\n\n\ndouble t( 2 , 2 )\n1 2 3 4\n\n",
+        "\u{feff}#1\ndouble t(2,2)\n1 2 3 4\n",
     ];
     for text in texts {
         let matrix = read(text, &[1, 2]).unwrap_or_else(|e| panic!("{text:?}: {e}"));
@@ -157,7 +158,8 @@ fn the_tag_must_be_the_first_two_bytes() {
         "#",
         "#2\ndouble t(1,1)\n0\n",
         " #1\ndouble t(1,1)\n0\n",
-        "\u{feff}#1\ndouble t(1,1)\n0\n",
+        "\u{feff}\u{feff}#1\ndouble t(1,1)\n0\n",
+        "\u{feff} #1\ndouble t(1,1)\n0\n",
         "double t(1,1)\n0\n",
         "# 1\ndouble t(1,1)\n0\n",
     ] {
@@ -194,6 +196,14 @@ fn a_header_other_than_double_name_rows_cols_is_refused() {
         "#1\ndouble t(2,1)\n0;,1\n",
         "#1\ndouble t(2,1)\n0 1,\n",
         "#1\ndouble t(2,1)\n0 1;\ndouble u(1,1)\n2\n",
+        // A header starts its line: not indented, not after the last value on its line.
+        "#1\n   double t(1,1)\n0\n",
+        "#1\n\tdouble t(1,1)\n0\n",
+        "#1\ndouble t(1,1)\n0 double u(1,1)\n1\n",
+        // Text after the last value that is no number.
+        "#1\ndouble t(1,1)\n0 x\n",
+        "#1\ndouble t(1,1)\n0\nend\n",
+        "#1\ndouble t(1,1)\n0\n1D3\n",
     ] {
         assert_eq!(refused(text, &[1]).0, "table-syntax", "{text:?}");
     }
@@ -322,4 +332,45 @@ fn a_comment_may_hold_any_bytes_and_a_value_may_not() {
         read_matrix(file, None, &[1], &limits()).unwrap_err().code(),
         "bad-number"
     );
+}
+
+#[test]
+fn the_words_c_reads_as_numbers_and_fortran_exponents_are_bad_numbers_in_a_cell() {
+    for word in [
+        "inf", "-inf", "+inf", "infinity", "INF", "nan", "NaN", "-nan", "1D3", "1d-3",
+    ] {
+        let text = format!("#1\ndouble t(2,1)\n0\n{word}\n");
+        assert_eq!(
+            refused(&text, &[1]),
+            ("bad-number", Some(4), Some(2), Some("1".to_owned())),
+            "{word}"
+        );
+    }
+}
+
+#[test]
+fn a_bare_carriage_return_ends_a_line_for_the_line_numbers() {
+    // Old Mac line ends: each `\r` alone is a line end; `\r\n` is one line end.
+    assert_eq!(
+        refused("#1\rdouble t(3,1)\r0\r1\rx\r", &[1]),
+        ("bad-number", Some(5), Some(3), Some("1".to_owned()))
+    );
+    assert_eq!(
+        refused("#1\r\ndouble t(3,1)\r\n0\r\n1\r\nx\r\n", &[1]),
+        ("bad-number", Some(5), Some(3), Some("1".to_owned()))
+    );
+    assert_eq!(refused("#1\r# c\r\rdouble t(1,1)\r\rx", &[1]).1, Some(6));
+}
+
+#[test]
+fn a_number_after_the_last_value_is_a_size_mismatch_and_other_text_is_syntax() {
+    assert_eq!(
+        refused("#1\ndouble t(1,1)\n0 1e999\n", &[1]).0,
+        "size-mismatch"
+    );
+    assert_eq!(
+        refused("#1\ndouble t(1,1)\n0 +.5\n", &[1]).0,
+        "size-mismatch"
+    );
+    assert_eq!(refused("#1\ndouble t(1,1)\n0 .\n", &[1]).0, "table-syntax");
 }

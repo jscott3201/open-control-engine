@@ -523,12 +523,28 @@ says.
 | one csv cell, one number, one matrix name | 256 bytes | `cell-too-long` | replay's `max_cell_bytes` |
 
 A line has no bound of its own: the `combiTimeTable` reader holds no line, only the number
-being converted, and replay's reader holds one record of capped cells. The merge visits each
-row once through a heap of one cursor per source, `O(R log S)`, and its frames are at most the
-rows of all sources together, never a product of sources. Memory is at most about 25 bytes per
-byte of a file by construction, pinned at 48 with 64 KiB of fixed overhead on hostile bytes, and
-a Building 33-shaped source of 75,578 rows peaks at 32 bytes a row (`combiTimeTable`) and 44
-(`csv`).
+being converted, and replay's reader holds one record of capped cells. **What a read costs.**
+Reading one file holds at most about 25 bytes per byte of it by construction (a cell is at least
+its separator, one byte, and is held as at most 16 bytes while read and 9 once merged); the
+hostile-bytes test pins 48 per byte plus 64 KiB for one source, and a Building 33-shaped source
+of 75,578 rows peaks at 32 bytes a row as `combiTimeTable` and 36 as `csv`. Every source's
+values are held until the merge; a `csv` source's lists are shrunk to its rows once read, and an
+expected or indicator series holds its own times (8 bytes a sample) beside its values, its read
+consumed as it is built. **The merged inputs are not bounded per byte of input**: every merged
+column is as long as the whole timeline, so they hold `frames × (8 + Σ widths)` bytes (8 a Real,
+9 an Integer, 2 a Boolean), quadratic in the number of input sources whose times differ: 64
+sources of 100 rows each, 44 KB of files, merge into 3.3 MB, and at 256 sources about 4 MB of
+files reach the 1 GiB cap. That product is checked against `max_source_bytes` from the counts
+before anything is allocated, and the test that pins it shows a refused merge allocating no
+column. The walk over the sources is `O(R log S)` for `R` rows over `S` sources; filling the
+merged columns is `O(frames × columns)` more, bounded by the same cap.
+
+**A switch beside a source with no hold.** Under the equal-times rule, a source that writes a
+switch as two rows at `t` (§12.2) makes two frames at `t`, and every other input source with no
+row for the second is missing there: with no `hold`, that frame is refused for a missing sample
+(decision 28's uncovered stretch). A spec whose sources record switches should declare `hold`
+on every other input source, `{ "maxAge": 0 }` at least, which carries that source's own row at
+`t` into the second frame at `t` and holds nothing older.
 
 ## Envelope
 

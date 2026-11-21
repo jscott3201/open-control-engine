@@ -189,45 +189,52 @@ fn plan_sources(
     Ok(planned)
 }
 
-/// The series of one read source, one per column, with the missing cells left out.
-fn series_of(source: &PlannedSource, read: &ReadSource) -> Vec<TrendSeries> {
+/// The series of one read source, one per column, with the missing cells left out. The read is
+/// consumed column by column, and each series is allocated at its exact length: a series holds
+/// its own times (8 bytes a sample) beside its values, since a column's missing cells give it
+/// times of its own.
+fn series_of(source: &PlannedSource, read: ReadSource) -> Vec<TrendSeries> {
+    let times = read.times;
     source
         .columns
         .iter()
-        .zip(&read.columns)
+        .zip(read.columns)
         .map(|(column, values)| {
-            let mut times = Vec::new();
+            let present: Vec<bool> = match &values {
+                Values::Real(values) => values.iter().map(|value| !value.is_nan()).collect(),
+                Values::Integer(values) => values.iter().map(Option::is_some).collect(),
+                Values::Boolean(values) => values.iter().map(Option::is_some).collect(),
+            };
+            let count = present.iter().filter(|&&p| p).count();
+            let mut kept_times = Vec::with_capacity(count);
+            kept_times.extend(
+                times
+                    .iter()
+                    .zip(&present)
+                    .filter(|(_, p)| **p)
+                    .map(|(t, _)| *t),
+            );
             let values = match values {
-                Values::Real(values) => SeriesValues::Real(
-                    values
-                        .iter()
-                        .zip(&read.times)
-                        .filter(|(value, _)| !value.is_nan())
-                        .map(|(value, t)| {
-                            times.push(*t);
-                            *value
-                        })
-                        .collect(),
-                ),
-                Values::Integer(values) => SeriesValues::Integer(
-                    values
-                        .iter()
-                        .zip(&read.times)
-                        .filter_map(|(value, t)| value.inspect(|_| times.push(*t)))
-                        .collect(),
-                ),
-                Values::Boolean(values) => SeriesValues::Boolean(
-                    values
-                        .iter()
-                        .zip(&read.times)
-                        .filter_map(|(value, t)| value.inspect(|_| times.push(*t)))
-                        .collect(),
-                ),
+                Values::Real(values) => {
+                    let mut kept = Vec::with_capacity(count);
+                    kept.extend(values.into_iter().filter(|value| !value.is_nan()));
+                    SeriesValues::Real(kept)
+                }
+                Values::Integer(values) => {
+                    let mut kept = Vec::with_capacity(count);
+                    kept.extend(values.into_iter().flatten());
+                    SeriesValues::Integer(kept)
+                }
+                Values::Boolean(values) => {
+                    let mut kept = Vec::with_capacity(count);
+                    kept.extend(values.into_iter().flatten());
+                    SeriesValues::Boolean(kept)
+                }
             };
             TrendSeries {
                 name: column.cdl.clone(),
                 device: column.device.clone(),
-                times,
+                times: kept_times,
                 values,
             }
         })
@@ -322,14 +329,15 @@ impl TrendSources {
                 &limits.replay,
             )?);
         }
-        assemble(&planned, &reads, inputs, record, origin, &limits)
+        assemble(&planned, reads, inputs, record, origin, &limits)
     }
 }
 
-/// The result, from the planned and read sources: the module's step 6 and the records.
+/// The result, from the planned and read sources: the module's step 6 and the records. The
+/// reads of the expected and indicator sources are consumed into their series as they go.
 fn assemble(
     planned: &[PlannedSource],
-    reads: &[ReadSource],
+    reads: Vec<ReadSource>,
     inputs: &SpecInputs,
     mapping: Option<MappingRecord>,
     origin: Option<&TimeOrigin>,
@@ -337,7 +345,7 @@ fn assemble(
 ) -> Result<TrendSources, SourceError> {
     let sources = planned
         .iter()
-        .zip(reads)
+        .zip(&reads)
         .map(|(source, read)| SourceRecord {
             role: source.role,
             path: source.path.clone(),
@@ -359,20 +367,25 @@ fn assemble(
             })
         })
         .collect();
-    let in_role = |role: SourceRole| {
-        planned
-            .iter()
-            .zip(reads)
-            .filter(move |(source, _)| source.role == role)
-    };
-    let merging: Vec<Merging<'_>> = in_role(SourceRole::Inputs)
+    let (mut input_reads, mut expected, mut indicators) = (Vec::new(), Vec::new(), Vec::new());
+    for (source, read) in planned.iter().zip(reads) {
+        match source.role {
+            SourceRole::Inputs => input_reads.push((source, read)),
+            SourceRole::Expected => expected.extend(series_of(source, read)),
+            SourceRole::Indicators => indicators.extend(series_of(source, read)),
+        }
+    }
+    let merging: Vec<Merging<'_>> = input_reads
+        .iter()
         .map(|(_, read)| Merging {
             times: &read.times,
             columns: &read.columns,
         })
         .collect();
     let (times, merged) = merge(&merging, &limits.replay)?;
-    let mut columns: Vec<InputColumn> = in_role(SourceRole::Inputs)
+    drop(merging);
+    let mut columns: Vec<InputColumn> = input_reads
+        .iter()
         .zip(merged)
         .flat_map(|((source, _), merged)| {
             source
@@ -387,22 +400,18 @@ fn assemble(
                 })
         })
         .collect();
+    drop(input_reads);
     columns.sort_by(|a, b| a.name.cmp(&b.name));
-    let series = |role| {
-        let mut all: Vec<TrendSeries> = in_role(role)
-            .flat_map(|(source, read)| series_of(source, read))
-            .collect();
-        all.sort_by(|a, b| a.name.cmp(&b.name));
-        all
-    };
+    expected.sort_by(|a: &TrendSeries, b: &TrendSeries| a.name.cmp(&b.name));
+    indicators.sort_by(|a: &TrendSeries, b: &TrendSeries| a.name.cmp(&b.name));
     Ok(TrendSources {
         inputs: TrendInputs {
             times,
             columns,
             origin: origin.cloned(),
         },
-        expected: series(SourceRole::Expected),
-        indicators: series(SourceRole::Indicators),
+        expected,
+        indicators,
         sources,
         mapping,
         unit_columns: unit_columns.into_iter().collect(),

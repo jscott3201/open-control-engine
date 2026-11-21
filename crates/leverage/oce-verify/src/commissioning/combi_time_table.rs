@@ -5,10 +5,12 @@
 //! parser, and nothing here reads one. The grammar, as §12.5.1 states it and no wider:
 //!
 //! - **The tag.** "The first two characters in the file need to be `#1`"; the rest of that line
-//!   is a comment. No byte-order mark, no leading space.
+//!   is a comment. A UTF-8 byte-order mark before it is skipped, as replay's csv reader skips
+//!   one and Modelica's table reader ignores one; no other byte may come first.
 //! - **Comments.** "Line comments start with the hash symbol (#) and can appear everywhere" a
 //!   separator can: from `#` to the end of the line. A comment may hold any bytes.
-//! - **A matrix** is "declared with type `double`, name and dimensions": `double`, one or more
+//! - **A matrix** is "declared with type `double`, name and dimensions": at the start of a line,
+//!   `double`, one or more
 //!   spaces or tabs, a name (`[A-Za-z_][A-Za-z0-9_]*`, at most `max_cell_bytes` bytes), then
 //!   `(rows, cols)` with optional spaces or tabs around each part, the two decimal integers at
 //!   least 1, then the end of the line or a comment. `float` and every other type are refused.
@@ -16,10 +18,12 @@
 //!   wherever the line breaks fall. Between two numbers stands a separator: any run of spaces,
 //!   tabs, line ends and comments, with at most one `,` or `;` in it ("number separators are
 //!   spaces, tab, comma, or semicolon"). Two commas with no number between them are an empty
-//!   cell and refused; so is a separator after a matrix's last value.
+//!   cell and refused; so is a separator after a matrix's last value. A number after the last
+//!   value is `size-mismatch`; any other text there is `table-syntax`.
 //! - **A number** "according to C syntax (such as 2.3, -2, +2.e4)": the decimal form
 //!   `[+-]? (D+ ('.' D*)? | '.' D+) ([eE] [+-]? D+)?`, at most `max_cell_bytes` bytes. No
-//!   hexadecimal, no `inf`, no `nan`: a value is a finite number. It is converted by Rust's
+//!   hexadecimal, no `inf`, no `nan`, no Fortran `D` exponent (`1D3`, which Modelica's reader
+//!   refuses too): a value is a finite number. It is converted by Rust's
 //!   `f64` parser, which rounds correctly (to nearest, ties to even), so the same text gives the
 //!   same bits on every target; a magnitude beyond `f64::MAX` is `non-finite-number`, and one
 //!   below the smallest subnormal reads as zero of its sign.
@@ -38,6 +42,9 @@
 use oce_replay::ReplayLimits;
 
 use super::source_error::{SourceError, SourceErrorKind as Kind};
+
+/// A UTF-8 byte-order mark, skipped before the tag.
+const BYTE_ORDER_MARK: &[u8] = b"\xef\xbb\xbf";
 
 /// The slot of a column that is not kept.
 const NOT_KEPT: u16 = u16::MAX;
@@ -76,7 +83,12 @@ pub(crate) fn read_matrix(
             ),
         ));
     }
-    if !bytes.starts_with(b"#1") {
+    let tag = if bytes.starts_with(BYTE_ORDER_MARK) {
+        BYTE_ORDER_MARK.len()
+    } else {
+        0
+    };
+    if !bytes[tag..].starts_with(b"#1") {
         return Err(SourceError::new(
             Kind::FormatTagMissing,
             "a combiTimeTable file starts with the two characters `#1`",
@@ -85,7 +97,7 @@ pub(crate) fn read_matrix(
     }
     let mut cursor = Cursor {
         bytes,
-        at: 2,
+        at: tag + 2,
         line: 1,
         max_token: limits.max_cell_bytes as usize,
     };
@@ -241,6 +253,9 @@ impl Cursor<'_> {
     /// `double <name>(<rows>,<cols>)` and the rest of its line.
     fn header(&mut self, limits: &ReplayLimits) -> Result<Header, SourceError> {
         let line = self.line;
+        if self.at > 0 && !matches!(self.bytes[self.at - 1], b'\n' | b'\r') {
+            return Err(self.syntax("a matrix header starts its line"));
+        }
         if !self.bytes[self.at..].starts_with(b"double")
             || !matches!(self.bytes.get(self.at + 6), Some(b' ' | b'\t'))
         {
@@ -446,6 +461,17 @@ impl Cursor<'_> {
             }
             Some(_) if self.bytes[self.at..].starts_with(b"double") => {}
             Some(_) => {
+                let rest = &self.bytes[self.at..];
+                let end = rest
+                    .iter()
+                    .position(|&b| ends_token(b))
+                    .unwrap_or(rest.len());
+                if number(&rest[..end]) == Err(Kind::BadNumber) {
+                    return Err(self.syntax(format!(
+                        "text that is no number follows the last value of matrix `{}`",
+                        header.name
+                    )));
+                }
                 return Err(SourceError::new(
                     Kind::SizeMismatch,
                     format!(
