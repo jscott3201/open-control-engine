@@ -12,7 +12,7 @@ reopened. Decisions 9 to 16 were made while drafting and accepted by the archite
 `crates/leverage/oce-diff` (issue #665, GitHub #692,
 [crate README](../../crates/leverage/oce-diff/README.md)), the CXF adapter as its
 `diff_topology` (issue #666, GitHub #715) and the blob comparison as its `compare_blobs` (issue
-#667, GitHub #PR); the `oce diff` verb is #668. What building them showed is listed under
+#667, GitHub #723); the `oce diff` verb is #668. What building them showed is listed under
 [As landed](#as-landed).
 
 The owner's work plan names the M3 deliverable as "a structural diff of two authoring models or CXF
@@ -808,7 +808,7 @@ Ruled by the owner on 2026-11-21, on the review of GitHub #715:
   diffable is GitHub #717, with two options: fall back to the content id's own names on both
   sides when either side is outside its root, or have the exporter keep the source root `@id`.
 
-What building the blob comparison (issue #667, GitHub #PR) showed, under decisions 3 and 15; the
+What building the blob comparison (issue #667, GitHub #723) showed, under decisions 3 and 15; the
 [crate README](../../crates/leverage/oce-diff/README.md#the-blob-comparison) states each in full:
 
 - **Each side carries this build's verdict.** A blob this build refuses to run can still have a

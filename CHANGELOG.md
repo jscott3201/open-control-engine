@@ -692,7 +692,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Leverage
 
-- **`oce-diff` compares two compiled-schedule blobs as same or different** (GitHub #PR, issue
+- **`oce-diff` compares two compiled-schedule blobs as same or different** (GitHub #723, issue
   #667; design note `docs/design/diff.md`, decisions 3 and 15, part 3 of 4).
   `compare_blobs(base, head)` reads each side through `oce_api::inspect_blob`, base first, and
   returns a `BlobComparison`; this crate parses no blob byte and never diffs a blob structurally.
