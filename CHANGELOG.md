@@ -37,7 +37,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ## Unreleased
 
-`development` carries **0.6.0** from GitHub #PRNUM (issue #683) on: the entries below are 0.6.0's
+`development` carries **0.6.0** from GitHub #720 (issue #683) on: the entries below are 0.6.0's
 so far, and no tag is cut by the bump.
 
 ### Facade
@@ -287,7 +287,7 @@ so far, and no tag is cut by the bump.
 ### CXF import and export
 
 - **Breaking in place: a Real parameter written as an Integer loads as a Real, and the workspace
-  moves to 0.6.0** (GitHub #PRNUM, issue #683). A CXF document may write a Real parameter's number
+  moves to 0.6.0** (GitHub #720, issue #683). A CXF document may write a Real parameter's number
   as an Integer: a bare JSON integer, a typed `xsd:integer`, an Integer expression, or a reference
   to an Integer sequence parameter (G36 `TrimAndRespond` binds `numIgnReq` to a Real `Constant.k`).
   Grounding is literal-natural, so the resolved model held `Value::Integer` there. Every block
