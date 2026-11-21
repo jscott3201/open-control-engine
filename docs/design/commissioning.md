@@ -316,6 +316,33 @@ A refused cell is a typed `SourceError` naming file, row and column, never a sil
 upstream Modelica model turns fan enable into a Boolean with `GreaterThreshold(t = 0.5)`; the
 verifier refuses a `0.5` instead (decision 19).
 
+### As landed: the unit table and the type rules
+
+*(GitHub #PRNUM, issue #659.)* `units/v1` is `convert_unit` in `crates/leverage/oce-verify`
+(`src/commissioning/units.rs`, with `UnitError`, `UnitSide`, `UNITS_TABLE` and
+`UNIT_ERROR_CODES`), and the type rules are `src/commissioning/type_rules.rs`, crate-internal
+until the trend sources (#660) call them. Its bit goldens come from a script that shares no code
+with the crate (`tests/fixtures/units/`). These are consequences of building it; no ruled text
+above changed:
+
+- **The cfm row's digits.** The table writes `0.00047194744832` beside "exact: 0.3048³ / 60", and
+  the exact quotient is `0.0004719474432`: the written digits are 1.08e-8 relative too large and
+  a different `f64`. The code follows the stated derivation; #714 asks the owner to confirm and
+  correct the digits.
+- **One pair is listed both ways.** `degC` → `K` and `K` → `degC` are both rows, so the reverse
+  of a row is refused for every row but those two.
+- **Choices the note left open.** An empty unit spelling is refused as `empty-unit`, the device
+  side's first, before the one-sided rule. A finite reading whose conversion overflows `f64` is
+  refused as `overflow` (a factor above one, beyond about 1e305). A NaN, replay's missing Real
+  cell, and an infinity pass through every pair with their bits unchanged, so no platform's NaN
+  propagation reaches a result. Identical spellings are the identity whatever they spell (`psi`
+  to `psi`). `-0.0` is zero for the Boolean and the Integer rules. A text cell is read by the
+  Boolean text rule only in a device `bool` column. `int` → `float` and `bool` → `float` are
+  not in the type table and are refused as `type-pair-refused`.
+- **No temperature difference form.** Tolerances are CDL-unit quantities, so nothing converts a
+  difference; every pair converts a reading. `-459.67 degF` converts to -2⁻⁴⁴ K, not zero, in
+  the table's operation order.
+
 ## Sources, sampling and time
 
 **Frames.** The verifier merges its input sources on the union of their timestamps and hands replay

@@ -2,8 +2,8 @@
 //! point mapping (design note `docs/design/commissioning.md`, "Test-spec file" and "Point
 //! mapping"; issue #658).
 //!
-//! Bytes in, typed values or typed refusals out. Nothing here opens a file, loads an engine,
-//! converts a unit, reads a trend or compares a series: those are the later parts of the
+//! Bytes in, typed values or typed refusals out. Nothing in the readers opens a file, loads an
+//! engine, reads a trend or compares a series: those are the later parts of the
 //! commissioning verifier, and each reads the types this module builds.
 //!
 //! - **The spec** ([`CommissioningSpec`]): a strict-JSON superset of OBC §12.7 Listing 12.1.
@@ -24,6 +24,12 @@
 //! - **Typed refusals** ([`SpecError`], [`SpecErrorKind`], [`SPEC_ERROR_CODES`]): one closed
 //!   kind per refusal, each with a stable kebab-case code and, for everything found in the
 //!   text, the line and column in the text as written.
+//!
+//! And what a trend's cells become (issue #659): the closed unit table `units/v1`
+//! ([`convert_unit`], [`UnitError`]), which converts a reading from its device unit to its CDL
+//! point's, and the discrete type rules of a point mapping (`type_rules`, crate-private until the
+//! trend sources call them, issue #660). Both are pure functions of a cell and the mapping: they
+//! read no file, load no engine and never touch a parameter (decision 24).
 
 mod canonical;
 mod choices;
@@ -39,6 +45,8 @@ mod model;
 mod selection;
 mod spec;
 mod tolerances;
+mod type_rules;
+mod units;
 
 pub use choices::{FunnelReference, PointType, TrendFormat};
 pub use error::{MAX_SPEC_DETAIL_BYTES, SPEC_ERROR_CODES, SpecError, SpecErrorKind};
@@ -50,6 +58,7 @@ pub use model::{
 };
 pub use spec::{CommissioningSpec, Finding, LBL_FIELD_IGNORED, SPEC_FINDING_CODES};
 pub use tolerances::{PartialTolerances, TOLERANCE_NAMES};
+pub use units::{UNIT_ERROR_CODES, UNITS_TABLE, UnitError, UnitSide, convert_unit};
 
 /// The format tag a commissioning spec carries in its `schema` key. A spec without the key is an
 /// LBL spec and is read as this format; any other tag is refused as `unknown-schema`.

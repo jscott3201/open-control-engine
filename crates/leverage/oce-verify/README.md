@@ -19,7 +19,10 @@ run is exact, a receipt's mode is `exact`, and `within`, `of` and `when` are sti
 
 The commissioning verifier (OBC §12) is being built beside it, in seven parts. The first is in
 (issue #658): [the readers of its two files](#the-commissioning-spec-and-the-point-mapping), the
-test spec `oce/commissioning-spec/v1` and the point mapping.
+test spec `oce/commissioning-spec/v1` and the point mapping. The second is in too (issue #659): `convert_unit` over the closed unit
+table `units/v1`, which turns a trended reading into its CDL point's unit, and the discrete rules
+that turn a cell into its CDL point's type ([Unit conversion](#unit-conversion-unitsv1) below).
+No run reads a trend yet.
 
 It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-replay` only. It
 opens no file, runs no clock, measures nothing and is not published.
@@ -687,8 +690,78 @@ entries, shared with the vector reader. A load holds at most 32 bytes per byte o
 fourteen are the strict-JSON codes above, spelled the same, and the last four are found only at
 bind. A refusal's sentence is at most 512 bytes of printable ASCII.
 
+## Unit conversion: `units/v1`
+
+OBC §12.7 puts unit conversion in "the tool that reads the CSV files", never in the engine. A
+commissioning run converts each trended value, device unit to CDL unit, before any comparison, so
+every tolerance is a quantity in the CDL unit ([commissioning note](../../../docs/design/commissioning.md),
+"Point mapping", decisions 5, 19 and 24). A parameter is never converted.
+
+```rust
+use oce_verify::{UNITS_TABLE, convert_unit};
+
+assert_eq!(UNITS_TABLE, "units/v1"); // what a commissioning receipt's `units.table` names
+assert_eq!(convert_unit("degF", "K", 32.0)?, 273.15);
+assert_eq!(convert_unit("K", "degF", 273.15).unwrap_err().code(), "unknown-pair");
+```
+
+The table is **closed** and each row runs one way, device to CDL. Spellings are compared byte for
+byte: no trimming, no case folding, no alias beyond `percent` and `%`. Two identical spellings
+are the identity, every bit kept.
+
+| Device → CDL | Operation, in this order, in `f64` | Constant and its source |
+| --- | --- | --- |
+| `degF` → `K` | `(x - 32.0) * (5.0 / 9.0) + 273.15` | NIST SP 811 B.9 (`T/K = (t/°F + 459.67) / 1.8`); 273.15 K exactly, NIST SP 330 §2.3.1 |
+| `degC` → `K` | `x + 273.15` | NIST SP 330 §2.3.1 |
+| `degF` → `degC` | `(x - 32.0) * (5.0 / 9.0)` | NIST SP 811 B.9 |
+| `K` → `degC` | `x - 273.15` | NIST SP 330 §2.3.1 |
+| `kPa` → `Pa` | `x * 1000.0` | NIST SP 330, table 7 |
+| `inH2O` → `Pa` | `x * 249.08891` | the conventional inch of water, 0.0254 m × 1000 kg/m³ × 9.80665 m/s² exactly (NIST SP 811 B.8, printed 2.490 889 E+02) |
+| `inH2O_60F` → `Pa` | `x * 248.84` | the inch of water at 60 °F, tabulated (NIST SP 811 B.8, 2.4884 E+02) |
+| `cfm` → `m3/s` | `x * 0.0004719474432` | 0.3048³ m³ / 60 s exactly (NIST SP 811 B.8, printed 4.719 474 E-04) |
+| `L/s` → `m3/s` | `x * 0.001` | NIST SP 811 B.8 |
+| `percent`, `%` → `1` | `x / 100.0` | NIST SP 811 §7.10.2 |
+
+- **What is refused** ([`UnitError`], codes in `UNIT_ERROR_CODES`): a pair the table does not
+  list, the reverse of a row included unless it is a row of its own (`degC` → `K` and `K` →
+  `degC` are both rows), as `unknown-pair`; a unit on one side of a point only, as `one-sided`;
+  an empty spelling, as `empty-unit`; a finite reading whose conversion overflows `f64` (a factor
+  above one, beyond about 1e305), as `overflow`. No unit on either side means no conversion. A
+  refusal quotes a spelling as an escaped excerpt of at most 64 bytes.
+- **Determinism.** The operations above and nothing else: no library call, no fused multiply-add,
+  one rounding per operation. A NaN (replay's missing Real cell) or an infinity is returned with
+  its bits unchanged, so no platform's NaN propagation shows. `-459.67 degF` reads as -2⁻⁴⁴ K,
+  not zero: -459.67 has no exact binary form, and the note's order is the contract.
+- **One spelling per unit.** `K`, `degC`, `degF`, `Pa`, `m3/s` and `1` are the strings the
+  engine's own unit reading gives (`oce_api::QUDT_UNITS`); a test holds the two together.
+
+**The type rules** read one cell as its CDL point's type. They are crate-internal until the trend
+sources (#660) call them and add the file, row and column to a refusal:
+
+| Device type → CDL type | Rule |
+| --- | --- |
+| `float` → `float` | the number as read, then the unit table |
+| `float` or `int` → `int` | integral and within `i32`, both ends included; else `not-integral` (a fraction, a NaN, an infinity) or `outside-int32` |
+| `float`, `int` or `bool` → `bool` | a number exactly `0` (`-0.0` included) is false and exactly `1` true; a text cell `true`/`false`, `active`/`inactive` or `1`/`0`, byte for byte; else `not-boolean` or `not-boolean-text`. No threshold: `0.5` is refused (decision 19) |
+| `bool` → `int` | the Boolean, then `false` 0 and `true` 1 |
+| `int` → `float`, `bool` → `float` | not in the note's table: `type-pair-refused` |
+
+**Evidence.** `tests/unit_table.rs` holds every pair to bit goldens at the zeros, the extremes,
+the subnormals, the infinities, five NaN payloads, a spread of magnitudes, the overflow edge and
+the note's known points (`tests/fixtures/units/units_v1.txt`). Those goldens are written by
+`tests/fixtures/units/derive_units.py`, which shares nothing with the crate: it checks every
+constant against its base definitions in exact rational arithmetic and evaluates each pair in the
+note's order in Python's binary64. The test also derives each factor again from the inch, the
+foot, standard gravity and the litre as an integer ratio divided once, and checks closure over
+every ordered pair of the table's spellings, near-miss spellings, monotonicity over 40,000
+readings and that a fused multiply-add would move golden bits.
+
 ## Fixtures and goldens
 
+- `tests/fixtures/units/units_v1.txt` holds the bit goldens of the unit table, written by
+  `tests/fixtures/units/derive_units.py` by hand and **never blessed**: when the table changes,
+  run `python3 -I derive_units.py units_v1.txt` in that directory, review the diff and say in the
+  pull request which rows moved and why.
 - `tests/fixtures/funnel/` is the funnel differential fixture and `tests/fixtures/aligned_grid/`
   the `aligned-grid` parity goldens; [`tests/fixtures/funnel/README.md`](tests/fixtures/funnel/README.md)
   and [`tests/fixtures/README.md`](tests/fixtures/README.md) say what each file is and what

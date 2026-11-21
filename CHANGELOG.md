@@ -614,6 +614,25 @@ and a gate that accepted any text would restore exactly the false assurance desc
     content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
 ### Leverage
 
+- **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point
+  mapping** (GitHub #PRNUM, issue #659; commissioning note, "Point mapping", decisions 5, 19 and
+  24). `oce-verify` gains `convert_unit(from, to, x)`, which converts a trended reading from its
+  device unit to its CDL point's unit by a closed table of eleven one-way pairs (`degF`, `degC`
+  and `K`; `kPa`, the conventional `inH2O` at 249.08891 Pa and `inH2O_60F` at 248.84 Pa to `Pa`;
+  `cfm` and `L/s` to `m3/s`; `percent` and `%` to `1`), each in the note's operation order with
+  one rounding per step, spellings compared byte for byte and identical spellings the identity
+  with every bit kept. Everything else is a typed `UnitError` (`unknown-pair`, `one-sided`,
+  `empty-unit`, `overflow`; `UNIT_ERROR_CODES`), never a pass-through; `UNITS_TABLE` is
+  `units/v1`. A NaN or an infinity keeps its bits through every pair. The cfm factor is the
+  exact `0.3048³ / 60` the note states, `0.0004719474432`, not the digits the note's table
+  writes beside it (#714). The type rules (a number is a Boolean only when exactly 0 or 1, a
+  text Boolean in six exact spellings, an Integer only when integral and within `i32`, `false`
+  and `true` as 0 and 1, `int` and `bool` to `float` refused) are crate-internal until the trend
+  sources (#660) call them. The goldens (`tests/fixtures/units/units_v1.txt`, 404 rows) come
+  from `derive_units.py`, which shares nothing with the crate and checks each constant against
+  NIST SP 811 and SP 330's definitions in exact arithmetic; they are never blessed. No format,
+  receipt, schema or existing golden changes, and no run reads a trend yet.
+
 - **`oce-diff` compares two loaded CXF documents** (GitHub #715, issue #666;
   design note `docs/design/diff.md`, part 2 of 4). `diff_topology(base, head, options)` takes the
   facade's `Topology` views of two documents the caller loaded and returns the same `Diff` data
