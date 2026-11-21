@@ -53,10 +53,10 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::{EvalResult, ExprAst, Scope};
 use oce_model::{EnumClassId, enum_class_id, enum_member_ordinal};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfValue, Node};
 use crate::ground::{ground_failure, ground_param_value};
 use crate::scope_chain::{IndexedEntries, ScopeFrame};
+use oce_diag::DiagnosticList;
 
 use super::composite_rules::{ARRAY_PARAMETER, DECLARATION_CYCLE, DUPLICATE_DECLARATION};
 use super::local_name;

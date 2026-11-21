@@ -16,7 +16,7 @@
 //! value today. It is the backstop on the flattened graph: it re-checks every block parameter
 //! value, whatever produced it, against any future ingest path or grounding regression.
 
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{BlockInstance, Value};
 
 use super::block_subject_of;
@@ -26,7 +26,7 @@ use super::block_subject_of;
 ///
 /// Runs for every block, including blocks whose class is not registered, so the refusal does not
 /// depend on registry coverage. Total and panic-free.
-pub(super) fn check_finite_params(blk: &BlockInstance, diags: &mut Vec<Diagnostic>) -> bool {
+pub(super) fn check_finite_params(blk: &BlockInstance, diags: &mut DiagnosticList) -> bool {
     let mut found = false;
     for (name, value) in &blk.params.values {
         // Only a Real can be non-finite; the shared predicate decides which Reals are refused.

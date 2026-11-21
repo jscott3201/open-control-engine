@@ -4,7 +4,7 @@
 use std::cell::Cell;
 use std::sync::Arc;
 
-use oce_diag::{DiagCode, Diagnostic, Severity, has_errors};
+use crate::{DiagCode, Diagnostic, Severity, has_errors};
 
 use super::{DiagnosticList, MAX_DIAGNOSTIC_TEXT_BYTES};
 

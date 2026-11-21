@@ -6,13 +6,13 @@ use std::sync::Arc;
 use serde_json::json;
 
 use super::{EndpointIx, LoweringEndpoints};
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 use crate::resolve::composite::{LoweredCxf, lower};
 use crate::resolve::composite_orientation::CompositeOrientation;
 use crate::resolve::declaration_scope::WithheldFindings;
 use crate::resolve::parameter_attrs::CheckedParameters;
 use crate::resolve::specialize::Specialization;
+use oce_diag::DiagnosticList;
 
 /// A top composite with a nested composite, a kept nested-input edge, a re-anchored top-input
 /// edge, and a leaf input that names the top input twice (swapped onto the top input).

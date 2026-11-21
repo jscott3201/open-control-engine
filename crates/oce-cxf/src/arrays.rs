@@ -14,11 +14,11 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::{ArrayValue, EvalResult};
 use oce_model::Value;
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfValue, Node};
 use crate::ground::{GroundErr, ground_param_value};
 use crate::resolve::local_name;
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
+use oce_diag::DiagnosticList;
 
 /// Strip a trailing array-decoration `[...]` from a local name: `k[2]` → `k`, `k` → `k`. Total —
 /// used so the preserved encoding's decorated base (`k[2]`) yields the same `k` base the flattened

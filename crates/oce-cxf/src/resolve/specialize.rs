@@ -10,9 +10,9 @@ use oce_model::{
     g36_integer_constant, is_g36_integer_constant_package, is_g36_type_path,
 };
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfValue, IriRef, Node};
 use crate::scope_chain::ScopeFrame;
+use oce_diag::DiagnosticList;
 
 use super::composite::is_runtime_composite;
 use super::declaration_scope::{Pass, WithheldFindings, evaluate_declarations};

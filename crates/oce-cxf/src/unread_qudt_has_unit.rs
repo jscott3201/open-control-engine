@@ -50,10 +50,10 @@
 use oce_diag::{DiagCode, Diagnostic};
 
 use super::property_keys::QUDT_HAS_UNIT;
-use crate::excerpt::excerpt;
-use crate::format_controls::visible;
 use crate::namespace_near_miss::namespace_near_miss;
 use crate::unit_iri::{QUDT_SCHEMA_NAMESPACES, QUDT_UNIT_NAMESPACES};
+use oce_diag::excerpt;
+use oce_diag::visible;
 
 /// The compact key modelica-json and CXF-Core write for a unit, as it stands after expansion in a
 /// document that binds no `qudt` prefix.
@@ -417,9 +417,7 @@ mod tests {
                     refusal.message
                 );
                 assert!(
-                    !refusal
-                        .message
-                        .contains(crate::format_controls::is_format_or_control),
+                    !refusal.message.contains(oce_diag::is_format_or_control),
                     "{:?}",
                     refusal.message
                 );

@@ -4,8 +4,8 @@ use oce_diag::DiagCode;
 use oce_model::{BlockId, Connection, Connector, ConnectorId, Dir, ValueType};
 
 use super::AssignmentTracker;
-use crate::diagnostic_list::DiagnosticList;
 use crate::resolve::connection_endpoints::EndpointId;
+use oce_diag::DiagnosticList;
 
 #[test]
 fn reassigned_child_inputs_are_refused_in_connector_order() {

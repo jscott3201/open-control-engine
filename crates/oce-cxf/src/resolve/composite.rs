@@ -4,8 +4,8 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::bridge;
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, IriRef, Node, OneOrMany};
+use oce_diag::DiagnosticList;
 use oce_diag::{DiagCode, Diagnostic};
 
 use super::composite_orientation::{

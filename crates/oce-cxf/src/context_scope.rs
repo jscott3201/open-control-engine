@@ -4,8 +4,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, CxfValue, TermAttr};
+use oce_diag::DiagnosticList;
 
 pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut DiagnosticList) {
     let mut subjects = HashMap::<&str, Arc<str>>::new();

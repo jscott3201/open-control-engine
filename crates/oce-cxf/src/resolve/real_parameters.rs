@@ -29,7 +29,7 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Value, ValueType};
 
-use crate::diagnostic_list::DiagnosticList;
+use oce_diag::DiagnosticList;
 
 /// The largest magnitude an Integer bound to a Real parameter may have: 2^53. Every integer up to
 /// it is exact as a binary64; 2^53 + 1 is the first that is not.
