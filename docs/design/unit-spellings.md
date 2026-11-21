@@ -426,7 +426,8 @@ rejected is under [Rulings](#rulings).
      no vocabulary; the caller holds the local name to its own closed list. The same rule for
      every modeled key (#691), a typing token (#636) and a term (#647) attaches there.
    - **Messages** quote the key and the namespace as written in at most 64 bytes each, with
-     format and control characters escaped, as the unmapped-IRI refusal does (decision 8).
+     format and control characters escaped, as the unmapped-IRI refusal does (decision 8), and
+     hold no other text of the document's: the node is the subject.
    - **Version:** no bump. Tightening accepted input is not a format change (decision 7, and
      the ruling on #647).
    - **The importer** already refuses each case as `unknown-key`: its `@context` is closed and

@@ -445,7 +445,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - **Not in this change:** a root input's declared unit still does not meet the ports it drives
     (issue #632).
 - **A `hasUnit` key the QUDT schema reading does not reach is refused, where it was left
-  unread** (issue #675; owner ruling of 2026-11-20). `qudt:hasUnit` is read as
+  unread** (GitHub #696, issue #675; owner ruling of 2026-11-20). `qudt:hasUnit` is read as
   `unit` by its expanded IRI in the two QUDT schema namespaces. One edit from that, the key fell
   into the pass-through map and the load reported nothing: the §7.10 unit gate, the point list,
   the content id and the export went without the unit. With `qudt` unbound, `"S231:unit": "K"`
@@ -470,8 +470,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
     #691); and `qudt:hasQuantityKind`, under any binding.
   - **Codes and messages.** No new code. The description of `vocabulary-namespace-mismatch` in
     `oce-diag` now names this case. Each message quotes the key and the namespace as written in
-    at most 64 bytes, with format and control characters written as escapes, and names the two
-    namespaces the property is read in. Each refusal is pinned as the complete diagnostic list.
+    at most 64 bytes, with format and control characters written as escapes, names the two
+    namespaces the property is read in, and holds no other text of the document's: the node is
+    the subject and is not repeated in the message. Each refusal is pinned as the complete
+    diagnostic list.
   - **One recogniser.** `oce_cxf::namespace_near_miss(iri, namespace)` decides whether an IRI is
     a near miss of a namespace and where its local name begins
     (`crates/oce-cxf/src/namespace_near_miss.rs`). It knows no vocabulary and refuses nothing;
