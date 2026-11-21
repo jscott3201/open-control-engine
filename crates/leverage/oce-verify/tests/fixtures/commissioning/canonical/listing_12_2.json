@@ -1,0 +1,118 @@
+[
+  {
+    "cdl": {
+      "name": "TZonCooSetOcc",
+      "type": "float",
+      "unit": "K"
+    },
+    "device": {
+      "name": "Occupied Cooling Setpoint_1",
+      "type": "float",
+      "unit": "degF"
+    }
+  },
+  {
+    "cdl": {
+      "name": "TZonHeaSetOcc",
+      "type": "float",
+      "unit": "K"
+    },
+    "device": {
+      "name": "Occupied Heating Setpoint_1",
+      "type": "float",
+      "unit": "degF"
+    }
+  },
+  {
+    "cdl": {
+      "name": "TZonCooSetUno",
+      "type": "float",
+      "unit": "K"
+    },
+    "device": {
+      "name": "Unoccupied Cooling Setpoint_1",
+      "type": "float",
+      "unit": "degF"
+    }
+  },
+  {
+    "cdl": {
+      "name": "TZonHeaSetUno",
+      "type": "float",
+      "unit": "K"
+    },
+    "device": {
+      "name": "Unoccupied Heating Setpoint_1",
+      "type": "float",
+      "unit": "degF"
+    }
+  },
+  {
+    "cdl": {
+      "name": "setAdj",
+      "type": "float",
+      "unit": "K"
+    },
+    "device": {
+      "name": "setpt_adj_1",
+      "type": "float",
+      "unit": "degF"
+    }
+  },
+  {
+    "cdl": {
+      "name": "heaSetAdj",
+      "type": "float",
+      "unit": "K"
+    },
+    "device": {
+      "name": "Heating Adjustment_1",
+      "type": "float",
+      "unit": "degF"
+    }
+  },
+  {
+    "cdl": {
+      "name": "uOccSen",
+      "type": "int"
+    },
+    "device": {
+      "name": "occ_sensor_bni_1",
+      "type": "bool"
+    }
+  },
+  {
+    "cdl": {
+      "name": "uWinSta",
+      "type": "int"
+    },
+    "device": {
+      "name": "window_sw_1",
+      "type": "bool"
+    }
+  },
+  {
+    "cdl": {
+      "name": "TZonCooSet",
+      "type": "float",
+      "unit": "K"
+    },
+    "device": {
+      "name": "Effective Cooling Setpoint_1",
+      "type": "float",
+      "unit": "degF"
+    }
+  },
+  {
+    "cdl": {
+      "name": "TZonHeaSet",
+      "type": "float",
+      "unit": "K"
+    },
+    "device": {
+      "name": "Effective Heating Setpoint_1",
+      "type": "float",
+      "unit": "degF"
+    }
+  }
+]

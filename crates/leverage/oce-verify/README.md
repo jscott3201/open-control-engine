@@ -17,6 +17,10 @@ funnel and the conformance harness's grid envelope, as a library surface
 ([Envelopes](#envelopes-funnel-and-aligned-grid) below). Nothing asks for it yet: comparison in a
 run is exact, a receipt's mode is `exact`, and `within`, `of` and `when` are still unknown keys.
 
+The commissioning verifier (OBC §12) is being built beside it, in seven parts. The first is in
+(issue #658): [the readers of its two files](#the-commissioning-spec-and-the-point-mapping), the
+test spec `oce/commissioning-spec/v1` and the point mapping.
+
 It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-replay` only. It
 opens no file, runs no clock, measures nothing and is not published.
 
@@ -601,6 +605,88 @@ the repository's `MIT OR Apache-2.0`. The crate's `license` field is therefore
 licence: whichever of MIT and Apache-2.0 a recipient takes, funnel's terms come with the crate as
 well. A crate that depends on this one keeps its own field, which describes its own sources.
 
+## The commissioning spec and the point mapping
+
+The two files a commissioning run reads (design note
+[`docs/design/commissioning.md`](../../../docs/design/commissioning.md), "Test-spec file" and
+"Point mapping"; issue #658). Bytes in, typed values or typed refusals out: nothing here opens a
+file, loads an engine, converts a unit, reads a trend or compares a series.
+
+```rust
+use oce_verify::{CommissioningSpec, PointMapping, SpecLimits};
+
+let spec = CommissioningSpec::from_json_bytes(&spec_bytes, &SpecLimits::default())?;
+let mapping = PointMapping::from_json_bytes(&mapping_bytes, &SpecLimits::default())?;
+for finding in spec.findings() {
+    eprintln!("{} at {}", finding.code(), finding.at()); // lbl-field-ignored at controller
+}
+println!("{}", spec.spec_id()); // spec:fnv1a128:<32 hex>, over spec.to_canonical_json()
+```
+
+**The spec** is a strict-JSON superset of OBC §12.7 Listing 12.1. A document with no `schema`
+key is an LBL spec and is read as `oce/commissioning-spec/v1`; any other tag is `unknown-schema`.
+
+- **Comments.** `//` to the end of its line and `/* */` are removed outside strings before the
+  strict read, and nothing else is tolerated: a trailing comma, `NaN`, a repeated key and an
+  unknown key are refused as in a vector set. A block comment that is never closed is
+  `unterminated-comment`. Every refusal's line and column are those of the text as written,
+  comments included.
+- **The LBL fields** load unchanged: `references[]` with `model`, `sequence`,
+  `pointNameMapping` (a path, or the mapping inline), `outputs`, `indicators`, `sampling` and
+  `controllerOutput`; top-level `tolerances` and `sampling`. `generateJson`,
+  `modelJsonDirectory`, `runController` and `controller` take any strict JSON value, are never
+  interpreted, and are each reported by `CommissioningSpec::findings` as `lbl-field-ignored`,
+  in an order that does not depend on the file's key order. A `controllerOutput` beside an
+  `expected` is reported the same way: `expected` is then the source, and the path is not
+  read.
+- **The added fields:** `schema`; `time.origin` (an RFC 3339 instant with an explicit offset,
+  held as `oce_replay::TimeOrigin`); `ltolx` and `ltoly` in any tolerance object; per reference
+  `cxf`, `parameters` (at most 256), `inputs`, `expected` and `indicatorSources` (trend
+  sources: `path`, `format` of `csv` or `combiTimeTable`, `table`, `timeColumn`, `columns`,
+  `hold.maxAge`), `window` (`start`, `stop`), `envelope` (`funnel` or `aligned-grid`) and
+  `funnelReference` (`engine` or `trend`).
+- **Rules checked at load:** every path relative and inside the spec's directory
+  (`path-invalid`); a tolerance not negative; a sampling above zero; a hold not negative; a
+  window with both ends and `start <= stop`; every name non-empty, a `model` and a point's
+  unit among them; each closed choice spelled
+  exactly (`unknown-value`). `window` and `cxf` are optional to load, because an LBL spec has
+  neither, and required to run: that refusal is bind's.
+- **Keys.** An `outputs` or `indicators` key starts with its reference's `sequence` and a `.`.
+  The rest is a glob when it holds `*` (any run of characters) or `?` (one character), matched
+  whole against the last `.`-segment of an output's canonical path, and otherwise an exact name,
+  resolved by the replay name rule: `u` never selects `uFan`.
+- **Which override applies never depends on the order of the file** (owner's ruling,
+  2026-11-21). For one output: the top-level `tolerances`; over them, every glob that selects
+  the output; over those, every exact key that selects it. An exact key beats a glob, field by
+  field. Two keys of one kind that give one field different values are refused,
+  `conflicting-override`; if they give the same value, or different fields, they combine.
+  Every indicator rule that selects an output applies, ANDed, each name once.
+- **The selection is in the crate and private** (`src/commissioning/glob.rs`, `selection.rs`)
+  until the bind that calls it lands (#662): a load cannot know a sequence's outputs. It takes
+  the outputs' canonical paths, refuses a key that selects nothing (`unmatched-key`), an exact
+  name that names several outputs (`ambiguous-output`) and a conflict, and is held to a work
+  bound that is checked before anything is allocated (`work-limit-exceeded`).
+- **The canonical form** (`to_canonical_json`) always carries `schema` and no comment, and is
+  written by the writer a vector set uses: every object's keys sorted, `outputs` and
+  `indicators` included, so reordering a spec changes neither what it means nor its `spec_id`,
+  which is `spec:fnv1a128:` over those bytes.
+
+**The point mapping** is Listing 12.2's shape, unchanged: a list of
+`{ "cdl": { name, unit?, type }, "device": { name, unit?, type } }` with the types `float`, `int`
+and `bool`, from a file of its own (`PointMapping::from_json_bytes`, comments removed the same
+way) or inline in a spec. A name is kept exactly as written and carries no sequence prefix; a
+name twice on one side is `duplicate-point`, and a unit that is written is not empty. Whether a name exists in a sequence is bind's check,
+and whether a pair of units converts is the unit table's.
+
+**Bounds** (`SpecLimits`, lowerable, never raised): 4 MiB per document, 256 parameters per
+reference, 4,096 keys per `outputs`, `indicators` or `columns` map, 2^28 work units per key
+selection; and the strict profile's nesting of 8, strings of 4,096 bytes and lists of 65,536
+entries, shared with the vector reader. A load holds at most 32 bytes per byte of its document
+(a test pins it on the densest shape, a long list of numbers in an ignored field), so about
+134 MB at the 4 MiB maximum. **Codes:** `SPEC_ERROR_CODES` lists the 31 refusals; the first
+fourteen are the strict-JSON codes above, spelled the same, and the last four are found only at
+bind. A refusal's sentence is at most 512 bytes of printable ASCII.
+
 ## Fixtures and goldens
 
 - `tests/fixtures/funnel/` is the funnel differential fixture and `tests/fixtures/aligned_grid/`
@@ -649,3 +735,13 @@ well. A crate that depends on this one keeps its own field, which describes its 
   format" section. `tests/closed_objects.rs` reads the note and requires the two to be equal byte
   for byte, so the note is on the classifier's test-read list (`scripts/ci/classify-changes.sh`)
   and an edit to it runs this suite; when that block changes, copy it again.
+- `tests/fixtures/commissioning/` holds the commissioning readers' fixtures: OBC §12.7
+  Listings 12.1 and 12.2 verbatim, a copy of Listing 12.1 with comments added (written for the
+  tests, and labelled so), the design note's Building 33 worked spec, a hand-written spec that
+  uses every key, and the canonical form of each. Its
+  [README](tests/fixtures/commissioning/README.md) records where the listings come from and the
+  day they were read. The canonical goldens and the `spec_id` literals in
+  `tests/commissioning/canonical_form.rs` are derived by `derive_canonical.py` there, outside
+  this crate, and **are never blessed**.
+- `tests/commissioning/` is one test binary: each file is a module of `main.rs`, and a test
+  there fails on a file that is not declared.

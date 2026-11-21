@@ -64,7 +64,10 @@ unchanged:
 
 `generateJson`, `modelJsonDirectory`, `runController` and `controller` parse and are ignored with a
 named `lbl-field-ignored` report finding; `controllerOutput` is honoured as the expected-output
-source when no `expected` block is given (decision 18). The loader strips `//` and `/* */`
+source when no `expected` block is given (decision 18). *(Amended 2026-11-21, owner's ruling:)*
+when a reference gives both, `expected` is the source, and its `controllerOutput` is reported as
+one more `lbl-field-ignored` finding, at `references[i].controllerOutput`; it is not a refusal.
+The loader strips `//` and `/* */`
 comments outside strings, then parses strictly (decision 3): duplicate keys, trailing commas,
 `NaN` and unknown fields are typed errors. The verifier always writes strict JSON with a `schema`
 tag, so a stored spec is canonical. *(Corrected 2026-11-20: the sentence gave as its reason that
@@ -92,9 +95,20 @@ literal. A key whose rest contains `*` or `?` is a glob (`*` any run of characte
 character, nothing else special): the rest is matched, whole, against the last `.`-segment of
 each output's canonical path, so the names a glob sees are `<sequence>.<last segment>`. Any other
 key is an exact name, and its rest resolves by the replay name rule against the outputs.
-Overrides apply in declaration order, later fields winning. A key that matches no output is an
-error, `SpecError::UnmatchedKey`, whose message names the key, whether it was read as an exact name
-or a glob, and the sequence's output names as a glob sees them, so a typo cannot pass silently.
+*(Amended 2026-11-21, owner's ruling; the sentence read "Overrides apply in declaration order,
+later fields winning":)* which override applies to an output **does not depend on the order of
+the file**. An exact key beats a glob, field by field. Two keys of one kind, two exact names or
+two globs, that select one output combine when they give different tolerance fields, or one
+field the same value; when they give one field different values no order could decide between
+them, and the selection is refused at bind as `conflicting-override`, naming both keys, the
+output and the field. The top-level `tolerances` lie under every key. Indicator rules have no
+such conflict: every rule that selects an output applies, ANDed, each name once. The canonical
+form therefore sorts every object's keys, those of `outputs` and `indicators` included, so a
+tool that reorders a spec changes neither its meaning nor its `spec_id`. A key that matches no
+output is an error, `SpecError::UnmatchedKey`, whose message names the key, whether it was read
+as an exact name or a glob, and the sequence's output names as a glob sees them, so a typo cannot
+pass silently; an exact name that names more than one output by the replay name rule is
+`ambiguous-output`.
 There is no substring or regular-expression matching: `u` selects only an output named `u`.
 Listing 12.1's `"setPoiVAV1.TSup*"` is a glob and loads unchanged (decision 17; the prefix and
 the last segment are decision 27's, 2026-11-20). A `parameters` key and a mapping's `cdl.name`
@@ -103,6 +117,105 @@ carry no prefix.
 **`window`** is required to run a reference, as `cxf` is: a reference without one loads, because
 an LBL file has none, and is refused at bind as `reference-incomplete`, naming the missing field
 (decision 16). When present it holds both `start` and `stop`, finite, with `start <= stop`.
+
+### As landed: the spec and mapping readers
+
+*(GitHub #704, issue #658.)* The two readers are in `crates/leverage/oce-verify`
+(`src/commissioning/`): `CommissioningSpec::from_json_bytes` and `from_json_str`,
+`PointMapping::from_json_bytes` and `from_json_str`, each with `to_canonical_json`, and
+`CommissioningSpec::spec_id`. This note said the loader is "bounded" and gave no numbers, and
+left a few shapes unsaid; this is what was built.
+
+- **Bounds.** The two readers of the crate have one profile, the strict cursor's: nesting at
+  most 8, a string at most 4,096 bytes as written, a list at most 65,536 entries, each refused
+  as `nesting-too-deep`, `string-too-long` and `list-too-long`. `SpecLimits` holds the rest, each
+  a default and a maximum that a caller may lower and never raise: 4 MiB per document, comments
+  included (`input-too-large`, decided from the length); 256 entries in one reference's
+  `parameters` (`too-many-parameters`, decision 29); 4,096 keys in one `outputs`, `indicators`
+  or `columns` map (`too-many-keys`: the most outputs a run compares, and the most columns a
+  replay source has); and 2^28 work units for one selection of a reference's keys against a
+  sequence's outputs (`work-limit-exceeded`: one unit per key and output compared and one per
+  step of the glob matcher, never time; a selection whose keys times outputs alone pass the
+  limit is refused before anything is allocated, and what a selection holds is one bit per key
+  and output). Two costs of a selection are outside that count, because they grow with the
+  sequence's outputs alone, which come from the engine's own frame and not from the spec: the
+  index an exact key is resolved through (`oce_replay::PathIndex`, one sort of the output
+  paths, `n log n` comparisons of path bytes) and the paths an ambiguous exact name collects
+  for its refusal. For scale: a million outputs that share one last segment, and one exact key
+  naming it, are refused as `ambiguous-output` after 7.4 s in a debug build. Every bound is
+  inclusive and pinned at its edge. A load holds at most 32 bytes
+  per byte of the document, pinned on the densest shape there is, a long list of one-digit
+  numbers inside a Scenario 1 field; so about 134 MB at the 4 MiB maximum.
+- **Comments.** `//` runs to the next line feed or carriage return, or to the end of the text.
+  `/*` runs to the next `*/`; block comments do not nest, `/*/` is an open comment, and one that
+  is never closed is `unterminated-comment` at its `/*`. A marker inside a string is text. Each
+  comment byte becomes a space and a line feed stays, so a refusal's line and byte column are
+  those of the text as written. The pass reads each byte once.
+- **Refusals.** `SpecError` carries a closed `SpecErrorKind`, its kebab-case code
+  (`SPEC_ERROR_CODES`), and for everything found in the text the line and column of the value
+  concerned; only `not-utf8`, `byte-order-mark` and `input-too-large` have no place. The
+  strict-JSON codes, `unknown-schema`, `too-many-parameters`, `empty-name` and `invalid-window`
+  are the vector reader's words; `invalid-tolerance` and `work-limit-exceeded` are the envelope
+  comparison's. The format's own are `unterminated-comment`, `too-many-keys`, `unknown-value`
+  (a `format`, `envelope`, `funnelReference` or point `type` outside its list), `path-invalid`,
+  `invalid-time-origin`, `invalid-sampling`, `invalid-hold` and `duplicate-point`, and three
+  found only when bind matches keys against a sequence's outputs: `unmatched-key`,
+  `ambiguous-output` (the vector bind's word) and `conflicting-override`. A sentence is at most
+  512 bytes of printable ASCII, whatever the document wrote.
+- **What a value must be.** `references` is required, and in a reference `model` and
+  `sequence`. No name is empty (`empty-name`): a `model` names a class, a `sequence` prefixes
+  every key, and a point that has no unit writes no `unit` key, so a unit that is written is
+  not empty either. Every other key is optional at load. A tolerance is not
+  negative; `sampling` is above zero; `hold.maxAge` is not negative; a `window` holds `start`
+  and `stop` with `start <= stop`; `time` holds `origin`. An integer token read as a real is
+  held to 2^53, as a vector set's times are. A trend source holds `path`, `format`,
+  `timeColumn` and `columns`; `table` and `hold` are optional. `timeColumn` is a position
+  counted from 1 (an integer token) or a header name (a string), and `columns` maps a file
+  column, written as a string, to a device point name. Which of the two a format takes is the
+  source reader's rule (#660), decided with the file's bytes.
+- **Paths.** `cxf`, `controllerOutput`, a `pointNameMapping` written as a string, and a
+  source's `path` are held to the rule a vector set's mutant paths are held to
+  (`path-invalid`).
+- **The envelope** a reference names is read as `oce_verify::Envelope`, the type the comparison
+  takes (GitHub #687), by its own spelling; `funnelReference` is `FunnelReference`, whose
+  default is the engine series (decision 11). `PartialTolerances::resolved` gives the
+  comparison's `Tolerances`, a name nothing gave read as zero.
+- **The Scenario 1 fields.** `generateJson`, `modelJsonDirectory`, `runController` and
+  `controller` each take any one strict JSON value. The value is never interpreted and is kept:
+  the canonical form writes it and `spec_id` covers it, so a spec and its stored form have the
+  same findings. `CommissioningSpec::findings` lists them in the order the receipt's `findings`
+  row states, and `findings_for(reference)` gives what one reference's receipt carries. A
+  `controllerOutput` beside an `expected` is listed with them (the owner's ruling of
+  2026-11-21), among its reference's fields in name order: `controllerOutput`, `generateJson`,
+  `runController`. It is still held to the path rule and still written.
+- **The canonical form sorts every key** and always writes `schema`. As first built it kept
+  the declaration order of `outputs` and `indicators` keys, because the note then made that
+  order the meaning; the owner's ruling of 2026-11-21 took the meaning out of the order, so the
+  two maps are sorted like every other object, in the model as in the canonical form.
+- **Keys and precedence** (crate-private until bind, #662, calls them: `src/commissioning/`
+  `glob.rs` and `selection.rs`). `SpecReference::select_output_keys` and
+  `select_indicator_keys` take the sequence's output **canonical paths**, sorted as
+  `FrameSlots::outputs()` lists them. A glob selects every output whose last `.`-segment its
+  rest matches, whole; an exact key selects the one output its rest names by
+  `oce_replay::resolve_path`, so `ahu.yFan` and the whole canonical path are exact names too;
+  a `#` is no boundary in that rule, so `s.Root.y` selects `urn:x#top.Root.y` and does not
+  select `urn:x#Root.y`.
+  A key without the reference's prefix, a glob that matches nothing and an exact name that
+  names nothing are `unmatched-key`, with the sentence decision 17 asks for; an exact name that
+  names several outputs is `ambiguous-output`. Then, for each output: the top-level
+  `tolerances`, the globs that select it laid over them, the exact keys laid over those
+  (`OutputSelection::tolerances_for`). Two keys of one kind that give one field different
+  values are `conflicting-override`; "the same value" is the number, so `10` and `10.0` agree.
+  A same-kind conflict is refused even when an exact key would set the field: two globs that
+  disagree about an output are refused whether or not an exact key also selects it.
+  `IndicatorSelection::indicators_for` gives the indicators of every rule that selects an
+  output, each once. The two selections are two types, and each borrows its reference, so one
+  cannot be read as the other or against another reference.
+- **The mapping.** A list of pairs, in file order, with no `schema` key. A name is kept as
+  written; a unit, when written, is not empty, is kept as written and is the unit table's to
+  judge (#659); a name twice on one side is `duplicate-point` at its second place. Two columns
+  of one source that name one device point load: what that means is the source reader's to
+  decide (#660).
 
 ### Worked spec: Building 33 cooling-coil valve (§12.6)
 
@@ -613,7 +726,7 @@ codes of a commissioning run come from three lists, by where the refusal is foun
 
 | Where | Type | Codes this note adds or names |
 | --- | --- | --- |
-| loading the spec or the mapping | `SpecError`, from `CommissioningSpec::from_json_str`, before `run_commissioning` is called | the strict-JSON spellings the vector reader prints, `too-many-parameters` (decision 29) and `UnmatchedKey` |
+| loading the spec or the mapping | `SpecError`, from `CommissioningSpec::from_json_str`, before `run_commissioning` is called | the strict-JSON spellings the vector reader prints, `too-many-parameters` (decision 29) and, found when bind matches a reference's keys against the sequence's outputs, `unmatched-key`, `ambiguous-output` and `conflicting-override` *(the last two added 2026-11-21)* |
 | bind and run | `VerifyError`, the type `run_vectors` returns, its `VerifyErrorKind` extended in place | `reference-out-of-range`, `reference-incomplete`, `unknown-indicator`, `frame-refused`, `too-many-sources`, `too-many-outputs`, `too-many-points`, `source-refused`, `unit-refused`, `compare-refused`; and the vector kinds it reuses (`subject-load-failed`, the name and `param-…` codes, `enum-port-unsupported`, `unsupported-port-type`, `run-refused`, `replay-failed`) |
 | the verb | `oce-cli`'s own codes | `reference-required` (decision 35), and its existing `not-found`, `not-a-file`, `read-failed`, `input-too-large` and `write-failed` (decision 37) |
 
@@ -778,11 +891,14 @@ itself (unrecorded); a designated clock source (drops samples replay must observ
 agent or a person writing `u` must not silently select every output); a `glob:` prefix (Listing
 12.1 would need editing, against decision 3). *(2026-11-20: decision 27 says what the whole
 string is: the reference's `sequence` and a `.`, literal, then the last segment of the output's
-canonical path.)*
+canonical path. 2026-11-21, owner's ruling: an exact key beats a glob, two keys of one kind
+that disagree about one output are `conflicting-override`, and no order of the file's keys
+matters; see [Review rulings](#review-rulings).)*
 
 **18. Scenario 1 fields parse and are ignored with a finding;** `controllerOutput` is the
 expected source when `expected` is absent. Rejected: refusing them (LBL specs would not load);
-acting on them (the verifier drives no controller).
+acting on them (the verifier drives no controller). *(2026-11-21, owner's ruling: beside an
+`expected`, `controllerOutput` is not read and is a finding of the same code.)*
 
 **19. `units/v1` as listed, discrete encodings exact.** Rejected: one ambiguous `inH2O`;
 a `0.5` Boolean threshold (a sensor fault would read as a state).
@@ -890,7 +1006,9 @@ bind, where `param-refused` and its class (`param-range`, `param-type`, `param-s
 found. At most 256 parameters per reference, which bounds the passes; one more is
 `too-many-parameters`. Rejected: the declaration order of the spec's `parameters` object (the
 canonical spec sorts keys, so it would run differently from the file it was written from); one
-pass in path order (it refuses lowering both hysteresis thresholds).
+pass in path order (it refuses lowering both hysteresis thresholds). *(2026-11-21: the owner's
+ruling on override precedence makes the same true of `outputs` and `indicators`: the canonical
+spec sorts every key, and no rule reads the order of a file's keys.)*
 
 **30. The header carries the document's content id; the body carries the edited one.** The
 header's `content_id` is the CXF's as loaded, before any edit. When `parameters` is not empty
@@ -1038,7 +1156,8 @@ caller's option.**
   duplicate keys, trailing commas, unknown fields, `NaN` and over-limit input refuse; exact keys,
   globs with `*` and `?` anchored at both ends, a key matching nothing refused with
   `UnmatchedKey` and its message, `u` not matching `uFan`, Listing 12.1's keys loading unchanged;
-  override order.
+  override precedence: an exact key over a glob, two keys of one kind combining, a disagreement
+  refused as `conflicting-override`, and the same answer for every order of the file's keys.
 - **Units.** Every pair golden-tested bit for bit at `-0.0`, extremes and known points (`32 degF`
   is exactly `273.15 K`); unknown and one-sided pairs refuse; `0.5`, `2` and `NaN` in a Boolean
   column refuse.
@@ -1208,6 +1327,31 @@ recorded as a ruling.
 Listings 12.1 and 12.2 as published carry none. The sentence states the loader's rule alone,
 which is decision 3's and does not change, and the test plan asks for a commented copy beside
 the verbatim listing.
+
+**The owner's rulings of 2026-11-21** *(the review of GitHub #704, issue #658)*. Building the
+spec reader showed two places where this note said two things, or nothing. Each was put to the
+owner with its options:
+
+1. **Override precedence is order-independent, and a conflict is refused.** "Test-spec file"
+   said overrides apply in declaration order, later fields winning; decision 29 said the
+   canonical spec sorts keys. Both cannot hold: sorted, a stored spec would run differently from
+   its file. The ruling: an exact key beats a glob; two keys of one kind (two exact names, or
+   two globs) that select one output and give one tolerance field different values are refused
+   with a typed error, `conflicting-override`, naming both keys, the output and the field; two
+   keys of one kind that give the same value, or different fields, combine. The canonical form
+   sorts every key, `outputs` and `indicators` included, so a spec's meaning and its `spec_id`
+   cannot change when a tool reorders it. The refusal is the key selection's, at bind (#662).
+   Rejected: file order for `outputs` with a finding when one override hides another (a
+   reordering tool would still change what runs); file order for both maps, kept by the
+   canonical form, as first built in GitHub #704 (the canonical form would sort every object
+   but two, and the spec's meaning would rest on an order JSON does not define).
+2. **`controllerOutput` beside `expected` is a finding.** When a reference gives both,
+   `expected` is the expected-output source and the loader records `lbl-field-ignored` at
+   `references[i].controllerOutput`, in the stated order of the findings, like the four
+   Scenario 1 fields. It is not a refusal.
+
+Accepted as built in the same review: several `indicators` keys that select one output are all
+applied, ANDed, each name once, as "Indicators" and OBC §12.7.2 read.
 
 **Readings added in review** *(2026-11-21, the review of GitHub #676)*. None reopens a ruling;
 each closes a place where a builder would have had to guess, and each is decided from the
