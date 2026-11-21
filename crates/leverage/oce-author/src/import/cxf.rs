@@ -9,6 +9,14 @@
 //! members of an enumeration or of a library constant package. Names are carried, never
 //! repaired (decision 13): a part that breaks the identifier syntax is refused, a reserved word
 //! or a duplicate is left for the validator.
+//!
+//! A `unit` and a `displayUnit` are read under every spelling the engine reads (issue #631;
+//! unit-spellings note, decision 6): `S231:unit`, `S231:hasUnit` and `qudt:hasUnit`,
+//! `S231:displayUnit` and `S231:hasDisplayUnit`. On a boundary a string is the unit and an IRI
+//! node is read through the engine's closed unit table; on a block port every spelling is a port
+//! attribute (decision 8); on a parameter it is checked, dropped and reported (decision 9). Two
+//! spellings of one property on one node are refused, and `qudt:hasQuantityKind` is an unknown
+//! key everywhere.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -21,11 +29,12 @@ use crate::model::{
 };
 use crate::validate::catalog::{is_template, lookup_class};
 
+use super::context::Context;
 use super::error::{ImportError, ImportErrorKind as Kind, SourceForm};
 use super::nodes::{
-    DataType, Names, NodeKind, OBC_PACKAGE, PARAMETER_ATTRIBUTES, RETIRED_S231_IRI, S231_IRI,
-    check_keys, check_parameter_attribute, check_parameter_type, connector_type, data_type,
-    declared_type, references, refuse, sequence_name, spelled, term_attribute, text_attribute,
+    DISPLAY_UNIT, DataType, Described, Names, NodeKind, OBC_PACKAGE, UNIT, check_keys,
+    check_parameter_attribute, check_parameter_type, connector_type, data_type, declared_type,
+    references, refuse, sequence_name, spelled, term_attribute, text_attribute, unit_attribute,
 };
 use super::precedence::{self, Graph};
 use super::report::{Dropped, DroppedProperty, ImportOptions, ImportReport, Imported, Normalised};
@@ -52,7 +61,7 @@ pub(super) fn import(bytes: &[u8], options: &ImportOptions) -> Result<Imported, 
             },
         ));
     };
-    check_context(top)?;
+    let context = Context::read(top)?;
     let graph = match top.get("@graph") {
         Some(Value::Array(graph)) => graph,
         Some(_) => {
@@ -122,58 +131,13 @@ pub(super) fn import(bytes: &[u8], options: &ImportOptions) -> Result<Imported, 
         [_, second, ..] => return Err(refuse(second, Kind::NestedComposite)),
     };
     let graph = Graph { nodes, order };
-    precedence::check(&graph, root_id)?;
-    let mut imported = Reader::new(&graph, root_id)?.read()?;
+    precedence::check(&graph, root_id, &context)?;
+    let mut imported = Reader::new(&graph, root_id, &context)?.read()?;
     imported
         .sequence
         .derived_from
         .clone_from(&options.derived_from);
     Ok(imported)
-}
-
-/// Accept only the `S231` binding the engine reads (and the corpus's inert `base`). `S231` bound
-/// to any other IRI, and any term bound to the namespace written through release 0.4.0, is a
-/// [`Kind::NamespaceMismatch`] naming the IRI found and the IRI expected; any other term is an
-/// unknown key.
-fn check_context(top: &Map<String, Value>) -> Result<(), ImportError> {
-    if let Some(key) = top.keys().find(|k| *k != "@context" && *k != "@graph") {
-        return Err(refuse("document", Kind::UnknownKey { key: key.clone() }));
-    }
-    match top.get("@context") {
-        None => Ok(()),
-        Some(Value::Object(context)) => {
-            for (term, value) in context {
-                match (term.as_str(), value) {
-                    ("S231", Value::String(iri)) if iri == S231_IRI => {}
-                    ("S231", Value::String(iri)) => return Err(wrong_namespace(term, iri)),
-                    (_, Value::String(iri)) if iri == RETIRED_S231_IRI => {
-                        return Err(wrong_namespace(term, iri));
-                    }
-                    ("base", Value::String(_)) => {}
-                    _ => return Err(refuse("document", Kind::UnknownKey { key: term.clone() })),
-                }
-            }
-            Ok(())
-        }
-        Some(_) => Err(refuse(
-            "document",
-            Kind::WrongShape {
-                key: "@context".to_owned(),
-            },
-        )),
-    }
-}
-
-/// The refusal for a `@context` term that spells the S231 vocabulary in another namespace.
-fn wrong_namespace(term: &str, found: &str) -> ImportError {
-    refuse(
-        "document",
-        Kind::NamespaceMismatch {
-            term: term.to_owned(),
-            found: found.to_owned(),
-            expected: S231_IRI,
-        },
-    )
 }
 
 /// One import in progress.
@@ -183,13 +147,19 @@ struct Reader<'a> {
     root_id: &'a str,
     root: &'a Map<String, Value>,
     names: Names<'a>,
+    /// The document's `@context` bindings: which unit spellings and unit IRIs it can write.
+    context: &'a Context<'a>,
     /// Every node the subset accounts for; any other node is refused.
     claimed: BTreeSet<&'a str>,
     report: ImportReport,
 }
 
 impl<'a> Reader<'a> {
-    fn new(graph: &'a Graph<'a>, root_id: &'a str) -> Result<Self, ImportError> {
+    fn new(
+        graph: &'a Graph<'a>,
+        root_id: &'a str,
+        context: &'a Context<'a>,
+    ) -> Result<Self, ImportError> {
         let root = graph
             .nodes
             .get(root_id)
@@ -201,6 +171,7 @@ impl<'a> Reader<'a> {
             root_id,
             root,
             names: Names { root: root_id },
+            context,
             claimed: BTreeSet::from([root_id]),
             report: ImportReport::new(SourceForm::Cxf),
         })
@@ -249,7 +220,7 @@ impl<'a> Reader<'a> {
     }
 
     fn read(mut self) -> Result<Imported, ImportError> {
-        check_keys(self.root_id, self.root, NodeKind::Root)?;
+        check_keys(self.root_id, self.root, NodeKind::Root, self.context)?;
         let name = sequence_name(self.root_id)?;
         match self.root.get("@type") {
             None => {}
@@ -337,22 +308,39 @@ impl<'a> Reader<'a> {
     }
 
     /// Check the shape of a parameter node's descriptive attributes, then drop and report them
-    /// (decision 9; the shape check is GitHub issue #559).
+    /// (decision 9; the shape check is GitHub issue #559), in the order unit, quantity, display
+    /// unit, min, max. A `unit` or `displayUnit` is read under whichever spelling the node writes
+    /// (issue #631) and reported as written; two spellings of one are refused.
     fn parameter_attributes(
         &mut self,
         iri: &str,
         node: &Map<String, Value>,
     ) -> Result<(), ImportError> {
-        let properties = [
-            DroppedProperty::Unit,
-            DroppedProperty::Quantity,
-            DroppedProperty::DisplayUnit,
-            DroppedProperty::Min,
-            DroppedProperty::Max,
+        let context = self.context;
+        let unit = Described::Unit(context);
+        let written = |key: &'static str| node.get(key).map(|value| (key, value));
+        let attributes = [
+            (
+                UNIT.written(iri, node, context)?,
+                unit,
+                DroppedProperty::Unit,
+            ),
+            (
+                written("S231:quantity"),
+                Described::Term,
+                DroppedProperty::Quantity,
+            ),
+            (
+                DISPLAY_UNIT.written(iri, node, context)?,
+                unit,
+                DroppedProperty::DisplayUnit,
+            ),
+            (written("S231:min"), Described::Bound, DroppedProperty::Min),
+            (written("S231:max"), Described::Bound, DroppedProperty::Max),
         ];
-        for (key, property) in PARAMETER_ATTRIBUTES.iter().zip(properties) {
-            if let Some(value) = node.get(*key) {
-                check_parameter_attribute(iri, key, value)?;
+        for (attribute, described, property) in attributes {
+            if let Some((key, value)) = attribute {
+                check_parameter_attribute(iri, key, value, described)?;
                 self.drop(iri, property, value);
             }
         }
@@ -364,7 +352,7 @@ impl<'a> Reader<'a> {
         iri: &'a str,
         node: &Map<String, Value>,
     ) -> Result<SequenceParameter, ImportError> {
-        check_keys(iri, node, NodeKind::SequenceParameter)?;
+        check_keys(iri, node, NodeKind::SequenceParameter, self.context)?;
         check_parameter_type(iri, node)?;
         let local = self.single_local(iri)?;
         let declared = declared_type(iri, node)?.ok_or_else(|| {
@@ -408,16 +396,16 @@ impl<'a> Reader<'a> {
         node: &'a Map<String, Value>,
         output: bool,
     ) -> Result<Boundary, ImportError> {
-        check_keys(iri, node, NodeKind::Boundary)?;
+        check_keys(iri, node, NodeKind::Boundary, self.context)?;
         let local = self.single_local(iri)?;
         let typed = connector_type(iri, node, if output { "Output" } else { "Input" })?;
         if output && node.contains_key("S231:isConnectedTo") {
             return Err(refuse(iri, Kind::DrivingSink));
         }
         let mut boundary = Boundary::new(Identifier::unchecked(local), typed.signal);
-        boundary.semantic.unit = term_attribute(iri, node, "S231:unit")?.map(str::to_owned);
+        boundary.semantic.unit = unit_attribute(iri, node, UNIT, self.context)?;
         boundary.quantity = term_attribute(iri, node, "S231:quantity")?.map(str::to_owned);
-        boundary.display_unit = term_attribute(iri, node, "S231:displayUnit")?.map(str::to_owned);
+        boundary.display_unit = unit_attribute(iri, node, DISPLAY_UNIT, self.context)?;
         if let Some(value) = node.get("S231:min") {
             boundary.min = Some(values::bound(iri, "S231:min", typed.signal, value)?);
         }
@@ -445,7 +433,7 @@ impl<'a> Reader<'a> {
         node: &'a Map<String, Value>,
         params: &[Identifier],
     ) -> Result<Block, ImportError> {
-        check_keys(iri, node, NodeKind::Block)?;
+        check_keys(iri, node, NodeKind::Block, self.context)?;
         let name = self.single_local(iri)?;
         let class_path = match node.get("@type") {
             Some(Value::String(class)) => class
@@ -481,7 +469,7 @@ impl<'a> Reader<'a> {
             for port_iri in references(iri, node, key)? {
                 let port = self.node(iri, port_iri)?;
                 let local = self.member(iri, name, port_iri)?;
-                check_keys(port_iri, port, NodeKind::Port)?;
+                check_keys(port_iri, port, NodeKind::Port, self.context)?;
                 let typed = connector_type(port_iri, port, side)?;
                 if side == "Input" && port.contains_key("S231:isConnectedTo") {
                     return Err(refuse(port_iri, Kind::DrivingSink));
@@ -509,7 +497,7 @@ impl<'a> Reader<'a> {
         local: &str,
         params: &[Identifier],
     ) -> Result<Vec<Assignment>, ImportError> {
-        check_keys(iri, node, NodeKind::BlockParameter)?;
+        check_keys(iri, node, NodeKind::BlockParameter, self.context)?;
         check_parameter_type(iri, node)?;
         let read = read_assignments(iri, node, class_path, local, params)?;
         values::check_value_shapes(iri, node, &read)?;

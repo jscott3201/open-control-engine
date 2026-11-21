@@ -83,7 +83,9 @@ It is a projection of
 (modelica-json's `-o cxf --elementary --cxfCore` output at the recorded pins) through the
 catalog's own names: the generator walks every class, connector and parameter `oce-api` names,
 looks each up by `@id`, and reads the description and the QUDT unit and quantity identifiers back
-into Modelica strings through a closed, pinned inverse of modelica-json's tables. The catalog
+into Modelica strings through a closed inverse of modelica-json's tables. The unit inverse is the
+engine's own table, `oce_api::QUDT_UNITS`, which the loader reads a unit IRI through (issue #631);
+the quantity inverse is the generator's, since the engine reads no quantity kind. The catalog
 drives the walk; the document only supplies text.
 
 ### `curated.json`: written by people

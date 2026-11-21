@@ -5,7 +5,11 @@
 //! - [`import_cxf`] reads one flat, single-root CXF document, the dialect the library corpus
 //!   uses: leaf blocks, boundary inputs and outputs with `unit`, `quantity`, `displayUnit`, `min`
 //!   and `max`, sequence parameters of a scalar or enumeration type, block parameters (array
-//!   parameters, enumeration members and library constants included) and connections.
+//!   parameters, enumeration members and library constants included) and connections. A `unit`
+//!   and a `displayUnit` are read under the spellings the engine reads them under, the ones
+//!   modelica-json and CXF-Core write among them (`qudt:hasUnit`, `S231:hasUnit`,
+//!   `S231:hasDisplayUnit`), and one written as an IRI node through the engine's closed unit
+//!   table (issue #631).
 //! - [`import_graph_v0`] reads one document in the frozen prototype's compact block-graph JSON.
 //!
 //! The importer is not a validator and not an evaluator. It decodes structure, resolves the names
@@ -23,6 +27,7 @@
 //! refused, not resolved.
 
 mod comments;
+mod context;
 mod cxf;
 mod error;
 mod nodes;

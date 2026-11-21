@@ -14,6 +14,25 @@ The work is two issues:
 - [#632](https://github.com/jscott3201/open-control-engine/issues/632), blocked by #631, unifies
   a root input's declared unit with the ports it drives.
 
+**As landed (#631).** Rulings 1 to 4 and 6 to 8 are built as written, and the measurements
+below were reproduced on the implementation: over the 257 tracked documents that hold an
+`@graph`, none newly fails, loads or warns once `connector_attrs.jsonld` is rewritten, 19 point
+rows move in 6 documents and 7 content ids move. Four things the rulings left open were settled
+in the build, each the narrowest reading:
+- **`connector_attrs.jsonld` also binds `unit`** to `http://qudt.org/vocab/unit#`. Its display
+  unit is `{"@id": "unit:DEG_C"}` as ruled, and an unbound `unit:` prefix names no QUDT IRI.
+- **A `qudt` prefix the document binds elsewhere, or nowhere, does not name the QUDT schema.**
+  The key is matched by its expanded IRI alone, so `qudt:hasUnit` then stays an unread
+  pass-through key in the engine, and is `unknown-key` in the importer.
+- **The S231 fallback's unit string is not empty and holds no whitespace.** An IRI holds none,
+  and a blank unit would reach the gate as a declared unit.
+- **The importer** admits two more `@context` terms, `qudt` and `unit`, bound to the namespaces
+  the table is keyed under; refuses an unmapped IRI node as `wrong-shape`; and refuses two
+  spellings with a kind of its own, `two-spellings`.
+
+The table is `oce_cxf::QUDT_UNITS` (`crates/oce-cxf/src/unit_iri.rs`), re-exported with its
+lookup as `oce_api::QUDT_UNITS` and `oce_api::unit_of_iri`.
+
 This note stays documentation only. Related:
 - the term-shape rule on every role
   ([GitHub #623](https://github.com/jscott3201/open-control-engine/pull/623), issue #602);

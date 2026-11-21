@@ -176,15 +176,28 @@ pub enum ImportErrorKind {
     ArraySequenceParameter,
     /// A value that is an expression, or a bare name that is not a sequence parameter.
     ExpressionValue,
-    /// `unit`, `quantity`, `displayUnit`, `min`, `max` or `nominal` on a block port.
+    /// `unit`, `quantity`, `displayUnit`, `min`, `max` or `nominal` on a block port, a unit or
+    /// display unit under any spelling the engine reads among them (`qudt:hasUnit`,
+    /// `S231:hasUnit`, `S231:hasDisplayUnit`).
     PortAttribute {
-        /// The attribute, as written (`S231:max`).
+        /// The attribute, as written (`S231:max`, `qudt:hasUnit`).
         attribute: String,
     },
     /// `nominal` or `unbounded` on a boundary.
     ConnectorAttribute {
         /// The attribute, as written (`S231:nominal`).
         attribute: String,
+    },
+    /// One property written under two spellings on one node (`S231:unit` beside
+    /// `qudt:hasUnit`), whether or not the two values agree: neither is chosen, as the engine
+    /// chooses neither (issue #631).
+    TwoSpellings {
+        /// The property, by the engine's own key (`S231:unit`, `S231:displayUnit`).
+        property: &'static str,
+        /// The spelling read first, as written.
+        first: String,
+        /// The second spelling, as written.
+        second: String,
     },
     /// `isConnectedTo` on a boundary output or a block input.
     DrivingSink,
@@ -231,6 +244,7 @@ pub const IMPORT_ERROR_CODES: &[&str] = &[
     "expression-value",
     "port-attribute",
     "connector-attribute",
+    "two-spellings",
     "driving-sink",
     "class-outside-obc",
     "datatype-mismatch",
@@ -268,6 +282,7 @@ impl ImportErrorKind {
             Self::ExpressionValue => "expression-value",
             Self::PortAttribute { .. } => "port-attribute",
             Self::ConnectorAttribute { .. } => "connector-attribute",
+            Self::TwoSpellings { .. } => "two-spellings",
             Self::DrivingSink => "driving-sink",
             Self::ClassOutsideObc => "class-outside-obc",
             Self::DatatypeMismatch => "datatype-mismatch",
@@ -334,6 +349,15 @@ impl fmt::Display for ImportErrorKind {
             Self::ConnectorAttribute { attribute } => {
                 write!(f, "`{attribute}` on a boundary is not carried")
             }
+            Self::TwoSpellings {
+                property,
+                first,
+                second,
+            } => write!(
+                f,
+                "`{property}` is written twice, as `{first}` and as `{second}`; a property has \
+                 exactly one spelling on a node"
+            ),
             Self::DrivingSink => {
                 f.write_str("a boundary output or block input drives a connection")
             }
@@ -449,6 +473,11 @@ mod tests {
             ImportErrorKind::ConnectorAttribute {
                 attribute: String::new(),
             },
+            ImportErrorKind::TwoSpellings {
+                property: "",
+                first: String::new(),
+                second: String::new(),
+            },
             ImportErrorKind::DrivingSink,
             ImportErrorKind::ClassOutsideObc,
             ImportErrorKind::DatatypeMismatch,
@@ -482,6 +511,7 @@ mod tests {
                 | ImportErrorKind::ExpressionValue
                 | ImportErrorKind::PortAttribute { .. }
                 | ImportErrorKind::ConnectorAttribute { .. }
+                | ImportErrorKind::TwoSpellings { .. }
                 | ImportErrorKind::DrivingSink
                 | ImportErrorKind::ClassOutsideObc
                 | ImportErrorKind::DatatypeMismatch
@@ -521,6 +551,7 @@ mod tests {
             "expression-value",
             "port-attribute",
             "connector-attribute",
+            "two-spellings",
             "driving-sink",
             "class-outside-obc",
             "datatype-mismatch",

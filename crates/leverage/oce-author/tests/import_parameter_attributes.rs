@@ -3,9 +3,11 @@
 //! JSON number, a typed literal or a string. `S231:unit`, `S231:quantity` and `S231:displayUnit`
 //! are a term: a string, a typed literal or an IRI node. A typed literal is an object of exactly
 //! `@value` and `@type`, both strings; an IRI node one of exactly `@id`, a string. None of those
-//! strings may be empty or whitespace-only (owner ruling). Anything else, `null` and a list
-//! included, is refused as `wrong-shape` naming the key. A legal one is still dropped unread and
-//! reported as written (importer note, decision 9).
+//! strings may be empty or whitespace-only (owner ruling). A `unit` or `displayUnit` IRI node
+//! must also name a unit the engine's closed table maps (issue #631; `import_unit_spellings.rs`
+//! holds the spellings and the table). Anything else, `null` and a list included, is refused as
+//! `wrong-shape` naming the key. A legal one is still dropped unread and reported as written
+//! (importer note, decision 9).
 //!
 //! Each case edits one node of a corpus fixture the importer reads: the sequence parameter
 //! `dpBuiSet`, and the block parameter `zerDam.k`.
@@ -75,6 +77,11 @@ fn legal(key: &str) -> Vec<Value> {
     if is_bound(key) {
         shapes.extend([json!(0), json!(-1), json!(30.5)]);
     } else {
+        // A `quantity` IRI node is any identifier, read verbatim. A `unit` or `displayUnit` one
+        // must name a unit the engine's closed table maps (issue #631), as this one does.
+        shapes.push(json!({ "@id": "http://qudt.org/vocab/unit#PA" }));
+    }
+    if key == "S231:quantity" {
         shapes.push(json!({ "@id": "unit:PA" }));
     }
     shapes
@@ -105,6 +112,15 @@ fn malformed(key: &str) -> Vec<Value> {
         shapes.push(json!({ "@id": "unit:PA" }));
     } else {
         shapes.extend([json!(5), json!(1.5)]);
+    }
+    if matches!(key, "S231:unit" | "S231:displayUnit") {
+        // A unit IRI node the engine's closed table does not map (issue #631): a prefix this
+        // document does not bind, a relative reference, a QUDT name the table lacks.
+        shapes.extend([
+            json!({ "@id": "unit:PA" }),
+            json!({ "@id": "Pa" }),
+            json!({ "@id": "http://qudt.org/vocab/unit#M3-PER-MIN" }),
+        ]);
     }
     shapes
 }

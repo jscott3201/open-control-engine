@@ -180,6 +180,11 @@ pub struct Node {
     /// fell through `other`, defeating unit unification on CXF. On a parameter node it, `quantity`
     /// and `displayUnit` are never used, but the resolver refuses the [`TermAttr::Other`] arm there
     /// as it does on a connector, and a blank term (issue #559).
+    ///
+    /// The resolver also reads this property under the spellings modelica-json and CXF-Core
+    /// write, `qudt:hasUnit` and `S231:hasUnit`, matched after `@context` expansion (issue #631).
+    /// This DTO does not: [`crate::parse_document`] leaves those keys in [`Node::other`], and the
+    /// resolver moves them here on its working clone.
     #[serde(rename = "S231:unit", default, skip_serializing_if = "Option::is_none")]
     pub unit: Option<TermAttr>,
     /// `S231:quantity` — the physical quantity kind (§7.4.1), e.g. `"ThermodynamicTemperature"` or
@@ -194,7 +199,8 @@ pub struct Node {
     pub quantity: Option<TermAttr>,
     /// `S231:displayUnit` — the **presentation** unit (OBC §7.4.1 / §7.17); divergence is a
     /// should-warning only and it **never** affects computation. A [`TermAttr`] (see
-    /// [`Node::unit`]).
+    /// [`Node::unit`]). The resolver also reads it under `S231:hasDisplayUnit`, the spelling
+    /// modelica-json and CXF-Core write (issue #631), on its working clone.
     #[serde(
         rename = "S231:displayUnit",
         default,
@@ -269,7 +275,10 @@ pub struct Node {
     /// opaque passthrough for lossless round-trip (R-8). A direct `@context` is retained here for
     /// round-trip fidelity, but the resolver refuses it before identity expansion because
     /// node-scoped context processing is outside the ingest subset. (`S231:unit`/`quantity`/
-    /// `displayUnit` are modeled typed fields above, not passthrough.)
+    /// `displayUnit` are modeled typed fields above, not passthrough.) The resolver reads three
+    /// keys out of this map as modeled properties, on its working clone: `qudt:hasUnit` and
+    /// `S231:hasUnit` as `unit`, and `S231:hasDisplayUnit` as `displayUnit` (issue #631).
+    /// `qudt:hasQuantityKind` is not one of them and stays here unread.
     #[serde(flatten)]
     pub other: BTreeMap<String, serde_json::Value>,
 }
@@ -426,6 +435,13 @@ pub enum CxfValue {
 /// `sh:class qudt:QuantityKind`, i.e. an IRI node). The lexical term is recovered with [`as_term`]
 /// (which returns `None` for the `Other` arm).
 ///
+/// **The shape decides how the resolver reads a unit** (issue #631; design note
+/// `docs/design/unit-spellings.md`, decision 2). A string or typed literal `unit` or `displayUnit`
+/// is the unit string, read verbatim. An IRI node is expanded against the document `@context` and
+/// looked up in the closed unit table ([`crate::unit_of_iri`]): `{"@id":"unit:K"}` under a
+/// `unit` prefix bound to QUDT's unit namespace reads `K`, and an IRI the table does not map is
+/// refused as `non-subset-construct`. A `quantity` IRI node is still its verbatim `@id`.
+///
 /// Variant order is load-bearing for `#[serde(untagged)]`: `Bare` (a string) must precede the two
 /// object arms, which are themselves disjoint (`Typed` requires `@value`+`@type`; `Iri` requires
 /// `@id`). Each object arm keeps a flattened `extra` map so unknown JSON-LD keys (`@language`,
@@ -463,9 +479,13 @@ pub enum TermAttr {
     /// An IRI-node reference `{"@id": "..."}` (the qudt:Unit / qudt:QuantityKind form
     /// `CXF-Core.jsonld` declares).
     Iri {
-        /// The referenced IRI — used verbatim as the lexical term. Deliberately excluded from
-        /// the resolver's `@context` expansion, permanently: unit/quantity/displayUnit are
-        /// lexical terms the §7.10 gate compares by exact string equality, not graph identities.
+        /// The referenced IRI, as written. For `quantity` it is the lexical term, used verbatim
+        /// and never expanded. For `unit` and `displayUnit` the resolver expands it against the
+        /// document `@context` and reads it through the closed unit table
+        /// ([`crate::unit_of_iri`]), so the §7.10 gate compares the unit string it stands for
+        /// (`K`), never the IRI (issue #631). Before that issue this field was excluded from
+        /// expansion for every term and compared verbatim, so `{"@id":"unit:K"}` was the unit
+        /// `unit:K` and did not unify with `"K"`.
         #[serde(rename = "@id")]
         id: String,
         /// Any other keys on the reference object, preserved for lossless round-trip (R-8). A
@@ -482,11 +502,13 @@ pub enum TermAttr {
 }
 
 impl TermAttr {
-    /// The lexical term: the bare string, the typed literal's `@value`, or the IRI node's `@id`;
-    /// `None` for the malformed `Other` arm. This is the string the §7.10 deep gate unifies on. An
-    /// IRI-node term is the raw IRI (e.g. `"unit:K"`); cross-form unit equivalence (IRI ⇔
-    /// bare-string ⇔ CURIE normalization) is out of scope by design — terms compare by exact
-    /// string equality, and the resolver's `@context` expansion never touches this arm.
+    /// The lexical term as written: the bare string, the typed literal's `@value`, or the IRI
+    /// node's `@id`; `None` for the malformed `Other` arm. For a string or typed literal, and for
+    /// a `quantity` in any shape, this is the string the §7.10 deep gate unifies on, compared by
+    /// exact string equality. For a `unit` or `displayUnit` IRI node it is the raw IRI as authored
+    /// (e.g. `"unit:K"`), which the resolver does **not** unify on: it reads the IRI through the
+    /// closed unit table ([`crate::unit_of_iri`]) into the unit string (`"K"`) first (issue #631).
+    /// This accessor expands nothing and maps nothing.
     #[must_use]
     pub fn as_term(&self) -> Option<&str> {
         match self {

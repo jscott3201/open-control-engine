@@ -149,14 +149,16 @@ fn modelica_json_style_document_loads_clean_with_expanded_identities() {
         graph.boundary_outputs[0].iri.as_ref(),
         format!("{prefix}.ySup")
     );
-    // The OUT-list positive pin: the fixture declares `unit` as a prefix AND uses it in a
-    // `S231:unit` IRI-node decoration on gai.y. The lexical term must survive VERBATIM —
-    // `TermAttr::Iri` is excluded from expansion even when its prefix is declared.
+    // The fixture declares `unit` as a prefix (QUDT's unit namespace, as modelica-json binds it)
+    // AND uses it in a `S231:unit` IRI-node decoration on gai.y. A unit written as an IRI node is
+    // expanded and read through the closed unit table (issue #631), so the gate and the host see
+    // the unit string `K`. Before, the term stayed the verbatim CURIE `unit:K`, which equals no
+    // unit string.
     match &graph.connectors[1].attrs {
         oce_model::Attrs::Real(attrs) => assert_eq!(
             attrs.unit.as_deref(),
-            Some("unit:K"),
-            "the unit term must stay the authored CURIE, never expand"
+            Some("K"),
+            "the unit IRI node must read as the unit string it stands for"
         ),
         other => panic!("gai.y must carry Real attrs, got {other:?}"),
     }

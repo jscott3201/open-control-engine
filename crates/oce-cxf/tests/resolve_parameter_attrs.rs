@@ -147,7 +147,9 @@ fn legal_terms() -> Vec<Json> {
         json!("1"),
         json!(" Pa "),
         json!({ "@value": "Pa", "@type": "http://www.w3.org/2001/XMLSchema#string" }),
-        json!({ "@id": "unit:PA" }),
+        // A `quantity` IRI node is its verbatim `@id`; a `unit` or `displayUnit` one is read
+        // through the closed unit table, which maps this IRI (issue #631).
+        json!({ "@id": "http://qudt.org/vocab/unit#PA" }),
         Json::Null,
     ]
 }

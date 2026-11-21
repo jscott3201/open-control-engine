@@ -11,8 +11,9 @@ use std::collections::BTreeMap;
 
 use serde_json::{Map, Value};
 
+use super::context::Context;
 use super::error::{ImportError, ImportErrorKind as Kind};
-use super::nodes::{Names, PORT_ATTRIBUTES, local_path, refuse, sequence_name};
+use super::nodes::{self, Names, local_path, refuse, sequence_name};
 use super::values::is_expression;
 
 /// The nodes by `@id`, and the `@id`s in `@graph` order.
@@ -22,10 +23,15 @@ pub(super) struct Graph<'a> {
 }
 
 /// Check conditional components, expression values, port attributes and names, in that order.
-pub(super) fn check(graph: &Graph<'_>, root: &str) -> Result<(), ImportError> {
+/// `context` says whether `qudt:hasUnit` is a port attribute in this document (issue #631).
+pub(super) fn check(
+    graph: &Graph<'_>,
+    root: &str,
+    context: &Context<'_>,
+) -> Result<(), ImportError> {
     conditional(graph)?;
     expression(graph, root)?;
-    port_attribute(graph, root)?;
+    port_attribute(graph, root, context)?;
     names(graph, root)
 }
 
@@ -81,7 +87,7 @@ fn expression(graph: &Graph<'_>, root: &str) -> Result<(), ImportError> {
     Ok(())
 }
 
-fn port_attribute(graph: &Graph<'_>, root: &str) -> Result<(), ImportError> {
+fn port_attribute(graph: &Graph<'_>, root: &str, context: &Context<'_>) -> Result<(), ImportError> {
     let Some(root_node) = graph.nodes.get(root) else {
         return Ok(());
     };
@@ -94,13 +100,11 @@ fn port_attribute(graph: &Graph<'_>, root: &str) -> Result<(), ImportError> {
                 let Some(port_node) = graph.nodes.get(port) else {
                     continue;
                 };
-                if let Some(attribute) =
-                    PORT_ATTRIBUTES.iter().find(|a| port_node.contains_key(**a))
-                {
+                if let Some(attribute) = nodes::port_attribute(port_node, context) {
                     return Err(refuse(
                         port,
                         Kind::PortAttribute {
-                            attribute: (*attribute).to_owned(),
+                            attribute: attribute.to_owned(),
                         },
                     ));
                 }

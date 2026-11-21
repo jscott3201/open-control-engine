@@ -62,6 +62,7 @@ mod core_crates_hash_free;
 mod crossed_bounds;
 mod cxf_namespace_and_label;
 mod cxf_property_key_spellings;
+mod cxf_unit_spellings;
 mod declared_output_lookup;
 mod derived_connector_types;
 mod device_filtered_inventory;
@@ -123,6 +124,7 @@ mod state_contract;
 mod state_old_layout;
 mod topology;
 mod unused_boundary_input;
+mod vendored_translation_units;
 
 /// Every file Cargo would have discovered as a test target, keyed by its path under `tests/`
 /// without the `.rs` (`name` for `tests/name.rs`, `name/main` for `tests/name/main.rs`).

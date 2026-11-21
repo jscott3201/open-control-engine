@@ -1,6 +1,7 @@
 {
   "@context": {
     "S231": "http://data.ashrae.org/S231#",
+    "unit": "http://qudt.org/vocab/unit#",
     "base": "http://example.org#"
   },
   "@graph": [
@@ -29,7 +30,7 @@
       "S231:isOfDataType": { "@id": "S231:Real" },
       "S231:unit": "K",
       "S231:quantity": { "@value": "ThermodynamicTemperature", "@type": "http://www.w3.org/2001/XMLSchema#string" },
-      "S231:displayUnit": { "@id": "degC" },
+      "S231:displayUnit": { "@id": "unit:DEG_C" },
       "S231:min": 0.0,
       "S231:max": 350.0,
       "S231:isConnectedTo": { "@id": "http://example.org#A.yOut" } },

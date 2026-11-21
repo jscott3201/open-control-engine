@@ -15,7 +15,8 @@ use crate::scope_chain::ParamScope;
 /// `nominal`; `Integer` carries only integer bounds, so a declared term or `nominal` is a
 /// `malformed-document` error; `Boolean`/`String`/`Enum` carry none (the type system forbids it),
 /// so a declared one is a `malformed-document` error, never silently dropped. A Real connector's
-/// term is held to its shape ([`super::term_shape`]).
+/// term is held to its shape ([`super::term_shape`]), and its `unit` or `displayUnit` written as an
+/// IRI node the closed unit table does not map is refused as `non-subset-construct` (issue #631).
 ///
 /// `nominal` grounds like a bound (issue #379): it reaches the deep gate, which refuses a
 /// non-finite one (`non-finite-bound`), and export round-trips it. It is still excluded from
@@ -25,8 +26,8 @@ pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Vec<Diagno
     match vt {
         ValueType::Real => Attrs::Real(RealAttrs {
             quantity: term_attr(node.quantity.as_ref(), "quantity", subject, diags),
-            unit: term_attr(node.unit.as_ref(), "unit", subject, diags),
-            display_unit: term_attr(node.display_unit.as_ref(), "displayUnit", subject, diags),
+            unit: unit_attr(node.unit.as_ref(), "unit", subject, diags),
+            display_unit: unit_attr(node.display_unit.as_ref(), "displayUnit", subject, diags),
             min: real_connector_number(node.min.as_ref(), "min", subject, diags),
             max: real_connector_number(node.max.as_ref(), "max", subject, diags),
             nominal: real_connector_number(node.nominal.as_ref(), "nominal", subject, diags),
@@ -101,6 +102,33 @@ fn term_attr(
 ) -> Option<Arc<str>> {
     let term = t?;
     if refuse_term(term, which, subject, diags) {
+        return None;
+    }
+    term.as_term().map(Arc::from)
+}
+
+/// Read the `unit` or `displayUnit` of a Real connector: [`term_attr`], and an IRI node the
+/// closed unit table does not map refused as outside the subset (issue #631; design note
+/// `docs/design/unit-spellings.md`, decision 2). A mapped IRI node never reaches here as one: the
+/// expansion pass replaced it by its unit string.
+fn unit_attr(
+    t: Option<&crate::dto::TermAttr>,
+    which: &str,
+    subject: &str,
+    diags: &mut Vec<Diagnostic>,
+) -> Option<Arc<str>> {
+    let term = t?;
+    if refuse_term(term, which, subject, diags) {
+        return None;
+    }
+    if let Some(found) = super::term_shape::unmapped_unit(term) {
+        diags.push(
+            Diagnostic::error(
+                DiagCode::NonSubsetConstruct,
+                format!("S231:{which} is {found}"),
+            )
+            .with_subject(subject.to_owned()),
+        );
         return None;
     }
     term.as_term().map(Arc::from)

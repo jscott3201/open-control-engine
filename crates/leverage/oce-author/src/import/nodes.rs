@@ -8,6 +8,7 @@ use serde_json::{Map, Value};
 use crate::identifier::check_identifier_syntax;
 use crate::model::SignalType;
 
+use super::context::Context;
 use super::error::{ImportError, ImportErrorKind as Kind, SourceForm};
 
 /// The `S231` context IRI: the only one a document may bind `S231` to.
@@ -52,32 +53,97 @@ pub(super) enum NodeKind {
     Port,
 }
 
-/// The descriptive parameter attributes the importer reads, drops and reports (decision 9).
-pub(super) const PARAMETER_ATTRIBUTES: [&str; 5] = [
-    "S231:unit",
-    "S231:quantity",
-    "S231:displayUnit",
-    "S231:min",
-    "S231:max",
-];
+/// The QUDT schema spelling of `unit` (`qudt:hasUnit`, as modelica-json writes it). It names the
+/// property only in a document that binds `qudt` to a QUDT schema namespace
+/// ([`Context::reads_qudt`]); in any other it is a key the importer does not know.
+pub(super) const QUDT_HAS_UNIT: &str = "qudt:hasUnit";
+
+/// One property read under more than one compact key (issue #631; unit-spellings note, decisions
+/// 1 and 6): the property as the engine names it, and every key that spells it, in the order a
+/// second spelling is reported.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Spellings {
+    /// The property, by the engine's own key (`S231:unit`).
+    property: &'static str,
+    /// Every key that spells it.
+    keys: &'static [&'static str],
+}
+
+/// The spellings of `unit`: the engine's key, the term CXF-Core's connector shapes name, and the
+/// QUDT schema property modelica-json writes.
+pub(super) const UNIT: Spellings = Spellings {
+    property: "S231:unit",
+    keys: &["S231:unit", "S231:hasUnit", QUDT_HAS_UNIT],
+};
+
+/// The spellings of `displayUnit`: the engine's key and the one modelica-json and CXF-Core write.
+pub(super) const DISPLAY_UNIT: Spellings = Spellings {
+    property: "S231:displayUnit",
+    keys: &["S231:displayUnit", "S231:hasDisplayUnit"],
+};
+
+impl Spellings {
+    /// The one spelling of this property `node` writes, as `(key, value)`, or `None` when it
+    /// writes none. Two spellings on one node are refused as [`Kind::TwoSpellings`], whether or
+    /// not their values agree, as the engine refuses them: neither reader picks one.
+    pub(super) fn written<'a>(
+        self,
+        id: &str,
+        node: &'a Map<String, Value>,
+        context: &Context<'_>,
+    ) -> Result<Option<(&'static str, &'a Value)>, ImportError> {
+        let mut present = self
+            .keys
+            .iter()
+            .filter(|key| **key != QUDT_HAS_UNIT || context.reads_qudt())
+            .filter_map(|key| node.get(*key).map(|value| (*key, value)));
+        let first = present.next();
+        match (first, present.next()) {
+            (Some((first, _)), Some((second, _))) => Err(refuse(
+                id,
+                Kind::TwoSpellings {
+                    property: self.property,
+                    first: first.to_owned(),
+                    second: second.to_owned(),
+                },
+            )),
+            (first, _) => Ok(first),
+        }
+    }
+}
+
+/// What a descriptive parameter attribute is held to (GitHub issue #559; issue #631).
+#[derive(Clone, Copy, Debug)]
+pub(super) enum Described<'a> {
+    /// `S231:min` or `S231:max`: a JSON number, a typed literal or a string (an expression).
+    Bound,
+    /// `S231:quantity`: a string, a typed literal or an IRI node, read verbatim by the engine.
+    Term,
+    /// A `unit` or `displayUnit`, under any spelling: a term whose IRI node the engine reads
+    /// through its closed unit table, so one the table does not map is refused.
+    Unit(&'a Context<'a>),
+}
 
 /// Refuse a descriptive parameter attribute of a malformed shape (GitHub issue #559; owner
-/// rulings of 2026-11-11), before it is dropped. The value is never read, but its shape is held
-/// to what the engine's loader accepts there: a bound (`S231:min`, `S231:max`) is a JSON
-/// number, a typed literal or a string (an expression); a term (`S231:unit`, `S231:quantity`,
-/// `S231:displayUnit`) is a string, a typed literal or an IRI node. A typed literal here is an
+/// rulings of 2026-11-11), before it is dropped. The value is never carried, but its shape is
+/// held to what the engine's loader accepts there: a bound (`S231:min`, `S231:max`) is a JSON
+/// number, a typed literal or a string (an expression); a term (`unit`, `quantity`,
+/// `displayUnit`) is a string, a typed literal or an IRI node. A typed literal here is an
 /// object of exactly `@value` and `@type`, both strings, and an IRI node one of exactly `@id`, a
 /// string: the strict shapes the rest of this reader accepts. No such string (the value itself, a
 /// typed literal's `@value`, an IRI node's `@id`) may be empty or whitespace-only, as
 /// [`str::trim`] reads whitespace, and a term's may carry no Unicode format or control character
-/// ([`legal_term_text`], issue #629). Anything else, `null` and a list included, is `wrong-shape`
-/// naming the key.
+/// ([`legal_term_text`], issue #629). A `unit` or `displayUnit` written as an IRI node must also
+/// name a unit the engine's closed table maps ([`Context::unit_of`], issue #631): the engine
+/// refuses any other there, and so does this reader. Anything else, `null` and a list included,
+/// is `wrong-shape` naming the key.
 pub(super) fn check_parameter_attribute(
     id: &str,
     key: &str,
     value: &Value,
+    described: Described<'_>,
 ) -> Result<(), ImportError> {
-    let bound = matches!(key, "S231:min" | "S231:max");
+    let bound = matches!(described, Described::Bound);
     let filled = |text: &str| {
         if bound {
             !text.trim().is_empty()
@@ -91,7 +157,11 @@ pub(super) fn check_parameter_attribute(
             && matches!(map.get("@type"), Some(Value::String(_)))
     };
     let iri_node = |map: &Map<String, Value>| {
-        map.len() == 1 && matches!(map.get("@id"), Some(Value::String(text)) if filled(text))
+        map.len() == 1
+            && matches!(map.get("@id"), Some(Value::String(text)) if filled(text) && match described {
+                Described::Unit(context) => context.unit_of(text).is_some(),
+                Described::Bound | Described::Term => true,
+            })
     };
     let legal = match value {
         Value::String(text) => filled(text),
@@ -111,15 +181,33 @@ pub(super) fn check_parameter_attribute(
     }
 }
 
-/// The attributes a block port may not carry (decision 8), in the order they are checked.
-pub(super) const PORT_ATTRIBUTES: [&str; 6] = [
+/// The attributes a block port may not carry (decision 8), in the order they are checked: the
+/// engine's keys, then the two S231 spellings modelica-json and CXF-Core write (issue #631).
+/// [`QUDT_HAS_UNIT`] is one more, checked last, in a document that binds `qudt`
+/// ([`port_attribute`]).
+pub(super) const PORT_ATTRIBUTES: [&str; 8] = [
     "S231:unit",
     "S231:quantity",
     "S231:displayUnit",
     "S231:min",
     "S231:max",
     "S231:nominal",
+    "S231:hasUnit",
+    "S231:hasDisplayUnit",
 ];
+
+/// The first attribute the block port `port` carries that a port may not (decision 8), in
+/// [`PORT_ATTRIBUTES`] order and then [`QUDT_HAS_UNIT`] where the document binds `qudt`.
+pub(super) fn port_attribute(
+    port: &Map<String, Value>,
+    context: &Context<'_>,
+) -> Option<&'static str> {
+    PORT_ATTRIBUTES
+        .iter()
+        .copied()
+        .chain(context.reads_qudt().then_some(QUDT_HAS_UNIT))
+        .find(|attribute| port.contains_key(*attribute))
+}
 
 /// The array keys of a parameter node.
 const ARRAY_KEYS: [&str; 3] = [
@@ -150,8 +238,10 @@ impl NodeKind {
                 "S231:isOfDataType",
                 "S231:value",
                 "S231:unit",
+                "S231:hasUnit",
                 "S231:quantity",
                 "S231:displayUnit",
+                "S231:hasDisplayUnit",
                 "S231:min",
                 "S231:max",
             ],
@@ -159,8 +249,10 @@ impl NodeKind {
                 "S231:isOfDataType",
                 "S231:value",
                 "S231:unit",
+                "S231:hasUnit",
                 "S231:quantity",
                 "S231:displayUnit",
+                "S231:hasDisplayUnit",
                 "S231:min",
                 "S231:max",
                 "S231:isArray",
@@ -171,8 +263,10 @@ impl NodeKind {
                 "S231:isOfDataType",
                 "S231:isConnectedTo",
                 "S231:unit",
+                "S231:hasUnit",
                 "S231:quantity",
                 "S231:displayUnit",
+                "S231:hasDisplayUnit",
                 "S231:min",
                 "S231:max",
             ],
@@ -180,9 +274,19 @@ impl NodeKind {
         }
     }
 
+    /// Whether a node of this kind may carry a unit: a boundary, where it is read, and a
+    /// parameter, where it is checked, dropped and reported.
+    fn carries_unit(self) -> bool {
+        matches!(
+            self,
+            Self::SequenceParameter | Self::BlockParameter | Self::Boundary
+        )
+    }
+
     /// The kind a key outside the whitelist is refused with: the out-of-subset construct it
-    /// spells, or [`Kind::UnknownKey`].
-    fn foreign(self, key: &str) -> Kind {
+    /// spells, or [`Kind::UnknownKey`]. `qudt_has_unit` says whether [`QUDT_HAS_UNIT`] names the
+    /// QUDT property in this document; where it does not, the key is unknown on every node.
+    fn foreign(self, key: &str, qudt_has_unit: bool) -> Kind {
         match (self, key) {
             (_, "S231:isConditionalComponent" | "S231:conditionalExpression") => {
                 Kind::ConditionalComponent
@@ -194,9 +298,13 @@ impl NodeKind {
             (Self::Boundary, "S231:nominal" | "S231:unbounded") => Kind::ConnectorAttribute {
                 attribute: key.to_owned(),
             },
-            (Self::Port, k) if PORT_ATTRIBUTES.contains(&k) => Kind::PortAttribute {
-                attribute: key.to_owned(),
-            },
+            (Self::Port, k)
+                if PORT_ATTRIBUTES.contains(&k) || (k == QUDT_HAS_UNIT && qudt_has_unit) =>
+            {
+                Kind::PortAttribute {
+                    attribute: key.to_owned(),
+                }
+            }
             _ => Kind::UnknownKey {
                 key: key.to_owned(),
             },
@@ -205,17 +313,23 @@ impl NodeKind {
 }
 
 /// Refuse any key outside `kind`'s whitelist and the common keys, with the kind it spells.
+/// [`QUDT_HAS_UNIT`] is inside the whitelist of a node that carries a unit where `context` binds
+/// `qudt` to a QUDT schema namespace, and outside every whitelist where it does not.
 pub(super) fn check_keys(
     id: &str,
     node: &Map<String, Value>,
     kind: NodeKind,
+    context: &Context<'_>,
 ) -> Result<(), ImportError> {
     let allowed = kind.allowed();
-    match node
-        .keys()
-        .find(|k| !COMMON_KEYS.contains(&k.as_str()) && !allowed.contains(&k.as_str()))
-    {
-        Some(key) => Err(refuse(id, kind.foreign(key))),
+    let qudt_has_unit = context.reads_qudt();
+    let known = |key: &str| {
+        COMMON_KEYS.contains(&key)
+            || allowed.contains(&key)
+            || (key == QUDT_HAS_UNIT && qudt_has_unit && kind.carries_unit())
+    };
+    match node.keys().find(|key| !known(key)) {
+        Some(key) => Err(refuse(id, kind.foreign(key, qudt_has_unit))),
         None => Ok(()),
     }
 }
@@ -278,11 +392,52 @@ fn legal_term_text(text: &str) -> bool {
     !text.trim().is_empty() && !text.chars().any(oce_api::is_format_or_control)
 }
 
-/// A boundary's term (`S231:unit`, `S231:quantity`, `S231:displayUnit`), or `None` when absent: a
+/// A boundary's `unit` or `displayUnit` under whichever of `spellings` the node writes, or `None`
+/// when it writes none (issue #631; unit-spellings note, decisions 2 and 6). The value's shape
+/// decides how it is read, as in the engine:
+///
+/// - **a string** that is a legal term ([`legal_term_text`]) is the unit string, verbatim;
+/// - **an IRI node** (an object of exactly `@id`, a legal term) is expanded against `context`
+///   and read through the engine's closed unit table ([`Context::unit_of`]):
+///   `{"@id": "unit:K"}` under a `unit` prefix bound to QUDT's unit namespace is `K`.
+///
+/// Anything else is `wrong-shape` naming the key as written: an IRI node the table does not map
+/// (which the engine refuses as `non-subset-construct`), a typed literal (which the engine
+/// accepts, since a boundary's term here is a string or a unit IRI), a blank string, another
+/// JSON shape. Two spellings on one node are [`Kind::TwoSpellings`].
+pub(super) fn unit_attribute(
+    id: &str,
+    node: &Map<String, Value>,
+    spellings: Spellings,
+    context: &Context<'_>,
+) -> Result<Option<String>, ImportError> {
+    let Some((key, value)) = spellings.written(id, node, context)? else {
+        return Ok(None);
+    };
+    let unit = match value {
+        Value::String(text) if legal_term_text(text) => Some(text.clone()),
+        Value::Object(map) if map.len() == 1 => match map.get("@id") {
+            Some(Value::String(iri)) if legal_term_text(iri) => context.unit_of(iri),
+            _ => None,
+        },
+        _ => None,
+    };
+    unit.map(Some).ok_or_else(|| {
+        refuse(
+            id,
+            Kind::WrongShape {
+                key: key.to_owned(),
+            },
+        )
+    })
+}
+
+/// A boundary's `S231:quantity`, or `None` when absent: a
 /// string that is a legal term ([`legal_term_text`]: not empty or whitespace-only, owner ruling of
 /// 2026-11-12, GitHub #602; no format or control character, issue #629). Anything else is
 /// `wrong-shape` naming the key: a typed literal and an IRI node too, which the engine also
-/// accepts, since a boundary's term here is a string.
+/// accepts, since a boundary's quantity here is a string. (A boundary's `unit` and `displayUnit`
+/// are [`unit_attribute`]'s.)
 pub(super) fn term_attribute<'a>(
     id: &str,
     node: &'a Map<String, Value>,

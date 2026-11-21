@@ -160,12 +160,32 @@ pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
 pub use state_snapshot::StatePortability;
 pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 
+/// Re-export of the two namespaces the loader reads the QUDT schema property `hasUnit` in, the
+/// one the modelica-json translations bind `qudt` to (`#`) and the one QUDT publishes (`/`), so
+/// a second reader accepts the bindings the loader does (issue #631).
+pub use oce_cxf::QUDT_SCHEMA_NAMESPACES;
+/// Re-export of the two namespaces the loader reads a QUDT unit IRI in, the one modelica-json
+/// binds `unit` to (`#`) and the one QUDT publishes (`/`) (issue #631).
+pub use oce_cxf::QUDT_UNIT_NAMESPACES;
+/// Re-export of the CXF reader's closed unit table: `(QUDT unit local name, Modelica unit string)`,
+/// 25 entries sorted by local name, the inverse of modelica-json's unit table less the two entries
+/// whose QUDT identifier names another unit (issue #631, design note
+/// `docs/design/unit-spellings.md`, decision 2). The loader reads a `unit` or `displayUnit` written
+/// as an IRI node through it, so `{"@id": "unit:K"}` is the unit string `K`. It is here so a second
+/// reader above the facade (the authoring importer, the vocabulary generator) reads units from
+/// this table and never from a copy of it.
+pub use oce_cxf::QUDT_UNITS;
 /// Re-export of the CXF reader's invisible-character class: whether a character is a Unicode
 /// format (`Cf`) or control (`Cc`) character, which the loader refuses in a typing token and in a
 /// `unit`, `quantity` or `displayUnit` term (GitHub #641, issue #629). It is here so a second CXF
 /// reader above the facade, the authoring importer, refuses exactly the characters the loader
 /// does, from the same table, and never a copy of it.
 pub use oce_cxf::is_format_or_control;
+/// Re-export of the loader's unit lookup: the unit string an absolute IRI stands for under
+/// [`QUDT_UNITS`] and the S231 fallback, or `None` when the closed table does not map it (issue
+/// #631). The caller expands the IRI against its document's `@context` first; a second reader
+/// that calls this cannot disagree with the loader on an IRI. Allocates nothing, never panics.
+pub use oce_cxf::unit_of_iri;
 
 /// Re-export of the diagnostic code vocabulary: the type of [`Diagnostic::code`], so a host
 /// matches a refusal's code (for example [`ClassPortsError::InvalidParameters`]) as

@@ -531,12 +531,37 @@ fn visible_terms_and_what_the_rule_does_not_name_still_load() {
     ] {
         for term in TERMS {
             for form in FORMS {
+                // A `unit` or `displayUnit` IRI node is read through the closed unit table
+                // (issue #631), which is another rule's: the block below holds it.
+                if matches!(form, Form::Iri) && term != "quantity" {
+                    continue;
+                }
                 for node in ROLES {
                     assert_eq!(
                         import(&with(base(), node, term, form.wrap(text))).ok(),
                         Some(BLOCKS),
                         "{node} {term} {form:?} {text:?}"
                     );
+                }
+            }
+        }
+        // The same text as a unit IRI node, behind the S231 namespace (the fallback modelica-json
+        // writes for a unit its table lacks). This rule still refuses none of it; the unit table
+        // reads it as the unit string unless it holds whitespace, which no IRI does.
+        let fallback = json!({ "@id": format!("http://data.ashrae.org/S231#{text}") });
+        for term in ["unit", "displayUnit"] {
+            for node in ROLES {
+                let outcome = import(&with(base(), node, term, fallback.clone()));
+                if text.contains(char::is_whitespace) {
+                    let diags = match outcome {
+                        Err(CxfError::Validation(diags)) => diags,
+                        other => panic!("{node} {term} {text:?}: {other:?}"),
+                    };
+                    assert_eq!(diags.len(), 1, "{diags:?}");
+                    assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct, "{diags:?}");
+                    assert_eq!(diags[0].subject.as_deref(), Some(node));
+                } else {
+                    assert_eq!(outcome.ok(), Some(BLOCKS), "{node} {term} {text:?}");
                 }
             }
         }

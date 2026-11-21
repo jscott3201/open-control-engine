@@ -2,7 +2,7 @@
 //!
 //! One uniform pre-resolve pass, run by `resolve()` on a working clone of the DTO before the
 //! `@id` index is built, so compact and expanded spellings of the same subject IRI key the same
-//! point, block, model, and datatype. The pass transforms the typed DTO slots only, in two
+//! point, block, model, and datatype. The pass transforms the typed DTO slots only, in three
 //! classes:
 //!
 //! - **Identity slots** — every [`Node`] `@id` and every [`IriRef`] in `containsBlock`,
@@ -41,13 +41,25 @@
 //!   CDL block class the registry lacks (GitHub #620, [`vocabulary_terms`]), which also matches an
 //!   enumeration there by its full path.
 //!
-//! Deliberately excluded from expansion: the [`crate::dto::TermAttr::Iri`] arm (`unit`/`quantity`/
-//! `displayUnit` are lexical terms consumed verbatim by attribute parsing), the `@type` annotation
+//! - **Unit IRI nodes** — a `unit` or `displayUnit` written as an IRI node
+//!   ([`crate::dto::TermAttr::Iri`]), under any key that names the property (issue #631, design
+//!   note `docs/design/unit-spellings.md`, decision 2). Its `@id` is expanded like a typing token,
+//!   best-effort, and the expanded IRI is looked up in the closed unit table
+//!   ([`crate::unit_iri`]). A mapped one becomes the unit string it stands for, so every later
+//!   stage reads `K` whether the document wrote `"K"` or `{"@id": "unit:K"}`. An unmapped one
+//!   keeps its IRI node, with the expanded IRI where it has one, and is refused where the node is
+//!   read ([`crate::resolve`]'s term-shape rule, `non-subset-construct`); nothing is refused
+//!   here. A term the shape rule refuses for another reason (a key beside `@id`, a blank `@id`, a
+//!   format or control character) is left exactly as written, so that refusal quotes the authored
+//!   text. See [`read_unit_iris`].
+//!
+//! Deliberately excluded from expansion: the [`crate::dto::TermAttr::Iri`] arm of `quantity` (a
+//! lexical term consumed verbatim by attribute parsing), the `@type` annotation
 //! inside typed literals (an XSD datatype, not a graph identity), and the lossless passthrough
 //! (`other`) maps. Their enclosing modeled objects are still checked for a direct `@context`, which
 //! is refused rather than applied. The remaining semantic payload body is carried verbatim for
 //! re-emit (`_spec/05` R-SEM-6). A generic JSON walk over `@id` keys would violate all three
-//! exclusions at once and would refuse the shipped `"degC"` unit term.
+//! exclusions at once.
 //!
 //! `@context` handling: the supported form is an **inline prefix map** — a single map, or a
 //! list of maps merged in order with later bindings overriding earlier ones (JSON-LD context
@@ -87,7 +99,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use crate::dto::{Context, CxfDocument, IriRef, Node, OneOrMany};
+use crate::dto::{Context, CxfDocument, IriRef, Node, OneOrMany, TermAttr};
+use crate::resolve::term_shape;
+use crate::unit_iri::unit_of_iri;
 
 #[path = "context_scope.rs"]
 mod context_scope;
@@ -602,6 +616,50 @@ fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut Vec<Diagnostic>
     }
     if let Some(datatype) = &mut node.is_of_data_type {
         expand_type("S231:isOfDataType", &mut datatype.id);
+    }
+    read_unit_iris(node, table);
+}
+
+/// Read each `unit` and `displayUnit` IRI node of `node` through the closed unit table (issue
+/// #631; design note `docs/design/unit-spellings.md`, decision 2).
+///
+/// A term's shape decides how it is read, not its key: a string or typed literal is a unit string
+/// and is not touched here. An IRI node is expanded against the document `@context`
+/// ([`expand_token`], best-effort like a typing token) and looked up with
+/// [`unit_of_iri`]:
+///
+/// - **mapped**: the term becomes the bare unit string, the spelling the §7.10 unit gate, the
+///   point list, the content id and the exporter all read;
+/// - **unmapped**: the term stays an IRI node, its `@id` replaced by the expanded IRI where the
+///   token expanded, so the refusal raised where the node is read
+///   ([`term_shape::unmapped_unit`]) quotes the IRI the document means and not only its compact
+///   spelling.
+///
+/// A term the shape rule already refuses ([`term_shape::problem`]) is left as written: a blank
+/// `@id` or one carrying a format or control character is never expanded, even where a `@context`
+/// term of that exact spelling exists, so the document cannot use a binding to launder a term no
+/// reader can see. `quantity` is never read here (decision 1): its IRI node stays a verbatim
+/// lexical term.
+///
+/// Work is one expansion and one table lookup per term; nothing is dereferenced and nothing is
+/// refused here.
+fn read_unit_iris(node: &mut Node, table: &PrefixTable) {
+    for slot in [&mut node.unit, &mut node.display_unit] {
+        let Some(term) = slot.as_mut() else {
+            continue;
+        };
+        if term_shape::problem(term).is_some() {
+            continue;
+        }
+        let TermAttr::Iri { id, .. } = term else {
+            continue;
+        };
+        if let Expansion::Expanded(iri) = expand_token(id, table) {
+            *id = iri;
+        }
+        if let Some(unit) = unit_of_iri(id).map(str::to_owned) {
+            *term = TermAttr::Bare(unit);
+        }
     }
 }
 

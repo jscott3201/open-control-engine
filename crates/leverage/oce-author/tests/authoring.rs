@@ -50,6 +50,7 @@ mod import_refusals;
 mod import_sweep;
 mod import_term_controls;
 mod import_term_shapes;
+mod import_unit_spellings;
 mod import_values;
 mod library_round_trip;
 mod named_types;
