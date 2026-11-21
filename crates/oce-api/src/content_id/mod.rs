@@ -9,6 +9,8 @@
 mod encode;
 mod graph;
 mod hash;
+#[cfg(test)]
+mod topology_agreement_tests;
 
 pub use hash::{ContentId, ContentIdParseError};
 

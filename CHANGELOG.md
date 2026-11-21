@@ -39,6 +39,41 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Facade
 
+- **`Topology` carries the boundary facts the content id encodes, and the root id** (GitHub
+  #702, issue #701). Two loaded documents that differed only in a boundary's unit, quantity,
+  display unit, type or an input's bound had different canonical content ids and equal
+  `Engine::topology()` snapshots, so nothing built on the view (`oce-diff`'s CXF adapter, issue
+  #666) could report a changed interface. Owner ruling of 2026-11-21: the view gains exactly
+  those facts, additively on its `#[non_exhaustive]` structs.
+  - **`Topology::boundary_inputs`**, a list of the new `DeclaredInput`: one per executable
+    boundary input, in UTF-8 path order, with `path`, `value_type`, `min` and `max` exactly as
+    the `InputDefinition` of the same input has them (the exact type; the effective acceptance
+    domain, not the declaration's bounds) and the declaration's `quantity`, `unit` and
+    `display_unit`, named as on `PointInfo`. An input that feeds only a pass-through is listed;
+    a declared input nothing reads is not, as in `Engine::input_definitions`.
+  - **`DeclaredOutput`** gains `value_type` (the driving connector's exact type, the one
+    `FrameSlots::output_types` reports) and `quantity`, `unit` and `display_unit` (the
+    declaration's after §7.10 unification; for a pass-through, the declared node's own). An
+    output's bounds are not carried: the engine enforces neither and the id leaves both out.
+  - **`Topology::model_id`** is the root identity, equal to `LoadReport::model_id` and empty
+    before a load. It cannot be derived from the block paths: in the 12 one-block documents of
+    the corpus the longest prefix the blocks share is the block's own path.
+  - **Equality.** `Topology`'s `==` now reads `model_id` and `boundary_inputs` too, and a
+    `DeclaredInput`'s bounds compare by bits like a block's Real parameters (`-0.0` is not
+    `0.0`, as in the id). No derive changed and nothing is serialised: the view stays plain
+    owned data with `Debug`, `Clone` and `PartialEq`.
+  - **What it proves.** Equal topologies now imply equal content ids. The converse does not
+    hold: a topology also carries the instance namespace, the root id and the loader's order.
+    `src/content_id/topology_agreement_tests.rs` compares every boundary record of the id with
+    the view, field by field, over the 47 corpus documents and the four content-id examples
+    (188 inputs, 137 outputs); `tests/topology_boundary.rs` moves the topology with each named
+    boundary edit that moves the id; `tests/topology_boundary_corpus.rs` does it over the
+    corpus (449 loading variants) and holds the root id to the load report's.
+  - **Unchanged.** A read-only view: no content id, blob, golden, export byte or format moves,
+    and the workspace version stays. One case no document reaches changed: a declared output
+    whose driving connector is out of range, which the load gate refuses, is now absent from
+    `boundary_outputs` (it has no type to report) where it was listed with a `conn#` path.
+
 - **`oce_api::inspect_blob` reads what a compiled-schedule blob records about itself** (GitHub
   #672, issue #448). It is the accessor a blob comparison needs (`oce-diff`, design note
   decision 15): a leverage crate may not call `oce_graph::blob`, and the facade exposed only

@@ -1,10 +1,13 @@
 //! The canonical content id corpus shared by the `content_id_*` test binaries: the 46 G36 catalog
 //! fixtures and the resolver-contract document `member_list_interface.jsonld`, loaders, and the
 //! enumerated JSON-LD rewrites the permutation classes apply (`docs/design/content-id.md`,
-//! "Permutation classes"). Every rewrite is a pure function of the document; nothing is random.
+//! "Permutation classes"), and the node accessors the one-change tests edit a document through.
+//! Every rewrite is a pure function of the document; nothing is random. The topology boundary
+//! tests share it.
 
 #![allow(dead_code)]
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use oce_api::{ContentId, Engine};
@@ -192,4 +195,54 @@ pub(crate) fn compact_ids(document: &Value) -> Value {
         Some(rest) => format!("base:{rest}"),
         None => id.to_owned(),
     })
+}
+
+/// The `@id`s of a reference or reference list.
+pub(crate) fn refs(value: Option<&Value>) -> Vec<String> {
+    match value {
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(|item| item["@id"].as_str().map(str::to_owned))
+            .collect(),
+        Some(item @ Value::Object(_)) => item["@id"]
+            .as_str()
+            .map(str::to_owned)
+            .into_iter()
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// The `@graph` node whose `@id` is `id`, if there is one.
+pub(crate) fn node<'a>(document: &'a Value, id: &str) -> Option<&'a Value> {
+    document["@graph"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|node| node["@id"] == id)
+}
+
+/// The `@graph` node whose `@id` is `id`, which must exist, for editing.
+pub(crate) fn node_mut<'a>(document: &'a mut Value, id: &str) -> &'a mut Value {
+    document["@graph"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|node| node["@id"] == id)
+        .unwrap()
+}
+
+/// The root composite: the node with `containsBlock` that no `containsBlock` names.
+pub(crate) fn root(document: &Value) -> String {
+    let graph = document["@graph"].as_array().unwrap();
+    let contained: BTreeSet<String> = graph
+        .iter()
+        .flat_map(|node| refs(node.get("S231:containsBlock")))
+        .collect();
+    graph
+        .iter()
+        .filter(|node| node.get("S231:containsBlock").is_some())
+        .map(|node| node["@id"].as_str().unwrap().to_owned())
+        .find(|id| !contained.contains(id))
+        .unwrap()
 }

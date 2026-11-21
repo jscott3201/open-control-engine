@@ -123,6 +123,8 @@ mod replay_matrix;
 mod state_contract;
 mod state_old_layout;
 mod topology;
+mod topology_boundary;
+mod topology_boundary_corpus;
 mod unused_boundary_input;
 mod vendored_translation_units;
 

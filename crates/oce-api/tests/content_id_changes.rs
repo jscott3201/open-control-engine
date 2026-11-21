@@ -102,39 +102,6 @@ fn every_parameter_edit_moves_the_id_and_setting_it_back_restores_it() {
     assert_eq!((edited, zero_signs, structural), (837, 120, 37));
 }
 
-/// The `@id`s of a reference or reference list.
-fn refs(value: Option<&Json>) -> Vec<String> {
-    match value {
-        Some(Json::Array(items)) => items
-            .iter()
-            .filter_map(|item| item["@id"].as_str().map(str::to_owned))
-            .collect(),
-        Some(item @ Json::Object(_)) => item["@id"]
-            .as_str()
-            .map(str::to_owned)
-            .into_iter()
-            .collect(),
-        _ => Vec::new(),
-    }
-}
-
-fn node<'a>(document: &'a Json, id: &str) -> Option<&'a Json> {
-    document["@graph"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|node| node["@id"] == id)
-}
-
-fn node_mut<'a>(document: &'a mut Json, id: &str) -> &'a mut Json {
-    document["@graph"]
-        .as_array_mut()
-        .unwrap()
-        .iter_mut()
-        .find(|node| node["@id"] == id)
-        .unwrap()
-}
-
 /// Rename `from` and every IRI under it (`from.` prefix) to `to`.
 fn rename(document: &Json, from: &str, to: &str) -> Json {
     rewrite_ids(document, &|id: &str| {
@@ -146,21 +113,6 @@ fn rename(document: &Json, from: &str, to: &str) -> Json {
             id.to_owned()
         }
     })
-}
-
-/// The root composite: the node with `containsBlock` that no `containsBlock` names.
-fn root(document: &Json) -> String {
-    let graph = document["@graph"].as_array().unwrap();
-    let contained: BTreeSet<String> = graph
-        .iter()
-        .flat_map(|node| refs(node.get("S231:containsBlock")))
-        .collect();
-    graph
-        .iter()
-        .filter(|node| node.get("S231:containsBlock").is_some())
-        .map(|node| node["@id"].as_str().unwrap().to_owned())
-        .find(|id| !contained.contains(id))
-        .unwrap()
 }
 
 /// Swap the drivers of two same-typed inputs of one leaf block that two different sources drive.

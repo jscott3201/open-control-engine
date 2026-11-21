@@ -627,7 +627,14 @@ above, and a token with both is this refusal, once.
 The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
 identity space: each resolves on `get_output` and `watch` as an alias for
 its driving internal connector's slot, and `Topology.boundary_outputs` enumerates the
-`(path, driver_path)` pairs. Declared names stay out of `point_list` and `IoSummary`; committed
+`(path, driver_path)` pairs, each with the output's exact type and its `quantity`, `unit` and
+`displayUnit` after that unification. `Topology.boundary_inputs` lists the executable boundary
+inputs in the order and with the type and effective bounds of `Engine::input_definitions`, each
+with its declaration's three labels, and `Topology.model_id` is the root identity
+`LoadReport::model_id` reports. Together these are the boundary facts the
+[canonical content id](design/content-id.md) encodes, so two loaded models with equal topologies
+have equal ids (the converse does not hold: a topology also carries the namespace and the
+loader's order). Declared names stay out of `point_list` and `IoSummary`; committed
 frames enumerate only the executable boundary. Their unit, quantity, and bounds are one §7.10 contract:
 conflicts refuse at load and one-sided values propagate to the unset peer. Frame preparation never accepts
 a declared output name. Because the driver's connector supplies host point metadata, a declared
