@@ -4,7 +4,7 @@
 //! withheld emission. Integration-level behavior (whole-document imports, permutations, probe
 //! graduations) lives in `tests/resolve_declaration_scope.rs`.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
@@ -15,7 +15,7 @@ use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
 use crate::scope_chain::ScopeFrame;
 
-use super::declaration_scope::{Pass, WithheldFindings, evaluate_declarations, identifier_heads};
+use super::declaration_scope::{Pass, TaggedFinding, evaluate_declarations, identifier_heads};
 use super::parameter_attrs::CheckedParameters;
 use super::specialize::Specialization;
 
@@ -327,11 +327,20 @@ fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machiner
          is non-emitting in this pass: {:?}",
         evaluation.withheld
     );
-    assert!(
-        evaluation.withheld[0]
-            .message
-            .starts_with("composite/declaration-cycle: "),
+    assert_eq!(
+        evaluation.withheld,
+        [TaggedFinding::Cycle {
+            participants: vec!["ex:M.a", "ex:M.b"],
+        }]
     );
+    // The finding's diagnostic is the one lowering reports for the same chain.
+    let diagnostic = evaluation.withheld[0].diagnostic();
+    assert_eq!(
+        diagnostic.message,
+        "composite/declaration-cycle: cycle in the block's own declaration references: \
+         ex:M.a -> ex:M.b -> ex:M.a"
+    );
+    assert_eq!(diagnostic.subject.as_deref(), Some("ex:M.a"));
     assert!(
         scalar(&evaluation.scope.flattened(), "ok")
             .unwrap()
@@ -561,126 +570,4 @@ fn a_long_operator_chain_yields_its_identifiers_in_source_order_on_a_small_stack
         .unwrap();
     assert_eq!(from_sum, names);
     assert_eq!(from_mixed, names);
-}
-
-/// A finding whose message is `message`, on the subject `chain`.
-fn finding(chain: &str, message: &str) -> Diagnostic {
-    Diagnostic::error(DiagCode::MalformedDocument, message).with_subject(chain)
-}
-
-/// A chain's withheld findings: one list of `messages`, as the specialize invocation builds it.
-fn withheld_list(chain: &str, messages: &[&str]) -> DiagnosticList {
-    messages
-        .iter()
-        .map(|message| finding(chain, message))
-        .collect()
-}
-
-/// What `withheld` releases into an empty list when lowering evaluated the chains `evaluated`.
-fn released(withheld: WithheldFindings, evaluated: &[&str]) -> Vec<Diagnostic> {
-    let evaluated: HashSet<String> = evaluated.iter().map(|chain| (*chain).to_owned()).collect();
-    let mut diags = DiagnosticList::new();
-    withheld.emit_unvisited(&evaluated, &mut diags);
-    diags.into_iter().collect()
-}
-
-/// The closing error of a list that left `unlisted` diagnostics out.
-fn closing_error(unlisted: u64) -> Diagnostic {
-    Diagnostic::error(
-        DiagCode::ResourceLimitExceeded,
-        format!(
-            "{unlisted} more diagnostic(s) are not listed: a diagnostic list holds at most \
-             8388608 bytes of message and subject text"
-        ),
-    )
-}
-
-#[test]
-fn withheld_findings_release_exactly_the_chains_lowering_did_not_evaluate_in_recording_order() {
-    let record = || {
-        let mut withheld = WithheldFindings::default();
-        withheld.record("urn:a", withheld_list("urn:a", &["a1", "a2"]));
-        withheld.record("urn:none", DiagnosticList::new());
-        withheld.record("urn:b", withheld_list("urn:b", &["b1"]));
-        withheld.record("urn:c", withheld_list("urn:c", &["c1", "c2"]));
-        withheld
-    };
-    assert_eq!(
-        released(record(), &[]),
-        [
-            finding("urn:a", "a1"),
-            finding("urn:a", "a2"),
-            finding("urn:b", "b1"),
-            finding("urn:c", "c1"),
-            finding("urn:c", "c2"),
-        ]
-    );
-    // A chain lowering evaluated is passed over whole, wherever it was recorded.
-    assert_eq!(
-        released(record(), &["urn:a"]),
-        [
-            finding("urn:b", "b1"),
-            finding("urn:c", "c1"),
-            finding("urn:c", "c2")
-        ]
-    );
-    assert_eq!(
-        released(record(), &["urn:b"]),
-        [
-            finding("urn:a", "a1"),
-            finding("urn:a", "a2"),
-            finding("urn:c", "c1"),
-            finding("urn:c", "c2"),
-        ]
-    );
-    assert_eq!(
-        released(record(), &["urn:a", "urn:b", "urn:c"]),
-        Vec::<Diagnostic>::new()
-    );
-}
-
-#[test]
-fn withheld_findings_of_every_chain_share_one_budget_and_keep_each_chain_its_count() {
-    // The first chain's finding fills the whole budget, so the two chains after it are counted
-    // and not kept: three findings and two.
-    let filler = "m".repeat(8 * 1024 * 1024 - "urn:a".len());
-    let record = || {
-        let mut withheld = WithheldFindings::default();
-        withheld.record("urn:a", withheld_list("urn:a", &[&filler]));
-        withheld.record("urn:b", withheld_list("urn:b", &["b1", "b2", "b3"]));
-        withheld.record("urn:c", withheld_list("urn:c", &["c1", "c2"]));
-        withheld
-    };
-    // Released whole, the kept finding is listed and the five others are counted.
-    assert_eq!(
-        released(record(), &[]),
-        [finding("urn:a", &filler), closing_error(5)]
-    );
-    // Each chain's count is its own: only the unevaluated chains' findings are counted.
-    assert_eq!(released(record(), &["urn:a", "urn:c"]), [closing_error(3)]);
-    assert_eq!(released(record(), &["urn:a", "urn:b"]), [closing_error(2)]);
-    assert_eq!(
-        released(record(), &["urn:b", "urn:c"]),
-        [finding("urn:a", &filler)]
-    );
-    assert_eq!(
-        released(record(), &["urn:a", "urn:b", "urn:c"]),
-        Vec::<Diagnostic>::new()
-    );
-}
-
-#[test]
-fn a_chain_whose_own_list_ended_keeps_its_listed_findings_and_its_count() {
-    // The chain's own list holds one finding and counts two more that did not fit it.
-    let filler = "m".repeat(8 * 1024 * 1024 - "urn:a".len());
-    let mut own = withheld_list("urn:a", &[&filler, "a2"]);
-    own.leave_unlisted();
-    assert_eq!(own.raised(), 3);
-    let mut withheld = WithheldFindings::default();
-    withheld.record("urn:a", own);
-    withheld.record("urn:b", withheld_list("urn:b", &["b1"]));
-    assert_eq!(
-        released(withheld, &[]),
-        [finding("urn:a", &filler), closing_error(3)]
-    );
 }

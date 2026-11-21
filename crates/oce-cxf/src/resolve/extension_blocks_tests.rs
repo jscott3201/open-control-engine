@@ -21,48 +21,43 @@ fn document(extension_block: bool) -> CxfDocument {
     .expect("the document parses")
 }
 
+/// Whether `document` holds an active extension block, as `refuse` reports it on `list`.
+fn reported(document: &CxfDocument, list: &mut DiagnosticList) -> bool {
+    refuse(document, &Specialization::default(), list)
+}
+
+/// A list that has ended: one diagnostic too large for any list was raised on it.
+fn ended_list() -> DiagnosticList {
+    let mut list = DiagnosticList::new();
+    list.push(Diagnostic::error(
+        DiagCode::MalformedDocument,
+        "m".repeat(8 * 1024 * 1024 + 1),
+    ));
+    assert_eq!((list.len(), list.raised()), (1, 1));
+    list
+}
+
 #[test]
 fn an_extension_block_is_reported_whether_or_not_the_list_has_room_for_its_refusal() {
     let mut open = DiagnosticList::new();
-    assert!(refuse(
-        &document(true),
-        &Specialization::default(),
-        &mut open
-    ));
+    assert!(reported(&document(true), &mut open));
     assert_eq!(open.len(), 1);
     assert_eq!(open[0].code, DiagCode::ExtensionBlockUnsupported);
 
     // A list that has ended lists nothing more, so its length does not move. The refusal is
     // still raised and counted, and the caller is still told to end the resolve.
-    let mut ended = DiagnosticList::new();
-    ended.push(Diagnostic::error(DiagCode::MalformedDocument, "earlier"));
-    ended.leave_unlisted();
-    let (length, raised) = (ended.len(), ended.raised());
-    assert!(refuse(
-        &document(true),
-        &Specialization::default(),
-        &mut ended
-    ));
-    assert_eq!(ended.len(), length);
-    assert_eq!(ended.raised(), raised + 1);
+    let mut ended = ended_list();
+    assert!(reported(&document(true), &mut ended));
+    assert_eq!((ended.len(), ended.raised()), (1, 2));
 }
 
 #[test]
 fn a_document_without_an_extension_block_is_not_reported_on_an_open_or_an_ended_list() {
     let mut open = DiagnosticList::new();
-    assert!(!refuse(
-        &document(false),
-        &Specialization::default(),
-        &mut open
-    ));
+    assert!(!reported(&document(false), &mut open));
     assert!(open.is_empty());
 
-    let mut ended = DiagnosticList::new();
-    ended.leave_unlisted();
-    assert!(!refuse(
-        &document(false),
-        &Specialization::default(),
-        &mut ended
-    ));
+    let mut ended = ended_list();
+    assert!(!reported(&document(false), &mut ended));
     assert_eq!(ended.raised(), 1);
 }

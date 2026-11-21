@@ -20,6 +20,9 @@ use std::time::{Duration, Instant};
 
 use super::*;
 
+/// The reader's budget of diagnostic text, restated so this test fails if it moves unreviewed.
+const DIAGNOSTIC_TEXT_BUDGET: usize = 8 * 1024 * 1024;
+
 /// One mebibyte of `@id` padding.
 const MIB: usize = 1024 * 1024;
 
@@ -122,12 +125,49 @@ fn assert_verdict(shape: Shape, source: &str, fanout: usize, diagnostics: &[Diag
         .iter()
         .filter(|diagnostic| diagnostic.code == code && diagnostic.message == message)
         .collect::<Vec<_>>();
+    // Every verdict carries the source as its subject, and a list holds 8 MiB of message and
+    // subject text, a subject counted for each diagnostic that carries it (GitHub issue #695).
+    // The verdicts that fit are listed, and the closing error counts the others.
+    let listed = count.min(DIAGNOSTIC_TEXT_BUDGET / (source.len() + message.len()));
     assert_eq!(
         matching.len(),
-        count,
+        listed,
         "{shape:?}: {} diagnostics",
         diagnostics.len()
     );
+    let closing = diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == DiagCode::ResourceLimitExceeded)
+        .collect::<Vec<_>>();
+    // What the shape raises beside its verdicts comes after them, so it is listed with them
+    // where they all fit and counted with the others where they do not.
+    let beside = match shape {
+        Shape::OutputToTopOutput => 2,
+        Shape::InputToTopOutput => 3,
+        Shape::InputToTopInput => 1,
+    };
+    if listed == count {
+        assert!(closing.is_empty(), "{shape:?}: every verdict fits");
+        assert_eq!(diagnostics.len(), count + beside, "{shape:?}");
+    } else {
+        assert_eq!(diagnostics.len(), listed + 1, "{shape:?}");
+        let last = diagnostics.last().expect("the closing error");
+        let quoted: String = source.chars().take(64).collect();
+        assert_eq!(
+            last.message,
+            format!(
+                "{} more diagnostic(s) are not listed, the first of them `{code}` on \
+                 `{quoted}…`: a diagnostic list holds at most 8388608 bytes of message and \
+                 subject text",
+                count - listed + beside
+            ),
+            "{shape:?}"
+        );
+        assert_eq!(
+            (last.code, &last.subject),
+            (DiagCode::ResourceLimitExceeded, &None)
+        );
+    }
     // Comparing a 1 MiB subject per diagnostic would itself cost fan-out × IRI length, so the
     // content is compared once and every other subject must be that same shared allocation.
     let subject = matching[0]
@@ -154,7 +194,8 @@ fn assert_verdict(shape: Shape, source: &str, fanout: usize, diagnostics: &[Diag
 }
 
 /// A 1 MiB authored source fanned out 65,535 times lowers and resolves to its ordinary verdict
-/// within the bound, for every shape. Before the fix each import took minutes in release.
+/// within the bound, for every shape: seven verdicts listed and the others counted where each
+/// edge has one, since every verdict carries the 1 MiB source. Before the fix each import took minutes in release.
 #[test]
 fn mebibyte_authored_source_fanout_lowers_within_the_cpu_bound() {
     for shape in SHAPES {

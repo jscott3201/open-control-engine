@@ -296,13 +296,26 @@ fn repeated_diagnostics_share_the_owner_subject() {
     let diags = import_bytes(&bytes).expect_err("reference contexts must refuse");
     let message_bytes: usize = diags.iter().map(|diag| diag.message.len()).sum();
 
-    assert_eq!(diags.len(), 128);
-    let first_subject = diags[0].subject.as_ref().expect("owner subject");
+    // A list holds 8 MiB of message and subject text, a subject counted for each diagnostic
+    // that carries it (GitHub issue #695): 127 of the 128 fit, and the last one is counted.
+    let (closing, listed) = diags.split_last().expect("diagnostics");
+    assert_eq!(listed.len(), 127);
+    let first_subject = listed[0].subject.as_ref().expect("owner subject");
     assert_eq!(first_subject.as_ref(), owner);
-    assert!(diags.iter().all(|diag| {
+    assert!(listed.iter().all(|diag| {
         let subject = diag.subject.as_ref().expect("owner subject");
-        std::sync::Arc::ptr_eq(first_subject, subject)
+        diag.code == DiagCode::NonSubsetConstruct && std::sync::Arc::ptr_eq(first_subject, subject)
     }));
+    assert_eq!(closing.code, DiagCode::ResourceLimitExceeded);
+    assert_eq!(closing.subject, None);
+    assert_eq!(
+        closing.message,
+        format!(
+            "1 more diagnostic(s) are not listed, the first of them `non-subset-construct` on \
+             `urn:{}…`: a diagnostic list holds at most 8388608 bytes of message and subject text",
+            "x".repeat(60)
+        )
+    );
     assert!(
         message_bytes < bytes.len(),
         "diagnostics amplified {} input bytes into {message_bytes} message bytes",

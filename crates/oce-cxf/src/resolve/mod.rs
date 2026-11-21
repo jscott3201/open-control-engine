@@ -60,6 +60,8 @@ mod connections;
 mod declaration_scope;
 #[cfg(test)]
 mod declaration_scope_tests;
+#[cfg(test)]
+mod declaration_scope_withheld_tests;
 mod diags;
 pub(crate) mod extension_blocks;
 mod instance_interface;

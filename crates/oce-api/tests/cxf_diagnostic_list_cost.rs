@@ -5,8 +5,9 @@
 //! `@id` again. One long `@id` and many findings about it, each costing the document a few bytes,
 //! make a list of `findings × id bytes` unless the list is bounded: 400 padded keys on a node with
 //! a 1 MiB `@id`, a document of 2.1 MB, are 1.2 GB of diagnostics. The reader's list holds at most
-//! 8 MiB of message and subject text; the first diagnostic that does not fit ends it, and one
-//! `resource-limit-exceeded` error counts that diagnostic and every later one.
+//! 8 MiB of message and subject text, a subject counted for every diagnostic that carries it; the
+//! first diagnostic that does not fit ends the list, and one `resource-limit-exceeded` error
+//! counts that diagnostic and every later one and names the first of them.
 //!
 //! Each case of [`ROUTES`] is one place the reader raises a diagnostic per item of a list the
 //! document sets (the keys of a node, its `@type` tokens, its references), about one string the
@@ -23,12 +24,13 @@
 //! The budget itself is pinned at its edge by a case of known size: the findings that fit are
 //! listed whole with no closing error, and one more finding adds only the closing error.
 //!
+//! Two more measures say what the budget is worth to a host. A receipt, which copies every
+//! record's subject, holds no more than the budget again. And what a returned refusal holds is
+//! its text and a fixed amount for each diagnostic, with no spare capacity in a message.
+//!
 //! Measured with `allocation-counter`, whose counters are local to the measuring thread. The
 //! ceilings have headroom over what was measured (in brackets); the headroom is far under the
 //! cost of one copied `@id` an item. What this cannot see: work that allocates nothing.
-
-use std::collections::HashSet;
-use std::sync::Arc;
 
 use allocation_counter::{AllocationInfo, measure};
 use oce_api::Engine;
@@ -313,31 +315,32 @@ fn refused(bytes: &[u8]) -> (AllocationInfo, Vec<Diagnostic>) {
     (info, error.diagnostics().to_vec())
 }
 
-/// The closing error of a list that left `unlisted` diagnostics out, stated by hand.
-fn closing(unlisted: usize) -> Diagnostic {
+/// The closing error of a list that left `unlisted` diagnostics out, the first of them described
+/// as `first` (its code and where it is), stated by hand.
+fn closing(unlisted: usize, first: &str) -> Diagnostic {
     Diagnostic::error(
         DiagCode::ResourceLimitExceeded,
         format!(
-            "{unlisted} more diagnostic(s) are not listed: a diagnostic list holds at most \
-             8388608 bytes of message and subject text"
+            "{unlisted} more diagnostic(s) are not listed, the first of them {first}: a \
+             diagnostic list holds at most 8388608 bytes of message and subject text"
         ),
     )
 }
 
-/// The message and subject text `diagnostics` hold, each subject allocation counted once.
-fn held_text(diagnostics: &[Diagnostic]) -> usize {
-    let mut counted = HashSet::new();
+/// The message and subject text of `diagnostics`, as the reader's budget counts it: a subject
+/// for every diagnostic that carries it.
+fn text(diagnostics: &[Diagnostic]) -> usize {
     diagnostics
         .iter()
         .map(|diagnostic| {
-            let subject = diagnostic
-                .subject
-                .as_ref()
-                .filter(|subject| counted.insert(Arc::as_ptr(subject).cast::<u8>()))
-                .map_or(0, |subject| subject.len());
-            diagnostic.message.len() + subject
+            diagnostic.message.len() + diagnostic.subject.as_deref().map_or(0, str::len)
         })
         .sum()
+}
+
+/// `text` as a message quotes authored text of more than 64 bytes: its first 64 and an ellipsis.
+fn excerpt(text: &str) -> String {
+    format!("{}…", &text[..64])
 }
 
 fn bytes(count: usize) -> u64 {
@@ -387,11 +390,22 @@ fn every_route_holds_a_bounded_list_and_builds_nothing_once_it_has_ended() {
                 counted >= unlisted && counted - unlisted <= 8,
                 "{name}: {counted} counted, {unlisted} of the route's own left out"
             );
-            assert_eq!(last, &closing(counted), "{name}");
-            assert!(held_text(listed) <= BUDGET, "{name}");
+            // It names the first finding left out: one of the route's own.
+            let leading = format!(
+                "{counted} more diagnostic(s) are not listed, the first of them `{}` on `",
+                route.code
+            );
+            assert!(
+                last.message.starts_with(&leading),
+                "{name}: {}",
+                last.message
+            );
+            assert!(last.message.len() <= 256, "{name}: {}", last.message);
+            assert_eq!(last.subject, None, "{name}");
+            assert!(text(listed) <= BUDGET, "{name}");
 
-            // The peak is the budget and what reading the document holds. [measured: 9.7 to
-            // 19.6 MB across the cases, for documents of 0.27 to 0.57 MB; 106 to 316 MB with no
+            // The peak is the budget and what reading the document holds. [measured: 6.1 to
+            // 11.7 MB across the cases, for documents of 0.27 to 0.57 MB; 106 to 316 MB with no
             // budget on the list]
             assert!(
                 info.bytes_max <= bytes(BUDGET) + 48 * bytes(document.len()),
@@ -404,7 +418,7 @@ fn every_route_holds_a_bounded_list_and_builds_nothing_once_it_has_ended() {
         // Between the two sizes every further item is one the list has no room for. It costs
         // what reading it costs: a fixed number of bytes and allocations, never the `@id` again.
         // [measured: 142 to 1,966 bytes and 2.0 to 15.2 allocations a further item; a diagnostic
-        // built and dropped would request 262,144 bytes or more]
+        // built and dropped requests 262,144 bytes or more]
         let (small, large) = (&costs[0], &costs[1]);
         let further = bytes(ITEMS[1] - ITEMS[0]);
         assert!(
@@ -437,7 +451,7 @@ fn a_list_that_fills_the_budget_exactly_is_whole_and_one_byte_more_ends_it() {
     let (_, probe) = refused(&relative_references(&short, "r", 1));
     assert_eq!(probe.len(), 1, "{probe:?}");
     assert_eq!(probe[0].code, DiagCode::RelativeIri);
-    let fixed = held_text(&probe) - 2 * short.len();
+    let fixed = text(&probe) - 2 * short.len();
 
     // Sixteen diagnostics of exactly a sixteenth of the budget each. The token is in the message
     // once, so a second character makes an odd remainder even.
@@ -451,7 +465,7 @@ fn a_list_that_fills_the_budget_exactly_is_whole_and_one_byte_more_ends_it() {
 
     let (_, whole) = refused(&relative_references(&id, token, 16));
     assert_eq!(whole.len(), 16);
-    assert_eq!(held_text(&whole), BUDGET);
+    assert_eq!(text(&whole), BUDGET);
     assert!(
         whole
             .iter()
@@ -464,12 +478,96 @@ fn a_list_that_fills_the_budget_exactly_is_whole_and_one_byte_more_ends_it() {
     let (_, one_more) = refused(&relative_references(&id, token, 17));
     assert_eq!(one_more.len(), 17);
     assert_eq!(&one_more[..16], &whole[..]);
-    assert_eq!(one_more[16], closing(1));
+    let first = format!("`relative-iri` on `{}`", excerpt(&id));
+    assert_eq!(one_more[16], closing(1, &first));
 
     // The same sixteen findings, each one byte longer in its message: fifteen fit.
     let longer = format!("{token}r");
     let (_, one_byte_more) = refused(&relative_references(&id, &longer, 16));
     assert_eq!(one_byte_more.len(), 16);
-    assert_eq!(held_text(&one_byte_more[..15]), 15 * (each + 1));
-    assert_eq!(one_byte_more[15], closing(1));
+    assert_eq!(text(&one_byte_more[..15]), 15 * (each + 1));
+    assert_eq!(one_byte_more[15], closing(1, &first));
+}
+
+/// [`MODEL`] with one more node of a 64 KiB `@id` whose `S231:hasInput` holds `count`
+/// references, each with a `@context` of its own: `count` refusals that share the node's `@id`
+/// as one subject allocation.
+fn scoped_references(count: usize) -> Vec<u8> {
+    let references = list(count, |i| {
+        format!(
+            "{{ \"@id\": \"local:r{i}\", \"@context\": {{ \"local\": \"http://scoped.example#\" }} }}"
+        )
+    });
+    with_long_node(
+        "",
+        &long_id(64 * 1024),
+        &format!("\"S231:hasInput\": [ {references} ]"),
+    )
+}
+
+#[test]
+fn a_receipt_copies_no_more_text_than_the_list_it_is_taken_from_holds() {
+    // 1,024 refusals on one 64 KiB subject, shared as one allocation: 127 fit the budget, which
+    // counts the subject for each. A receipt copies every record's subject, so what it holds is
+    // the budget again and no more.
+    let document = scoped_references(1_024);
+    Engine::new()
+        .load_cxf(MODEL.as_bytes())
+        .expect("the model loads");
+    let mut plain = Engine::new();
+    let mut receipted = Engine::new();
+    let (mut without, mut with) = (None, None);
+    let plain_info = measure(|| without = Some(plain.load_cxf(&document)));
+    let receipt_info = measure(|| with = Some(receipted.load_cxf_with_receipt(&document)));
+    let error = without.expect("ran").expect_err("refused");
+    let failure = with.expect("ran").expect_err("refused");
+
+    let diagnostics = error.diagnostics();
+    assert_eq!(diagnostics.len(), 128);
+    assert_eq!(diagnostics[127].code, DiagCode::ResourceLimitExceeded);
+    assert!(text(&diagnostics[..127]) <= BUDGET);
+    let records = failure.diagnostics().records();
+    assert_eq!(records.len(), 128);
+    // [measured: a peak of 3.1 MB without a receipt and 8.5 MB with one, for a document of
+    // 148,711 bytes; with every one of the 1,024 listed and each subject copied, 67.9 MB]
+    assert!(
+        plain_info.bytes_max <= 48 * bytes(document.len()),
+        "{} bytes held without a receipt",
+        plain_info.bytes_max
+    );
+    assert!(
+        receipt_info.bytes_max <= bytes(BUDGET) + 48 * bytes(document.len()),
+        "{} bytes held with a receipt",
+        receipt_info.bytes_max
+    );
+}
+
+#[test]
+fn a_refusal_list_holds_its_text_and_a_fixed_amount_for_each_diagnostic() {
+    // Two full lists: fifteen diagnostics of half a megabyte, and tens of thousands of about a
+    // hundred bytes. What the returned error holds, once the load has returned, is the text and
+    // a record for each diagnostic.
+    for (id_bytes, items) in [(ID_BYTES, 400_usize), (64, 100_000)] {
+        let id = long_id(id_bytes);
+        let references = list(items, |_| "{ \"@id\": \"r\" }".to_owned());
+        let document = with_long_node("", &id, &format!("\"S231:hasInput\": [ {references} ]"));
+        Engine::new()
+            .load_cxf(MODEL.as_bytes())
+            .expect("the model loads");
+        let mut engine = Engine::new();
+        let mut result = None;
+        let info = measure(|| result = Some(engine.load_cxf(&document)));
+        let error = result.expect("ran").expect_err("refused");
+        let diagnostics = error.diagnostics();
+        let held = text(diagnostics);
+        // [measured: 1,073 bytes beside 7,866,384 of text in 16 diagnostics, and 2,138,988
+        // beside 8,388,638 in 33,421: 64 bytes a diagnostic, 1.26 times the text]
+        assert!(
+            info.bytes_current
+                <= i64::try_from(held + 112 * diagnostics.len() + 4_096).expect("fits"),
+            "{} bytes held for {held} of text in {} diagnostics",
+            info.bytes_current,
+            diagnostics.len()
+        );
+    }
 }

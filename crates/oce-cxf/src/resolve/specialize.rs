@@ -47,11 +47,11 @@ impl Specialization {
 ///   shared declaration chain ([`complete_scope`]);
 /// - a **pruned** derivation-shaped instance's members are marked inactive in a second pass
 ///   after the propagation loop completes ([`mark_pruned_instance_members`]).
-pub(super) fn specialize(
-    doc: &crate::dto::CxfDocument,
-    by_id: &HashMap<&str, &Node>,
+pub(super) fn specialize<'a>(
+    doc: &'a crate::dto::CxfDocument,
+    by_id: &HashMap<&str, &'a Node>,
     diags: &mut DiagnosticList,
-) -> (Specialization, WithheldFindings) {
+) -> (Specialization, WithheldFindings<'a>) {
     let mut specialization = Specialization::default();
     let mut withheld = WithheldFindings::default();
     let mut decisions: HashMap<&str, bool> = HashMap::new();
@@ -205,11 +205,11 @@ fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashS
 /// (`ConditionalGuardUnknownParameter` et al.) are unaffected — they emit from guard
 /// evaluation, not from scope construction. `members` is a derivation-shaped parent's
 /// value-carrying member appendix (R19-15 site 3), empty everywhere else.
-fn complete_scope(
-    parent: &Node,
-    members: &[&str],
-    by_id: &HashMap<&str, &Node>,
-    withheld: &mut WithheldFindings,
+fn complete_scope<'a>(
+    parent: &'a Node,
+    members: &[&'a str],
+    by_id: &HashMap<&str, &'a Node>,
+    withheld: &mut WithheldFindings<'a>,
 ) -> CompleteScope {
     let evaluation = evaluate_declarations(
         parent,

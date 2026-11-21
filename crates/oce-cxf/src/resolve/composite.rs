@@ -98,7 +98,7 @@ pub(super) fn lower(
     doc: &CxfDocument,
     by_id: &HashMap<&str, &Node>,
     specialization: &Specialization,
-    withheld: WithheldFindings,
+    withheld: WithheldFindings<'_>,
     checked: &mut CheckedParameters,
     diags: &mut DiagnosticList,
 ) -> LoweredCxf {

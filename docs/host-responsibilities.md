@@ -673,7 +673,7 @@ changes.
 | Composite **nesting** (`containsBlock` lowering) | 64 | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 | Composite boundary path | 64 non-top `isConnectedTo` hops | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 | Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
-| Diagnostic text of one CXF read | 8 MiB (8,388,608 bytes) of messages and subjects together | `crates/oce-cxf/src/diagnostic_list.rs` | the list ends; one closing `resource-limit-exceeded` error counts what is not listed |
+| Diagnostic text of one CXF read | 8 MiB (8,388,608 bytes) of messages and subjects together, a subject counted for each diagnostic | `crates/oce-cxf/src/diagnostic_list.rs` | the list ends; one closing `resource-limit-exceeded` error counts what is not listed |
 
 Composite nesting and boundary traversal are different walks and have separate limits. Boundary
 traversal is iterative, so an accepted path does not consume one call-stack frame per hop. Its work
@@ -688,32 +688,49 @@ A diagnostic copies document text: its subject is a node's `@id`, and most messa
 of a load, to 8 MiB of text (issue #695). What you can rely on:
 
 - **The bound.** The messages and subjects of the listed diagnostics are at most 8,388,608
-  bytes together. A subject that several diagnostics share as one allocation (the resolver's
-  findings on one connector share an `Arc`) is counted once, as it is held once. If you copy or
-  print each diagnostic with its subject, you pay for that subject each time: one long shared
-  subject on many diagnostics is larger printed than held, and
-  `load_cxf_with_receipt` copies every subject into its receipt (issue #708).
+  bytes together. A subject is counted for every diagnostic that carries it, whether or not the
+  diagnostics share one allocation of it, so the bound is what you pay when you copy, print,
+  log or bind each diagnostic with its subject. `load_cxf_with_receipt`, which copies every
+  record's subject, holds no more than the bound again for the import stage.
+- **What that is in memory.** A returned list holds its text and one record for each
+  diagnostic, with no spare capacity in a message. Measured: 1,073 bytes beside 7.9 MB of text
+  for sixteen large diagnostics, and 64 bytes a diagnostic, 1.26 times the text, for 33,421 of
+  about 250 bytes. Where diagnostics share a subject the list holds less than its text. While
+  a load runs, the reader holds that list beside the document it parsed: peaks of 6.1 to
+  11.7 MB for the refused documents of 0.27 to 0.57 MB that the cost tests measure.
 - **Past the bound.** Diagnostics are listed in the order the reader raises them. The first one
   that does not fit ends the list: it and every later one are counted, never listed, even where
   a later one would have fit. The list then ends with one `resource-limit-exceeded` error with
-  no subject, whose message starts with the count: `385 more diagnostic(s) are not listed: a
-  diagnostic list holds at most 8388608 bytes of message and subject text`. The diagnostics
-  before it are in the reader's usual order.
-- **It is always a refusal.** The closing error is an error whatever was left out, so a document
-  whose warnings alone pass the bound is refused. A load never succeeds with warnings missing.
-- **What it does not change.** A list within the bound is whole: no message is shortened
-  and no subject is cut. Every tracked document and every document of `open-control-library`
-  is far inside it (the largest list among them is 196 diagnostics and 29,460 bytes, from a
-  document of 201,721 bytes).
+  no subject. Its message starts with the count and names the first diagnostic left out, by its
+  code and at most 64 bytes of its subject with format and control characters escaped:
+  `385 more diagnostic(s) are not listed, the first of them `malformed-document` on
+  `urn:long:xxx…`: a diagnostic list holds at most 8388608 bytes of message and subject text`.
+  One diagnostic larger than the whole bound therefore leaves that error alone, and it still
+  says what was refused and where. The diagnostics before it are in the reader's usual order.
+- **Where the closing error is.** Last in `CxfError::Validation` and in
+  `OcError::diagnostics()`. A receipt sorts its records by stage, subject, code and severity,
+  and a record with no subject sorts before every record with one, so in
+  `load_cxf_with_receipt` it is the first `Import` record.
+- **It is always a refusal, and that changes one accepted outcome.** The closing error is an
+  error whatever was left out, so a document whose warnings alone pass the bound is refused
+  where it loaded with all of them. A load never succeeds with warnings missing. Measured at
+  the edge: 127 unused boundary inputs under a 64 KiB namespace load with 127 warnings, and 128
+  are refused.
+- **A list within the bound is whole.** Every diagnostic the reader raises is listed, with its
+  message and subject as they are: nothing is shortened, cut, merged or dropped. Every tracked
+  document and every document of `open-control-library` is far inside the bound (the largest
+  list among them is 196 diagnostics and 29,460 bytes, from a document of 201,721 bytes).
 - **Work.** Where one node can raise a diagnostic per item of a list the document sets (its
   keys, its `@type` tokens, its references, its `hasInstance` members, its repeated children, a
   composite's repeated declarations), a finding past the bound is counted and nothing is built
   for it. Other findings past the bound are built and dropped, so they cost their copying but
-  hold nothing (issue #711).
+  hold nothing (issue #711). That is bounded memory, not bounded time: a document that asks for
+  very many such findings is refused after as long as building them takes, where without the
+  bound it failed on allocation first.
 
 The bound covers what `oce-cxf` raises while it reads. The later load stages (unification,
-validation, the schedule) return lists of their own, which this bound does not hold, and an
-export's diagnostics are not held to it either.
+validation, the schedule) return lists of their own, which this bound does not hold: a receipt
+copies their subjects too (issue #708). An export's diagnostics are not held to it either.
 
 ## Treat untrusted CXF as untrusted input
 

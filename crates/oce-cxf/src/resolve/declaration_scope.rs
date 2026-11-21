@@ -97,7 +97,7 @@ pub(super) enum Pass<'a> {
 }
 
 /// The outcome of one own-declaration chain evaluation.
-pub(super) struct Evaluation {
+pub(super) struct Evaluation<'a> {
     /// The enclosing frame extended by the chain's grounded own entries **in chained
     /// declaration order** (not evaluation order). Own names are unique (duplicates refuse), so
     /// the own region's internal order can never change a name-lookup result. Shared by `Arc`
@@ -105,9 +105,61 @@ pub(super) struct Evaluation {
     pub(super) scope: Arc<ScopeFrame>,
     /// Tagged contract findings withheld for reconciliation. Always empty for
     /// [`Pass::Lowering`] (it emits directly); for [`Pass::Specialize`] it carries the
-    /// `declaration-cycle` / `duplicate-declaration` diagnostics of this chain, within the
-    /// text budget of a [`DiagnosticList`].
-    pub(super) withheld: DiagnosticList,
+    /// `declaration-cycle` / `duplicate-declaration` findings of this chain.
+    pub(super) withheld: Vec<TaggedFinding<'a>>,
+}
+
+/// One tagged contract finding of a chain, held as the document's own strings.
+///
+/// A finding is kept this way until it is certain to be reported, and its diagnostic is built
+/// only then ([`TaggedFinding::diagnostic`]): a chain may re-bind one name any number of times,
+/// and every such finding names the first declaration, so built diagnostics would hold
+/// `findings × IRI bytes` where these hold three references each (GitHub issue #695).
+#[derive(Debug, PartialEq, Eq)]
+pub(super) enum TaggedFinding<'a> {
+    /// `iri` re-binds the local name `name`, which `first` declared before it.
+    Duplicate {
+        /// The later declaration, refused.
+        iri: &'a str,
+        /// The local name both declare.
+        name: &'a str,
+        /// The first declaration of the name.
+        first: &'a str,
+    },
+    /// The declarations of one reference cycle, in chained order.
+    Cycle {
+        /// The participants' IRIs, the earliest first.
+        participants: Vec<&'a str>,
+    },
+}
+
+impl TaggedFinding<'_> {
+    /// The finding's diagnostic: `composite/duplicate-declaration` on the later declaration, or
+    /// `composite/declaration-cycle` on the earliest participant, its path closing on that one.
+    pub(super) fn diagnostic(&self) -> Diagnostic {
+        match self {
+            Self::Duplicate { iri, name, first } => Diagnostic::error(
+                DUPLICATE_DECLARATION.code,
+                DUPLICATE_DECLARATION.message(format!(
+                    "own declaration {iri} re-binds local name `{name}` first declared at {first}"
+                )),
+            )
+            .with_subject((*iri).to_owned()),
+            Self::Cycle { participants } => {
+                let earliest = participants.first().copied().unwrap_or_default();
+                let mut path = participants.clone();
+                path.push(earliest);
+                Diagnostic::error(
+                    DECLARATION_CYCLE.code,
+                    DECLARATION_CYCLE.message(format!(
+                        "cycle in the block's own declaration references: {}",
+                        path.join(" -> ")
+                    )),
+                )
+                .with_subject(earliest.to_owned())
+            }
+        }
+    }
 }
 
 /// Tagged contract findings computed by the specialize pass, withheld until after lowering.
@@ -118,41 +170,29 @@ pub(super) struct Evaluation {
 /// releases only the chains the lowering pass never evaluated. Chains are recorded in `@graph`
 /// order (the specialize pass's iteration order), so release order is deterministic.
 ///
-/// Every chain's findings are kept in one [`DiagnosticList`], so what is withheld for the whole
-/// document fits one text budget (GitHub issue #695): a chain may raise many findings that each
-/// name one long declaration. A finding past the budget is counted for its chain and not kept,
-/// and its release ends the import's list as any diagnostic past the budget does.
+/// What is withheld is each finding's [`TaggedFinding`], references into the document, so the
+/// store grows with the number of findings and never with the length of an IRI; a finding's
+/// diagnostic is built when it is released, while the import's list has room for it.
 #[derive(Default)]
-pub(super) struct WithheldFindings {
-    /// Every recorded chain's findings, in recording order.
-    findings: DiagnosticList,
-    /// Each recorded chain and how many findings it raised, in recording order.
-    raised_by_chain: Vec<(String, u64)>,
+pub(super) struct WithheldFindings<'a> {
+    by_chain: Vec<(&'a str, Vec<TaggedFinding<'a>>)>,
 }
 
-impl WithheldFindings {
+impl<'a> WithheldFindings<'a> {
     /// Record one chain's withheld tagged findings (no-op when there are none).
-    pub(super) fn record(&mut self, chain: &str, findings: DiagnosticList) {
-        let raised = findings.raised();
-        if raised > 0 {
-            self.raised_by_chain.push((chain.to_owned(), raised));
-            self.findings.append(findings);
+    pub(super) fn record(&mut self, chain: &'a str, findings: Vec<TaggedFinding<'a>>) {
+        if !findings.is_empty() {
+            self.by_chain.push((chain, findings));
         }
     }
 
     /// Emit the findings of every chain NOT in `evaluated` (the composite ids whose chains the
-    /// lowering pass evaluated itself) into the shared diagnostic list. A finding of such a
-    /// chain that was counted and not kept is counted there too.
+    /// lowering pass evaluated itself) into the shared diagnostic list.
     pub(super) fn emit_unvisited(self, evaluated: &HashSet<String>, diags: &mut DiagnosticList) {
-        let (kept, _) = self.findings.into_parts();
-        let mut kept = kept.into_iter();
-        for (chain, raised) in self.raised_by_chain {
-            let unvisited = !evaluated.contains(&chain);
-            for _ in 0..raised {
-                match kept.next() {
-                    Some(finding) if unvisited => diags.push(finding),
-                    None if unvisited => diags.leave_unlisted(),
-                    Some(_) | None => {}
+        for (chain, findings) in self.by_chain {
+            if !evaluated.contains(chain) {
+                for finding in findings {
+                    diags.raise(|| finding.diagnostic());
                 }
             }
         }
@@ -185,14 +225,14 @@ struct Declaration<'a> {
 ///
 /// Returns the extended scope entries plus (for the specialize pass) the withheld tagged
 /// findings. Total and panic-free on any input document.
-pub(super) fn evaluate_declarations(
-    node: &Node,
-    appended: &[&str],
+pub(super) fn evaluate_declarations<'a>(
+    node: &'a Node,
+    appended: &[&'a str],
     enclosing: &Arc<ScopeFrame>,
-    by_id: &HashMap<&str, &Node>,
+    by_id: &HashMap<&str, &'a Node>,
     mut pass: Pass<'_>,
-) -> Evaluation {
-    let mut withheld = DiagnosticList::new();
+) -> Evaluation<'a> {
+    let mut withheld: Vec<TaggedFinding<'a>> = Vec::new();
 
     // 1. Collect the active chain in chained declaration order (parameters, then constants,
     // then the caller's appendix).
@@ -228,16 +268,12 @@ pub(super) fn evaluate_declarations(
             }
             Some(&first) => {
                 chain[index].refused = true;
-                record_tagged(&mut pass, &mut withheld, || {
-                    Diagnostic::error(
-                        DUPLICATE_DECLARATION.code,
-                        DUPLICATE_DECLARATION.message(format!(
-                            "own declaration {} re-binds local name `{}` first declared at {}",
-                            chain[index].iri, chain[index].name, chain[first].iri
-                        )),
-                    )
-                    .with_subject(chain[index].iri.to_owned())
-                });
+                let finding = TaggedFinding::Duplicate {
+                    iri: chain[index].iri,
+                    name: chain[index].name,
+                    first: chain[first].iri,
+                };
+                record_tagged(&mut pass, &mut withheld, finding);
             }
         }
     }
@@ -280,18 +316,10 @@ pub(super) fn evaluate_declarations(
     for component in components {
         let mut participants: Vec<usize> = component;
         participants.sort_unstable();
-        record_tagged(&mut pass, &mut withheld, || {
-            let mut path: Vec<&str> = participants.iter().map(|&i| chain[i].iri).collect();
-            path.push(chain[participants[0]].iri);
-            Diagnostic::error(
-                DECLARATION_CYCLE.code,
-                DECLARATION_CYCLE.message(format!(
-                    "cycle in the block's own declaration references: {}",
-                    path.join(" -> ")
-                )),
-            )
-            .with_subject(chain[participants[0]].iri.to_owned())
-        });
+        let finding = TaggedFinding::Cycle {
+            participants: participants.iter().map(|&i| chain[i].iri).collect(),
+        };
+        record_tagged(&mut pass, &mut withheld, finding);
         for index in participants {
             chain[index].refused = true;
         }
@@ -379,18 +407,18 @@ impl OwnGrounded {
 /// Record one tagged contract finding per the pass's emission policy: the lowering invocation
 /// emits directly; the specialize invocation withholds it for post-lowering reconciliation on a
 /// composite chain and records nothing for a leaf chain (R20-9 — the refused declarations still
-/// fail to ground there, silently). `build` is called only where the finding is kept: not for
-/// a leaf chain, and not once the list it would join has ended.
-fn record_tagged(
+/// fail to ground there, silently). The finding's diagnostic is built at lowering only while the
+/// list has room for it, and for a withheld finding not before it is released.
+fn record_tagged<'a>(
     pass: &mut Pass<'_>,
-    withheld: &mut DiagnosticList,
-    build: impl FnOnce() -> Diagnostic,
+    withheld: &mut Vec<TaggedFinding<'a>>,
+    finding: TaggedFinding<'a>,
 ) {
     match pass {
-        Pass::Lowering { diags, .. } => diags.raise(build),
+        Pass::Lowering { diags, .. } => diags.raise(|| finding.diagnostic()),
         Pass::Specialize {
             composite_chain: true,
-        } => withheld.raise(build),
+        } => withheld.push(finding),
         Pass::Specialize {
             composite_chain: false,
         } => {}
