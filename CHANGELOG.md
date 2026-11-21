@@ -851,6 +851,8 @@ so far, and no tag is cut by the bump.
     each byte of a document, so a document at the 8 MiB admission limit would have to more than
     double under expansion to be refused. A document that fills the bound exactly loads (17.3 MB
     at its peak, for 137 KB), and one byte more is refused.
+  - **Nothing a format defines changes, and the workspace version is not bumped:** tightening
+    accepted input is not a format change (unit-spellings ruling 7; the ruling on #647).
   - **One pinned document is such a document.** The edge GitHub #713 measured for "warnings
     alone can refuse a load", 127 unused boundary inputs under a 64 KiB namespace, wrote each
     input's `@id` twice through the prefix, so its expansion added 16 MiB: it loaded with 127
