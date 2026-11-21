@@ -332,6 +332,17 @@ name = "oce-diag"
 version = "0.5.0"
 
 [[package]]
+name = "oce-diff"
+version = "0.5.0"
+dependencies = [
+ "oce-api",
+ "oce-author",
+ "oce-bless",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "oce-expr"
 version = "0.5.0"
 dependencies = [

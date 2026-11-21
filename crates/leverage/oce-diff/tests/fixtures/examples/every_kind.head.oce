@@ -1,0 +1,35 @@
+# Every kind of change, head.
+sequence every_kind_head
+derived_from cxf:fnv1a128:0123abcd
+
+param fresh : Real = 2.5
+param tuned : Real = 21
+param retyped : Real = 3.0
+param second : Real = 2.0
+param first : Real = 1
+
+in uNew : Real @unit K
+in uType : Integer
+in uUnit : Real @unit degC @quantity Temperature @displayUnit K @min 1 @max 11
+in uTags : Real @brick Zone_Air_Temperature_Setpoint
+in uSecond : Boolean
+in uFirst : Boolean
+out yOne : Real
+out yTwo : Boolean
+
+# The gain, after.
+block gain = CDL.Reals.MultiplyByParameter(k = tuned)
+block delay = CDL.Logical.TrueDelay(delayTime = 60.0)
+block limit = CDL.Reals.Limiter(uMin = 0.5, uMax = 10.0)
+block newName = CDL.Reals.Abs
+block fresher = CDL.Reals.Sources.Constant(k = fresh)
+block both = CDL.Logical.And
+
+gain.y -> limit.u
+uUnit -> gain.u
+uType -> newName.u
+newName.y -> yOne
+uSecond -> delay.u
+delay.y -> both.u1
+uFirst -> both.u2
+both.y -> yTwo

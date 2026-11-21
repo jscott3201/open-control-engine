@@ -525,6 +525,33 @@ test reads (an edit to the note runs the determinism lane); copy the block again
 does not build until `VECTOR_ERROR_CODES` lists its code in order, and needs its case in
 `tests/error_codes.rs`.
 
+## The `oce-diff` goldens move with the catalog and the diff's own surface
+
+`crates/leverage/oce-diff/tests/fixtures/examples/` holds five pairs of authoring text
+(`*.base.oce`, `*.head.oce`: the diff note's three worked examples, the literal variant of the
+first, and `every_kind`, whose diff holds every kind of every section) and three goldens for each:
+the diff as JSON, as text and as a Markdown table (`*.diff.json`, `*.diff.txt`, `*.diff.md`; issue
+#665). `tests/example_goldens.rs` compares them byte for byte. The pairs are written by hand and
+never blessed. The goldens move in three cases:
+
+- a catalog change of any kind: every diff records `oce_api::catalog_content_id`, so the
+  `catalog` line of all five JSON goldens moves, and nothing else does unless a literal default
+  or a parameter type the pairs rest on moved too;
+- a change to the diff's data (a field, a kind, the sort) or to what it reports;
+- a change to a renderer's template.
+
+Regenerate with `OCE_BLESS_DIFF=1 cargo nextest run -p oce-diff`, run it again without the switch,
+and say in the PR which files moved and why. The switch never touches the oracle:
+`tests/note_examples.rs` holds the worked examples' expected JSON, text and table rows typed by
+hand from `docs/design/diff.md`. When the note's examples change, copy them there by hand; when
+that test fails, the note or the code is wrong, not the test. No test reads the note, so editing
+it is a docs-only change. The format stays `oce-diff/1` until 1.0.0 (issue #509): it changes in
+place and the goldens are re-blessed.
+
+What a diff costs is pinned in counted work by the unit tests of `src/work.rs` (key comparisons
+and elements visited, compiled into the crate's own test build), as `oce-author` pins validation.
+A new index, group or sort over the models is keyed by `Counted`, or the bound cannot see it.
+
 ## The frame driver lives in `oce-graph`, and its run digests move with behaviour
 
 The HostTick v1 frame driver (time checks, per-slot input checks, the non-finite policy, the

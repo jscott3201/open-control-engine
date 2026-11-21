@@ -4,14 +4,14 @@
 import hashlib
 
 
-# Approval witness for release.yml as re-pinned when its verify job began prefetching the tool
-# workspaces the tests build offline (issue #610; previously when the leverage crate oce-verify
-# became the eighth private member, issue #519, for oce-vocab, issue #499, oce-cli, issue #489,
-# oce-author, issue #463, oce-replay, issue #445, the firmware image, GitHub #449, and when the
-# member count fell to 12, GitHub #391).
+# Approval witness for release.yml as re-pinned when the leverage crate oce-diff became the ninth
+# private member (issue #665; previously when its verify job began prefetching the tool workspaces
+# the tests build offline, issue #610, when oce-verify became the eighth private member,
+# issue #519, for oce-vocab, issue #499, oce-cli, issue #489, oce-author, issue #463, oce-replay,
+# issue #445, the firmware image, GitHub #449, and when the member count fell to 12, GitHub #391).
 # Intentional changes follow the procedure in docs/ci-and-the-gate.md (the package validator).
 # Never derive the expected digest from the candidate workflow at validation time.
-EXPECTED_SHA256 = "27d29381843ab05931f698b12853c739953e54c77d7520e5257adc653012bfce"
+EXPECTED_SHA256 = "3ded2351974d88f59752a1195303eef472ee2a59321a4450d33fac521b0221cf"
 
 
 class WorkflowError(ValueError):
