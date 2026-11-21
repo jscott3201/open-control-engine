@@ -70,7 +70,7 @@ run_case() {
         printf '%s\n' "$output"
         exit 1
       fi
-      if ! printf '%s\n' "$output" | grep -q '^OK:'; then
+      if ! grep -q '^OK:' <<< "$output"; then
         echo "FAIL: stale-status fixture '$name' passed without the OK line"
         printf '%s\n' "$output"
         exit 1
@@ -82,7 +82,7 @@ run_case() {
         printf '%s\n' "$output"
         exit 1
       fi
-      if ! printf '%s\n' "$output" | grep -q '^FAIL:'; then
+      if ! grep -q '^FAIL:' <<< "$output"; then
         echo "FAIL: stale-status fixture '$name' failed without a FAIL line"
         printf '%s\n' "$output"
         exit 1

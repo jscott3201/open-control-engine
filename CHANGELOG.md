@@ -881,6 +881,38 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Verification
 
+- **A gate fixture no longer reports a correct result as a failure when `grep -q` finishes before
+  `printf`** (GitHub #698, issue #693; #689 was the same defect).
+  The fixture harnesses tested a checker's output with `printf '%s\n' "$output" | grep -q …` under
+  `set -o pipefail`. `grep -q` exits at its first match. bash writes one line at a time, so a
+  `printf` with lines still to write then got a broken pipe and failed, the pipeline's status was
+  `printf`'s, and the match read as no match. It turned `CI OK` or a local gate red three times in
+  two days (on GitHub #676, #682 and #692), each time green on a re-run.
+  - **The fix:** every reader that can stop early now takes a here-string, which bash writes whole
+    before the reader starts, so no writer is left to fail: `grep -q … <<< "$output"`, with a
+    command's output captured into a variable first. The reader gets the same bytes, so `-F`, `-x`
+    and every anchor read as before, and no check tests anything else than it did.
+  - **The sites, 43:** 16 in five fixture harnesses (the verdict of `test-workflow-gates.sh`,
+    `test-check-default-no-db.sh`, `test-check-stale-crate-status.sh` and
+    `test-check-golden-gen-anti-tautology.sh`, and `has_line`, `has_text` and one `head` in
+    `test-check-no-secrets.sh`); 22 in five checkers (`check-workflow-gates.sh`,
+    `check-default-no-db.sh`, `check-golden-gen-anti-tautology.sh`,
+    `check-gate-script-coverage.sh`, `scripts/ci/check-no-std-entry-closure.sh`); the
+    `wasm32-wasip1` target test in `.agents/gate.sh`; and four `head -n 1` in `test-math-lint.sh`,
+    `emulate-firmware.sh` and `qemu.yml`. In `check-workflow-gates.sh` a refusal that listed more
+    than five lines could also lose the line naming its rule.
+  - **So it cannot return:** `check-workflow-gates.sh` refuses a pipe into a quiet grep or `head`
+    (`refuse_piped_early_exit_reader`) in every shell script under `.github/scripts/` and
+    `scripts/`, in the gate script and in every workflow but the frozen `ci.yml` and the two
+    OpenModelica evidence workflows, whose bytes are bound into recorded evidence and whose steps
+    run without `pipefail`. 21 new cases in `test-workflow-gates.sh` (402 → 423) hold it.
+    `test-workflow-gates.sh` and `test-check-no-secrets.sh` also check their own readers first,
+    on a planted output with the match on its first line and more after it than a pipe holds:
+    there the piped spelling fails on every run, not now and then.
+  - **Not changed:** the same pipe in `tools/openmodelica-line-reference/line/regenerate.sh` and
+    `tools/openmodelica-reliefs-reference/reliefs/regenerate.sh`, which are bound into that
+    evidence too. Their writer prints one short line, so nothing is left to cut off.
+
 - **Each run of the OpenModelica Line or Reliefs tool in the `oce-cxf` tests starts an executable
   of its own, so those tests no longer fail now and then with `could not execute process …
   (never executed)`** (GitHub #645, issues #642 and #640).

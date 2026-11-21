@@ -202,10 +202,10 @@ round_trip_replay_host() {
 # cache directory outside `target/`, so `cargo clean` does not delete it. The rustup target is
 # still the author's to add.
 round_trip_replay_wasm() {
-  local tools
+  local tools installed
   tools="$(bash scripts/ci/install-wasmtime.sh --print-destination)" || return 1
   bash scripts/ci/install-wasmtime.sh || return 1
-  if ! rustup target list --installed | grep -qx wasm32-wasip1; then
+  if ! installed="$(rustup target list --installed)" || ! grep -qx wasm32-wasip1 <<< "$installed"; then
     echo 'the wasm32-wasip1 target is not installed: rustup target add wasm32-wasip1' >&2
     return 1
   fi

@@ -41,7 +41,7 @@ run_fixture() {
         printf '%s\n' "$output"
         exit 1
       fi
-      if ! printf '%s\n' "$output" | grep -q '^OK:'; then
+      if ! grep -q '^OK:' <<< "$output"; then
         echo "FAIL: fixture '$name' passed without the OK line"
         printf '%s\n' "$output"
         exit 1
@@ -53,12 +53,12 @@ run_fixture() {
         printf '%s\n' "$output"
         exit 1
       fi
-      if ! printf '%s\n' "$output" | grep -q '^FAIL:'; then
+      if ! grep -q '^FAIL:' <<< "$output"; then
         echo "FAIL: fixture '$name' failed without a FAIL line"
         printf '%s\n' "$output"
         exit 1
       fi
-      if [ -n "$expected_message" ] && ! printf '%s\n' "$output" | grep -Fq -- "$expected_message"; then
+      if [ -n "$expected_message" ] && ! grep -Fq -- "$expected_message" <<< "$output"; then
         echo "FAIL: fixture '$name' failed without expected message substring: $expected_message"
         printf '%s\n' "$output"
         exit 1
@@ -103,7 +103,7 @@ run_live_cargo_fixture() {
         printf '%s\n' "$output"
         exit 1
       fi
-      if ! printf '%s\n' "$output" | grep -q '^OK:'; then
+      if ! grep -q '^OK:' <<< "$output"; then
         echo "FAIL: live-cargo fixture '$name' passed without the OK line"
         printf '%s\n' "$output"
         exit 1
@@ -115,7 +115,7 @@ run_live_cargo_fixture() {
         printf '%s\n' "$output"
         exit 1
       fi
-      if ! printf '%s\n' "$output" | grep -q '^FAIL:'; then
+      if ! grep -q '^FAIL:' <<< "$output"; then
         echo "FAIL: live-cargo fixture '$name' failed without a FAIL line"
         printf '%s\n' "$output"
         exit 1
@@ -127,7 +127,7 @@ run_live_cargo_fixture() {
       ;;
   esac
 
-  if [ -n "$expected_message" ] && ! printf '%s\n' "$output" | grep -Fq -- "$expected_message"; then
+  if [ -n "$expected_message" ] && ! grep -Fq -- "$expected_message" <<< "$output"; then
     echo "FAIL: live-cargo fixture '$name' output lacked expected substring: $expected_message"
     printf '%s\n' "$output"
     exit 1

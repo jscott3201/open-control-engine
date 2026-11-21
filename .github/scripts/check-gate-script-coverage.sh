@@ -52,7 +52,7 @@ for path in "$SCRIPT_DIR"/*.sh; do
   # the thirteen scripts sat in that blind spot, this one included. The `$SCRIPT_DIR/` prefix
   # separates the pair, because the fixture is invoked as `.github/scripts/test-check-foo.sh` and
   # never contains `.github/scripts/check-foo.sh`.
-  printf '%s\n' "$gate_code" | grep -q -F -- "$SCRIPT_DIR/$name" || missing+=("$name")
+  grep -q -F -- "$SCRIPT_DIR/$name" <<< "$gate_code" || missing+=("$name")
 done
 
 if [ "${#missing[@]}" -ne 0 ]; then
