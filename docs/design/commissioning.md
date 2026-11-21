@@ -137,7 +137,13 @@ left a few shapes unsaid; this is what was built.
   sequence's outputs (`work-limit-exceeded`: one unit per key and output compared and one per
   step of the glob matcher, never time; a selection whose keys times outputs alone pass the
   limit is refused before anything is allocated, and what a selection holds is one bit per key
-  and output). Every bound is inclusive and pinned at its edge. A load holds at most 32 bytes
+  and output). Two costs of a selection are outside that count, because they grow with the
+  sequence's outputs alone, which come from the engine's own frame and not from the spec: the
+  index an exact key is resolved through (`oce_replay::PathIndex`, one sort of the output
+  paths, `n log n` comparisons of path bytes) and the paths an ambiguous exact name collects
+  for its refusal. For scale: a million outputs that share one last segment, and one exact key
+  naming it, are refused as `ambiguous-output` after 7.4 s in a debug build. Every bound is
+  inclusive and pinned at its edge. A load holds at most 32 bytes
   per byte of the document, pinned on the densest shape there is, a long list of one-digit
   numbers inside a Scenario 1 field; so about 134 MB at the 4 MiB maximum.
 - **Comments.** `//` runs to the next line feed or carriage return, or to the end of the text.
@@ -191,13 +197,17 @@ left a few shapes unsaid; this is what was built.
   `select_indicator_keys` take the sequence's output **canonical paths**, sorted as
   `FrameSlots::outputs()` lists them. A glob selects every output whose last `.`-segment its
   rest matches, whole; an exact key selects the one output its rest names by
-  `oce_replay::resolve_path`, so `ahu.yFan` and the whole canonical path are exact names too.
+  `oce_replay::resolve_path`, so `ahu.yFan` and the whole canonical path are exact names too;
+  a `#` is no boundary in that rule, so `s.Root.y` selects `urn:x#top.Root.y` and does not
+  select `urn:x#Root.y`.
   A key without the reference's prefix, a glob that matches nothing and an exact name that
   names nothing are `unmatched-key`, with the sentence decision 17 asks for; an exact name that
   names several outputs is `ambiguous-output`. Then, for each output: the top-level
   `tolerances`, the globs that select it laid over them, the exact keys laid over those
   (`OutputSelection::tolerances_for`). Two keys of one kind that give one field different
   values are `conflicting-override`; "the same value" is the number, so `10` and `10.0` agree.
+  A same-kind conflict is refused even when an exact key would set the field: two globs that
+  disagree about an output are refused whether or not an exact key also selects it.
   `IndicatorSelection::indicators_for` gives the indicators of every rule that selects an
   output, each once. The two selections are two types, and each borrows its reference, so one
   cannot be read as the other or against another reference.

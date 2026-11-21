@@ -35,6 +35,13 @@ pub struct SpecLimits {
     /// is `work-limit-exceeded`, and a selection whose keys times outputs alone pass it is
     /// refused before anything is allocated. A selection holds one bit per key and output, so
     /// this bound is also its memory: at most an eighth of it in bytes.
+    ///
+    /// Two costs of a selection are outside this count, because they grow with the sequence's
+    /// outputs alone, which come from the engine's own frame and not from the spec: the index
+    /// an exact key is resolved through (one sort of the output paths, `n log n` comparisons of
+    /// path bytes), and the paths an ambiguous exact name collects for its refusal. For scale,
+    /// a million outputs sharing one last segment, and one exact key naming it, are refused as
+    /// `ambiguous-output` after 7.4 s in a debug build.
     pub max_key_match_work: u64,
 }
 

@@ -146,6 +146,31 @@ fn an_exact_key_names_one_output_by_the_replay_name_rule() {
             );
         }
     }
+    // A `#` is no boundary in the name rule: `Root.y` names `…#top.Root.y`, and does not name
+    // `…#Root.y`, which only `y` and the whole path name.
+    let rooted = Outputs(vec![
+        "urn:x#Root.y".to_owned(),
+        "urn:x#top.Root.y".to_owned(),
+    ]);
+    let selects = |key: &str| -> Vec<usize> {
+        let spec = spec_with(&format!("\"{key}\": {{}}"), "", "");
+        let selection = spec.references()[0]
+            .select_output_keys(&rooted.paths(), &LIMITS)
+            .unwrap_or_else(|error| panic!("{key}: {error}"));
+        (0..2)
+            .filter(|output| selection.selects(0, *output))
+            .collect()
+    };
+    assert_eq!(
+        selects("s.Root.y"),
+        [1],
+        "the path under `top`, not the one at the `#`"
+    );
+    // `top.Root.y` reaches back to the `#` and names nothing, as in the rule's own examples.
+    let spec = spec_with("\"s.top.Root.y\": {}", "", "");
+    assert_eq!(refusal(&spec, &rooted).code(), "unmatched-key");
+    assert_eq!(selects("s.urn:x#Root.y"), [0]);
+    assert_eq!(selects("s.urn:x#top.Root.y"), [1]);
     // What the name rule does not resolve selects nothing: part of a segment, a wrong segment,
     // another case, a rest that starts past a `#` (which is no boundary), an empty rest.
     for key in [
@@ -427,6 +452,47 @@ fn two_keys_of_one_kind_that_disagree_about_one_output_are_refused() {
     let error = refusal(&spec, &wide);
     assert_eq!(error.code(), "conflicting-override");
     assert!(error.detail().len() <= MAX_SPEC_DETAIL_BYTES && error.detail().is_ascii());
+}
+
+#[test]
+fn two_globs_that_disagree_are_refused_even_where_an_exact_key_would_set_the_field() {
+    // The exact key would give `atoly` to the one output, and so hide what the two globs say
+    // about it. They still say two things at one level: refused, and with the two globs named.
+    let outputs = Outputs::of(&["ahu.yFan"]);
+    let globs = "\"s.y*\": {\"atoly\": 1}, \"s.?Fan\": {\"atoly\": 2}";
+    let spec = spec_with(
+        &format!("{globs}, \"s.ahu.yFan\": {{\"atoly\": 3}}"),
+        "",
+        "",
+    );
+    let error = refusal(&spec, &outputs);
+    assert_eq!(error.code(), "conflicting-override");
+    assert_eq!(
+        error.detail(),
+        "the keys `s.?Fan` and `s.y*` both select the output `s.yFan` and give `atoly` different values, 2 and 1; both are globs, so neither takes precedence"
+    );
+    // The same refusal as without the exact key: adding or removing it changes nothing.
+    assert_eq!(error, refusal(&spec_with(globs, "", ""), &outputs));
+    // And it is the globs' disagreement that is refused, not the exact key's presence: with
+    // the globs agreeing, the exact key sets the field.
+    let agreed = spec_with(
+        "\"s.y*\": {\"atoly\": 1}, \"s.?Fan\": {\"atoly\": 1.0}, \"s.ahu.yFan\": {\"atoly\": 3}",
+        "",
+        "",
+    );
+    assert_eq!(tolerances(&agreed, &outputs, "ahu.yFan")[1], 3.0);
+    // Two exact names that disagree are refused with a glob beside them as well.
+    let exact = spec_with(
+        "\"s.yFan\": {\"atoly\": 1}, \"s.ahu.yFan\": {\"atoly\": 2}, \"s.y*\": {\"atoly\": 3}",
+        "",
+        "",
+    );
+    let error = refusal(&exact, &outputs);
+    assert!(
+        error
+            .detail()
+            .ends_with("both are exact names, so neither takes precedence")
+    );
 }
 
 #[test]

@@ -10,7 +10,9 @@
 //!   matches, whole ([`super::glob`]);
 //! - **an exact name** (any other rest): the one output the rest names by the replay name rule
 //!   ([`oce_replay::resolve_path`]): the path itself, or the one path that ends with the rest at
-//!   a `.` boundary.
+//!   a `.` boundary. A `#` is no boundary in that rule, so `s.Root.y` selects
+//!   `urn:x#top.Root.y` and does not select `urn:x#Root.y`, whose own exact names are `s.y` and
+//!   `s.urn:x#Root.y`.
 //!
 //! A key that does not start with the reference's `sequence` and a `.`, a glob that matches no
 //! output and an exact name that names none are each `unmatched-key`; an exact name that names
@@ -26,14 +28,27 @@
 //! Two keys of one kind (two globs, or two exact names) that select one output may give
 //! different fields, or one field the same value, and then they combine. If they give one field
 //! **different values**, no order could decide between them, and the selection is refused as
-//! `conflicting-override`. Indicators have no such conflict: every rule that selects an output
-//! adds its indicators, each name once, and the output is compared only where all are true.
+//! `conflicting-override`. That holds even where an exact key would set the field and so hide
+//! the disagreement: two globs that disagree about an output are refused whether or not an
+//! exact key also selects it, because the spec says two things at one level, and removing the
+//! exact key must not be what turns a spec that loads and binds into one that does not.
+//! Indicators have no such conflict: every rule that selects an output adds its indicators,
+//! each name once, and the output is compared only where all are true.
 //!
 //! **Cost.** Every key is compared with every output, one work unit each, and a glob's matcher
 //! steps are counted on top, against [`SpecLimits::max_key_match_work`]. The product of the two
 //! counts is checked before anything is allocated, so a selection past the limit costs its
 //! refusal and nothing else. What a selection holds is one bit per key and output: at most an
 //! eighth of the work limit in bytes, 32 MiB at the maximum.
+//!
+//! **What the counter does not count.** The first exact key builds an index of the paths
+//! ([`oce_replay::PathIndex`]): one sort, `n log n` comparisons of path bytes over `n` outputs,
+//! and two words per output. An exact name that turns out to be ambiguous has every path it
+//! names collected for the refusal. Neither is a unit of [`SpecLimits::max_key_match_work`]:
+//! both grow with the outputs alone, and the outputs come from the engine's own frame of a
+//! loaded sequence, which the engine bounds, never from the spec. Measured for scale: a million
+//! outputs that share one last segment and one exact key naming it are refused as
+//! `ambiguous-output` after 7.4 s in a debug build.
 
 // Bind (issue #662) is the caller of everything here. Until it lands only this crate's tests
 // call it, so outside a test build the items are unused.
@@ -394,7 +409,12 @@ impl SpecReference {
     /// Which `outputs` keys select which of a sequence's outputs. `paths` are the outputs'
     /// canonical paths, sorted ascending by their bytes with none repeated, as
     /// `FrameSlots::outputs()` lists them; out of that order an exact name can be missed, as
-    /// [`oce_replay::resolve_path`] misses it.
+    /// [`oce_replay::resolve_path`] misses it. An exact key's rest is resolved by that rule, in
+    /// which a `#` is no boundary: `s.Root.y` selects `urn:x#top.Root.y`, not `urn:x#Root.y`.
+    ///
+    /// The work limit covers the comparisons and the matcher's steps. It does not cover the
+    /// index of the paths an exact key needs (one sort of them) or the paths an ambiguous name
+    /// collects: those grow with `paths`, which is the engine's list, not the spec's.
     ///
     /// # Errors
     /// In this order: `work-limit-exceeded`, before anything is allocated, when the keys times
@@ -402,7 +422,8 @@ impl SpecReference {
     /// do; for the first key in the order of [`Self::outputs`] that fails, `unmatched-key` (no
     /// prefix, a glob that matches nothing, an exact name that names nothing) or
     /// `ambiguous-output` (an exact name that names several); then `conflicting-override` for
-    /// the first output two keys of one kind give one field different values for.
+    /// the first output two keys of one kind give one field different values for, whether or
+    /// not an exact key would set that field.
     pub(crate) fn select_output_keys(
         &self,
         paths: &[&str],
