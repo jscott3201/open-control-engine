@@ -209,9 +209,14 @@ fn a_qudt_prefix_bound_elsewhere_or_nowhere_does_not_name_the_qudt_schema() {
         }
         let unset = rendered(&document(context.clone()));
         for role in ROLES {
-            for value in [json!("K"), json!({ "@id": "unit:K" }), json!(5)] {
-                let doc = with(document(context.clone()), role, "qudt:hasUnit", value);
-                assert_eq!(rendered(&doc), unset, "{binding:?} {role}");
+            // The key, and its whitespace near miss: trimmed, it still names no modeled
+            // property under this binding, so it is no near miss either (issue #675 asks
+            // whether either should be refused).
+            for key in ["qudt:hasUnit", "qudt:hasUnit ", " qudt:hasUnit"] {
+                for value in [json!("K"), json!({ "@id": "unit:K" }), json!(5)] {
+                    let doc = with(document(context.clone()), role, key, value);
+                    assert_eq!(rendered(&doc), unset, "{binding:?} {role} {key:?}");
+                }
             }
         }
     }

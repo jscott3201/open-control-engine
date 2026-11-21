@@ -449,17 +449,19 @@ is matched after the same expansion, on every node that carries one:
 - **`unit`** is also `S231:hasUnit`, and `hasUnit` in either QUDT schema namespace:
   `http://qudt.org/schema/qudt#`, as the modelica-json translations bind `qudt`, and
   `http://qudt.org/schema/qudt/`, as QUDT and CXF-Core do. The compact key `qudt:hasUnit` is that
-  property only through a `qudt` prefix bound to one of the two. Unbound, or bound to any other
-  namespace but the S231 one, it names no modeled property and stays an unread pass-through key.
+  property only through a `qudt` prefix bound to one of the two.
+  **A known gap, not a guarantee:** where the document leaves `qudt` unbound, or binds it to any
+  other namespace but the S231 one, the key names no modeled property, stays in the pass-through
+  map and is not read, and the load reports nothing. The node then has no unit, or the unit
+  another key gives it. Whether such a key should be refused is open (issue #675). Bind `qudt` to
+  one of the two namespaces, as every modelica-json translation does, or write `S231:unit`.
 - **`displayUnit`** is also `S231:hasDisplayUnit`.
 - **`quantity` has no other spelling.** `qudt:hasQuantityKind` is not read: modelica-json writes
   `PressureDifference` as the kind `Pressure`, so reading it would report the wrong quantity. The
   key stays in the pass-through map.
 
-Before, those keys were not read at all: the §7.10 unit gate, the point list, the content id and
-the export went without every unit a modelica-json document declares. Reading them moved 18 point
-rows and 6 content ids in the vendored translations that load, which now carry the units they
-always declared.
+A unit read under any of these keys reaches the §7.10 unit gate, the point list, the content id
+and the export exactly as one read under `S231:unit` does.
 
 A unit's shape decides how it is read, not its key. A string or a typed literal is the unit
 string, verbatim. **An IRI node** for a unit or a display unit, under any key that names it and
@@ -482,10 +484,10 @@ through a closed table:
   and `unit:IN_H2O_60DEG_F`, which it writes for `inH2O` and which is the inch of water at 60 °F.
   Write such a unit as a string.
 
-So `{"@id": "unit:K"}` and `"K"` are one unit to the gate and to the host, under any key. That
-reverses an earlier rule: an IRI node's `@id` used to be the term itself, so `unit:K` was a unit
-that equals no unit string. A `quantity` IRI node is still its verbatim `@id`. A parameter's unit
-goes through the same reading where the parameter is read, though it is still used for nothing.
+So `{"@id": "unit:K"}` and `"K"` are one unit to the gate and to the host, under any key. A
+`quantity` is not read through any table: its IRI node is its `@id`, verbatim and unexpanded. A
+parameter's unit goes through the same reading where the parameter is read, though it is used
+for nothing.
 Export writes every unit back as a bare string under `S231:unit` or `S231:displayUnit`
 ([the unit spellings read](cxf-round-trip.md#the-unit-spellings-read-and-the-one-written)), so a
 round trip normalises the spelling.
@@ -569,7 +571,9 @@ one). Another prefix bound to the published IRI is the same namespace under anot
 accepted. A node that writes one property in two spellings
 (an explicit `null` or `[]` compact key counts; `S231:unit` beside `qudt:hasUnit` is two
 spellings of `unit`, and is refused even when the two values agree) and a key that names a modeled
-property only after trimming surrounding whitespace (`"qudt:hasUnit "` among them) are refused as
+property only after trimming surrounding whitespace (`"S231:hasUnit "`; `"qudt:hasUnit "` too
+where `qudt` is bound to a QUDT schema namespace, since only then does the trimmed key name the
+property) are refused as
 `malformed-document`, as is any key — modeled or
 not — written more than once on one `@graph` node, since JSON parsing would silently keep only one
 of the values. None of these is silently

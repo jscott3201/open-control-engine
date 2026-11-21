@@ -95,7 +95,7 @@ modelica-json and `CXF-Core.jsonld` do not write a unit under `S231:unit`. They 
 | --- | --- |
 | `S231:unit`, `S231:hasUnit`, and `hasUnit` in either QUDT schema namespace (`http://qudt.org/schema/qudt#`, as the translations bind `qudt`; `http://qudt.org/schema/qudt/`, as QUDT and CXF-Core do) | `unit` |
 | `S231:displayUnit`, `S231:hasDisplayUnit` | `displayUnit` |
-| `S231:quantity` | `quantity`, as before |
+| `S231:quantity` | `quantity` |
 | `qudt:hasQuantityKind` | not read: it stays in the pass-through map |
 
 The value's shape decides how it is read, not its key:
@@ -109,10 +109,9 @@ The value's shape decides how it is read, not its key:
   modelica-json writes for a unit its table lacks (`http://data.ashrae.org/S231#s/K` reads `s/K`).
 - **An IRI the table does not map** is refused as `non-subset-construct`, subject the node.
 
-**A round trip writes the `S231:` spelling.** The exporter is unchanged: it writes a unit as a bare
-string under `S231:unit` and `S231:displayUnit`. A document written with
-`"qudt:hasUnit": {"@id": "unit:K"}` exports `"S231:unit": "K"`, where before this reading it
-exported no unit at all. Re-import reads the same string, so RT-2 holds and a document in the
+**A round trip writes the `S231:` spelling.** The exporter writes a unit as a bare string under
+`S231:unit` and `S231:displayUnit`. A document written with `"qudt:hasUnit": {"@id": "unit:K"}`
+exports `"S231:unit": "K"`. Re-import reads the same string, so RT-2 holds and a document in the
 upstream spellings and the same document in the engine's export byte-identically. The
 [host responsibilities](host-responsibilities.md#cxf-point-identities-are-the-authored-ids) page
 has the refusals: two spellings of one property on one node, the two QUDT entries left out of the

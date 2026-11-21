@@ -402,7 +402,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   - **Refusals, each pinned as the complete diagnostic list.** An IRI the table does not map is
     `non-subset-construct`, subject the node, the IRI quoted in at most 64 bytes. Two spellings of
     one property on one node are `malformed-document`, even when they agree. A key that names a
-    spelling only after trimming whitespace (`"qudt:hasUnit "`) is `malformed-document`. A scoped
+    spelling only after trimming whitespace is `malformed-document` (`"S231:hasUnit "`, and
+    `"qudt:hasUnit "` where `qudt` is bound to a QUDT schema namespace; under an unbound `qudt`
+    the trimmed key names nothing and the key passes through unread, issue #675). A scoped
     `@context` on the term object stays refused.
   - **One recorded rule is reversed.** An IRI node's `@id` was the term itself, never expanded, so
     `{"@id": "unit:K"}` was the unit `unit:K` and did not unify with `"K"`. For a unit and a

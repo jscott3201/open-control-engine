@@ -44,7 +44,8 @@
 //!   pass-through key — is refused (`malformed-document`): JSON parsing keeps one of the values
 //!   silently. (A repeated compact modeled key is already a parse error.)
 //! - **Whitespace near misses** — a key that names a modeled property only after trimming
-//!   surrounding whitespace (`"S231:min "`, `"qudt:hasUnit "`) — are refused
+//!   surrounding whitespace (`"S231:min "`; `"qudt:hasUnit "` where `qudt` is bound to a QUDT
+//!   schema namespace, since the trimmed key is matched like any other) — are refused
 //!   (`malformed-document`).
 //! - A value that does not fit the modeled field's shape is refused (`malformed-document`), the
 //!   resolver-side twin of the parse error the compact spelling raises.
