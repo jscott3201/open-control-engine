@@ -779,6 +779,14 @@ example shows `funnel@a12fa96` and nothing for `aligned-grid`.
   (decision 8). The [vectors note](vectors.md) uses the same object for a set with a `within`
   window.
 
+  Under either envelope the verdict is taken at the test instants: an instant's exceedance is
+  "Envelope" step 5's error there, from the envelope's two bound curves, and the exceedance
+  column has one value per test instant (decision 6). `oce-conformance`'s `compare` also checks
+  the bounds' breakpoints between test samples (`crates/oce-conformance/tests/funnel.rs:256`);
+  that check is not carried into an `oce-verify` verdict. An exceedance at a time that is no
+  test instant would have no row in the column, no place in `compared`, and no counterpart
+  under `funnel`.
+
 **33. Warnings are listed beside the findings, not inside them.** *Question:* where load
 warnings go.
 
