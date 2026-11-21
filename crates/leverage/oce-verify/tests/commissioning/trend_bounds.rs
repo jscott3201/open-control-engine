@@ -370,6 +370,39 @@ fn the_files_of_a_reference_together_are_held_to_the_total_byte_bound_before_any
     let unparsable = files(b"\xff\xff\xff\xff\xff\xff\xff");
     let error = TrendSources::read(&spec, 0, &unparsable, &limits(total - 1)).expect_err("refused");
     assert_eq!(error.code(), "too-many-total-bytes");
+    // Before the mapping is read: a mapping that does not load, or a column naming a point the
+    // mapping lacks, is still refused for the total first.
+    let broken_mapping = SpecInputs {
+        cxf: Vec::new(),
+        files: vec![
+            ("m.json".to_owned(), b"[1,".to_vec()),
+            ("a.csv".to_owned(), b"time\n0\n".to_vec()),
+            ("b.csv".to_owned(), b"time\n1\n".to_vec()),
+        ],
+    };
+    let error =
+        TrendSources::read(&spec, 0, &broken_mapping, &limits(3 + 7 + 7 - 1)).expect_err("refused");
+    assert_eq!(error.code(), "too-many-total-bytes");
+    let error =
+        TrendSources::read(&spec, 0, &broken_mapping, &limits(3 + 7 + 7)).expect_err("refused");
+    assert_eq!(error.code(), "mapping-refused");
+    let unmapped = loaded(
+        r#"{"references": [{"model": "M", "sequence": "s", "pointNameMapping": "m.json",
+            "inputs": [{"path": "a.csv", "format": "csv", "timeColumn": "time",
+                        "columns": {"T": "No Such Point"}}]}]}"#,
+    );
+    let inputs = SpecInputs {
+        cxf: Vec::new(),
+        files: vec![
+            ("m.json".to_owned(), b"[]".to_vec()),
+            ("a.csv".to_owned(), b"time,T\n0,1\n".to_vec()),
+        ],
+    };
+    let error =
+        TrendSources::read(&unmapped, 0, &inputs, &limits(2 + 11 - 1)).expect_err("refused");
+    assert_eq!(error.code(), "too-many-total-bytes");
+    let error = TrendSources::read(&unmapped, 0, &inputs, &limits(2 + 11)).expect_err("refused");
+    assert_eq!(error.code(), "unmapped-point");
     // Lowered, and never raised past 1 GiB.
     assert_eq!(limits(u64::MAX).effective().max_total_bytes, 1 << 30);
     assert_eq!(TrendLimits::default().max_total_bytes, 1 << 30);

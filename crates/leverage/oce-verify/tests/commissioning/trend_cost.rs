@@ -99,9 +99,9 @@ fn a_building_33_shaped_csv_loads_within_a_pinned_allocation_bound() {
     let length = bytes.len() as u64;
     // [peak 2,711,293 bytes: 35.9 a row, 0.99 of the file; 149 allocations]. The lists read
     // from replay's reader grow by doubling and are shrunk to their rows once the file is read.
-    assert!(info.bytes_max <= 44 * ROWS as u64, "{info:?}");
+    assert!(info.bytes_max <= 40 * ROWS as u64, "{info:?}");
     assert!(
-        info.bytes_max <= 5 * length / 4,
+        info.bytes_max <= 9 * length / 8,
         "{info:?} for {length} bytes"
     );
     assert!(info.count_total <= 192, "{info:?}");

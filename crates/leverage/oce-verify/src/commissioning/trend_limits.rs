@@ -28,7 +28,9 @@ pub struct TrendLimits {
     /// `controllerOutput`, each counted once, the CXF not included. Maximum 1 GiB; past it the
     /// refusal is `too-many-total-bytes`, decided from the lengths of the files handed in before
     /// any is parsed (the owner's ruling of 2026-11-21). One file is also held to
-    /// `replay.max_source_bytes`; this bounds them together.
+    /// `replay.max_source_bytes`; this bounds them together. It is checked first, so under the
+    /// default limits a single file of 1 GiB and one byte is `too-many-total-bytes`, never
+    /// `too-many-bytes`; `too-many-bytes` for one file is reached when this bound is the higher.
     pub max_total_bytes: u64,
     /// The caps of replay, applied to each file and to the merged inputs:
     ///

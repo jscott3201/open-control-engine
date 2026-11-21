@@ -493,10 +493,15 @@ Two more, **ruled by the owner on 2026-11-21** in the review of GitHub #729:
   one frame; a file with two rows at `t` beside one with one give two. Pinned by test, by the
   fixture's independent derivation and by a replay of it.
 
-**The `combiTimeTable` grammar** is §12.5.1's and no wider: the file starts with `#1`; `#`
-comments run to the line end anywhere a separator may stand; a matrix is `double <name>(<rows>,
-<cols>)` (`float` and other types refused); values follow in row order, wherever lines break,
-separated by spaces, tabs, line ends and comments with at most one `,` or `;`; a number is the
+**The `combiTimeTable` grammar** is §12.5.1's and no wider: the file starts with `#1`, after at
+most a UTF-8 byte-order mark, which is skipped; `#` comments run to the line end anywhere a
+separator may stand; a matrix is `double <name>(<rows>, <cols>)` at the start of a line
+(`float` and other types refused, and an indented header, or one on the line of the previous
+matrix's last value, is `table-syntax`: a deliberate narrowing, which real Modelica exports have
+not been tested against, as no `#1` file is vendored under `third_party/` yet); values follow in
+row order, wherever lines break, separated by spaces, tabs, line ends and comments with at most
+one `,` or `;`, and after a matrix's last value a number is `size-mismatch` while any other text
+is `table-syntax`; a number is the
 C decimal form `[+-]? (D+ ('.' D*)? | '.' D+) ([eE] [+-]? D+)?`, with no `inf`, `nan` or
 hexadecimal, converted by Rust's `f64` parser, which rounds correctly, so the same text gives
 the same bits on every target. A file with several matrices needs `table` (`table-required`);
@@ -532,7 +537,7 @@ says.
 | --- | --- | --- | --- |
 | sources per reference | 256 | `too-many-sources` | decision 42's bound on the complete `sources` list |
 | bytes of a reference's files together (mapping, sources, `controllerOutput`; each once; not the CXF) | 1 GiB | `too-many-total-bytes` | the owner's ruling of 2026-11-21; decided from the lengths before any file is parsed |
-| bytes of one file | 1 GiB | `too-many-bytes` | replay's `max_source_bytes`, decided from the length |
+| bytes of one file | 1 GiB | `too-many-bytes` | replay's `max_source_bytes`, decided from the length; the total below is checked first, so under the default limits one file of 1 GiB and one byte is `too-many-total-bytes` |
 | values one source keeps, and the merged inputs hold | 1 GiB | `too-many-bytes` | the same cap as a `ColumnarSource`'s bytes, checked from the counts before allocating |
 | rows of one file, frames of the merge | 16,777,216 | `too-many-rows` | replay's `max_rows`; the merge counts its frames before allocating and stops at the first past the cap |
 | columns of one file, of the merge (time included) | 4,096 | `too-many-columns` | replay's `max_columns`, the spec's `max_keys` |

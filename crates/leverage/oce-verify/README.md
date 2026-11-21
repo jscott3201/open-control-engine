@@ -796,7 +796,10 @@ let source = read.inputs.into_source(&map, &oce_replay::ReplayLimits::default())
 - **Formats.** `csv` goes through replay's `CsvSource` (a header row, replay's caps), never a
   second CSV reader; `combiTimeTable` through this crate's reader of OBC §12.5.1's `#1` text
   (`double <name>(<rows>,<cols>)`, C decimal numbers, `#` comments, several matrices with `table`
-  choosing one). A `combiTimeTable` addresses columns by position from 1, a `csv` by header name.
+  choosing one). A UTF-8 byte-order mark before `#1` is skipped; a matrix header must start its
+  line, so an indented one is refused, a deliberate narrowing not yet tested against real
+  Modelica exports (none is vendored); after a matrix's last value a number is `size-mismatch`
+  and other text `table-syntax`. A `combiTimeTable` addresses columns by position from 1, a `csv` by header name.
   A `controllerOutput` with no `expected` is read as OBC §12.7.3's csv: the first header is the
   time in seconds, every other a mapped device point. Replay's reader trims no cell, so OBC
   §12.7.3's printed examples, padded with spaces (`time, uHea`), are refused until #733.
@@ -817,7 +820,8 @@ let source = read.inputs.into_source(&map, &oce_replay::ReplayLimits::default())
   cause; codes in `SOURCE_ERROR_CODES`. A unit, type, address or mapping refusal is found before
   any file is parsed.
 - **Bounds** (`TrendLimits`): 256 sources (decision 42), 1 GiB of a reference's files together
-  (`too-many-total-bytes`, from the lengths before any parse), and replay's caps on each file and on
+  (`too-many-total-bytes`, from the lengths before any parse, and so what one file of 1 GiB and
+  a byte gets under the defaults), and replay's caps on each file and on
   the merge: 1 GiB of bytes read and of values held, 16,777,216 rows and frames, 4,096 columns,
   256 bytes a cell, a number or a matrix name.
 - **Cost.** Reading a file holds at most about 25 bytes per byte of it. The merged inputs hold

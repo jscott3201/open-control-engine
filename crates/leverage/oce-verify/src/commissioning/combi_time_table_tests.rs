@@ -160,6 +160,7 @@ fn the_tag_must_be_the_first_two_bytes() {
         " #1\ndouble t(1,1)\n0\n",
         "\u{feff}\u{feff}#1\ndouble t(1,1)\n0\n",
         "\u{feff} #1\ndouble t(1,1)\n0\n",
+        " \u{feff}#1\ndouble t(1,1)\n0\n",
         "double t(1,1)\n0\n",
         "# 1\ndouble t(1,1)\n0\n",
     ] {
