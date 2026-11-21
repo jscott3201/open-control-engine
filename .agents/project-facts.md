@@ -541,10 +541,13 @@ never blessed. The goldens move in three cases:
 - a change to a renderer's template.
 
 Regenerate with `OCE_BLESS_DIFF=1 cargo nextest run -p oce-diff`, run it again without the switch,
-and say in the PR which files moved and why. The switch never touches the oracle:
+and say in the PR which files moved and why. The switch never touches the two oracles.
 `tests/note_examples.rs` holds the worked examples' expected JSON, text and table rows typed by
 hand from `docs/design/diff.md`. When the note's examples change, copy them there by hand; when
-that test fails, the note or the code is wrong, not the test. No test reads the note, so editing
+that test fails, the note or the code is wrong, not the test. `tests/rename_oracle.rs` holds a
+second implementation of the note's rename rules, pair by pair, and pinned counts over its
+enumerated families; a change to the rules changes both implementations, and the counts are
+re-derived from the reference, never from the crate. No test reads the note, so editing
 it is a docs-only change. The format stays `oce-diff/1` until 1.0.0 (issue #509): it changes in
 place and the goldens are re-blessed.
 

@@ -196,7 +196,7 @@ fn base_profile<'a>(
     b: usize,
 ) -> Option<Profile<'a>> {
     let gate = gates.base.get(&b).copied()?;
-    profile(gate, sides.base_index, sides.head_index, b, |position| {
+    profile(gate, sides.base_index, b, |position| {
         matching.partner.get(position).copied().flatten()
     })
 }
@@ -208,7 +208,7 @@ fn head_profile<'a>(
     h: usize,
 ) -> Option<Profile<'a>> {
     let gate = gates.head.get(&h).copied()?;
-    profile(gate, sides.head_index, sides.base_index, h, |position| {
+    profile(gate, sides.head_index, h, |position| {
         matches!(matching.matched_head.get(position), Some(true)).then_some(position)
     })
 }
@@ -216,10 +216,13 @@ fn head_profile<'a>(
 /// The profile of the block at `position` of the side `own` indexes, or `None` when one of its
 /// link ends can never be matched (so the block can never be renamed). `matched` gives the head
 /// position of a matched block of that side.
+///
+/// A boundary is an anchor here when its own side declares it. The note asks for both sides, and
+/// equal profiles give exactly that: a boundary only one side declares is in no profile of the
+/// other side, so no pair can agree on it.
 fn profile<'a>(
     gate: usize,
     own: &Index<'a>,
-    other: &Index<'a>,
     position: usize,
     matched: impl Fn(usize) -> Option<usize>,
 ) -> Option<Profile<'a>> {
@@ -241,7 +244,7 @@ fn profile<'a>(
         let port = ports.last_mut()?;
         match touch.other {
             End::Boundary(name) => {
-                if !(own.declares(name) && other.declares(name)) {
+                if !own.declares(name) {
                     return None;
                 }
                 port.anchors.push(Counted(Anchor::Boundary(name)));

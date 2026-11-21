@@ -148,6 +148,60 @@ fn several_drivers_on_one_target_are_compared_as_a_multiset() {
 }
 
 #[test]
+fn leftover_drivers_are_paired_in_the_order_of_their_spellings() {
+    // `z` is declared before `a`, so the two drivers sort one way by where their blocks stand
+    // and the other way by how they are spelled. The pairing goes by the spelling, which is what
+    // a reader sees and what keeps the diff the same when the blocks are declared in another
+    // order.
+    let side = |sources: &[&str]| {
+        let mut model = sequence("s");
+        for name in ["p", "q"] {
+            model.inputs.push(boundary(name, SignalType::Real));
+        }
+        for name in ["z", "a", "t"] {
+            model.blocks.push(block(name, "CDL.Reals.Abs", &[]));
+        }
+        for source in sources {
+            model.connections.push(link(source, "t.u"));
+        }
+        model
+    };
+    let diff = compare(&side(&["z.y", "a.y"]), &side(&["q", "p"]));
+    assert_eq!(
+        support::json(&diff)["graph"],
+        json!([
+          { "kind": "rewired", "subject": "t.u", "old": "a.y", "new": "p" },
+          { "kind": "rewired", "subject": "t.u", "old": "z.y", "new": "q" }
+        ])
+    );
+}
+
+#[test]
+fn the_inputs_of_a_removed_block_are_sorted_by_port_then_by_the_drivers_spelling() {
+    // Two drivers on one port: a block port (`b.y`) and a boundary (`c`). By spelling the block
+    // port comes first.
+    let mut base = sequence("s");
+    base.inputs.push(boundary("c", SignalType::Real));
+    base.blocks.push(block("b", "CDL.Reals.Abs", &[]));
+    base.blocks.push(block("gone", "CDL.Reals.Add", &[]));
+    for (source, target) in [("c", "gone.u2"), ("c", "gone.u1"), ("b.y", "gone.u1")] {
+        base.connections.push(link(source, target));
+    }
+    let mut head = base.clone();
+    head.blocks.pop();
+    head.connections.clear();
+    let json = support::json(&compare(&base, &head));
+    assert_eq!(
+        json["graph"][0]["inputs"],
+        json!([
+          { "port": "u1", "source": "b.y" },
+          { "port": "u1", "source": "c" },
+          { "port": "u2", "source": "c" }
+        ])
+    );
+}
+
+#[test]
 fn a_target_on_a_block_nobody_declared_is_reported_as_spelled() {
     let side = |source: &str| {
         let mut model = sequence("s");

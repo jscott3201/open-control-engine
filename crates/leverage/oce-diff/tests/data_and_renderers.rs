@@ -297,6 +297,25 @@ fn the_block_counts_are_written_only_when_a_block_was_renamed_removed_or_added()
 }
 
 #[test]
+fn counts_read_from_json_cannot_overflow_a_renderer() {
+    // A `Diff` can be read from any JSON; the renderers add its counts without panicking.
+    let mut value = empty();
+    value["notes"] = json!(["names-disjoint"]);
+    value["summary"]["blocks"] = json!({ "by_name": usize::MAX, "renamed": usize::MAX,
+                                         "base_only": usize::MAX, "head_only": usize::MAX });
+    let text = render_text(&read(value.clone()));
+    assert!(text.contains(&format!(
+        "# names disjoint: no block kept its name; {max} of {max} matched by the rename pass, {max} not matched\n",
+        max = usize::MAX
+    )));
+    value["notes"] = json!([]);
+    assert!(render_text(&read(value)).contains(&format!(
+        "# blocks: {max} by name, {max} renamed, {max} removed, {max} added\n",
+        max = usize::MAX
+    )));
+}
+
+#[test]
 fn the_one_sided_templates_spell_the_empty_side() {
     let mut value = empty();
     value["graph"] = json!([

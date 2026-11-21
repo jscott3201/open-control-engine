@@ -9,7 +9,8 @@ reopened. Decisions 9 to 16 were made while drafting and accepted by the archite
 [authoring layer note](authoring-layer.md).
 
 **As landed.** The authoring diff, the rename pass and the two renderers are built as
-`crates/leverage/oce-diff` (issue #665, [crate README](../../crates/leverage/oce-diff/README.md));
+`crates/leverage/oce-diff` (issue #665, GitHub #692,
+[crate README](../../crates/leverage/oce-diff/README.md));
 the CXF adapter, the blob comparison and the `oce diff` verb are #666 to #668. Building it settled
 a few things this note had left open or had wrong, each written back where it belongs and listed
 under [As landed](#as-landed).

@@ -75,6 +75,24 @@ fn an_added_parameter_lists_heads_references_and_a_removed_one_bases() {
 }
 
 #[test]
+fn what_a_parameter_affects_is_sorted_and_lists_each_assignment_once() {
+    // `z` is declared before `a`, and `a` assigns `k` twice (which a validator refuses): the
+    // list is in byte order whatever the authored order, with `a.k` once.
+    let side = |value: f64| {
+        let mut model = model(&format!(
+            "param gain : Real = {value:?}\n\
+             block z = CDL.Reals.MultiplyByParameter(k = gain)\n\
+             block a = CDL.Reals.MultiplyByParameter(k = gain)\n"
+        ));
+        let again = model.blocks[1].assignments[0].clone();
+        model.blocks[1].assignments.push(again);
+        model
+    };
+    let diff = support::json(&compare(&side(2.0), &side(3.0)));
+    assert_eq!(diff["parameters"][0]["affects"], json!(["a.k", "z.k"]));
+}
+
+#[test]
 fn a_parameter_nothing_references_affects_nothing() {
     let diff = diffed("param spare : Integer = 1\n", "param spare : Integer = 2\n");
     assert_eq!(
@@ -194,6 +212,59 @@ fn an_integer_and_a_real_that_differ_in_value_or_sign_of_zero_are_not_respelled(
             ("literal-respelled".to_owned(), "m.k_2".to_owned())
         ]
     );
+}
+
+#[test]
+fn an_integer_past_two_to_the_fifty_third_is_never_the_real_it_rounds_to() {
+    // 2^53 is the last Integer every one of whose neighbours is a Real. 2^53 + 1 rounds to 2^53
+    // as an f64: a different value, so a change, not a respelling.
+    let diff = diffed(
+        "param big : Real = 9007199254740992\n",
+        "param big : Real = 9007199254740992.0\n",
+    );
+    assert_eq!(diff["parameters"], json!([]));
+    assert_eq!(
+        diff["metadata"],
+        json!([{ "kind": "literal-respelled", "subject": "big",
+                 "old": "9007199254740992", "new": "9007199254740992.0" }])
+    );
+    for integer in [
+        "9007199254740993",
+        "-9007199254740993",
+        "9223372036854775807",
+    ] {
+        let real = if integer.starts_with('-') {
+            "-9007199254740992.0"
+        } else if integer.len() == 16 {
+            "9007199254740992.0"
+        } else {
+            "9223372036854775807.0"
+        };
+        let diff = diffed(
+            &format!("param big : Real = {integer}\n"),
+            &format!("param big : Real = {real}\n"),
+        );
+        assert_eq!(
+            support::kinds(&diff["parameters"]),
+            [("changed".to_owned(), "big".to_owned())],
+            "{integer} against {real}"
+        );
+        assert_eq!(diff["metadata"], json!([]), "{integer} against {real}");
+    }
+    // The same limit on a block parameter and on its catalog default.
+    let diff = diffed(
+        "block d = CDL.Logical.TrueDelay(delayTime = 9007199254740993)\n",
+        "block d = CDL.Logical.TrueDelay(delayTime = 9007199254740992.0)\n",
+    );
+    assert_eq!(
+        support::kinds(&diff["graph"]),
+        [("reparameterized".to_owned(), "d.delayTime".to_owned())]
+    );
+    let diff = diffed(
+        "block d = CDL.Logical.TrueDelay(delayTime = -9007199254740992)\n",
+        "block d = CDL.Logical.TrueDelay(delayTime = -9007199254740992.0)\n",
+    );
+    assert_eq!(diff["graph"], json!([]));
 }
 
 #[test]

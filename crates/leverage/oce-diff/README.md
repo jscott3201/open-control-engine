@@ -186,8 +186,12 @@ OCE_BLESS_DIFF=1 cargo nextest run -p oce-diff   # rewrite the goldens, then run
 ```
 
 Every diff records the catalog's content id, so a catalog change moves the `catalog` line of each
-JSON golden. `tests/note_examples.rs` is the oracle: the examples' expected JSON, text and table
-rows typed by hand from the note, never blessed.
+JSON golden. Two oracles are never blessed. `tests/note_examples.rs` holds the examples' expected
+JSON, text and table rows, typed by hand from the note. `tests/rename_oracle.rs` holds a second
+implementation of the note's rename rules, written pair by pair as the note states them and
+sharing nothing with the crate's, and requires the two to agree on 135,168 enumerated pairs of
+small models, sides a validator refuses among them. `tests/model_coverage.rs` edits every field of
+the model one at a time and requires each edit to be reported in the section it belongs to.
 
 ## Parts 2 to 4
 

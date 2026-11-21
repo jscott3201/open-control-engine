@@ -61,7 +61,7 @@ pub fn render_text(diff: &Diff) -> String {
     ));
     let blocks = summary.blocks;
     let disjoint = diff.notes.contains(&Note::NamesDisjoint);
-    if !disjoint && blocks.renamed + blocks.base_only + blocks.head_only > 0 {
+    if !disjoint && (blocks.renamed > 0 || blocks.base_only > 0 || blocks.head_only > 0) {
         out.push(format!(
             "# blocks: {} by name, {} renamed, {} removed, {} added",
             blocks.by_name, blocks.renamed, blocks.base_only, blocks.head_only
@@ -72,7 +72,8 @@ pub fn render_text(diff: &Diff) -> String {
             Note::NamesDisjoint => format!(
                 "# names disjoint: no block kept its name; {} of {} matched by the rename pass, {} not matched",
                 blocks.renamed,
-                blocks.renamed + blocks.base_only,
+                // The counts of a diff read from JSON may be anything: never overflow.
+                blocks.renamed.saturating_add(blocks.base_only),
                 blocks.base_only
             ),
             Note::RenamePassSkipped => format!(
