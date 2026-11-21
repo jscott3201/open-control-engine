@@ -245,7 +245,8 @@ so far, and no tag is cut by the bump.
     every reader agreeing), `blob_hostile_parameter_models.rs` (100 seeded models decode or
     refuse as predicted within the bound), `blob_summary_allocations.rs`, and
     `cxf_constructed_budget.rs` (the same boundary, receipt record and order through
-    `Engine::load_cxf`).
+    `Engine::load_cxf`), and a unit test that `Engine::resume` refuses the same way and stays
+    halted.
   - Documented in the [trust model](docs/compiled-schedule-blob.md#trust-model) and the
     [ingest resource bounds](docs/host-responsibilities.md#ingest-resource-bounds).
 

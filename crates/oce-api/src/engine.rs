@@ -370,8 +370,12 @@ impl Engine {
 /// ([`oce_graph::MAX_CONSTRUCTED_WORDS`]) as soon as it is constructed, with the accumulator the
 /// blob decoder uses. The first block that takes the total past the budget is dropped with the
 /// blocks before it and the build is refused: [`OcError::Build`] carrying
-/// [`oce_graph::BuildError::ConstructedTooLarge`]. So the blocks held never exceed the budget,
-/// whatever a document's parameters size.
+/// [`oce_graph::BuildError::ConstructedTooLarge`]. So the blocks this call returns never exceed
+/// the budget, whatever a document's parameters size. That bounds one set of blocks, not the
+/// engine: `Engine::resume` calls this while the blocks of the loaded model are still alive, and
+/// `Engine::compile_blob` decodes the bytes it encoded (a second set, under the decoder's same
+/// budget) beside them, so for the length of either call up to twice the budget is held
+/// (issue #722).
 pub(crate) fn instantiate_blocks(model: &ModelGraph) -> Result<Vec<Box<dyn Block>>, OcError> {
     let mut blocks: Vec<Box<dyn Block>> = Vec::with_capacity(model.blocks.len());
     let mut constructed = ConstructedBudget::new();

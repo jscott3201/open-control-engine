@@ -16,6 +16,7 @@ mod params_tests;
 mod pre_execution_profile_tests;
 mod projection_tests;
 mod reset_pid_block_loop;
+mod resume_constructed_budget_tests;
 mod state_codec_tests;
 mod state_compatibility_tests;
 mod state_continuation_tests;

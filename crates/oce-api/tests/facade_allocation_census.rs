@@ -17,9 +17,9 @@ mod blob_image;
 mod blob_models;
 #[path = "support/dual_entry.rs"]
 mod dual_entry;
-// The parameter fuzz's hostile tables, shared with `oce-blocks` and `oce-validate`.
 #[path = "../../oce-graph/tests/support/frame_schedule.rs"]
 mod frame_schedule;
+// The parameter fuzz's hostile tables, shared with `oce-blocks` and `oce-validate`.
 #[allow(
     dead_code,
     reason = "this binary uses part of the support the parameter fuzz shares"
