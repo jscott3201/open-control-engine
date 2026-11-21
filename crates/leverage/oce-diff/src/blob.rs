@@ -149,7 +149,8 @@ impl Serialize for BlobSide {
 /// Four facts about the pair and each side's own two: whether the bytes are equal; whether the
 /// recorded content ids are; the class-table entries that differ, by class path; and whether the
 /// per-instance initial-state CRCs are. Nothing else a blob holds is compared (no parameter,
-/// connection, schedule or I/O path), and no entry is matched across the two by block id.
+/// connection, schedule or I/O path), and only the initial state is compared block id by block
+/// id, under the alignment check `initial_state` describes.
 ///
 /// Written, never read back: [`BlobComparison::to_json`] writes it with sorted keys, and a
 /// side's refusal is kept as `accepted` only.
@@ -202,8 +203,8 @@ impl BlobComparison {
 /// **A blob this build would refuse to run is still compared.** Its summary reads, and its side
 /// carries the decoder's refusal ([`BlobSide::decode_refusal`]), so "same" on every axis is
 /// never "runnable": read [`BlobSide::accepted`] for that. A blob from another build of the same
-/// engine version whose registry differs is how a `signature-changed` class arises, and it is
-/// refused here with `BlobError::ClassSignatureMismatch`.
+/// engine version whose registry differs is how a `signature-changed` class arises, and the side
+/// whose hash is not this build's carries `BlobError::ClassSignatureMismatch`.
 ///
 /// # Errors
 ///

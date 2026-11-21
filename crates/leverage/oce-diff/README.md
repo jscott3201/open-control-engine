@@ -359,8 +359,8 @@ but not across the model, so a blob of a few kilobytes can make it allocate hund
 ([`docs/compiled-schedule-blob.md`](../../../docs/compiled-schedule-blob.md#what-a-summary-costs)).
 Until the model-wide budget of
 [#700](https://github.com/jscott3201/open-control-engine/issues/700) lands, do not compare
-untrusted bytes without your own memory limit; this crate does not work around it. A refusal
-allocates nothing. The comparison itself is linear in the instances and in the class tables,
+untrusted bytes without your own memory limit; this crate does not work around it. A side the
+facade refuses allocates nothing. The comparison itself is linear in the instances and in the class tables,
 which hold only registered classes (`src/blob_tests.rs` pins it in counted work).
 
 ## Tests and goldens
