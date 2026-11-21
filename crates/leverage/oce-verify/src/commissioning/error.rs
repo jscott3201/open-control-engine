@@ -58,8 +58,9 @@ pub enum SpecErrorKind {
     /// format reads a real, outside the range in which every integer is a binary64
     /// ([`crate::MAX_TIME_INTEGER`]); or a column index that is not from 1 to 4,294,967,295.
     IntegerOutOfRange,
-    /// A string carries a control character (anything in C0 but line feed, DEL or C1), raw or
-    /// escaped.
+    /// A string carries a control character, raw or escaped: anything in C0, DEL or C1. The one
+    /// exception is a line feed written as the escape `\n`; a raw line feed inside a string is
+    /// refused like the rest.
     ControlCharacter,
     /// A `/*` comment that is never closed.
     UnterminatedComment,
