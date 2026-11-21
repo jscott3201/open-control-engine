@@ -3,10 +3,10 @@
 //!
 //! A diagnostic copies document text: its subject is a node's `@id`, and most messages name that
 //! `@id` again. One long `@id` and many findings about it, each costing the document a few bytes,
-//! used to build a list of `findings × id bytes`: 400 padded keys on a node with a 1 MiB `@id`, a
-//! document of 2.1 MB, held 1.2 GB. The reader's list holds at most 8 MiB of message and subject
-//! text; the first diagnostic that does not fit ends it, and one `resource-limit-exceeded` error
-//! counts that diagnostic and every later one.
+//! make a list of `findings × id bytes` unless the list is bounded: 400 padded keys on a node with
+//! a 1 MiB `@id`, a document of 2.1 MB, are 1.2 GB of diagnostics. The reader's list holds at most
+//! 8 MiB of message and subject text; the first diagnostic that does not fit ends it, and one
+//! `resource-limit-exceeded` error counts that diagnostic and every later one.
 //!
 //! Each case of [`ROUTES`] is one place the reader raises a diagnostic per item of a list the
 //! document sets (the keys of a node, its `@type` tokens, its references), about one string the
@@ -391,8 +391,8 @@ fn every_route_holds_a_bounded_list_and_builds_nothing_once_it_has_ended() {
             assert!(held_text(listed) <= BUDGET, "{name}");
 
             // The peak is the budget and what reading the document holds. [measured: 9.7 to
-            // 19.6 MB across the cases, for documents of 0.27 to 0.57 MB; 106 to 316 MB before
-            // the list had a budget]
+            // 19.6 MB across the cases, for documents of 0.27 to 0.57 MB; 106 to 316 MB with no
+            // budget on the list]
             assert!(
                 info.bytes_max <= bytes(BUDGET) + 48 * bytes(document.len()),
                 "{name}: {} bytes held for a document of {}",
@@ -460,7 +460,7 @@ fn a_list_that_fills_the_budget_exactly_is_whole_and_one_byte_more_ends_it() {
         "every finding is listed, and nothing else"
     );
 
-    // One more finding of the same size: the sixteen are listed as they were, and it is counted.
+    // One more finding of the same size: the same sixteen are listed, and it is counted.
     let (_, one_more) = refused(&relative_references(&id, token, 17));
     assert_eq!(one_more.len(), 17);
     assert_eq!(&one_more[..16], &whole[..]);

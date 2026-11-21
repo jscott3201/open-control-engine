@@ -2,9 +2,10 @@
 //!
 //! A diagnostic copies document text: its subject is an `@id` as authored or expanded, and most
 //! messages name that `@id` again. Nothing else ties the number of diagnostics to the length of
-//! the strings they copy, so one node with a long `@id` and many refused keys built a list of
-//! `keys × id bytes`: 400 keys on a 1 MiB `@id`, a document of 2 MiB, held over 1.2 GB of
-//! diagnostics. A refusal has to be a bounded answer, whatever the document.
+//! the strings they copy: one node with a long `@id` and many refused keys raises a diagnostic
+//! per key, each a copy or two of the `@id`. Unbounded, 400 keys on a 1 MiB `@id`, a document of
+//! 2 MiB, are over 1.2 GB of diagnostics. A refusal has to be a bounded answer, whatever the
+//! document.
 //!
 //! A [`DiagnosticList`] therefore lists diagnostics, in the order they are raised, while the
 //! text it holds fits [`MAX_DIAGNOSTIC_TEXT_BYTES`]. The text of a diagnostic is its message and
@@ -102,7 +103,7 @@ impl DiagnosticList {
     }
 
     /// Count one diagnostic that was raised and is not kept, ending the list if it has not
-    /// ended. For a caller that knows a finding was raised and no longer holds its text.
+    /// ended. For a caller that knows a finding was raised and does not hold its text.
     pub(crate) fn leave_unlisted(&mut self) {
         self.count_unlisted(1);
     }

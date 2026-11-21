@@ -692,7 +692,7 @@ of a load, to 8 MiB of text (issue #695). What you can rely on:
   findings on one connector share an `Arc`) is counted once, as it is held once. If you copy or
   print each diagnostic with its subject, you pay for that subject each time: one long shared
   subject on many diagnostics is larger printed than held, and
-  `load_cxf_with_receipt` copies every subject into its receipt today (issue #708).
+  `load_cxf_with_receipt` copies every subject into its receipt (issue #708).
 - **Past the bound.** Diagnostics are listed in the order the reader raises them. The first one
   that does not fit ends the list: it and every later one are counted, never listed, even where
   a later one would have fit. The list then ends with one `resource-limit-exceeded` error with
@@ -701,7 +701,7 @@ of a load, to 8 MiB of text (issue #695). What you can rely on:
   before it are in the reader's usual order.
 - **It is always a refusal.** The closing error is an error whatever was left out, so a document
   whose warnings alone pass the bound is refused. A load never succeeds with warnings missing.
-- **What it does not change.** A list within the bound is what it was: no message is shortened
+- **What it does not change.** A list within the bound is whole: no message is shortened
   and no subject is cut. Every tracked document and every document of `open-control-library`
   is far inside it (the largest list among them is 196 diagnostics and 29,460 bytes, from a
   document of 201,721 bytes).

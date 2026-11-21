@@ -12,11 +12,11 @@
 //!
 //! Peak memory stays within a fixed multiple of the document's bytes for both.
 //!
-//! A third case is the document that made the engine's own reader build a refusal list of
-//! `keys × id bytes` (GitHub issue #695): one node with a 256 KiB `@id` and 400 or 1,600 keys the
-//! reader refuses. The importer answers with one refusal, and here it is for the name: a local
-//! part of more than 64 bytes is `invalid-name`. It copies the `@id` once however many keys the
-//! node carries, and a further key costs what parsing it costs.
+//! A third case is the document whose refusal list the engine's own reader holds to a budget,
+//! since it grows as `keys × id bytes` (GitHub issue #695): one node with a 256 KiB `@id` and 400
+//! or 1,600 keys that reader refuses. The importer answers with one refusal, and here it is for
+//! the name: a local part of more than 64 bytes is `invalid-name`. It copies the `@id` once
+//! however many keys the node carries, and a further key costs what parsing it costs.
 //!
 //! Measured with `allocation-counter`, whose counters are local to the measuring thread. Naming
 //! that crate links its counting global allocator, which is why this file is a test binary of its
