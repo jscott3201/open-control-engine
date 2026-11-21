@@ -1441,8 +1441,17 @@ a number.
 is `of`, by zero-order hold; the **test** is the engine's output at each tick. Their `x` values
 are the tick times in seconds, so the envelope's endpoint precondition holds by construction,
 and a window of one tick is two one-point series. The envelope is built around the reference
-with the window's tolerances, by #655's arithmetic unmodified, and the test is judged at each
-tick: an exceedance of exactly zero passes the instant, anything above fails it.
+with the window's tolerances, by #655's arithmetic unmodified. Under either envelope an
+instant's exceedance is the error at that tick against the two bound curves,
+`max(0, y - y_up) - min(0, y - y_low)`: exactly zero passes the instant, anything above fails
+it. A vector's instants are its ticks, so the check `oce-conformance`'s `compare` also makes at
+the bounds' breakpoints between samples is no part of a vector verdict.
+
+**Self-enclosure.** Before a window is judged, its reference is checked against its own bounds
+at every tick. A reference outside them is `compare-refused` with the cause
+`reference-outside-envelope`: an error with no receipt (exit 2). So in every window that is
+judged, an output equal to `of` passes, whatever the tolerances. `aligned-grid` encloses its
+reference by construction; decision 41 says why the check exists for `funnel`.
 
 **`when`.** Each name resolves by the one name rule (decision 6) against the inputs and outputs
 together and must be a Boolean port. At a tick the mask is the AND of the signals' values in
@@ -1498,13 +1507,22 @@ which series it is built around.
 envelope, and where it is named.
 
 - *Options.* (a) An optional set-level `envelope`, default `funnel`. (b) `funnel` only and no
-  key. (c) A key on each window.
-- *Evidence.* The header has one `comparison` object for the receipt.
-- **Proposed: (a).** One envelope keeps the header true for the whole set, and the second
-  envelope #655 keeps is reachable from a vector set through the same code as from a
-  commissioning spec. A set with the key and no `within` window loads, and its receipt says
-  `exact`. Any other value is `unknown-envelope`. (b) is the smaller format, and `envelope`
-  could be added in place later; see the questions.
+  key. (c) The key, with `aligned-grid` when absent. (d) A key on each window.
+- *Evidence.* The header has one `comparison` object for the receipt. `oce-conformance` records why
+  its envelope is not a corner construction: that one "can reject a bit-identical trace when `atolx`
+  is large relative to sample spacing" (`crates/oce-conformance/src/funnel.rs:112`), and a test pins
+  that the envelope `aligned-grid` copies encloses a bit-identical trace
+  (`crates/oce-conformance/tests/funnel.rs:271`). On a vector's grid an `atolx` of one step or more
+  is that case, and it is the ordinary way to give a delay edge a tick of slack. What #655's port
+  does there is not known before it lands.
+- **Proposed: (a), with the self-enclosure check** of [the format](#the-format-as-proposed).
+  One envelope keeps the header true for the whole set, `funnel` is the default in both specs,
+  and the second envelope #655 keeps is one key away. The check turns the one way `funnel`
+  could surprise a vector author, failing an output that equals its expectation, into a typed
+  refusal that names the window, so no verdict and no mutant catch ever rests on it. A set with
+  the key and no `within` window loads, and its receipt says `exact`. Any other value is
+  `unknown-envelope`. (c) trades the shared default for an envelope that never refuses its own
+  reference; see the questions.
 
 **42. The header says `tolerance` when any window uses `within`.** *Question:* the header under
 a set that mixes the two forms.
@@ -1580,8 +1598,9 @@ the budgets.
   allows for the set's envelope is `too-many-points`, at bind in the budget step, straight after
   `too-many-instants`: arithmetic on the clock and the window, before any load but the
   subject's first.
-- The loop-removal work bound of #655 can only be met while comparing. A window that reaches it
-  is `compare-refused` with the `CompareError` code as its cause: an error with no receipt
+- The loop-removal work bound of #655 can only be met while comparing, and so can the
+  self-enclosure check. A window that fails either is `compare-refused`, with the
+  `CompareError` code or `reference-outside-envelope` as its cause: an error with no receipt
   (exit 2). Without a `when`, the envelope depends on the file and the clock alone, so the
   refusal is a property of the vector set, never of what a mutant produced.
 
@@ -1639,7 +1658,7 @@ Added to [the table](#error-codes), each exit 2 with no receipt:
 | `when-unknown`, `when-ambiguous`, `when-not-boolean` | bind | a `when` name that matches nothing, matches several, or names a port that is not a Boolean |
 | `tolerance-on-discrete-output` | bind | `within` on a Boolean or Integer output |
 | `too-many-points` | bind | a `within` window with more ticks than `CompareLimits` allows for the set's envelope |
-| `compare-refused` | run | a `CompareError` while comparing, with its code as `cause` |
+| `compare-refused` | run | a `CompareError` while comparing, with its code as `cause`, or a reference outside its own envelope, with the cause `reference-outside-envelope` |
 
 With these rows `within`, `of` and `when` are keys of the format, so `unknown-key` does not name
 them, and `ambiguous-expectation` also covers a window with both `equals` and `within`, one of
@@ -1665,9 +1684,12 @@ tick and between two, and one after `to_s` refused; `within` on a Boolean and on
 refused before a frame runs; a NaN and an infinity in a `within` window failing the instant with the
 other ticks judged; a mask true, false and changing inside a window, for both forms; a `when` naming
 an input and one naming an output; every new code once, pinned by code; `receipt_id` equal across
-chunk sizes; a mutant caught by `tolerance-exceeded`; each of `CompareLimits`' point caps at its
-limit and one past; the hand-derived exceedance of one window against the note's formulas; and, if
-this PR is the one that bumps, the 0.5.0 artefact refused with `EngineVersionMismatch`.
+chunk sizes; a mutant caught by `tolerance-exceeded`; under each envelope, the reference against its
+own bounds at an `atolx` of one, two and sixteen steps over a step, a one-tick pulse and a ramp,
+each outcome pinned, and a window refused as `reference-outside-envelope`; each of `CompareLimits`'
+point caps at its limit and one past; the hand-derived exceedance of one window against the note's
+formulas; and, if this PR is the one that bumps, the 0.5.0 artefact refused with
+`EngineVersionMismatch`.
 
 ### Questions for the owner
 
@@ -1682,14 +1704,18 @@ settle. The rest follow from decisions 8, 9, 10 and 26, from the commissioning n
    - *Evidence:* the envelope takes `rtol` from the reference's range (commissioning note,
      "Envelope", step 1), so under (b) a mutant's own output sets the width of the band it is
      judged by.
-2. **Whether a vector set can choose `aligned-grid` (decision 41).**
-   - *Options:* (a) an optional set-level `envelope`, default `funnel`. (b) `funnel` only; the
-     key is added in place if a set ever needs the other.
-   - *Recommendation:* (a): one key, and both envelopes of #655 are then exercised through the
-     vector path as well as the commissioning one. (b) is the smaller published format, and no
-     library vector is known to need `aligned-grid`.
-   - *Evidence:* the 45 library windows that wait on this work are setpoint values in one
-     routine; nothing in the tree asks for the second envelope from a vector.
+2. **Which envelope a vector set uses (decision 41).**
+   - *Options:* (a) an optional set-level `envelope`, default `funnel`, and a reference that
+     must sit inside its own envelope. (b) `funnel` only, with the same check; the key is added
+     in place if a set needs the other. (c) The key, with `aligned-grid` when absent.
+   - *Recommendation:* (a). It keeps one default across vectors and commissioning, and the
+     check makes the risk a typed refusal. The build pins the cases; if they show the port
+     refusing ordinary windows with a tick of time slack, that is a finding for a new issue,
+     never a choice made inside the build PR. (c) avoids the risk at the cost of two defaults.
+   - *Evidence:* `oce-conformance` records that a corner construction "can reject a
+     bit-identical trace when `atolx` is large relative to sample spacing"
+     (`crates/oce-conformance/src/funnel.rs:112`); nothing in the tree shows what the faithful
+     port does on a uniform grid, and no library vector asks for either envelope yet.
 3. **When file-backed series arrive (decision 49).**
    - *Options:* (a) their own issue, after #660, outside the M3 closeout (#671). (b) Inside M3,
      blocking the closeout. (c) In the tolerance build itself.
