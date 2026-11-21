@@ -332,6 +332,34 @@ and a gate that accepted any text would restore exactly the false assurance desc
     is not bumped (owner ruling: tightening accepted CXF input is not a format change).
 ### Leverage
 
+- **A wire refusal names itself: `WireError::code()` and `WireError::location()`** (GitHub #654,
+  issue #495). `oce-author`'s wire reader was the one layer whose refusals a host had to name
+  by hand. `oce-cli` held the sixteen codes in a table of its own and matched the variants of
+  `WireError` to pick one, with a `wire-refused` fallback behind the wildcard arm that a
+  `#[non_exhaustive]` enum forces on another crate. A variant added in `oce-author` would have
+  compiled and been reported as `wire-refused`.
+  - `WireError::code(&self) -> &'static str` returns one of the sixteen codes in the new
+    `oce_author::WIRE_CODES`, one per variant in declaration order: `not-utf8`,
+    `byte-order-mark`, `input-too-large`, `nesting-too-deep`, `list-too-long`,
+    `string-too-long`, `duplicate-key`, `non-finite-number`, `integer-out-of-range`,
+    `control-character`, `unknown-key`, `missing-key`, `wrong-type`, `json-syntax`,
+    `bound-list-too-long`, `malformed-connection`. They are the strings the CLI already
+    reported.
+  - `WireError::location(&self) -> Option<Location>` returns the line and column a refusal
+    carries. `not-utf8`, `byte-order-mark`, `input-too-large` and `malformed-connection` have
+    none. The CLI derived this from the variants too, behind the same wildcard arm.
+  - An in-crate test pins the list against a match with no wildcard arm, so a variant without
+    a code does not compile and one without a row in the pinned list fails.
+    `tests/wire_codes.rs` produces every code from a document.
+  - `oce-cli` reports `code()` and `location()` and matches no variant. Its sixteen `WIRE_*`
+    constants, `input::wire_code` and the `wire-refused` code are gone; the meanings `oce vocab`
+    prints stay there, held to `WIRE_CODES` in order.
+  - Two CLI transcripts move, `vocab_text` and `vocab_json`: each loses the `wire-refused` row.
+    No run could produce that code, since every variant had its own. No other transcript
+    moves. A new test in `hostile_inputs.rs` holds the code, detail and span the tool prints
+    for one document per code to the literals it printed before this change, and passes
+    against the previous source as well.
+  - The `oce-author` README lists the codes; the CLI README points there.
 - **The importer's refusal of a giant list is pinned in allocations, not in elapsed time** (GitHub
   #601, issue #578). `import_hostile.rs` asserted a 60 s ceiling over two refusals: 100,000
   references to nodes that do not exist (`unresolved-reference`) and a 1,000,000-element array
