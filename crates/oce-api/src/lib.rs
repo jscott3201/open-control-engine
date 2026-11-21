@@ -158,7 +158,9 @@ pub use params::{ParamAttrs, ParamTable, RunMode};
 pub use replay::{MAX_REPLAY_BYTES, ReplayContentId, ReplayError, ReplayExactness, ReplayRecord};
 pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
 pub use state_snapshot::StatePortability;
-pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};
+pub use topology::{
+    DeclaredInput, DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection,
+};
 
 /// Re-export of the two namespaces the loader reads the QUDT schema property `hasUnit` in, the
 /// one the modelica-json translations bind `qudt` to (`#`) and the one QUDT publishes (`/`), so

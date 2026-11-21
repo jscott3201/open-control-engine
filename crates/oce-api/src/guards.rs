@@ -19,10 +19,10 @@
 use std::sync::Arc;
 
 use crate::{
-    AssertEvent, AssertLevel, ConnectorId, DeclaredOutput, Diagnostic, Engine, EngineCheckpoint,
-    EngineStateError, EngineStateSnapshot, IoClass, IoInventory, IoSummary, LoadErrorContext,
-    LoadReport, LoadedModel, OcError, ParamAttrs, ParamTable, PassThroughPair, PhysicalKind,
-    PointDirection, PointInfo, PointValueType, RunMode, Topology, TopologyBlock,
+    AssertEvent, AssertLevel, ConnectorId, DeclaredInput, DeclaredOutput, Diagnostic, Engine,
+    EngineCheckpoint, EngineStateError, EngineStateSnapshot, IoClass, IoInventory, IoSummary,
+    LoadErrorContext, LoadReport, LoadedModel, OcError, ParamAttrs, ParamTable, PassThroughPair,
+    PhysicalKind, PointDirection, PointInfo, PointValueType, RunMode, Topology, TopologyBlock,
     TopologyConnection, TrendCfg, TrendInterval, Value, ValueType,
 };
 
@@ -127,6 +127,7 @@ fn _assert_python_facing_types_are_clone() {
     needs_clone::<TopologyBlock>();
     needs_clone::<TopologyConnection>();
     needs_clone::<PassThroughPair>();
+    needs_clone::<DeclaredInput>();
     needs_clone::<DeclaredOutput>();
     needs_clone::<EngineCheckpoint>();
     needs_clone::<EngineStateSnapshot>();
