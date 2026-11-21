@@ -5,14 +5,17 @@ receipt, a bundle card or an agent can read, with authored block names as the id
 Design note: [`docs/design/diff.md`](../../../docs/design/diff.md), which is the specification of
 everything here.
 
-One of four parts is in. **The authoring diff** (issue #665): `diff` compares two authoring models
-and returns a sorted, schema-tagged `Diff`; the bounded rename pass presents renamed blocks; two
-pure renderers turn the data into text and a Markdown table. The CXF adapter (#666), the blob
-comparison (#667) and the `oce diff` verb (#668) build on it.
+Two of four parts are in. **The authoring diff** (issue #665): `diff` compares two authoring
+models and returns a sorted, schema-tagged `Diff`; the bounded rename pass presents renamed blocks;
+two pure renderers turn the data into text and a Markdown table. **The CXF adapter** (issue #666):
+`diff_topology` gives the same data for two loaded CXF documents, compared through the facade's
+`Topology` views ([below](#the-cxf-adapter)). The blob comparison (#667) and the `oce diff` verb
+(#668) build on them.
 
 It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-author` only. It
-never validates and never evaluates: it takes parsed models as they are, reads the catalog only for
-a parameter's literal default and type, loads no engine, opens no file and is not published.
+never validates and never evaluates: it takes parsed models or loaded topologies as they are, reads
+the catalog only for a parameter's literal default and type and the facade only for a block's port
+names, loads no engine, opens no file and is not published.
 
 ```rust
 use oce_author::parse_text;
@@ -27,6 +30,18 @@ if changes.summary.graph_equal && changes.summary.parameters_equal == Some(false
 print!("{}", render_text(&changes));      // one line per entry
 print!("{}", render_markdown(&changes));  // a Change | Subject | Was | Now table
 print!("{}", changes.to_json());          // the data: sorted keys, two-space indentation
+```
+
+```rust
+use oce_api::Engine;
+use oce_diff::{DiffOptions, diff_topology};
+
+// The caller loads each document into a throwaway engine; the crate loads nothing.
+let (mut base, mut head) = (Engine::new(), Engine::new());
+base.load_cxf(&std::fs::read("reset.v1.jsonld")?)?;
+head.load_cxf(&std::fs::read("reset.v2.jsonld")?)?;
+let changes = diff_topology(&base.topology(), &head.topology(), &DiffOptions::default())?;
+assert_eq!(changes.summary.parameters_equal, None); // a retune is on the leaves it reaches
 ```
 
 ## Identity
@@ -80,9 +95,86 @@ whenever a side has nothing left, hinted or not. Equal ids prove nothing about p
 comments or authored order, so everything else is compared in full. If the statement is wrong and
 blocks are unmatched on both sides, the pass runs as it would without the hint.
 
+## The CXF adapter
+
+`diff_topology(base, head, options)` compares two loaded documents through their
+`oce_api::Topology` views (design note decisions 3, 8 and 15). The caller loads the engines; the
+crate takes `&Topology` and never reads CXF bytes. It lowers each view into the same level-neutral
+side the authoring diff lowers into (`src/wiring`), so a block is matched, renamed and rewired
+exactly as at the authoring level, and it builds a `Diff` with `source: cxf`.
+
+- **Names.** A block or boundary is named by its path with the root prefix stripped: the root id
+  (`Topology::model_id`), a `.`, and a non-empty name with no `#`, `/` or `:`, which may hold
+  dots of its own (a flattened nested block is `sub.block`). That is the modelica-json convention
+  the emitter and the corpus follow; the loader does not check it, and the adapter never guesses a
+  root from the paths (the blocks of a one-block document share that block's whole path). The
+  delimiters are excluded because the content id names an IRI by what follows its last `#`, `/`
+  or `:`: without one in the name, the id names the element `{sequence}.{name}` and this level
+  names it `name`, so the two agree. A path that breaks the rule is refused with
+  `DiffError::OutsideRoot` (`outside-root`): a block or boundary named in another namespace or
+  with a delimiter in its name, every block of a document the engine exported (whose root is the
+  exporter's fixed `@id` while its instance IRIs keep their own, so it has the original's content
+  id and is still refused; [#717](https://github.com/jscott3201/open-control-engine/issues/717)
+  is to make it diffable), and any block or boundary of a model with a synthetic root key. Diffing
+  by whole path instead is rejected: an export against its source would read as a total rewrite
+  (owner ruling of 2026-11-21). Base is checked first.
+- **Unnamed blocks.** A path that is `b` and decimal digits is the facade's spelling of a block
+  with no instance IRI. It is loader order, no identity across two documents, so such a block is
+  never matched by name, only by the rename pass, its entries carry that spelling, and the diff
+  carries the note `unnamed-blocks`. No public load path produces one.
+- **Ports by index.** A block's connector paths are positional (an input a boundary feeds carries
+  the boundary's path), so port `i` is the `i`-th name `oce_api::class_ports` gives for the
+  block's class and ground parameters. A block whose ports cannot be named that way is refused
+  with `DiffError::UnresolvedPorts` (`unresolved-ports`); no loaded document has one.
+- **Ground values.** A block's parameters are the values its document bound, grounded: a
+  sequence-parameter retune is `reparameterized` on each leaf it reaches, so `parameters_equal` is
+  `null`. A value on one side only is `parameter-defaulted` against the catalog's literal default,
+  as at the authoring level. An Integer literal against the equal Real is a change of value here:
+  the loaded graph holds two values and the content id moves (issue #683 will make the engine
+  hold the Real). An entry lists a block's ground parameters by name.
+- **Interface.** A boundary input is in a topology only when something reads it and an output
+  only when something drives it. An input's `min` and `max` are its effective bounds (the
+  declaration's intersected with every port it feeds; an Integer input left open is the `i32`
+  range). An output carries no bounds: the engine enforces none and the id leaves them out.
+- **Not seen.** Comments, semantic fields other than `unit`, `derived_from` (always `null`) and
+  authored order are not in a loaded graph, so no entry is `reordered`. Neither are a `unit`,
+  `quantity` or `displayUnit` on a boundary that is not a Real, the spelling of an
+  Integer-written bound on a Real boundary (held as the Real), or a member of an Integer constant
+  package (held as its Integer).
+- **The sequence** of each side is its root id after the namespace (the IRI after its last `#`,
+  `/` or `:`, as the content id names an IRI). Every name is stripped of the root, so a renamed
+  root is no graph entry. It is reported as at the authoring level, a `sequence-renamed` metadata
+  entry, so the diff is not `equal` and `oce diff` will exit 1 for it (owner ruling of
+  2026-11-21). That entry is the only metadata this level sees: `metadata_equal` is `false` beside
+  it and `null` (unknown) without it, and the strict reader accepts a CXF diff in exactly those two
+  shapes, with `parameters_equal` `null`.
+
+**Content ids.** Equal canonical content ids and equal sequence names never coexist with a graph
+or interface entry: the diff reads only facts the id encodes, plus the root, and under the name
+rule above the id names every element `{sequence}.{name}`, so with equal sequence names the
+root adds nothing the id has not already fixed. Equal ids alone are not enough: the id never
+encodes the root id, so a document whose root `@id` alone moved to a shorter dot-prefix of its
+instance IRIs keeps its id, has another sequence name, and names every element differently here.
+The converse does not hold either: a renamed root moves the id and is a `sequence-renamed` entry
+alone (two corpus documents differ only so), and an interface-only change moves the id with the
+graph section empty. `diff_topology_with_ids` takes the two ids beside the two topologies and
+records whether they are equal as `DiffOptions::canonical_ids_equal`, a hint that never changes a
+result: it returns exactly what `diff_topology` returns, whatever ids it is given.
+
+**Across the levels.** For two authoring models that emit and load, the CXF diff of the two
+loaded documents equals the authoring diff of the two models *as loaded*: references replaced by
+the values they ground to and sequence parameters dropped, an Integer on a Real parameter widened
+as the emitter writes it, constant-package members as their Integers, an input nothing reads and
+an output nothing drives dropped, output bounds dropped, Integer inputs at their effective domain.
+They agree on the graph and interface sections (`reordered` aside), their two flags, the block
+counts, the notes, the sequence names, the `sequence-renamed` entry and `equal` once those are
+the only entries counted, with the rename pass on and off.
+`tests/cxf_cross_level.rs` holds it over every ordered pair of the 42 tracked authoring fixtures
+that load and over eleven edits of each.
+
 ## The data: `oce-diff/1`
 
-A `Diff` holds `schema` (`DIFF_SCHEMA`), `source` (`authoring`), `catalog` (the content id of the
+A `Diff` holds `schema` (`DIFF_SCHEMA`), `source` (`authoring` or `cxf`), `catalog` (the content id of the
 catalog the defaults were read from), `base` and `head` (`sequence`, `derived_from`, `null` for
 none), `summary`, `notes` and four sections. Each section is sorted by subject bytewise, then by
 kind in the order below, then by the rest of the entry. Every enum is `#[non_exhaustive]` and is
@@ -104,7 +196,7 @@ written as a kebab-case string; every object is closed.
   false. "Same structure?" reads `graph_equal`; "nothing at all changed?" reads `equal`. A site
   retune is `graph_equal && !parameters_equal`.
 - **`notes`**: `names-disjoint` (both sides have blocks and none kept its name and class),
-  `rename-pass-skipped`, `rename-pass-off`.
+  `rename-pass-skipped`, `rename-pass-off`, `unnamed-blocks` (CXF only).
 - **A value** is one object per kind: `{"real", "bits"}`, `{"integer"}`, `{"boolean"}`,
   `{"text"}`, `{"ref"}`, `{"member"}`. A Real is its shortest round-trip spelling and its bits
   (`{ "real": "0.6", "bits": "0x3fe3333333333333" }`), never a JSON number.
@@ -188,14 +280,21 @@ The rename pass adds at most eight passes over the links at no more than 2,048 u
 side. Both are pinned in counted work (key comparisons and elements visited, compiled into the
 crate's own test build), never in elapsed time: `src/work_tests.rs` holds two models at the text
 form's statement limits and a bucket at the pair cap to bounds a scan per lookup or an evaluation
-pair by pair would break.
+pair by pair would break. A CXF diff stays within 16 units per topology element (block, port,
+ground parameter, connection, boundary) and bit of their count, the rename pass's rounds included
+(`src/topology/topology_tests.rs`, chains at the rename cap, one past it and a sixteenth of it);
+the facade's naming of each block's ports is outside the count. When the diff succeeds that
+naming costs as much as the counted ports, since each named port is one; before a refusal it is
+one block build of at most `MAX_RESOLVED_ARITY` (2^21) ports, the bound every block constructor
+holds.
 
 ## Tests and goldens
 
 `tests/fixtures/examples/` holds the note's three worked examples and the literal variant of the
 first as checked-in pairs in the text form (`*.base.oce`, `*.head.oce`), and `every_kind`, a pair
 whose diff holds every kind of every section. Each has golden JSON, text and Markdown
-(`*.diff.json`, `*.diff.txt`, `*.diff.md`), compared byte for byte.
+(`*.diff.json`, `*.diff.txt`, `*.diff.md`), compared byte for byte, and each worked example has
+the same three of its CXF diff, both sides emitted and loaded (`*.cxf.diff.json`, `.txt`, `.md`).
 
 ```bash
 cargo nextest run -p oce-diff --locked --profile ci --no-tests=fail
@@ -210,14 +309,20 @@ sharing nothing with the crate's, and requires the two to agree on 135,168 enume
 small models, sides a validator refuses among them. `tests/model_coverage.rs` edits every field of
 the model one at a time and requires each edit to be reported in the section it belongs to.
 
-## Parts 2 to 4
+The CXF adapter's tests: `tests/cxf_examples.rs` (the note's adapter test and the goldens),
+`tests/cxf_cross_level.rs` (the agreement above), `tests/cxf_corpus.rs` (every document of the
+content-id pin, the 46 G36 catalog fixtures among them, against itself, a second load, four
+re-spelled copies and a re-rooted copy; equal ids and names against every entry over the
+corpus's pairs; a delimiter in a name refused in every document; every port list reversed, the
+id and the diff agreeing on each of the 47), `tests/cxf_identity.rs` (roots, refusals, the
+unnamed block, topologies no load writes), `tests/cxf_values.rs` (each value kind and entry
+kind) and `tests/cxf_metadata.rs` (the renamed root and what the reader accepts).
 
-- **The CXF adapter** (#666) lowers two `oce_api::Topology` views into the same level-neutral
-  side the authoring diff lowers into (`src/wiring`), so it gets the same matching, rename pass
-  and `added` / `removed` / `renamed` / `rewired` entries, and builds a `Diff` with
-  `source: cxf` and `parameters_equal` and `metadata_equal` `null`. Both renderers already write
-  such a diff.
+## Parts 3 and 4
+
 - **The blob comparison** (#667) is a function of its own over `oce_api::inspect_blob`; it
   shares the crate and nothing of the matching.
 - **`oce diff`** (#668) puts a `Diff` in the CLI's report. `Diff::to_json` writes the report's
-  spelling (sorted keys, two-space indentation), and `Diff` reads back with `serde`.
+  spelling (sorted keys, two-space indentation), and `Diff` reads back with `serde`. For two
+  `.jsonld` files it loads each into a throwaway engine and calls `diff_topology_with_ids` with
+  the two topologies and content ids; a `DiffError` is an error (exit 2), like a load refusal.

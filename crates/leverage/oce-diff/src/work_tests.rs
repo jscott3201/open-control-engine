@@ -38,7 +38,7 @@ pub(crate) fn add(units: usize) {
 }
 
 /// Run `run` and return the work it counted on this thread, with its result.
-fn work<R>(run: impl FnOnce() -> R) -> (u64, R) {
+pub(crate) fn work<R>(run: impl FnOnce() -> R) -> (u64, R) {
     WORK.with(|work| work.set(0));
     let result = run();
     (WORK.with(Cell::get), result)

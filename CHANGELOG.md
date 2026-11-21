@@ -614,6 +614,39 @@ and a gate that accepted any text would restore exactly the false assurance desc
     content id moves, and the 46 fixture goldens and 422 provenance goldens are byte-identical.
 ### Leverage
 
+- **`oce-diff` compares two loaded CXF documents** (GitHub #715, issue #666;
+  design note `docs/design/diff.md`, part 2 of 4). `diff_topology(base, head, options)` takes the
+  facade's `Topology` views of two documents the caller loaded and returns the same `Diff` data
+  as the authoring diff, with `source: cxf`; it loads nothing and reads no CXF bytes.
+  - **Identity.** A block or boundary is its path with the root prefix (`model_id` and a `.`)
+    stripped, the name holding no `#`, `/` or `:`; a block is matched, renamed and rewired as at
+    the authoring level, its ports named by index through `oce_api::class_ports`. A path not so
+    named is refused with the new typed `DiffError` (`#[non_exhaustive]`, `code()`,
+    `DiffError::CODES`): `outside-root`, which also refuses a document the engine exported
+    (issue #717 is to make one diffable), and `unresolved-ports` for a block whose ports cannot
+    be named. A block with no instance IRI (`b<id>`) is matched
+    only by the rename pass and adds the new note `unnamed-blocks`.
+  - **Sections.** A changed ground parameter is `reparameterized` on its leaf, so a
+    sequence-parameter retune is one entry per leaf it reaches and `parameters_equal` is
+    `null`; a one-sided value is `parameter-defaulted` against the
+    catalog's literal default; an Integer against the equal Real is a change of value until
+    issue #683. The interface compares each boundary's type, labels and, for an input, its
+    effective bounds. Order is never compared and nothing is `reordered`. A renamed root is a
+    `sequence-renamed` metadata entry, the one metadata a topology holds, so `metadata_equal` is
+    `false` beside it and `null` otherwise (owner ruling of 2026-11-21); the strict reader takes
+    a CXF diff in exactly those shapes.
+  - **Content ids.** `diff_topology_with_ids` takes the two documents' content ids beside the
+    topologies and gives the same result whatever ids it is given. Equal content ids and equal
+    sequence names never coexist with a graph or interface entry: the diff reads only facts
+    the id encodes, plus the root. Held over the content-id pin's 47 documents, each with four
+    re-spelled copies and a re-rooted copy (which keeps the id under another sequence name):
+    every pair within each family of six, and every pair of two families' originals.
+  - **Across the levels.** For two authoring models that emit and load, the CXF diff equals the
+    authoring diff of the models as loaded, held over every ordered pair of the 42 tracked
+    authoring fixtures that load and eleven edits of each; the note's worked examples have
+    golden CXF diffs. The cost is pinned in counted work at 16 units per topology element and
+    bit. The authoring diff and its goldens are unchanged; `oce-api` and the CLI are untouched.
+
 - **`oce-verify` reads the commissioning test spec and the point mapping** (GitHub #704, issue
   #658). Part 1 of 7 of the commissioning verifier (OBC §12; design note
   `docs/design/commissioning.md`, "Test-spec file" and "Point mapping"): the two files a
@@ -665,6 +698,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
     (`strict::StrictKind`), so the two readers share one profile and each keeps its own codes;
     no vector code, sentence or place moves. The path rule a mutant path is held to is one
     function both readers call.
+
 - **`oce-verify` declares the funnel port's licence in its package metadata** (GitHub #706,
   issue #703). The crate's `license` field is now `(MIT OR Apache-2.0) AND BSD-3-Clause-LBNL`
   and no longer inherits the workspace's `MIT OR Apache-2.0`: `src/funnel/`, the port of LBNL
