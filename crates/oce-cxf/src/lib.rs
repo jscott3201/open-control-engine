@@ -55,10 +55,12 @@ mod scope_chain_tests;
 #[cfg(test)]
 mod tests;
 mod translation_software;
+mod unit_iri;
 
 pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 pub use format_controls::is_format_or_control;
 pub use resolve::{ImportMode, ResolveOptions, ValidationReport};
+pub use unit_iri::{QUDT_SCHEMA_NAMESPACES, QUDT_UNIT_NAMESPACES, QUDT_UNITS, unit_of_iri};
 
 /// A CXF import/export error. Ingest failures in bounded parser and composite-lowering paths are
 /// typed. Composite boundary lowering rejects paths beyond 64 non-top hops or documents beyond

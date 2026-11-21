@@ -376,6 +376,74 @@ and a gate that accepted any text would restore exactly the false assurance desc
     documents, `CXF-Core.jsonld` and the vendored translations among them). The library's 140 CXF
     documents carry no term. `fixture_corpus_import.txt` is byte-identical. The workspace version
     is not bumped (owner ruling: tightening accepted CXF input is not a format change).
+- **The unit spellings modelica-json and CXF-Core write are read, through a closed table, in both
+  readers** (GitHub #674, issue #631; closes #622; design note
+  [`docs/design/unit-spellings.md`](docs/design/unit-spellings.md), owner rulings of 2026-11-12).
+  The OBC §7.10 unit gate read a connector's unit only under `S231:unit` and its display unit only
+  under `S231:displayUnit`. modelica-json writes `qudt:hasUnit` and `S231:hasDisplayUnit`, 484 and
+  75 times in the 44 vendored translations and CXF-Core, so the gate, the host's point list, the
+  content id and the export all went without those units.
+  - **Spellings.** `qudt:hasUnit` and `S231:hasUnit` are read as `unit`, and `S231:hasDisplayUnit`
+    as `displayUnit`, each matched after `@context` expansion like every modeled key. The QUDT
+    key is read in both schema namespaces, `http://qudt.org/schema/qudt#` (the translations) and
+    `http://qudt.org/schema/qudt/` (QUDT and CXF-Core); a `qudt` prefix bound elsewhere, or not
+    bound, does not name it. `qudt:hasQuantityKind` is not read and stays a pass-through key:
+    modelica-json writes `PressureDifference` as the kind `Pressure`.
+  - **The table.** A term's shape decides how it is read. A string or a typed literal is the unit
+    string, as before. A `unit` or `displayUnit` written as an IRI node, under any key and the
+    engine's own `S231:unit` included, is expanded against the document `@context` and read
+    through a closed `const` table in `oce-cxf` (`QUDT_UNITS`, `unit_of_iri`): modelica-json's
+    `getQudtUnit` inverted at the vendored pin, in `http://qudt.org/vocab/unit#` and
+    `http://qudt.org/vocab/unit/`, plus the S231 fallback, read as the string after the namespace
+    (`http://data.ashrae.org/S231#s/K` is `s/K`). It has 25 entries: `M3-PER-MIN` and
+    `IN_H2O_60DEG_F`, which modelica-json writes for `cfm` and `inH2O` and which QUDT defines as
+    other units, are left out. The host sees Modelica strings (`K`, `Pa`, `1`, `m3/s`). Nothing is
+    dereferenced and nothing registers an entry at run time.
+  - **Refusals, each pinned as the complete diagnostic list.** An IRI the table does not map is
+    `non-subset-construct`, subject the node, the IRI quoted in at most 64 bytes. Two spellings of
+    one property on one node are `malformed-document`, even when they agree. A key that names a
+    spelling only after trimming whitespace is `malformed-document` (`"S231:hasUnit "`, and
+    `"qudt:hasUnit "` where `qudt` is bound to a QUDT schema namespace; under an unbound `qudt`
+    the trimmed key names nothing and the key passes through unread, issue #675). A scoped
+    `@context` on the term object stays refused.
+  - **One recorded rule is reversed.** An IRI node's `@id` was the term itself, never expanded, so
+    `{"@id": "unit:K"}` was the unit `unit:K` and did not unify with `"K"`. For a unit and a
+    display unit it is now read through the table. A `quantity` IRI node is still its `@id`.
+  - **Export is unchanged.** It writes bare strings under `S231:unit` and `S231:displayUnit`, so a
+    document written with `"qudt:hasUnit": {"@id": "unit:K"}` exports `"S231:unit": "K"` where it
+    exported no unit before, and a round trip normalises the spelling.
+  - **Both readers.** `oce-api` re-exports the table and its lookup (`QUDT_UNITS`,
+    `QUDT_UNIT_NAMESPACES`, `QUDT_SCHEMA_NAMESPACES`, `unit_of_iri`). `oce-author`'s importer reads
+    the same spellings through it: on a boundary into `SemanticPoint.unit` and `display_unit`, an
+    IRI node included where it was `wrong-shape`; on a block port as `port-attribute`; on a
+    parameter shape-checked, dropped and reported. Its `@context` admits `qudt` and `unit` bound
+    to those namespaces. Two spellings on one node are a new `ImportErrorKind`, `TwoSpellings`
+    (`two-spellings`, the 31st code); an unmapped IRI is `wrong-shape`; `qudt:hasQuantityKind`
+    stays `unknown-key`. The emitter is unchanged. `oce-vocab`'s generator reads units through the
+    same table in place of its own copy, and `generated.json` is byte-identical.
+  - **Measured** on the 257 tracked documents that hold an `@graph`, through `Engine::load_cxf`,
+    before and after. No document newly fails, loads or warns; the 37 translations that do not
+    load keep their diagnostics code for code. **19 point rows change in 6 documents**: 18 in five
+    translations gain unit `1` (11) and `Pa` (7), three of them display unit `Pa`
+    (`ReliefDamper` 6, `ReliefFan` 3, `SupplySignals` 5, Reheat `Overrides` 2, `ControlLoops` 2),
+    and `modelica_json_style.jsonld`'s `gai.y` reads `K` where it read `unit:K`.
+  - **Breaking, in place:** a document whose unit or display unit is an IRI node the table does
+    not map is refused where it loaded. One tracked document was one, the synthetic fixture
+    `connector_attrs.jsonld`, whose display unit was `{"@id": "degC"}`; it now writes
+    `{"@id": "unit:DEG_C"}` and binds `unit`, and its graph and export bytes are unchanged.
+  - **Seven content ids move**, because those documents now carry units they always declared:
+    the translations `AHUs/MultiZone/VAV/SetPoints/ReliefDamper.jsonld`, `…/ReliefFan.jsonld` and
+    `…/SupplySignals.jsonld`, `Generic/TimeSuppression.jsonld` (its units sit on root inputs,
+    which reach the id and no point row), `TerminalUnits/Reheat/Subsequences/Overrides.jsonld` and
+    `ThermalZones/ControlLoops.jsonld`, all under
+    `third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/`, and
+    `crates/oce-cxf/tests/fixtures/modelica_json_style.jsonld`. The same seven lines of
+    `fixture_corpus_import.txt` move. No id in `content_id/pin.tsv` does.
+  - **No format this project defines changes, and the workspace version is not bumped** (ruling
+    7): not the content-id encoding, the blob, the snapshot layout or the exporter's layout for a
+    given graph. The 46 fixture goldens and 422 provenance goldens are byte-identical.
+  - **Not in this change:** a root input's declared unit still does not meet the ports it drives
+    (issue #632).
 ### Leverage
 
 - **`oce id` prints the canonical content id of a CXF or authoring file** (GitHub #513). The

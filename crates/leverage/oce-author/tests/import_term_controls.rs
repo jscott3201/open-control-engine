@@ -160,8 +160,31 @@ fn visible_terms_and_what_the_rule_does_not_name_still_import() {
         for key in TERMS {
             for node in [BOUNDARY, PARAMETER, BLOCK_PARAMETER] {
                 for value in forms(node, &text) {
+                    // A `unit` or `displayUnit` IRI node is read through the engine's closed
+                    // unit table (issue #631), which is another rule's: the block below.
+                    if value.get("@id").is_some() && key != "S231:quantity" {
+                        continue;
+                    }
                     import(&with(node, key, &value))
                         .unwrap_or_else(|e| panic!("{node} {key} {value}: {e}"));
+                }
+            }
+        }
+        // The same text as a unit IRI node, behind the S231 namespace (the fallback
+        // modelica-json writes). This rule still refuses none of it; the table reads it as the
+        // unit string unless it holds whitespace, which no IRI does.
+        let fallback = json!({ "@id": format!("http://data.ashrae.org/S231#{text}") });
+        for key in ["S231:unit", "S231:displayUnit"] {
+            for node in [BOUNDARY, PARAMETER, BLOCK_PARAMETER] {
+                let outcome = import(&with(node, key, &fallback));
+                if c.is_whitespace() {
+                    assert_eq!(
+                        outcome.map_err(|e| (e.subject, e.kind)),
+                        Err(wrong_shape(node, key)),
+                        "{node} {key} {c:?}"
+                    );
+                } else {
+                    outcome.unwrap_or_else(|e| panic!("{node} {key} {c:?}: {e}"));
                 }
             }
         }

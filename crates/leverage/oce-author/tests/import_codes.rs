@@ -142,6 +142,11 @@ fn cases() -> Vec<(&'static str, Case)> {
             cxf(econ().put(&id("TOut"), "S231:nominal", json!(293.15))),
         ),
         (
+            // `TOut` already writes `S231:unit`.
+            "two-spellings",
+            cxf(econ().put(&id("TOut"), "S231:hasUnit", json!("K"))),
+        ),
+        (
             "driving-sink",
             cxf(econ().put(
                 &id("ecoEna"),
@@ -198,7 +203,7 @@ fn every_import_error_code_is_produced_by_a_case() {
     }
     let listed: BTreeSet<&str> = IMPORT_ERROR_CODES.iter().copied().collect();
     assert_eq!(produced, listed);
-    assert_eq!(IMPORT_ERROR_CODES.len(), 30);
+    assert_eq!(IMPORT_ERROR_CODES.len(), 31);
 }
 
 #[test]

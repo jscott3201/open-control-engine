@@ -23,14 +23,30 @@
 //!   the retired one's ([`super::vocabulary_namespace::FOREIGN_NAMESPACES`]). It is not the
 //!   document's property, and passing it through would drop it silently again; the message names
 //!   the namespace found and the one expected.
-//! - **Two spellings of one property on one node** — compact plus expanded, or two expanded — are
-//!   refused (`malformed-document`) rather than one being chosen. A compact key the DTO cannot
-//!   represent (an explicit `null` or `[]`) counts: it is read from the authored JSON.
+//! - **The upstream unit spellings normalize too** (issue #631, design note
+//!   `docs/design/unit-spellings.md`, decision 1). modelica-json and `CXF-Core.jsonld` write a
+//!   unit as `qudt:hasUnit` and a display unit as `S231:hasDisplayUnit`, and CXF-Core's connector
+//!   shapes name `S231:hasUnit`. Each is one more spelling of a modeled property
+//!   ([`S231_SPELLINGS`], [`QUDT_HAS_UNIT`]): `hasUnit` in the S231 namespace or in either QUDT
+//!   schema namespace ([`QUDT_SCHEMA_NAMESPACES`]: `#` as the translations bind `qudt`, `/` as
+//!   QUDT and CXF-Core do) moves into `unit`, and `S231:hasDisplayUnit` into `displayUnit`. The
+//!   QUDT key is matched by its expanded IRI alone: under a `qudt:` prefix the document binds
+//!   nowhere, or to a namespace that is neither QUDT schema namespace nor the S231 one, the key
+//!   names no modeled property and stays in the pass-through map. (Bound to the S231 namespace,
+//!   `qudt:hasUnit` is `S231:hasUnit` under another prefix, and is read as that.)
+//!   `qudt:hasQuantityKind` is not read under any binding (decision 1: modelica-json's quantity
+//!   table is lossy at `PressureDifference`).
+//! - **Two spellings of one property on one node** — compact plus expanded, two expanded, or
+//!   `S231:unit` beside `qudt:hasUnit` — are refused (`malformed-document`) rather than one being
+//!   chosen, even when their values agree. A compact key the DTO cannot represent (an explicit
+//!   `null` or `[]`) counts: it is read from the authored JSON.
 //! - **Any key written twice on one node** — a repeated expanded spelling, or a repeated
 //!   pass-through key — is refused (`malformed-document`): JSON parsing keeps one of the values
 //!   silently. (A repeated compact modeled key is already a parse error.)
 //! - **Whitespace near misses** — a key that names a modeled property only after trimming
-//!   surrounding whitespace (`"S231:min "`) — are refused (`malformed-document`).
+//!   surrounding whitespace (`"S231:min "`; `"qudt:hasUnit "` where `qudt` is bound to a QUDT
+//!   schema namespace, since the trimmed key is matched like any other) — are refused
+//!   (`malformed-document`).
 //! - A value that does not fit the modeled field's shape is refused (`malformed-document`), the
 //!   resolver-side twin of the parse error the compact spelling raises.
 //!
@@ -52,6 +68,7 @@ use super::{Expansion, PrefixTable, expand_token};
 use crate::dto::{CxfDocument, Node};
 use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
+use crate::unit_iri::QUDT_SCHEMA_NAMESPACES;
 
 /// Every property term the [`Node`] DTO models as a typed field, i.e. every `S231:<term>` serde
 /// rename. A unit test pins this list against the DTO in both directions.
@@ -82,6 +99,16 @@ pub(super) const MODELED_TERMS: [&str; 25] = [
     "conditionalExpression",
     "isReplaceable",
 ];
+
+/// The S231 terms that are a second spelling of a modeled term (issue #631): `(the term as
+/// written, the modeled term it is read as)`. CXF-Core's connector and parameter shapes name
+/// `hasUnit` and `hasDisplayUnit`, and modelica-json writes `S231:hasDisplayUnit`.
+pub(super) const S231_SPELLINGS: [(&str, &str); 2] =
+    [("hasUnit", "unit"), ("hasDisplayUnit", "displayUnit")];
+
+/// The QUDT schema property read as the modeled term `unit` (issue #631): modelica-json writes a
+/// declared unit as `qudt:hasUnit`. It is matched in [`QUDT_SCHEMA_NAMESPACES`] only.
+pub(super) const QUDT_HAS_UNIT: &str = "hasUnit";
 
 /// One pass-through key that names a modeled property: the authored key and the modeled term.
 struct Alias {
@@ -188,13 +215,31 @@ pub(super) fn normalize(
     }
 }
 
-/// The modeled term an expanded key `iri` names, if any: the whole remainder after `namespace`.
+/// The modeled term an expanded key `iri` names in the S231 vocabulary bound to `namespace`, if
+/// any: the whole remainder after `namespace` is a modeled term, or a second spelling of one
+/// ([`S231_SPELLINGS`]).
 fn modeled_term(iri: &str, namespace: &str) -> Option<&'static str> {
     let term = iri.strip_prefix(namespace)?;
     MODELED_TERMS
         .iter()
         .copied()
         .find(|modeled| *modeled == term)
+        .or_else(|| {
+            S231_SPELLINGS
+                .iter()
+                .find(|(written, _)| *written == term)
+                .map(|(_, modeled)| *modeled)
+        })
+}
+
+/// The modeled term an expanded key `iri` names in the QUDT schema, if any: `unit` for
+/// [`QUDT_HAS_UNIT`] in either of [`QUDT_SCHEMA_NAMESPACES`], and nothing else.
+fn qudt_term(iri: &str) -> Option<&'static str> {
+    QUDT_SCHEMA_NAMESPACES
+        .iter()
+        .filter_map(|namespace| iri.strip_prefix(namespace))
+        .any(|term| term == QUDT_HAS_UNIT)
+        .then_some("unit")
 }
 
 /// What a key means against one document: its prefix table, and the node being read (for
@@ -206,7 +251,7 @@ struct KeyScope<'a> {
 
 /// How one pass-through key relates to the modeled properties.
 enum KeyMeaning {
-    /// A modeled term in the S231 namespace.
+    /// A modeled term in the S231 namespace, or `hasUnit` in a QUDT schema namespace.
     Own(&'static str),
     /// A modeled term in a foreign namespace.
     Foreign(&'static str, &'static str),
@@ -225,7 +270,7 @@ impl KeyScope<'_> {
             Expansion::Verbatim => key.to_owned(),
             Expansion::Relative => return KeyMeaning::Unrelated,
         };
-        if let Some(term) = modeled_term(&iri, S231_CONTEXT_IRI) {
+        if let Some(term) = modeled_term(&iri, S231_CONTEXT_IRI).or_else(|| qudt_term(&iri)) {
             return KeyMeaning::Own(term);
         }
         FOREIGN_NAMESPACES
@@ -234,8 +279,9 @@ impl KeyScope<'_> {
             .unwrap_or(KeyMeaning::Unrelated)
     }
 
-    /// Collect the pass-through keys of `node` that name a modeled property in the S231
-    /// namespace, refusing foreign-namespace and whitespace near-miss spellings.
+    /// Collect the pass-through keys of `node` that name a modeled property, in the S231
+    /// namespace or as the QUDT schema's `hasUnit`, refusing foreign-namespace and whitespace
+    /// near-miss spellings.
     fn aliases_of(&self, node: &Node, diags: &mut Vec<Diagnostic>) -> Vec<Alias> {
         let subject = self.subject;
         let mut aliases = Vec::new();
@@ -407,5 +453,58 @@ mod tests {
         assert_eq!(modeled_term(ns, ns), None);
         assert_eq!(modeled_term("http://example.org#min", ns), None);
         assert_eq!(modeled_term(&format!("{ns}moSource"), ns), None);
+    }
+
+    #[test]
+    fn the_second_s231_spellings_name_their_modeled_terms_and_nothing_near_them_does() {
+        let ns = S231_CONTEXT_IRI;
+        assert_eq!(modeled_term(&format!("{ns}hasUnit"), ns), Some("unit"));
+        assert_eq!(
+            modeled_term(&format!("{ns}hasDisplayUnit"), ns),
+            Some("displayUnit")
+        );
+        for near in [
+            "hasunit",
+            "HasUnit",
+            "hasUnits",
+            "hasUnit ",
+            "hasDisplayunit",
+            "hasQuantity",
+            "hasQuantityKind",
+        ] {
+            assert_eq!(modeled_term(&format!("{ns}{near}"), ns), None, "{near}");
+        }
+        // Every second spelling reads as a term the DTO models.
+        for (_, modeled) in S231_SPELLINGS {
+            assert!(MODELED_TERMS.contains(&modeled), "{modeled}");
+        }
+    }
+
+    #[test]
+    fn has_unit_is_the_one_qudt_schema_term_read_in_both_schema_namespaces() {
+        for ns in QUDT_SCHEMA_NAMESPACES {
+            assert_eq!(qudt_term(&format!("{ns}hasUnit")), Some("unit"), "{ns}");
+            for other in [
+                "hasQuantityKind",
+                "hasDisplayUnit",
+                "unit",
+                "hasunit",
+                "hasUnit ",
+                "hasUnits",
+                "",
+            ] {
+                assert_eq!(qudt_term(&format!("{ns}{other}")), None, "{ns}{other}");
+            }
+        }
+        for iri in [
+            "qudt:hasUnit",
+            "hasUnit",
+            "https://qudt.org/schema/qudt#hasUnit",
+            "http://qudt.org/schema/qudthasUnit",
+            "http://qudt.org/vocab/unit#hasUnit",
+            "http://example.org/qudt#hasUnit",
+        ] {
+            assert_eq!(qudt_term(iri), None, "{iri}");
+        }
     }
 }

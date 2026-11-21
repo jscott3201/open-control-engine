@@ -9,12 +9,13 @@
 
 use std::collections::BTreeSet;
 
+use oce_api::QUDT_UNITS;
 use oce_vocab::vocabulary;
 use serde_json::Value;
 
 use crate::generator::core::Core;
 use crate::generator::units::{
-    QUANTITY_KINDS, QUDT_UNITS, RESOLVED_QUANTITIES, modelica_quantities, modelica_unit,
+    QUANTITY_KINDS, RESOLVED_QUANTITIES, modelica_quantities, modelica_unit,
 };
 use crate::generator::{BUILDINGS_COMMIT, DOCUMENT, MODELICA_JSON_COMMIT};
 use crate::support::{core_bytes, modelica_source, repository, vendored};
@@ -232,7 +233,12 @@ fn the_unit_table_is_injective_and_total_over_the_vendored_document() {
         QUDT_UNITS.len(),
         "two QUDT units invert to one string"
     );
-    assert_eq!(QUDT_UNITS.len(), 27);
+    // The engine's table, read through the facade: modelica-json's 27 entries less the two
+    // whose QUDT identifier names another unit, which have no inverse here either.
+    assert_eq!(QUDT_UNITS.len(), 25);
+    for dropped in ["unit:M3-PER-MIN", "unit:IN_H2O_60DEG_F"] {
+        assert_eq!(modelica_unit(dropped), None, "{dropped}");
+    }
 
     let core = Core::parse(core_bytes()).expect("the vendored document parses");
     let identifiers = core.identifiers("qudt:hasUnit");
@@ -250,6 +256,22 @@ fn the_unit_table_is_injective_and_total_over_the_vendored_document() {
     assert_eq!(modelica_unit("unit:SEC"), Some("s"));
     assert_eq!(modelica_unit("unit:UNITLESS"), Some("1"));
     assert_eq!(modelica_unit("S231:1/s"), Some("1/s"));
+    // The generator and the loader read every `unit:` identifier of the document alike: the
+    // loader's lookup of the expanded IRI gives the same string.
+    for (node, identifier) in &identifiers {
+        let expanded = match identifier.strip_prefix("unit:") {
+            Some(local) => format!("{}{local}", oce_api::QUDT_UNIT_NAMESPACES[0]),
+            None => identifier.strip_prefix("S231:").map_or_else(
+                || (*identifier).to_owned(),
+                |unit| format!("http://data.ashrae.org/S231#{unit}"),
+            ),
+        };
+        assert_eq!(
+            oce_api::unit_of_iri(&expanded),
+            modelica_unit(identifier),
+            "{node}: {identifier}"
+        );
+    }
     for identifier in [
         "unit:sec",
         "unit:",

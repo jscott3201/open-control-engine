@@ -26,7 +26,10 @@ validates nor evaluates; names are carried, never repaired, for the validator to
 - **`import_cxf(bytes, &ImportOptions)`** reads one flat, single-root CXF document (the library
   dialect): leaf blocks; boundaries with `unit`, `quantity`, `displayUnit`, `min` and `max` (a bound
   converted exactly as the loader converts it: a typed literal's text with `str::parse`, untrimmed,
-  an Integer on a Real boundary with `as f64`); sequence parameters of a scalar or enumeration type;
+  an Integer on a Real boundary with `as f64`; a `unit` read under `S231:unit`, `S231:hasUnit` or
+  `qudt:hasUnit` and a `displayUnit` under `S231:displayUnit` or `S231:hasDisplayUnit`, the
+  spellings the loader reads, each a string or an IRI node read through the loader's closed unit
+  table, `oce_api::unit_of_iri`, so `{"@id": "unit:K"}` is `K`); sequence parameters of a scalar or enumeration type;
   block parameters, arrays row-major under the catalog's template names; enumeration members and
   library constants as full member paths resolved through `oce_api::enumerations()`; connections.
 - **`import_graph_v0(bytes, &ImportOptions)`** reads the prototype's compact block graph under the
@@ -48,7 +51,7 @@ validates nor evaluates; names are carried, never repaired, for the validator to
   report.
 
 Every refusal is an `ImportError { source, subject, kind }`, never a panic. `ImportErrorKind` is
-`#[non_exhaustive]`; branch on `code()`, one of the 30 stable kebab-case codes in
+`#[non_exhaustive]`; branch on `code()`, one of the 31 stable kebab-case codes in
 `IMPORT_ERROR_CODES` (pinned by an in-crate test, and each produced by `tests/import_codes.rs`):
 `too-large`, `not-strict-json` (a key written twice, an integer outside `i64` at any depth, broken
 syntax, non-UTF-8), `limit-exceeded` (v0 bounds), `unknown-key`, `namespace-mismatch` (a
@@ -57,7 +60,8 @@ namespace written through release 0.4.0), `missing-key`, `wrong-shape`,
 `no-root`, `duplicate-id`, `unresolved-reference`, `stray-node`, `invalid-name`, the out-of-subset
 kinds `nested-composite`, `instance-member`, `constant-member`, `conditional-component`,
 `array-connector`, `array-sequence-parameter`, `expression-value`, `port-attribute` and
-`connector-attribute` (`nominal`, `unbounded`), then `driving-sink`, `class-outside-obc`,
+`connector-attribute` (`nominal`, `unbounded`), then `two-spellings` (one property under two keys
+on one node, `S231:unit` beside `qudt:hasUnit`), `driving-sink`, `class-outside-obc`,
 `datatype-mismatch`, `unknown-datatype`, `unknown-member-type`, `malformed-literal`,
 `array-shape`, `string-value` and `malformed-connection`. A document with several out-of-subset
 constructs is refused for the first of nested composite, conditional component, expression value,

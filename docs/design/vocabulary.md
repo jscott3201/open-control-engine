@@ -258,6 +258,12 @@ same way, and a quantity whose inverse is not unique refuses. A test checks each
 against its declaration in the vendored `.mo` source as a substring (`unit="s"`), the same kind of
 data read `class_descriptions_match_vendored_sources` already does. Rejected: carrying QUDT
 identifiers (M8 owns the QUDT mapping, and the corpus and the engine use Modelica strings).
+*Since issue #631 the unit inverse is not the generator's own copy.* The engine's loader reads a
+unit IRI through the same table, so it lives in `oce-cxf` and the generator reads it through the
+facade (`oce_api::QUDT_UNITS`): 25 entries, modelica-json's 27 less `M3-PER-MIN` and
+`IN_H2O_60DEG_F`, whose QUDT identifiers name another unit than the Modelica string. CXF-Core uses
+neither, so `generated.json` did not move. The quantity inverse stays in the generator
+([unit spellings](unit-spellings.md), decision 6).
 
 **6. Two files: `generated.json` and `curated.json`.** Regeneration writes only the first; people
 write only the second. Curated text may add notes, and may add a description only where the

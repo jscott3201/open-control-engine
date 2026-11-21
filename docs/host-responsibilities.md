@@ -442,6 +442,56 @@ of the `S231:` terms the importer reads — is the same property whether it is k
 (`S231:min`), by its full IRI in the S231 namespace, by another prefix bound to that namespace, or
 by a declared term.
 
+A unit and a display unit have further spellings, the ones modelica-json and `CXF-Core.jsonld`
+write (issue #631, [unit spellings](design/unit-spellings.md), owner rulings of 2026-11-12). Each
+is matched after the same expansion, on every node that carries one:
+
+- **`unit`** is also `S231:hasUnit`, and `hasUnit` in either QUDT schema namespace:
+  `http://qudt.org/schema/qudt#`, as the modelica-json translations bind `qudt`, and
+  `http://qudt.org/schema/qudt/`, as QUDT and CXF-Core do. The compact key `qudt:hasUnit` is that
+  property only through a `qudt` prefix bound to one of the two.
+  **A known gap, not a guarantee:** where the document leaves `qudt` unbound, or binds it to any
+  other namespace but the S231 one, the key names no modeled property, stays in the pass-through
+  map and is not read, and the load reports nothing. The node then has no unit, or the unit
+  another key gives it. Whether such a key should be refused is open (issue #675). Bind `qudt` to
+  one of the two namespaces, as every modelica-json translation does, or write `S231:unit`.
+- **`displayUnit`** is also `S231:hasDisplayUnit`.
+- **`quantity` has no other spelling.** `qudt:hasQuantityKind` is not read: modelica-json writes
+  `PressureDifference` as the kind `Pressure`, so reading it would report the wrong quantity. The
+  key stays in the pass-through map.
+
+A unit read under any of these keys reaches the §7.10 unit gate, the point list, the content id
+and the export exactly as one read under `S231:unit` does.
+
+A unit's shape decides how it is read, not its key. A string or a typed literal is the unit
+string, verbatim. **An IRI node** for a unit or a display unit, under any key that names it and
+the engine's own `S231:unit` included, is expanded against the document `@context` and read
+through a closed table:
+
+- a QUDT unit IRI, in `http://qudt.org/vocab/unit#` (modelica-json) or
+  `http://qudt.org/vocab/unit/` (QUDT), reads as the Modelica unit string of one of 25 entries:
+  `K` as `K`, `PA` as `Pa`, `DEG_C` as `degC`, `UNITLESS` as `1`, `M3-PER-SEC` as `m3/s`. The
+  table is modelica-json's own, inverted, and is in the engine: nothing is dereferenced, and
+  nothing registers an entry at run time (`oce_api::QUDT_UNITS`, `oce_api::unit_of_iri`);
+- an IRI in the S231 namespace reads as the text after the namespace, the form modelica-json
+  writes for a unit its table lacks (`http://data.ashrae.org/S231#s/K` is `s/K`). The text is not
+  empty and holds no whitespace and no format or control character;
+- **any other IRI is refused** as `non-subset-construct`, subject the node, with the IRI quoted in
+  at most 64 bytes: a relative reference (`{"@id": "degC"}`), an `@id` that holds whitespace, a
+  `unit:` prefix the document binds to another vocabulary or not at all, a name the table lacks,
+  and the two entries left out of it. Those two
+  are `unit:M3-PER-MIN`, which modelica-json writes for `cfm` and which is cubic metres a minute,
+  and `unit:IN_H2O_60DEG_F`, which it writes for `inH2O` and which is the inch of water at 60 °F.
+  Write such a unit as a string.
+
+So `{"@id": "unit:K"}` and `"K"` are one unit to the gate and to the host, under any key. A
+`quantity` is not read through any table: its IRI node is its `@id`, verbatim and unexpanded. A
+parameter's unit goes through the same reading where the parameter is read, though it is used
+for nothing.
+Export writes every unit back as a bare string under `S231:unit` or `S231:displayUnit`
+([the unit spellings read](cxf-round-trip.md#the-unit-spellings-read-and-the-one-written)), so a
+round trip normalises the spelling.
+
 A parameter's `min`, `max`, `unit`, `quantity` and `displayUnit` are never used for control, but
 their shape is checked where the parameter is read (GitHub #594, issue #559): a bound is one
 number, typed literal or expression string (modelica-json writes a bound over other parameters as
@@ -519,8 +569,12 @@ and the message names the IRI found and the IRI expected:
 In a list of context maps only the binding in force is judged (a later map replaces an earlier
 one). Another prefix bound to the published IRI is the same namespace under another name and is
 accepted. A node that writes one property in two spellings
-(an explicit `null` or `[]` compact key counts) and a key that names a modeled property only after
-trimming surrounding whitespace are refused as `malformed-document`, as is any key — modeled or
+(an explicit `null` or `[]` compact key counts; `S231:unit` beside `qudt:hasUnit` is two
+spellings of `unit`, and is refused even when the two values agree) and a key that names a modeled
+property only after trimming surrounding whitespace (`"S231:hasUnit "`; `"qudt:hasUnit "` too
+where `qudt` is bound to a QUDT schema namespace, since only then does the trimmed key name the
+property) are refused as
+`malformed-document`, as is any key — modeled or
 not — written more than once on one `@graph` node, since JSON parsing would silently keep only one
 of the values. None of these is silently
 dropped. Keys that name no modeled property pass through unchanged. A `@type` value or an

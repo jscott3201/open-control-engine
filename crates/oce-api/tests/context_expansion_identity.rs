@@ -79,4 +79,17 @@ fn modelica_json_style_document_loads_clean_with_expanded_point_paths() {
         BTreeSet::from([format!("{prefix}.gai.y")]),
         "block output point must carry the expanded authored @id"
     );
+    // The fixture writes `gai.y`'s unit as the IRI node `unit:K` under `S231:unit`, with `unit`
+    // bound to QUDT's unit namespace. The host reads the unit string it stands for (issue #631);
+    // before, the row read the verbatim CURIE `unit:K`, and the content id covered that text.
+    let rows = engine.point_list(None).expect("point inventory");
+    let gai_y = rows
+        .iter()
+        .find(|point| point.path == format!("{prefix}.gai.y"))
+        .expect("gai.y has a row");
+    assert_eq!(gai_y.unit.as_deref(), Some("K"));
+    assert_eq!(
+        engine.content_id().expect("content id").as_str(),
+        "oce:canon1:4e4b755dd43d528a524f336b10db58e288a8649c6f10f436d83e28dfbf600f48"
+    );
 }

@@ -23,8 +23,14 @@
 //!   form, [`crate::dto::TermAttr::as_term`]). Whitespace is Unicode `White_Space`, as
 //!   [`str::trim`] reads it.
 //!
+//! - **A `unit` or `displayUnit` written as an IRI node** goes through the rule a connector's does
+//!   (issue #631; design note `docs/design/unit-spellings.md`, decision 2): it is read through the
+//!   closed unit table ([`crate::unit_iri`]), under any key that names the property
+//!   (`qudt:hasUnit`, `S231:hasUnit` and `S231:hasDisplayUnit` among them), and one the table does
+//!   not map is refused as `non-subset-construct`, subject the parameter node. `quantity` is not.
+//!
 //! JSON `null` reads as absent, as on a connector. The value of a well-shaped attribute is still
-//! never read.
+//! never used for control: it reaches no gate, no `ParamAttrs` field and no point.
 //!
 //! Not every malformed bound reaches this check. A bound whose JSON matches none of
 //! [`crate::dto::CxfValue`]'s arms (an object that is not a typed literal with a string `@value`
@@ -91,13 +97,29 @@ impl CheckedParameters {
             ("quantity", &node.quantity),
             ("displayUnit", &node.display_unit),
         ] {
-            let Some(found) = term.as_ref().and_then(term_shape::problem) else {
+            let Some(term) = term.as_ref() else {
                 continue;
             };
-            diags.push(malformed(
-                subject,
-                format!("S231:{which} on a parameter is {found} — malformed term"),
-            ));
+            if let Some(found) = term_shape::problem(term) {
+                diags.push(malformed(
+                    subject,
+                    format!("S231:{which} on a parameter is {found} — malformed term"),
+                ));
+                continue;
+            }
+            // `quantity` is a verbatim lexical term; only a unit goes through the table.
+            if which == "quantity" {
+                continue;
+            }
+            if let Some(found) = term_shape::unmapped_unit(term) {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::NonSubsetConstruct,
+                        format!("S231:{which} on a parameter is {found}"),
+                    )
+                    .with_subject(subject.to_owned()),
+                );
+            }
         }
     }
 }

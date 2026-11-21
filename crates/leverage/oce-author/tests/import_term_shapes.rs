@@ -4,6 +4,11 @@
 //! or whitespace-only: before #602 a blank one imported, and only `validate` reported it, as
 //! `invalid-semantic-point`. A parameter's term was already held to the exact shapes since #559:
 //! these tests pin the shapes the ruling names there too. Block ports carry no attribute here.
+//!
+//! Since issue #631 a boundary's `unit` or `displayUnit` may also be an IRI node the engine's
+//! closed unit table maps, and a parameter's must be one where it is an IRI node
+//! (`import_unit_spellings.rs`). A `quantity` is as before: a string on a boundary, and any
+//! well-shaped term on a parameter.
 
 use oce_author::{ImportError, ImportErrorKind, ImportOptions, SourceForm, import_cxf};
 use serde_json::{Value as Json, json};
@@ -55,17 +60,32 @@ fn wrong_shape(subject: &str, key: &str) -> (String, ImportErrorKind) {
 
 #[test]
 fn a_well_shaped_term_imports() {
+    // An IRI node the engine's unit table maps; as a `quantity` it is any identifier.
+    let mapped = json!({ "@id": "http://qudt.org/vocab/unit#K" });
     for key in TERMS {
         import(&with(BOUNDARY, key, &json!("K"))).expect("a boundary's string term");
         for node in [PARAMETER, BLOCK_PARAMETER] {
             for value in [
                 json!("K"),
                 json!({ "@value": "K", "@type": XSD_STRING }),
-                json!({ "@id": "unit:K" }),
+                mapped.clone(),
             ] {
                 import(&with(node, key, &value)).unwrap_or_else(|e| panic!("{node} {key}: {e}"));
             }
         }
+    }
+    // A boundary's unit and display unit take the mapped IRI node too; its quantity is a string.
+    for key in ["S231:unit", "S231:displayUnit"] {
+        import(&with(BOUNDARY, key, &mapped)).unwrap_or_else(|e| panic!("{key}: {e}"));
+    }
+    assert_eq!(
+        refusal(&with(BOUNDARY, "S231:quantity", &mapped)),
+        wrong_shape(BOUNDARY, "S231:quantity")
+    );
+    // A parameter's quantity IRI node is read verbatim, whatever it names.
+    for node in [PARAMETER, BLOCK_PARAMETER] {
+        import(&with(node, "S231:quantity", &json!({ "@id": "unit:K" })))
+            .unwrap_or_else(|e| panic!("{node}: {e}"));
     }
 }
 

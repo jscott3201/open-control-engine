@@ -224,7 +224,7 @@ for a member path) and at validation (`unknown-enum-type`, `unknown-enum-literal
 | --- | --- |
 | root `@id` `{namespace}{sequence}` | `Sequence.name` = the trailing identifier; the namespace is not kept |
 | root `hasParameter` | sequence parameters in order; `isOfDataType` names the type (scalar or enumeration); value a literal or a member |
-| root `hasInput` / `hasOutput` | boundaries in order; `@type` and `isOfDataType` must agree; `unit` to `SemanticPoint.unit`; `quantity`, `displayUnit`, `min`, `max` to their fields. A term (`unit`, `quantity`, `displayUnit`) is a string that is not empty or whitespace-only (GitHub #602) and carries no Unicode format or control character (GitHub #646, issue #629); anything else is `wrong-shape` naming the key |
+| root `hasInput` / `hasOutput` | boundaries in order; `@type` and `isOfDataType` must agree; `unit` to `SemanticPoint.unit`; `quantity`, `displayUnit`, `min`, `max` to their fields. A term (`unit`, `quantity`, `displayUnit`) is a string that is not empty or whitespace-only (GitHub #602) and carries no Unicode format or control character (GitHub #646, issue #629); anything else is `wrong-shape` naming the key. A `unit` is read under `S231:unit`, `S231:hasUnit` or `qudt:hasUnit`, and a `displayUnit` under `S231:displayUnit` or `S231:hasDisplayUnit`, and either may also be an IRI node the engine's closed unit table maps (issue #631, [below](#unit-spellings)) |
 | root `containsBlock` | blocks in order; class path from the `@type` fragment after `Buildings.Controls.OBC.` |
 | block `hasParameter` | assignments in order; arrays row-major under the catalog's template names |
 | `isConnectedTo` | connections by source node in `@graph` order, each source's targets in array order |
@@ -253,12 +253,20 @@ lists one **normalisation**: a boundary typed by a constant package becomes an I
 Where the two readers differ on these attributes, and on a boundary's terms, each follows a
 convention it already had. The review of GitHub #594 probed for an attribute the importer accepts
 and the engine refuses and found none, and so did the review of GitHub #623: in every difference
-the engine is the more lenient, or both refuse with different codes.
+the engine is the more lenient, or both refuse with different codes. The review of GitHub #674
+found one that both had missed, the last row below (#679).
 
 | Input | Engine | Importer |
 | --- | --- | --- |
 | `null` bound or term | absent, as on a connector | `wrong-shape`, as on a boundary |
-| a boundary term written as a typed literal or IRI node | accepted, read as the term | `wrong-shape`: a boundary's term is a string |
+| a boundary term written as a typed literal, or a boundary `quantity` written as an IRI node | accepted, read as the term | `wrong-shape`: a boundary's term is a string, or for a unit an IRI node the unit table maps |
+| a `unit` or `displayUnit` IRI node the unit table does not map | `non-subset-construct` | `wrong-shape` naming the key |
+| two spellings of `unit` or `displayUnit` on one node | `malformed-document` | `two-spellings` |
+| `qudt:hasUnit` with no `qudt` binding, or `qudt:hasQuantityKind` | an unread pass-through key | `unknown-key` |
+| a `qudt` or `unit` prefix bound to another IRI | accepted; the key or identifier is then whatever it expands to (for any namespace but the S231 one, an unread key and an unmapped identifier) | `unknown-key` naming the term |
+| a unit IRI node through `base` or a whole-token `@context` term (`{"@id": "base:K"}` with `base` bound to a unit namespace) | read through the table | `wrong-shape`: `base` is inert, and only `S231:`, `qudt:` and `unit:` identifiers and full IRIs are looked up |
+| a unit, in any spelling, on a block port | read | `port-attribute` (decision 8) |
+| a `unit`, `quantity` or `displayUnit` on an Integer or Boolean boundary | `malformed-document` | **imported**: the one difference in which the importer is the more lenient, found by the review of GitHub #674 and filed as #679 |
 | object bound that is no typed literal (`{}`, `{"@id": …}`, `{"@value": "30"}`) | the whole document fails to parse (`CxfError::Json`, no code or subject) | `wrong-shape` naming the key |
 | a well-shaped attribute under its full-IRI key | normalised, then checked | `unknown-key`: compact keys only |
 | typed literal carrying `@context` | `non-subset-construct` | `wrong-shape` |
@@ -270,6 +278,37 @@ for lossless round-trip (R-8). Only `oce_cxf::parse_document` and `write_documen
 engine reads the term alone and its export writes every term back as a bare string, so the key was
 lost between import and export. Both readers now refuse it, on every role (owner ruling of
 2026-11-12), and the DTO still round-trips it.
+
+### Unit spellings
+
+The importer reads a unit and a display unit under the spellings the engine reads
+([unit spellings](unit-spellings.md), decision 6; issue #631), so the two readers do not disagree
+on a document modelica-json could have written:
+
+- **Keys.** `unit` is `S231:unit`, `S231:hasUnit` or `qudt:hasUnit`; `displayUnit` is
+  `S231:displayUnit` or `S231:hasDisplayUnit`. The importer still reads compact keys only.
+  `qudt:hasUnit` is the QUDT property where the `@context` binds `qudt` to a QUDT schema
+  namespace, `http://qudt.org/schema/qudt#` or `http://qudt.org/schema/qudt/`; without that
+  binding it is `unknown-key` on every node. `qudt:hasQuantityKind` is `unknown-key` everywhere.
+- **`@context`.** Two more terms are admitted beside `S231` and `base`: `qudt`, bound to either
+  schema namespace, and `unit`, bound to either QUDT unit namespace
+  (`http://qudt.org/vocab/unit#` or `http://qudt.org/vocab/unit/`). Either term bound to anything
+  else is `unknown-key` naming the term, as any other term is.
+- **A boundary.** A string is the unit, as before. An IRI node, `wrong-shape` before, is expanded
+  through the `S231`, `qudt` or `unit` prefix where the document binds it (never `base`) and
+  looked up with the engine's lookup
+  (`oce_api::unit_of_iri`, over `oce_api::QUDT_UNITS`): `{"@id": "unit:K"}` is `K`, and the S231
+  fallback `{"@id": "S231:1/s"}` is `1/s`. One the table does not map stays `wrong-shape` naming
+  the key as written, where the engine says `non-subset-construct`.
+- **A block port.** Every spelling is `port-attribute` naming the attribute as written (decision
+  8), where it was `unknown-key`.
+- **A parameter.** Every spelling is shape-checked, dropped and reported as `unit` or
+  `display-unit` with the value as written (decision 9). Its IRI node must name a unit the table
+  maps, as the engine requires where it reads the parameter.
+- **Two spellings** of one property on one node are `two-spellings`, whether or not the values
+  agree; the engine says `malformed-document`.
+
+The emitter is unchanged: it writes `S231:unit` and `S231:displayUnit` as bare strings.
 
 **Refused, never guessed** (each a typed kind, see [`ImportError`](#importerror)): every construct in
 the authoring note's out-of-scope list, an expression value, a block-port attribute, `nominal` and
@@ -408,8 +447,9 @@ impl ImportErrorKind { pub fn code(&self) -> &'static str }   // stable kebab-ca
 | `ArrayConnector` | `array-connector` | an array boundary or port |
 | `ArraySequenceParameter` | `array-sequence-parameter` | `isArray` on a root parameter |
 | `ExpressionValue` | `expression-value` | a value that is an expression, or a bare name that is not a sequence parameter |
-| `PortAttribute { attribute }` | `port-attribute` | `unit`, `quantity`, `displayUnit`, `min`, `max` or `nominal` on a block port |
+| `PortAttribute { attribute }` | `port-attribute` | `unit`, `quantity`, `displayUnit`, `min`, `max` or `nominal` on a block port, a unit or display unit under any spelling among them (`S231:hasUnit`, `S231:hasDisplayUnit`, `qudt:hasUnit`) |
 | `ConnectorAttribute { attribute }` | `connector-attribute` | `nominal` or `unbounded` on a boundary |
+| `TwoSpellings { property, first, second }` | `two-spellings` | one property under two spellings on one node (`S231:unit` beside `qudt:hasUnit`), whether or not the values agree (issue #631) |
 | `DrivingSink` | `driving-sink` | `isConnectedTo` on a boundary output or a block input |
 | `ClassOutsideObc` | `class-outside-obc` | a block `@type` not under `Buildings.Controls.OBC.` |
 | `DatatypeMismatch` | `datatype-mismatch` | a value or bound whose shape disagrees with its declared type, or a connector whose `@type` and `isOfDataType` disagree |
@@ -714,7 +754,8 @@ choice open, or the implementation reads a rule more narrowly, the choice is rec
 
 - **29 kinds.** `ImportErrorKind` had the 29 rows of the [`ImportError`](#importerror) table, one
   code each, in table order (`IMPORT_ERROR_CODES`); the issue's "30-row" count was off by one.
-  GitHub #527 added the thirtieth, `namespace-mismatch`.
+  GitHub #527 added the thirtieth, `namespace-mismatch`, and issue #631 the thirty-first,
+  `two-spellings`.
 - **Kinds for cases the table leaves open.** A bound written as a string is `expression-value`; a
   bound on a Boolean boundary, a Real literal on an Integer boundary and a typed Boolean bound are
   `datatype-mismatch` at import (the validator's `invalid-bound` stays for models built in the

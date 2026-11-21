@@ -193,7 +193,10 @@ fn the_three_shapes_load_on_every_role() {
         for value in [
             json!("K"),
             json!({ "@value": "K", "@type": XSD_STRING }),
-            json!({ "@id": "unit:K" }),
+            // An IRI node: a `quantity` is its verbatim `@id`, and a `unit` or `displayUnit` is
+            // read through the closed unit table, which maps this IRI to `K` (issue #631;
+            // `resolve_unit_iris.rs` holds what the table does not map).
+            json!({ "@id": "http://qudt.org/vocab/unit#K" }),
         ] {
             // One role at a time: a unit on two connected ports would be unified.
             for node in roles() {

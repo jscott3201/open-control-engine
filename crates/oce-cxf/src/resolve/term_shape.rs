@@ -33,6 +33,21 @@
 //! token: `"K\t"` is refused as carrying U+0009, since no other rule refuses it (a term may carry
 //! surrounding spaces) and it would reach the gate as a unit that is not `K`. A `@context` inside a
 //! term object is refused before any of these, by the expansion pass, as a scoped context.
+//!
+//! ## A unit written as an IRI node
+//!
+//! A term's shape also decides how it is read (issue #631; design note
+//! `docs/design/unit-spellings.md`, decision 2; owner ruling of 2026-11-12). A string or typed
+//! literal is the term itself, read verbatim. A `unit` or `displayUnit` written as an IRI node,
+//! under any key that names the property and the engine's own `S231:unit` included, is read
+//! through the closed unit table ([`crate::unit_iri`]): the expansion pass
+//! (`crate::expand`) expands its `@id` against the document `@context` and replaces a mapped
+//! term by the unit string it stands for, before any node is read. So an IRI node that reaches
+//! this module for `unit` or `displayUnit` is one the table does not map, and
+//! [`unmapped_unit`] names it for the refusal: `non-subset-construct`, subject the node, the IRI
+//! quoted as an excerpt of at most 64 bytes. It is raised only for a term [`problem`] accepts, so
+//! a term is still refused once. `quantity` is not read through any table: its IRI node stays the
+//! verbatim lexical term it always was.
 
 use crate::dto::TermAttr;
 use crate::excerpt::{excerpt, named_keys};
@@ -46,7 +61,7 @@ pub(super) const BLANK_VALUE: &str = "a typed literal whose @value is empty or w
 
 /// What is wrong with `term`, as the noun phrase a refusal reads (`S231:unit … is <it>`), or
 /// `None` when it is one of the three shapes, not blank and free of format and control characters.
-pub(super) fn problem(term: &TermAttr) -> Option<String> {
+pub(crate) fn problem(term: &TermAttr) -> Option<String> {
     match term {
         TermAttr::Other(_) => Some("not a string, typed literal, or IRI node".to_owned()),
         TermAttr::Typed { extra, .. } if extra.contains_key("@id") => Some(BOTH.to_owned()),
@@ -88,6 +103,30 @@ fn invisible(text: &str, holder: &str, carries: &str) -> Option<String> {
 
 /// What a refusal calls an object carrying both `@id` and `@value`.
 const BOTH: &str = "an object carrying both @id and @value";
+
+/// What a refusal calls `term`, a `unit` or `displayUnit` that [`problem`] accepts, when it is an
+/// IRI node the closed unit table does not map, as the phrase a refusal reads (`S231:unit … is
+/// <it>`); `None` for a string or a typed literal, which is read verbatim.
+///
+/// The expansion pass has already replaced every mapped IRI node by its unit string and every
+/// expandable `@id` by its expanded IRI ([`crate::unit_iri`]), so any IRI node still here is
+/// unmapped. The IRI is quoted as an [`excerpt`]: a megabyte-long one costs the message 64 bytes
+/// of the document's text. It is passed through [`visible`] as well. [`problem`] already refuses
+/// an identifier that carries a format or control character, the expanded one included (an
+/// expansion can carry one its `@context` binding wrote), so this is a second guard that no
+/// message ever holds such a character as it is.
+/// Never call this for `quantity`, which is not read through the table.
+pub(crate) fn unmapped_unit(term: &TermAttr) -> Option<String> {
+    let TermAttr::Iri { id, .. } = term else {
+        return None;
+    };
+    Some(format!(
+        "the IRI node `{}`, which the closed unit table does not map; a unit written as an IRI \
+         node is read only as a QUDT unit the table lists (`http://qudt.org/vocab/unit#K`) or as \
+         an S231-namespace unit string, so write one of those or the unit as a string (`\"K\"`)",
+        visible(&excerpt(id))
+    ))
+}
 
 /// Whether `text` is empty or holds only Unicode `White_Space`.
 pub(super) fn blank(text: &str) -> bool {

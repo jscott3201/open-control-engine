@@ -34,6 +34,8 @@ mod binary_layout;
 // Helpers that several modules share, declared once for the whole binary.
 mod bless;
 mod render;
+// The composite the unit-spelling tests share (`resolve_unit_spellings`, `resolve_unit_iris`).
+mod unit_documents;
 
 mod export_cascade_naming;
 mod export_declared_output_attrs;
@@ -109,9 +111,12 @@ mod resolve_term_controls;
 mod resolve_term_shapes;
 mod resolve_type_near_miss;
 mod resolve_typing_controls;
+mod resolve_unit_iris;
+mod resolve_unit_spellings;
 mod resolve_unused_boundary_input;
 mod resolve_vocabulary_namespace;
 mod resolve_vocabulary_terms;
+mod vendored_unit_iris;
 
 #[test]
 fn every_test_file_is_compiled_into_exactly_one_binary() {
