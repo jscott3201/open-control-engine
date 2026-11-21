@@ -820,7 +820,7 @@ so far, and no tag is cut by the bump.
     `oce-cxf`. No format, content id, blob or golden moves, and the workspace version is not
     bumped.
 - **A sparse flattened table is one validation finding, and each validator pass's diagnostics
-  hold at most 8 MiB of text** (GitHub #PRNUM, issue #726).
+  hold at most 8 MiB of text** (GitHub #732, issue #726).
   A `CDL.Reals.Sources.TimeTable` takes its shape from the largest `table_<row>_<col>` it
   carries, so one parameter `table_524288_2` declares 1,048,576 cells and binds one. The
   validator raised a `parameter-out-of-range` for every absent cell and walked the whole shape to
