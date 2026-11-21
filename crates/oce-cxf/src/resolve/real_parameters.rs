@@ -29,6 +29,8 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Value, ValueType};
 
+use crate::diagnostic_list::DiagnosticList;
+
 /// The largest magnitude an Integer bound to a Real parameter may have: 2^53. Every integer up to
 /// it is exact as a binary64; 2^53 + 1 is the first that is not.
 pub(crate) const MAX_EXACT_INTEGER_AS_REAL: u64 = 1 << 53;
@@ -50,7 +52,7 @@ pub(super) fn hold_real_parameters_as_reals(
     owner: &str,
     table: &mut [(Arc<str>, Value)],
     sources: &[&str],
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     for (index, (name, value)) in table.iter_mut().enumerate() {
         let Value::Integer(integer) = *value else {
@@ -61,20 +63,19 @@ pub(super) fn hold_real_parameters_as_reals(
         }
         match exact_real(integer) {
             Some(real) => *value = Value::Real(real),
-            None => {
-                let diagnostic = Diagnostic::error(
+            // Raised, not pushed: every element of one array can be refused, and each message
+            // names the owner, so nothing is built once the list has ended.
+            None => diags.raise(|| {
+                Diagnostic::error(
                     DiagCode::ParameterOutOfRange,
                     format!(
                         "parameter `{name}` on `{owner}` binds the Integer {integer} to a Real \
                          parameter of `{class_path}`; an Integer above 2^53 in magnitude is not \
                          exact as a Real"
                     ),
-                );
-                diags.push(match sources.get(index) {
-                    Some(source) => diagnostic.with_subject((*source).to_owned()),
-                    None => diagnostic.with_subject(owner.to_owned()),
-                });
-            }
+                )
+                .with_subject(sources.get(index).copied().unwrap_or(owner).to_owned())
+            }),
         }
     }
 }

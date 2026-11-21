@@ -10,6 +10,8 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic, Severity};
 use oce_model::{EnumClassId, Value};
 
+use crate::diagnostic_list::DiagnosticList;
+
 use super::real_parameters::{
     MAX_EXACT_INTEGER_AS_REAL, exact_real, hold_real_parameters_as_reals,
 };
@@ -34,9 +36,9 @@ fn held(class_path: &str, entries: &[(&str, Value)]) -> (Table, Vec<Diagnostic>)
         .map(|(name, _)| format!("{OWNER}.{name}"))
         .collect();
     let sources: Vec<&str> = sources.iter().map(String::as_str).collect();
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     hold_real_parameters_as_reals(class_path, OWNER, &mut table, &sources, &mut diags);
-    (table, diags)
+    (table, diags.to_vec())
 }
 
 fn assert_bit_eq(actual: &Table, expected: &[(&str, Value)]) {
@@ -345,7 +347,7 @@ fn each_refused_entry_is_reported_once_in_table_order_and_the_rest_still_convert
 #[test]
 fn a_refusal_without_a_recorded_source_is_located_on_the_owning_instance() {
     let mut table = table(&[("uLow", Value::Integer(i64::MAX))]);
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     hold_real_parameters_as_reals("CDL.Reals.Hysteresis", OWNER, &mut table, &[], &mut diags);
     assert_eq!(diags.len(), 1);
     assert_eq!(diags[0].subject.as_deref(), Some(OWNER));

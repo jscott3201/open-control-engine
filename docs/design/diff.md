@@ -774,8 +774,8 @@ building decisions 3, 8 and 15 against the facade as it stands, not a new decisi
   rename pass, and adds the note `unnamed-blocks`; it is reached by editing a topology.
 - **Ground values follow the authoring level's rules.** A value on one side only is
   `parameter-defaulted` against the catalog's literal default, a block's parameters are listed by
-  name, and an Integer against the equal Real is a change of value until #683 makes the engine
-  hold the Real.
+  name, and an Integer against the equal Real on a Real parameter is no entry, since the engine
+  holds both as the one Real (#683, engine 0.6.0; a change of value before it).
 - **An input's bounds are its effective domain** (an Integer input left open is the `i32` range);
   an output carries none, and `derived_from` is `null`: a topology holds neither. Nor does it
   hold a `unit`, `quantity` or `displayUnit` on a boundary that is not a Real, the spelling of an

@@ -154,29 +154,37 @@ fn an_assignment_on_one_side_is_defaulted_against_a_literal_default_and_reparame
 }
 
 #[test]
-fn an_integer_literal_on_a_real_parameter_is_another_ground_value_until_issue_683() {
-    // Issue #683 (owner ruling): the engine is to normalise an Integer literal bound to a
-    // parameter the catalog types Real to a Real at load. Until it does, the loaded graph holds
-    // `Integer(0)` where the respelled document holds `Real(0.0)`, the two content ids differ,
-    // and this level reports the truth of the loaded graph: a change of value. When #683 lands
-    // the two load alike, the ids agree, and this test must change to an empty diff.
+fn an_integer_literal_on_a_real_parameter_is_the_ground_value_of_its_real_spelling() {
+    // Issue #683 (owner ruling): the engine holds an Integer bound to a parameter the catalog
+    // types Real as that Real, at load. So the tracked document that writes `k = 0` and the same
+    // document respelled `0.0` load alike: one content id, and nothing to report at this level.
     let path = "crates/oce-cxf/tests/fixtures/pass_through_miniature.jsonld";
     let integer = corpus_bytes(path);
     let text = String::from_utf8(integer.clone()).expect("UTF-8");
     assert_eq!(text.matches("\"S231:value\": 0\n").count(), 1);
     let real = text.replace("\"S231:value\": 0\n", "\"S231:value\": 0.0\n");
-    let (integer, real) = (load(&integer), load(real.as_bytes()));
-    assert_ne!(integer.id, real.id);
-    let diff = compare_loaded(&integer, &real);
-    assert_eq!(
-        support::json(&diff)["graph"],
-        json!([{ "kind": "reparameterized", "subject": "keep.k",
-                 "old": { "integer": 0 },
-                 "new": { "real": "0.0", "bits": "0x0000000000000000" } }])
+    let other = text.replace("\"S231:value\": 0\n", "\"S231:value\": 1\n");
+    let (integer, real, other) = (
+        load(&integer),
+        load(real.as_bytes()),
+        load(other.as_bytes()),
     );
-    assert!(!diff.summary.graph_equal);
+    assert_eq!(integer.id, real.id);
+    let diff = compare_loaded(&integer, &real);
+    assert_eq!(support::json(&diff)["graph"], json!([]));
+    assert!(diff.summary.graph_equal);
+    assert!(diff.summary.equal);
+    // Not vacuous: another Integer is another value, and it is reported as the Real it is held
+    // as on both sides.
+    assert_ne!(integer.id, other.id);
+    assert_eq!(
+        support::json(&compare_loaded(&integer, &other))["graph"],
+        json!([{ "kind": "reparameterized", "subject": "keep.k",
+                 "old": { "real": "0.0", "bits": "0x0000000000000000" },
+                 "new": { "real": "1.0", "bits": "0x3ff0000000000000" } }])
+    );
     // The authoring level writes the Real it means, so the same two spellings authored are one
-    // document: the emitter widens the Integer.
+    // document too: the emitter widens the Integer.
     let gain = |k: &str| {
         format!(
             "in u : Real\nout y : Real\n\nblock g = CDL.Reals.MultiplyByParameter(k = {k})\n\nu -> g.u\ng.y -> y\n"

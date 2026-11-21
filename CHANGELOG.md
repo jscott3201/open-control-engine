@@ -778,7 +778,7 @@ so far, and no tag is cut by the bump.
     sequence-parameter retune is one entry per leaf it reaches and `parameters_equal` is
     `null`; a one-sided value is `parameter-defaulted` against the
     catalog's literal default; an Integer against the equal Real is a change of value until
-    issue #683. The interface compares each boundary's type, labels and, for an input, its
+    issue #683 (GitHub #720, in this section: no entry since). The interface compares each boundary's type, labels and, for an input, its
     effective bounds. Order is never compared and nothing is `reordered`. A renamed root is a
     `sequence-renamed` metadata entry, the one metadata a topology holds, so `metadata_equal` is
     `false` beside it and `null` otherwise (owner ruling of 2026-11-21); the strict reader takes
