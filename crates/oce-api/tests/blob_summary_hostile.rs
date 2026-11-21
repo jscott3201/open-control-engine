@@ -2,15 +2,17 @@
 //! every refusal of the decoder's framing and structural pass is the summary's refusal too, the
 //! identical typed error at the identical offset, and no input panics.
 //!
-//! The defects are the ones `blob_hostile_bytes.rs` feeds the decoder, built with the same
-//! test-side writer and re-checksummed so each reaches the check under test. Every case goes
-//! through [`against_the_decoder`], which holds the summary to the decoder's verdict.
+//! The defects are the ones `blob_hostile_bytes.rs` and `blob_refusal_precedence.rs` feed the
+//! decoder, built with the same test-side writer and re-checksummed so each reaches the check
+//! under test. Every case goes through [`against_the_decoder`], which holds the summary to the
+//! decoder's verdict.
 
 // Shared helpers, declared once for this binary in its root `facade.rs`.
 use crate::blob_corpus;
 use crate::blob_fuzz::{XorShift, env_u64};
-use crate::blob_hostile_bytes::WORKED_COUNTS;
+use crate::blob_hostile_bytes::{WORKED_COUNTS, rich as rich_golden};
 use crate::blob_image;
+use crate::blob_refusal_precedence::{Defect, REFUSAL_ORDER, refusal, with_defects};
 use crate::blob_summary_facts;
 
 use blob_corpus::{FIXTURES, golden};
@@ -105,28 +107,10 @@ fn refused_as_malformed(bytes: &[u8], fault: MalformedFault, what: &str) -> u32 
     }
 }
 
-/// The smallest golden with at least two classes, connections, inputs and outputs, an input with
-/// two targets and a stateful block, so every list can be put out of order.
+/// The golden `blob_hostile_bytes.rs` puts out of order: the smallest with two classes,
+/// connections, inputs and outputs, an input with two targets and a stateful block.
 fn rich() -> Vec<u8> {
-    let mut best: Option<Vec<u8>> = None;
-    for name in FIXTURES {
-        let bytes = golden(name);
-        let decoded = decode(&bytes).unwrap();
-        let rich = decoded.model.connections.len() >= 2
-            && decoded.inputs.len() >= 2
-            && decoded.outputs.len() >= 2
-            && decoded.inputs.iter().any(|i| i.targets.len() >= 2)
-            && !decoded.state.slots.is_empty()
-            && decoded
-                .model
-                .blocks
-                .iter()
-                .any(|b| b.class_iri != decoded.model.blocks[0].class_iri);
-        if rich && best.as_ref().is_none_or(|b| bytes.len() < b.len()) {
-            best = Some(bytes);
-        }
-    }
-    best.expect("a rich fixture")
+    rich_golden().1
 }
 
 fn image_of(bytes: &[u8]) -> Image {
@@ -301,6 +285,42 @@ fn header_defects_are_the_decoders_refusals_in_the_decoders_order() {
         rechecksum(&mut flagged);
         assert_eq!(summarise(&flagged), Err(BlobError::NonzeroFlags { flags }));
         assert_eq!(against_the_decoder(&flagged, "flags"), Verdict::SameRefusal);
+    }
+}
+
+#[test]
+fn of_every_two_header_defects_the_summary_reports_the_one_the_decoder_reports() {
+    // The decoder's ten header checks in their order, each defect alone and every pair that can
+    // occur together (`blob_refusal_precedence.rs`): the summary's refusal is the earlier check's,
+    // spelled out from the header table, which is also what the decoder says.
+    let valid = golden(WORKED);
+    for (index, &earlier) in REFUSAL_ORDER.iter().enumerate() {
+        let alone = with_defects(&valid, &[earlier]);
+        assert_eq!(
+            summarise(&alone),
+            Err(refusal(earlier, &alone)),
+            "{earlier:?}"
+        );
+        for &later in &REFUSAL_ORDER[index + 1..] {
+            if matches!(
+                (earlier, later),
+                (Defect::Oversized, Defect::Short) | (Defect::Short, Defect::Section)
+            ) {
+                continue;
+            }
+            let bytes = with_defects(&valid, &[earlier, later]);
+            let expected = refusal(earlier, &bytes);
+            assert_eq!(
+                summarise(&bytes),
+                Err(expected),
+                "{earlier:?} with {later:?}"
+            );
+            assert_eq!(
+                decode(&bytes).err(),
+                Some(expected),
+                "{earlier:?} with {later:?}"
+            );
+        }
     }
 }
 

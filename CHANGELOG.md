@@ -71,9 +71,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
     and flips every bit of every class hash and initial-state CRC of one golden and requires
     exactly that field to move. `tests/blob_summary_acceptance.rs` summarises nine blobs the
     decoder refuses after its structural pass and pins the two refusals the reader adds.
-    `tests/blob_summary_hostile.rs` feeds the hostile-bytes defects and 10,000 seeded mutations
-    through both readers and requires the decoder's identical error for every structural
-    refusal. `tests/blob_summary_allocations.rs` pins the allocation count and the peak ratios.
+    `tests/blob_summary_hostile.rs` feeds the hostile-bytes defects, every pair of header
+    defects and 10,000 seeded mutations through both readers and requires the decoder's
+    identical error for every structural refusal. `tests/blob_summary_allocations.rs` pins the allocation count and the peak ratios.
     `oce-graph`'s `tests/blob_summary.rs` checks the core reader against `decode`, and passes
     against the `no_std + alloc` build. The facade-contract check's positive control compiles a
     host-side use.
