@@ -48,6 +48,7 @@ mod g36_catalog_package_guard;
 #[cfg(test)]
 mod g36_catalog_tests;
 mod ground;
+mod namespace_near_miss;
 mod resolve;
 mod scope_chain;
 #[cfg(test)]

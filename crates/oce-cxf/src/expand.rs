@@ -107,6 +107,8 @@ use crate::unit_iri::unit_of_iri;
 mod context_scope;
 #[path = "property_keys.rs"]
 mod property_keys;
+#[path = "unread_qudt_has_unit.rs"]
+mod unread_qudt_has_unit;
 #[path = "vocabulary_namespace.rs"]
 mod vocabulary_namespace;
 #[path = "vocabulary_terms.rs"]

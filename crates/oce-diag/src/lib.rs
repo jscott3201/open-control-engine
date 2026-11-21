@@ -170,6 +170,14 @@ pub enum DiagCode {
     /// message names the IRI found and the IRI expected (subject = the `@context` term, or the
     /// node carrying the key or the type). Refused at load: nothing reads a document in another
     /// namespace.
+    ///
+    /// The same code refuses the QUDT schema property `hasUnit`, which the engine reads as a
+    /// unit in `http://qudt.org/schema/qudt#` and `http://qudt.org/schema/qudt/`, keyed in a
+    /// near miss of either (the `https:` spelling, the scheme or the host in another letter
+    /// case, a default port, a missing, repeated or wrong separator) or in the QUDT unit
+    /// vocabulary (issue #675). The message names the namespace as written and the two read
+    /// (subject = the node carrying the key). Passing the key through would leave a declared
+    /// unit unread.
     VocabularyNamespaceMismatch,
 
     // --- Validate-time `shall`-errors (oce-validate, the deep gate) ---
