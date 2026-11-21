@@ -348,8 +348,14 @@ with the crate (`tests/fixtures/units/`). These are consequences of building it:
   `UnitConversion::for_port_quantity(quantity)`, crate-internal, which #662 calls with the
   facade's `PointInfo::quantity` for each mapped point; it refuses only on the exact quantity
   `TemperatureDifference`. Nothing here sees a port, so the `cdl.unit` check is #662's alone.
-  A difference unit mapped onto a port whose quantity is `ThermodynamicTemperature` is not
-  refused by any rule yet.
+- **What the quantity check does not see.** `for_port_quantity` matches the bare string
+  `TemperatureDifference`, byte for byte, and nothing else. A quantity carried as an IRI
+  (`q:TemperatureDifference`, or a full QUDT IRI the importer keeps as `TermAttr::Iri`) is not
+  refused, and neither is a quantity left unread: modelica-json translations write it as
+  `qudt:hasQuantityKind`, so `PointInfo::quantity` is `None` there. A `*_delta` unit mapped onto
+  a port whose quantity is `ThermodynamicTemperature` is not refused here either. All three
+  belong to the binder (#662), which sees the port; a test lists the first two spellings as
+  deliberately passing.
 - **Choices the note left open.** An empty unit spelling is refused as `empty-unit`, the device
   side's first, before the one-sided rule. A finite reading whose conversion overflows `f64` is
   refused as `overflow` (a factor above one, beyond about ±1e305). A NaN, replay's missing Real
@@ -358,11 +364,13 @@ with the crate (`tests/fixtures/units/`). These are consequences of building it:
   to `psi`). `-0.0` is zero for the Boolean and the Integer rules. A text cell is read by the
   Boolean text rule only in a device `bool` column. `bool` → `float` is not in the type table and
   is refused as `type-pair-refused`.
-- **The bound on the temperature rows.** In the table's operation order an absolute temperature
-  pair is within 2 ulps (1 for the two Celsius–kelvin rows) of the exact conversion, measured in
-  ulps of the largest magnitude in the sum, which the script checks against the exact rational
-  and the test at every golden row. Near the offset the result cancels: `-459.67 degF` converts
-  to -2⁻⁴⁴ K, not zero.
+- **The bound on the temperature rows.** Errors are counted in ulps of the largest magnitude in
+  the sum, M, not of the result: near the offset the result cancels, and `-459.67 degF` converts
+  to -2⁻⁴⁴ K, not zero. The two Celsius–kelvin rows are within 1 ulp(M) of the exact conversion,
+  and that is proven: half an ulp for rounding 273.15 to `f64`, half for the add. The two
+  Fahrenheit rows are held to 2 ulp(M), and that bound is **measured, not proven**: the script
+  checks it against the exact rational at every golden row and at 140,000 seeded readings per
+  pair (worst 1.62 for `degF` → `K`, 1.22 for `degF` → `degC`), and the test at every golden row.
 
 ## Sources, sampling and time
 

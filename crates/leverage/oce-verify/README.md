@@ -19,10 +19,10 @@ run is exact, a receipt's mode is `exact`, and `within`, `of` and `when` are sti
 
 The commissioning verifier (OBC §12) is being built beside it, in seven parts. The first is in
 (issue #658): [the readers of its two files](#the-commissioning-spec-and-the-point-mapping), the
-test spec `oce/commissioning-spec/v1` and the point mapping. The second is in too (issue #659): `convert_unit` over the closed unit
-table `units/v1`, which turns a trended reading into its CDL point's unit, and the discrete rules
-that turn a cell into its CDL point's type ([Unit conversion](#unit-conversion-unitsv1) below).
-No run reads a trend yet.
+test spec `oce/commissioning-spec/v1` and the point mapping. The second is in too (issue #659):
+`convert_unit` over the closed unit table `units/v1`, which turns a trended reading into its CDL
+point's unit, and the discrete rules that turn a cell into its CDL point's type
+([Unit conversion](#unit-conversion-unitsv1) below). No run reads a trend yet.
 
 It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-replay` only. It
 opens no file, runs no clock, measures nothing and is not published.
@@ -765,11 +765,13 @@ the note's known points (`tests/fixtures/units/units_v1.txt`). Those goldens are
 `tests/fixtures/units/derive_units.py`, which shares nothing with the crate: it checks every
 constant against its base definitions in exact rational arithmetic and evaluates each pair in the
 note's order in Python's binary64, and holds each pair to a bound against the exact conversion
-(a scaled pair within 1 ulp, a division or `degC_delta` exact, an absolute temperature pair
-within 2 ulps of the largest magnitude in its sum, 1 for the Celsius–kelvin rows). The test also derives each factor again from the inch, the
-foot, standard gravity and the litre as an integer ratio divided once, and checks closure over
-every ordered pair of the table's spellings, near-miss spellings, monotonicity over 40,000
-readings and that a fused multiply-add would move golden bits.
+(a scaled pair within 1 ulp; a division or `degC_delta` exact; the two Celsius–kelvin rows
+within 1 ulp of the largest magnitude in the sum, which is proven, half an ulp for rounding
+273.15 and half for the add; the two Fahrenheit rows within 2, which is measured on the golden
+rows and 140,000 seeded readings per pair, not proven). The test also derives each factor again
+from the inch, the foot, standard gravity and the litre as an integer ratio divided once, and
+checks closure over every ordered pair of the table's spellings, near-miss spellings,
+monotonicity over 40,000 readings and that a fused multiply-add would move golden bits.
 
 ## Fixtures and goldens
 

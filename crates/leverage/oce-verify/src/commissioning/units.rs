@@ -240,7 +240,9 @@ impl UnitSide {
 /// A unit spelling in a refusal is an excerpt, written as the spec reader writes what it quotes:
 /// printable ASCII from the space to `~` as itself, a line feed as `\n`, every other character
 /// as `\u{…}` with its hexadecimal code point, and cut with `...` at 64 bytes, so a refusal
-/// never carries a megabyte-long or invisible spelling.
+/// never carries a megabyte-long or invisible spelling. A backtick or a backslash in a unit is
+/// not escaped, so a quoted spelling that holds one can read ambiguously; the code, not the
+/// sentence, is the contract.
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum UnitError {

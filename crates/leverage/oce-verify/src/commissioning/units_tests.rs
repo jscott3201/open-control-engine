@@ -454,12 +454,16 @@ fn a_temperature_difference_port_refuses_every_absolute_pair_and_takes_the_rest(
         } else {
             assert_eq!(checked, Ok(conversion), "{} -> {}", listed.from, listed.to);
         }
-        // Any other quantity, a near miss of it, or none, takes every row.
+        // Any other quantity, a near miss of it, or none, takes every row. The IRI spelling and
+        // the lower-case one pass deliberately: the check matches the bare string only, and the
+        // binder (#662), which sees how the port's quantity was written, owns the rest.
         for quantity in [
             None,
             Some("ThermodynamicTemperature"),
             Some("Pressure"),
             Some("temperatureDifference"),
+            Some("temperaturedifference"),
+            Some("q:TemperatureDifference"),
             Some("TemperatureDifference "),
             Some(""),
         ] {
