@@ -12,7 +12,10 @@ part 1 of 4, the format, landed in GitHub #541. 2026-11-10: part 2 of 4, binding
 receipt, landed in GitHub #558. 2026-11-11: part 3 of 4, mutant mode, landed in GitHub #565, and
 the work budgets of the [work-budget note](vector-work-budget.md) (#561) in GitHub #570. Part 4 of
 4, the `oce verify` verb and the in-repo replay gate, landed in GitHub #573; see
-[Part 4's readings](#part-4s-readings).)*
+[Part 4's readings](#part-4s-readings). 2026-11-20:
+[Tolerance windows](#tolerance-windows-within-of-and-when) proposes decisions 38 to 50 for issue
+#656, the `within`, `of` and `when` keys and the tolerance receipt. They await the owner's
+rulings, and nothing above is changed by them until they are ruled.)*
 
 **The version rule, in one sentence.** The format is `oce/vectors/v1` and stays `v1` until 1.0.0: a
 change is made in place, in the PR that rewrites every in-repo fixture and golden, and nothing
@@ -574,7 +577,8 @@ receipt is written atomically to `<DIR>/receipt.json` and stdout is the report, 
 The two flags change the exit code only; no receipt byte depends on them. `--deny-warnings` counts
 `load_warnings_total` and `totals.warnings`. `oce vocab` lists the new codes. Commissioning stays
 `oce verify --commission <SPEC>`; #456 item 7's "`oce commission` subcommand" is reworded to
-match.
+match. *(Proposed 2026-11-20, the commissioning note's decision 35: one reference per run there,
+as one vector file per run here, so neither form of the verb has a batch mode.)*
 
 ## Fixtures
 
@@ -668,7 +672,7 @@ to rewrite); a list starting later (a missing input and a refused frame); a step
 input position is `wrong-type`. File-backed series arrive in place with the commissioning sources
 (tracking item 7), which must build the union of times (commissioning decision 15). Rejected: mixed
 sources now (a `Replay` takes one `FrameSource`, and nothing defines how they combine; no existing
-vector uses one).
+vector uses one). *(Proposed 2026-11-20, decision 49: as their own issue, after #660.)*
 
 **6. One name rule for inputs, outputs and parameters.** The exact canonical path, or a unique
 `.`-boundary suffix; ambiguous, unknown, doubled and unsupplied names are typed errors. Part 2
@@ -703,12 +707,14 @@ that says `exact`); a `tolerance` key beside `equals` (two tolerance spellings).
 port (tracking item 6) the key is `unknown-key`, never ignored; that PR adds `within` and `of` in
 place and amends this note with their window semantics. Rejected: the sketch's `atol`, `rtol`,
 `ttol_s` (a second spelling of one type); accepting and ignoring the key (`oce-verify` may not ship
-a `todo!` or a silent pass). *(Ruled 2026-11-09: accepted.)*
+a `todo!` or a silent pass). *(Ruled 2026-11-09: accepted. Proposed 2026-11-20, issue #656:
+[Tolerance windows](#tolerance-windows-within-of-and-when) gives the window semantics.)*
 
 **10. `when` names Boolean signals, and waits with `within`.** A list of input or output names,
 ANDed, masking instants that are counted as `masked` and never passed (commissioning decision 2).
 `unknown-key` until item 6, when the trace also starts retaining inputs. Rejected: the sketch's
 time-window indicator (time gating is already `from_s` and `to_s`; one meaning across both specs).
+*(Proposed 2026-11-20, decision 46: `when` on both window forms, at most 16 names.)*
 
 **11. Windows are inclusive, inside the clock, and must contain a tick.** Refused at load from the
 clock alone. `Trace::check_coverage` (replay decision 7) runs again after a scenario in which no
@@ -830,7 +836,9 @@ for that scenario. A `run`-class refusal, a subject that does not load, an unres
 uncovered window, an invalid mutant and an I/O failure are exit 2 with no receipt. Rejected: every
 refusal as exit 2 (a mutant that narrows an input bound would then be an error, not a catch).
 *(Ruled 2026-11-09: accepted for vectors. The commissioning note sends an engine refusal to exit
-2; whether tolerance mode follows this rule is that work's to settle.)*
+2; whether tolerance mode follows this rule is that work's to settle. Proposed 2026-11-20,
+decision 47: a vector set keeps this rule under tolerance; a commissioning run keeps its own,
+an engine refusal being an error there, as that note's proposed decision 28 states.)*
 
 **27. A mutant has the subject's boundary and a different content id, or the run is an error.** As
 [Mutant mode](#mutant-mode): validated at bind, output types through #460, and an invalid mutant
@@ -1348,3 +1356,345 @@ taken.
 **No version bump for it** *(ruled by the owner, 2026-11-12).* The two sources spell the same
 string at every version without a pre-release suffix, so nothing written by 0.5.0 changes bytes or
 meaning: no golden receipt and no `verify_*` transcript moves, and standing rule 10 does not apply.
+
+## Tolerance windows: `within`, `of` and `when`
+
+**Proposed 2026-11-20 for issue #656: a draft awaiting the owner's rulings (see
+[Questions for the owner](#questions-for-the-owner)).** This section decides how a vector file
+asks for a tolerance comparison and what the receipt then says: the `within` and `of` keys of a
+window, the `when` mask, and the `tolerance` comparison mode of `oce/receipt/v1`. Decisions 1 to
+37 stand as ruled and none is reopened; decisions 9, 10 and 26 deferred these points to this
+work. Decisions 38 to 50 answer the issue's thirteen questions in its order (question *n* is
+decision 37 + *n*). Decision 50 records an owner ruling of 2026-11-20. Every other decision is a
+proposal, marked **Proposed**, and nothing is built from it before it is ruled: until the build
+PR lands, the three keys stay `unknown-key` and every section above describes the format as
+built. The envelope arithmetic is issue #655's and is not reopened here.
+
+### What the tree has today
+
+Checked on `development` at commit `13b9152b`. A path that starts `src/` or `tests/` is under
+`crates/leverage/oce-verify/`.
+
+- **The reader.** An expectation is a closed object of six keys, and any other key is
+  `unknown-key` (`crates/leverage/oce-verify/src/decode.rs:359` to `372`). The error kind's own
+  text names the three: "`within`, `of` and `when` are such keys: refused, never ignored"
+  (`src/error.rs:61`), a test holds each refused in every object
+  (`tests/closed_objects.rs:78`), and `oce vocab` says "(within, when: not yet)"
+  (`crates/leverage/oce-cli/src/verify_codes.rs:33`).
+- **The comparison** is exact for every type, a Real by its bits (`src/compare.rs:4`).
+- **The receipt.** `ComparisonMode` has the one variant `Exact`, and `Comparison` holds the mode
+  and no envelope (`src/receipt.rs:46`, `:65`); the writer emits `{ "mode": … }`
+  (`src/receipt_json.rs:66`). `InstantCounts::masked` is "zero until `when` exists"
+  (`src/receipt.rs:201`). A failure is one of three records (`src/receipt.rs:249`).
+- **The trace.** A scenario's replay is built from `ReplayOptions::new`, whose trace keeps
+  outputs only (`src/run.rs:337`; `crates/leverage/oce-replay/src/replay.rs:58`).
+  `TraceOptions::inputs` retains one column per input when set (`replay.rs:29`).
+- **The budgets.** Compared instants are bounded as `(1 + m) * sum(I_j)` against
+  `max_total_instants`, checked at bind (`src/budget.rs:12`).
+- **The envelopes.** `oce-verify` has no tolerance code. Issue #655 adds it as a pure module:
+  `funnel` and `aligned-grid` over `Series`, the one type `Tolerances` with the six names of
+  decision 9, `CompareLimits` (1,048,576 points for `funnel`, 32,768 for `aligned-grid`, and a
+  work bound on loop removal), `CompareError`, and `FUNNEL_VERSION = "funnel@a12fa96"`. It
+  refuses a non-finite sample, an empty series and mismatched endpoints.
+- **The corpus.** The library has 45 windows with a non-Boolean `equals`, all in one routine
+  (`airflow-setpoint`), and no file-backed series
+  ([What exists today](#what-exists-today-checked-against-the-tree)). All 21 windows of the two
+  in-repo rules are Boolean.
+
+### The format, as proposed
+
+Four keys are added in place to `oce/vectors/v1`: three on a window and one on the set. A
+scenario that uses the three:
+
+```json
+{
+  "name": "airflow_tracks_setpoint",
+  "inputs": { "occupied": [ { "t": 0, "value": false }, { "t": 300, "value": true } ],
+              "VDis_flow_set": 0.25 },
+  "expect": [
+    { "output": "yDam", "from_s": 0, "to_s": 240, "equals": 0.0 },
+    { "output": "VDis_flow", "from_s": 300, "to_s": 1800,
+      "within": { "atoly": 0.005, "atolx": 60 },
+      "of": [ { "t": 300, "value": 0.0 }, { "t": 600, "value": 0.25 } ],
+      "when": [ "occupied" ] }
+  ]
+}
+```
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `envelope` (set level, beside `clock`) | no | `funnel` or `aligned-grid`: the envelope every `within` window of the set is compared under; `funnel` when absent |
+| `within` (window) | with `of`, in place of `equals` | a closed object of the six tolerance names `atolx`, `atoly`, `ltolx`, `ltoly`, `rtolx`, `rtoly`; each optional, at least one present, each finite and not negative; an absent name is zero |
+| `of` (window) | with `within` | the expected signal over the window: a number, or a step list `[{ "t", "value" }]` whose first `t` is the window's `from_s` |
+| `when` (window) | no | 1 to 16 names of Boolean inputs or outputs; the window's instants count only where every one is true |
+
+A window carries exactly one of `equals` or the pair `within` and `of`; `when` goes with either.
+An instant expectation (`diagnostic`, `at_s`) takes none of the three.
+
+**`of`.** A number is that value at every tick of the window. In a step list, `t` is finite and
+strictly increasing, the first `t` equals `from_s` exactly, and none is after `to_s`; a step
+time need not be a tick, and a step takes effect at the first tick at or after it, as an input's
+does. Values are typed as an `equals` literal is (decision 7): the output is a Real, so each is
+a number.
+
+**The two series.** Both are sampled at the window's ticks and nowhere else. The **reference**
+is `of`, by zero-order hold; the **test** is the engine's output at each tick. Their `x` values
+are the tick times in seconds, so the envelope's endpoint precondition holds by construction,
+and a window of one tick is two one-point series. The envelope is built around the reference
+with the window's tolerances, by #655's arithmetic unmodified, and the test is judged at each
+tick: an exceedance of exactly zero passes the instant, anything above fails it.
+
+**`when`.** Each name resolves by the one name rule (decision 6) against the inputs and outputs
+together and must be a Boolean port. At a tick the mask is the AND of the signals' values in
+that frame: an output's value, or the value submitted for an input. Where the mask is false the
+instant is **masked**: for an `equals` window it is skipped; for a `within` window both series
+are set to zero there before the envelope is built, as OBC §12.7.2 step 8 says and the
+commissioning note's decision 2 follows. A masked instant is counted in `masked`, never in
+`checked` or `passed`.
+
+**Canonical form.** `within` writes the names the file wrote, sorted; an absent name stays
+absent, and so does an absent `envelope`. `of` and `when` keep their order. Numbers keep their
+lexical kind. `spec_id` covers all of it.
+
+**Bounds.** `VerifyLimits` gains `max_when_signals` (16) and `compare`, the `CompareLimits` of
+#655; both are lower-only.
+
+### Decisions 38 to 50
+
+**38. The expectation is the funnel reference.** *Question:* the envelope is not symmetric, so
+which series it is built around.
+
+- *Options.* (a) `of` is the reference and the engine output the test. (b) The engine output is
+  the reference, the commissioning default. (c) A key that chooses.
+- *Evidence.* #655's envelope takes `rtol` relative to the reference's range and measures the
+  error at the test's times. Under (b) the band of a window would depend on what the engine
+  produced: a mutant whose output swings widely would widen its own tolerance.
+- **Proposed: (a),** with no key. In a vector the expectation is the specification, and under
+  (a) the band is a function of the file and the clock alone. The receipt's body records the
+  role as `funnel_reference: "expectation"`. The commissioning default is the other way round
+  because there the CDL is the specification and the trend is under test.
+
+**39. A tolerance window is `within` and `of`, in place of `equals`.** *Question:* the shape.
+
+- *Options.* (a) The pair, as [the format](#the-format-as-proposed) states. (b) `within` beside
+  `equals`, which then holds the expected value. (c) A step list in `equals`.
+- **Proposed: (a).** `equals` stays exact for every type (decision 8), so a reader of a file
+  never has to look for a second key to learn whether a comparison has slack. Any other
+  combination, `when` on an instant included, is `ambiguous-expectation`. An empty `within`, or
+  a negative tolerance, is `invalid-tolerance`. `of` takes a number or a step list and nothing
+  else: a string is `wrong-type`. Rejected for now: `of` naming another signal (an input the
+  output should track); no vector needs it, and it can be added in place.
+
+**40. Both series are sampled at the window's ticks.** *Question:* how the two series are built.
+
+- *Options.* (a) At the window's ticks, `of` by zero-order hold. (b) `of` at its own step
+  times, the output at ticks. (c) Linear interpolation of `of`.
+- **Proposed: (a).** The engine's output exists at ticks only, and a vector's clock is the one
+  grid of the set (decision 3). (b) gives the two series different endpoints whenever a step
+  time is off the grid, which the envelope refuses. (c) invents values no author wrote, the
+  reason the commissioning note's decision 14 gives.
+
+**41. One envelope for the set, named by an optional set-level key.** *Question:* which
+envelope, and where it is named.
+
+- *Options.* (a) An optional set-level `envelope`, default `funnel`. (b) `funnel` only and no
+  key. (c) A key on each window.
+- *Evidence.* The header has one `comparison` object for the receipt.
+- **Proposed: (a).** One envelope keeps the header true for the whole set, and the second
+  envelope #655 keeps is reachable from a vector set through the same code as from a
+  commissioning spec. A set with the key and no `within` window loads, and its receipt says
+  `exact`. Any other value is `unknown-envelope`. (b) is the smaller format, and `envelope`
+  could be added in place later; see the questions.
+
+**42. The header says `tolerance` when any window uses `within`.** *Question:* the header under
+a set that mixes the two forms.
+
+- **Proposed.** `{ "mode": "exact" }` when no window of the set uses `within`, so a set with no
+  `within` window has the `comparison` its receipt has today. Otherwise
+  `{ "mode": "tolerance", "envelope": …, "envelope_version": … }`, the three keys the
+  commissioning note gives: `funnel` with `funnel@a12fa96`, or `aligned-grid` with
+  `aligned-grid@1` (that note's proposed decision 32). Under `tolerance`, an `equals` window is
+  still compared by bits; the mode says an envelope was used somewhere, and each failure's code
+  says which comparison failed. Rejected: a mode per scenario (the header is the receipt's);
+  `mixed` as a third mode (it would tell a reader nothing the failure codes do not).
+
+**43. `within` on a discrete output is refused at bind.** *Question:* Boolean, Integer and Enum
+outputs. *Evidence:* the commissioning note's decision 8, "Booleans and Integers exact, never
+through the funnel": the envelope is type-blind, so a value between two levels could pass.
+**Proposed:** a `within` window whose output is a Boolean or an Integer is
+`tolerance-on-discrete-output`, at bind, where the output's type is known
+(`FrameSlots::output_types()`). An Enum boundary port is already `enum-port-unsupported`.
+
+**44. A tolerance miss is its own failure record.** *Question:* the record.
+**Proposed:** one code beside `value-mismatch`:
+
+| `code` | Fields |
+| --- | --- |
+| `tolerance-exceeded` | `expectation` (index), `output` (canonical path), `t`, `expected` (the value of `of` at that tick), `actual`, `exceedance` |
+
+Instants are counted per tick as today: a tick with an exceedance above zero is one failed
+instant and one record, in tick order, then expectation order, under the same cap. `exceedance`
+is a Real in the receipt's value spelling. A mutant caught in a `within` window carries this
+record as its `failure`.
+
+**45. A non-finite output in a `within` window fails the instant.** *Question:* the envelope
+refuses non-finite input. *Options:* (a) a failed instant; (b) an error with no receipt.
+**Proposed: (a).** A NaN or an infinity at an unmasked tick is a `tolerance-exceeded` failure
+whose `actual` is spelled by its bits and whose `exceedance` is positive infinity. That tick's
+value does not enter the envelope: the test series carries the reference's value there, so
+every other tick is judged as it would be had that tick passed. Under (b) a mutant that
+produces a NaN would be an error instead of a catch, the reason decision 26 gives for failing a
+scenario on a refused frame.
+
+**46. `when` masks either window form.** *Question:* decision 10 names the key and its
+counting.
+
+- *Options for a `within` window.* (a) Zero both series at masked instants, then build the
+  envelope. (b) Drop the masked instants and build an envelope over each unmasked run.
+- **Proposed: (a),** as [the format](#the-format-as-proposed) states, so one word means one
+  thing in a vector set and in a commissioning spec (decision 10). (b) is `oce-conformance`'s
+  segmenting, which the commissioning note keeps as a named deviation there.
+  - A name that matches nothing is `when-unknown`, several `when-ambiguous`, a port that is not
+    a Boolean `when-not-boolean`; all at bind. An empty list is `when-empty` and more than 16
+    names `too-many-when-signals`, at load.
+  - The cap is a work bound: a mask costs its names times the window's ticks, and without it a
+    4 MiB file could ask for that product without limit.
+  - A scenario whose every instant is masked has `instants.checked == 0` and is `no_data` by
+    the rule the scenario table already states.
+  - A scenario with a `when` that names an input runs with `TraceOptions::inputs` set; no
+    other scenario's trace changes.
+
+**47. A refused frame under tolerance: unchanged for vector sets.** *Question:* decision 26's
+closing line. **Proposed:** a frame-class refusal fails its scenario (exit 1) with one
+`frame-refused` record, and a run-class refusal is `run-refused` (exit 2), whatever the windows'
+forms. A `within` window cut by the refusal is compared over its ticks before the refused one;
+both series end at the same tick, so the envelope's precondition still holds, and a window with
+no tick before it adds no instant. Commissioning has its own rule, in that note's proposed
+decision 28: there an engine refusal is an error.
+
+**48. Work: the instant budget as today, and each window inside `CompareLimits`.** *Question:*
+the budgets.
+
+- **Proposed.** A `within` window's ticks count toward `max_total_instants` exactly as an
+  `equals` window's do, mutants included. A `within` window with more ticks than `CompareLimits`
+  allows for the set's envelope is `too-many-points`, at bind in the budget step, straight after
+  `too-many-instants`: arithmetic on the clock and the window, before any load but the
+  subject's first.
+- The loop-removal work bound of #655 can only be met while comparing. A window that reaches it
+  is `compare-refused` with the `CompareError` code as its cause: an error with no receipt
+  (exit 2). Without a `when`, the envelope depends on the file and the clock alone, so the
+  refusal is a property of the vector set, never of what a mutant produced.
+
+**49. File-backed series are not in this amendment.** *Question:* decision 5 lets them "arrive
+in place with the commissioning sources". **Proposed:** an input and `of` take a constant or a
+step list, as today, and a file-backed series is cut as its own issue after the commissioning
+sources (#660) exist. It needs the CLI to resolve and bound more files and changes the
+load-byte budget, and no vector in this repository or the library has one.
+
+**50. The workspace version** *(ruled by the owner, 2026-11-20, on issues #656, #657, #663 and
+#671).* The first PR that changes the bytes or meaning of `oce/vectors/v1` or `oce/receipt/v1`,
+the tolerance-vector build cut from this note or the commissioning receipt in #663, whichever
+merges first, bumps the workspace on `development` from 0.5.0 to 0.6.0 and re-blesses every
+version-bearing golden. For an additive change, the "previous layout is refused" test of
+standing rule 10 is: an artefact carrying engine version 0.5.0 is refused by 0.6.0 with
+`EngineVersionMismatch`. The second of the two PRs, and the closeout (#671), bump nothing.
+Neither tag changes: the keys and the mode arrive in place, and nothing reads an older shape.
+An 0.5.0 `oce verify` refuses a file that uses the new keys as `unknown-key`, and the receipt's
+`engine_version` tells the two readings of the one tag apart.
+
+### The receipt, as proposed
+
+Four places of [the receipt](#the-receipt) change, each in place:
+
+| Where | Change |
+| --- | --- |
+| Header, `comparison` | `{ "mode": "exact" }`, or `{ "mode": "tolerance", "envelope", "envelope_version" }` when a window of the set uses `within` (decision 42) |
+| Body, `funnel_reference` | a string, present when `comparison.mode` is `tolerance`: always `expectation` (decision 38) |
+| Scenario, `instants.masked` | the instants a `when` excluded; `checked == passed + failed` still holds, and a masked instant is in neither |
+| Failure record | `tolerance-exceeded` (decision 44), also as a caught mutant's `failure` |
+
+A receipt of a set with no `within` and no `when` keeps every byte it has today, apart from the
+`engine_version` that decision 50 moves and the `receipt_id` over it. A failing instant of a
+`within` window:
+
+```json
+{
+  "expectation": 1, "output": "urn:x#vav.VDis_flow", "t": 900.0,
+  "expected": 0.25, "actual": 0.238, "exceedance": 0.007, "code": "tolerance-exceeded"
+}
+```
+
+The numbers show the shape; no engine was run for them.
+
+### Error codes, as proposed
+
+Added to [the table](#error-codes), each exit 2 with no receipt:
+
+| Code | Stage | Refuses |
+| --- | --- | --- |
+| `unknown-envelope` | load | an `envelope` other than `funnel` or `aligned-grid` |
+| `invalid-tolerance` | load | a `within` with no name, or a negative tolerance (a non-finite one is `non-finite-number`) |
+| `of-not-from-window-start`, `of-step-after-window` | load | an `of` step list whose first `t` is not `from_s`, or with a `t` after `to_s`; an empty list and times that do not increase reuse `step-list-empty` and `step-times-not-increasing` |
+| `when-empty`, `too-many-when-signals` | load | a `when` with no name, or with more than 16 |
+| `when-unknown`, `when-ambiguous`, `when-not-boolean` | bind | a `when` name that matches nothing, matches several, or names a port that is not a Boolean |
+| `tolerance-on-discrete-output` | bind | `within` on a Boolean or Integer output |
+| `too-many-points` | bind | a `within` window with more ticks than `CompareLimits` allows for the set's envelope |
+| `compare-refused` | run | a `CompareError` while comparing, with its code as `cause` |
+
+With these rows `within`, `of` and `when` are keys of the format, so `unknown-key` does not name
+them, and `ambiguous-expectation` also covers a window with both `equals` and `within`, one of
+`within` and `of` without the other, and a `when` on an instant.
+
+### What the build changes
+
+One issue, cut from this section once it is ruled, depending on #655:
+
+- the reader, its shapes in `src/dto.rs` and the regenerated `schema/vectors.schema.json`, with
+  the rows of `tests/schema_conformance.rs`; the canonical writer; binding, the budget step and
+  the comparison; `ComparisonMode::Tolerance`, `Comparison`'s envelope and the writer; the two
+  code lists and `oce vocab`'s meanings;
+- the worked example of [The vector format](#the-vector-format) gains a `within` window and a
+  `when`, and `tests/fixtures/note/worked_example.json` is copied from it again; the format
+  table, "Windows", the receipt tables and the error-code table above take this section's rows;
+- golden receipts for a tolerance pass, a tolerance failure, a masked window and an all-masked
+  `no_data` scenario, each `receipt_id` recomputed outside the crate;
+- the two in-repo `vectors.json` files do not change, so their `spec_id` values do not move.
+
+**Test plan additions.** A window at each tolerance kind alone; a one-tick window; an `of` step on a
+tick and between two, and one after `to_s` refused; `within` on a Boolean and on an Integer output
+refused before a frame runs; a NaN and an infinity in a `within` window failing the instant with the
+other ticks judged; a mask true, false and changing inside a window, for both forms; a `when` naming
+an input and one naming an output; every new code once, pinned by code; `receipt_id` equal across
+chunk sizes; a mutant caught by `tolerance-exceeded`; each of `CompareLimits`' point caps at its
+limit and one past; the hand-derived exceedance of one window against the note's formulas; and, if
+this PR is the one that bumps, the 0.5.0 artefact refused with `EngineVersionMismatch`.
+
+### Questions for the owner
+
+Three of the decisions above are choices of product outcome that the code as built does not
+settle. The rest follow from decisions 8, 9, 10 and 26, from the commissioning note or from
+#655, and are proposals to accept or correct.
+
+1. **Which series the envelope is built around (decision 38).**
+   - *Options:* (a) the expectation, `of`. (b) The engine output, as commissioning defaults.
+     (c) A key on the set or the window.
+   - *Recommendation:* (a), with no key.
+   - *Evidence:* the envelope takes `rtol` from the reference's range (commissioning note,
+     "Envelope", step 1), so under (b) a mutant's own output sets the width of the band it is
+     judged by.
+2. **Whether a vector set can choose `aligned-grid` (decision 41).**
+   - *Options:* (a) an optional set-level `envelope`, default `funnel`. (b) `funnel` only; the
+     key is added in place if a set ever needs the other.
+   - *Recommendation:* (a): one key, and both envelopes of #655 are then exercised through the
+     vector path as well as the commissioning one. (b) is the smaller published format, and no
+     library vector is known to need `aligned-grid`.
+   - *Evidence:* the 45 library windows that wait on this work are setpoint values in one
+     routine; nothing in the tree asks for the second envelope from a vector.
+3. **When file-backed series arrive (decision 49).**
+   - *Options:* (a) their own issue, after #660, outside the M3 closeout (#671). (b) Inside M3,
+     blocking the closeout. (c) In the tolerance build itself.
+   - *Recommendation:* (a).
+   - *Evidence:* no input in this repository or in the library's 139 vector files is a file
+     ([What exists today](#what-exists-today-checked-against-the-tree)); the CLI reads one
+     vector file, one subject and the mutants today
+     (`crates/leverage/oce-cli/src/commands/verify.rs:6` to `11`).
