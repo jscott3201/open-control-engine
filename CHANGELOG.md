@@ -873,8 +873,9 @@ so far, and no tag is cut by the bump.
   sources, 1 GiB of a reference's files together (`too-many-total-bytes`, checked from the
   lengths before any parse), and replay's caps on each file and on the merge, whose columns
   cost frames times columns and are checked against the byte cap before they are allocated.
-  OBC §12.7.3's padded example csv files are refused until replay trims cells (#733). A `csv` Boolean reads `true`,
-  `false`, `1` and `0` only until replay hands a text cell over (#728).
+  OBC §12.7.3's padded example csv files are refused until replay trims cells (#733), and a
+  `csv` Boolean reads `true`, `false`, `1` and `0` only until replay hands a text cell over
+  (#728).
 
 - **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point
   mapping** (GitHub #716, issue #659, closes #714; commissioning note, "Point mapping", decisions
