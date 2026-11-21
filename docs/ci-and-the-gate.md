@@ -826,7 +826,36 @@ the rule or pin and the edit that resolves it:
 - a second `$GITHUB_PATH` line (`require_build_env_untouched`): widen the rule's one allowed line;
 - a mid-script `cd x && cmd` (`refuse_masked_step_status`): write `cd x` and `cmd` on lines of
   their own;
-- any key in `.config/nextest.toml` (`pinned_nextest_config`): change the pin in the same PR.
+- any key in `.config/nextest.toml` (`pinned_nextest_config`): change the pin in the same PR;
+- a pipe into a quiet grep or `head` (`refuse_piped_early_exit_reader`, below): give the reader a
+  here-string.
+
+**No script or step pipes into a reader that stops early** (issue #693). Under `pipefail` a
+pipeline fails when any command in it fails. `grep -q` exits at its first match and `head` after
+its last line; a writer that is still writing then gets a broken pipe and fails, so the pipeline
+fails although the reader found what it was asked for. bash writes one line at a time, so
+`printf '%s\n' "$output" | grep -q '^FAIL:'` lost that race whenever the match was not on the last
+line and `grep` won. It reported a correct fixture as a failure three times in two days, each
+passing when re-run. Every gate script, CI script and workflow step now hands such a reader a
+here-string, which bash writes whole before the reader starts:
+
+```bash
+grep -Fq -- "$needle" <<< "$output"        # not: printf '%s\n' "$output" | grep -Fq -- "$needle"
+installed="$(rustup target list --installed)"
+grep -qx wasm32-wasip1 <<< "$installed"    # not: rustup target list --installed | grep -qx …
+head -n 5 <<< "$bad" | sed 's/^/  /'       # not: printf '%s\n' "$bad" | head -n 5 | sed …
+```
+
+The reader gets the same bytes either way (the text and one newline), so `-F`, `-x` and every
+anchor read as before. `check-workflow-gates.sh` refuses the piped spelling in every `*.sh` under
+`.github/scripts/` and `scripts/`, in `.agents/gate.sh` and in every workflow except the frozen
+`ci.yml` and the two OpenModelica evidence workflows, whose bytes are bound into recorded
+evidence and whose steps run without `pipefail`. It is a line scan, not a proof: it reads `grep`,
+`egrep` and `fgrep` with `-q` among their leading options, and `head`, on one line or after a line
+that ends in `|`, and it does not see `grep -m`, `sed q`, `awk` with `exit` or a reader behind a
+variable. `test-workflow-gates.sh` and `test-check-no-secrets.sh` each check their own readers
+first, on an output with its match on the first line and more after it than a pipe holds, where
+the piped spelling fails every time.
 
 A PR with no checks still looks a lot like a PR with no failing checks — confirm `CI OK` actually
 reported, and on a docs-only or leverage-only PR expect the determinism jobs to show as skipped, not

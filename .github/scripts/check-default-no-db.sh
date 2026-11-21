@@ -172,13 +172,13 @@ check_tree() {
 
   # Sanity: the tree must be non-empty AND contain the package root node before we trust a clean
   # FORBIDDEN result. Otherwise an empty/garbled tree would yield a vacuous green pass.
-  if ! printf '%s\n' "$tree" | grep -Eq "(^|[[:space:]])$package v"; then
+  if ! grep -Eq "(^|[[:space:]])$package v" <<< "$tree"; then
     echo "FAIL: cargo tree output for '$package' did not contain the expected '$package v' root node:"
     printf '%s\n' "$tree"
     exit 1
   fi
 
-  if printf '%s\n' "$tree" | grep -Eiq "$FORBIDDEN"; then
+  if grep -Eiq "$FORBIDDEN" <<< "$tree"; then
     echo "FAIL: '$package' default build links a database / async runtime / parallelism runtime:"
     printf '%s\n' "$tree" | grep -Ei "$FORBIDDEN" || true
     echo
@@ -188,7 +188,7 @@ check_tree() {
     exit 1
   fi
 
-  if [ "$package" = "oce-api" ] && printf '%s\n' "$tree" | grep -Eq "$FACADE_STORAGE"; then
+  if [ "$package" = "oce-api" ] && grep -Eq "$FACADE_STORAGE" <<< "$tree"; then
     echo "FAIL: 'oce-api' reaches the storage port through its normal dependency tree:"
     printf '%s\n' "$tree" | grep -E "$FACADE_STORAGE" || true
     echo

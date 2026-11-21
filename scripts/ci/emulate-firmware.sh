@@ -66,7 +66,8 @@ bounded() {
 for job in "${jobs[@]}"; do
   IFS='|' read -r _ qemu _ <<<"$job"
   command -v "$qemu" >/dev/null || { echo "error: $qemu is not on PATH" >&2; exit 2; }
-  echo "$qemu: $("$qemu" --version | head -n 1)"
+  version="$("$qemu" --version || true)"
+  echo "$qemu: $(head -n 1 <<< "$version")"
 done
 
 target_dir=$(cargo metadata --format-version 1 --no-deps --locked |

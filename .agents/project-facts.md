@@ -632,6 +632,17 @@ new one the same way, and keep `sk-` out of case names (a name such as `…-sk-a
 itself a match). A new pattern needs planted values and near misses there, or the fixture fails,
 and a change to a pattern's meaning moves the values, near misses and weakened copies that pin it.
 
+## Test text with a here-string, never a pipe into `grep -q`
+
+In a gate script, a CI script or a workflow step, write `grep -q -- "$needle" <<< "$text"`, and
+capture a command's output into a variable first. Do not write
+`printf '%s\n' "$text" | grep -q …` or `some-command | head -n 1`. `grep -q` and `head` stop
+reading early, the writer then fails on the broken pipe, and under `pipefail` a match reads as no
+match: issue #693, three false reds in two days. `check-workflow-gates.sh` refuses the piped
+spelling (`refuse_piped_early_exit_reader`) in `.github/scripts/`, `scripts/`, `.agents/gate.sh`
+and the workflows; [CI and the gate](../docs/ci-and-the-gate.md#every-pull-request-runs-the-gate) has what it reads
+and what it does not.
+
 ## Working directories are gitignored
 
 `.gitignore` excludes every top-level `_*/` directory, so `_spec/`, `_research/`,

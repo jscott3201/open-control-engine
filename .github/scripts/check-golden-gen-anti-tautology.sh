@@ -31,12 +31,12 @@ if ! payload="$(metadata)"; then
   exit 1
 fi
 
-if ! printf '%s\n' "$payload" | grep -Eq '"name"[[:space:]]*:[[:space:]]*"golden-gen"'; then
+if ! grep -Eq '"name"[[:space:]]*:[[:space:]]*"golden-gen"' <<< "$payload"; then
   echo "FAIL: cargo metadata for $manifest did not include the golden-gen package"
   exit 1
 fi
 
-if printf '%s\n' "$payload" | grep -Eq '"name"[[:space:]]*:[[:space:]]*"oce-[^"]*"'; then
+if grep -Eq '"name"[[:space:]]*:[[:space:]]*"oce-[^"]*"' <<< "$payload"; then
   echo "FAIL: tools/golden-gen dependency graph contains an oce-* crate:"
   printf '%s\n' "$payload" | grep -Eo '"name"[[:space:]]*:[[:space:]]*"oce-[^"]*"'
   exit 1

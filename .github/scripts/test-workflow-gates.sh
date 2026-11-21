@@ -35,7 +35,11 @@
 #   config;
 # - in a step script, a bare or zero `exit`, a `&&` before the last command and a background `&`
 #   fail.
-# Each has its positive twin.
+# Each has its positive twin. Issue #693: a gate script, CI script or workflow step that pipes into
+# a quiet grep or `head` fails, on one line or over a continuation; a here-string, a `||` list, a
+# reader that reads to the end and a comment pass. The verdict this file reaches on a case is
+# checked first as well (verdict_self_check), on a planted checker whose output is far larger than
+# a pipe holds with its OK or FAIL line first.
 #
 # The cases run concurrently (issue #627); run serially they made `gate behavior fixtures` the
 # per-PR gate's longest job. Each case builds and edits a scratch tree of its own under
@@ -678,6 +682,15 @@ if [ "$MODE" = full ]; then
   step 'compiled-schedule blob matrix artifact' blob_matrix_artifact
 fi
 EOF
+  # A script directory (issue #693): the checker reads every shell script under it for a pipe into
+  # an early-exiting reader. This one tests text the way the scripts here do.
+  mkdir -p "$(dirname "$dir")/scripts/ci"
+  cat > "$(dirname "$dir")/scripts/ci/check-fixture.sh" <<'EOF'
+# A comment never counts: printf '%s\n' "$text" | grep -q needle
+text="$(printf 'one\ntwo\n')"
+grep -q -- two <<< "$text"
+head -n 1 <<< "$text" | sed 's/^/  /'
+EOF
   cat > "$(dirname "$dir")/nextest.toml" <<'EOF'
 # The real file's keys, which the checker pins line for line (issue #566); comments and blank
 # lines may differ.
@@ -832,6 +845,7 @@ run_one_case() {
     OCE_FIRMWARE_DIR="$tmp/$name/firmware" \
     OCE_GATE_SCRIPT="$tmp/$name/gate.sh" \
     OCE_NEXTEST_CONFIG="$tmp/$name/nextest.toml" \
+    OCE_SHELL_SCRIPT_DIRS="$tmp/$name/scripts" \
     bash "$SCRIPT" 2>&1
   )"
   status=$?
@@ -844,7 +858,7 @@ run_one_case() {
         printf '%s\n' "$output"
         exit 1
       fi
-      if ! printf '%s\n' "$output" | grep -q '^OK:'; then
+      if ! grep -q '^OK:' <<< "$output"; then
         echo "FAIL: workflow fixture '$name' passed without the OK line"
         printf '%s\n' "$output"
         exit 1
@@ -856,12 +870,12 @@ run_one_case() {
         printf '%s\n' "$output"
         exit 1
       fi
-      if ! printf '%s\n' "$output" | grep -q '^FAIL:'; then
+      if ! grep -q '^FAIL:' <<< "$output"; then
         echo "FAIL: workflow fixture '$name' failed without a FAIL line"
         printf '%s\n' "$output"
         exit 1
       fi
-      if [ -n "$expected_message" ] && ! printf '%s\n' "$output" | grep -Fq -- "$expected_message"; then
+      if [ -n "$expected_message" ] && ! grep -Fq -- "$expected_message" <<< "$output"; then
         echo "FAIL: workflow fixture '$name' failed without expected message substring: $expected_message"
         printf '%s\n' "$output"
         exit 1
@@ -991,6 +1005,50 @@ pool_self_check() {
       exit 1
     fi
   done
+}
+
+# The verdict's own control (issue #693). run_one_case used to test the checker's output with
+# `printf '%s\n' "$output"` piped into a quiet grep. The grep exits at its first match; a printf
+# still writing then fails on the broken pipe, and under pipefail the match read as no match, so a
+# case that behaved correctly was reported as failed whenever the reader won the race. Here the
+# race is not left to timing: a planted checker prints its OK or FAIL line first and then far more
+# than a pipe holds, so a writer feeding a reader that stops at the first line can never finish.
+# run_one_case must accept those two runs, and must still refuse a run whose output lacks the OK
+# line, the FAIL line or the expected message, with the line start and the literal reading of the
+# message both kept: `note: OK:` is not an OK line, and `a.c` does not match `abc`.
+planted_checker() {
+  mkdir -p "$tmp/verdict-check"
+  {
+    printf '%s\n' "$2"
+    echo "awk 'BEGIN { for (i = 0; i < 20000; i++) print \"filler line \" i \" of a planted checker, to overfill a pipe\" }'"
+    printf '%s\n' "$3"
+    printf 'exit %s\n' "$4"
+  } > "$tmp/verdict-check/$1.sh"
+}
+verdict_self_check() {
+  local name expected status first last message want got
+  while IFS='|' read -r name expected status first last message want; do
+    planted_checker "$name" "$first" "$last" "$status"
+    got=accepted
+    (
+      SCRIPT="$tmp/verdict-check/$name.sh"
+      run_one_case "verdict-check-$name" "$expected" noop "$message"
+    ) > "$tmp/verdict-check/$name.out" 2>&1 || got=refused
+    if [ "$got" != "$want" ]; then
+      echo "FAIL: the case verdict's control ($name): run_one_case $got a planted checker run that must be $want"
+      sed -n '1,5s/^/  /p' "$tmp/verdict-check/$name.out"
+      exit 1
+    fi
+  done <<'EOF'
+ok-line-first|pass|0|echo 'OK: planted'|:||accepted
+fail-line-first|fail|1|echo 'FAIL: planted refusal (a.c)'|:|planted refusal (a.c)|accepted
+ok-line-last|pass|0|:|echo 'OK: planted'||accepted
+fail-line-last|fail|1|:|echo 'FAIL: planted refusal'|planted refusal|accepted
+no-ok-line|pass|0|echo 'note: OK: planted'|:||refused
+no-fail-line|fail|1|echo 'note: FAIL: planted refusal'|:|planted refusal|refused
+message-read-as-a-pattern|fail|1|echo 'FAIL: planted refusal (abc)'|:|planted refusal (a.c)|refused
+message-absent|fail|1|echo 'FAIL: planted refusal'|:|another refusal|refused
+EOF
 }
 
 # How many cases run at once: OCE_FIXTURE_JOBS when set, else the CPU count, else 2. A value is
@@ -3903,6 +3961,110 @@ run_case gate-script-prefetch-after-the-oracle fail gate_script_prefetch_after_t
 run_case gate-script-prefetch-or-true fail gate_script_prefetch_or_true "$OFFLINE_GATE_MESSAGE"
 run_case gate-script-prefetch-in-a-comment fail gate_script_prefetch_in_a_comment "$OFFLINE_GATE_MESSAGE"
 
+
+# Pipes into early-exiting readers (issue #693). The planted lines are put together here from two
+# halves, so that this file, which the rule reads, holds no such pipe itself.
+plant_in_fixture_script() {
+  printf '%s %s\n' "$2" "$3" >> "$(dirname "$1")/scripts/ci/check-fixture.sh"
+}
+script_pipes_into_quiet_grep() {
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\" |" 'grep -q two'
+}
+script_pipes_into_quiet_fixed_grep() {
+  plant_in_fixture_script "$1" "if ! printf '%s\\n' \"\$text\" |" 'grep -Fq -- "$needle"; then exit 1; fi'
+}
+script_pipes_into_grep_with_quiet_apart() {
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\" |" 'grep -F -q -- two'
+}
+script_pipes_into_grep_quiet_spelled_out() {
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\" |" 'grep --quiet two'
+}
+script_pipes_into_quiet_egrep() {
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\" |" 'egrep -q two'
+}
+script_pipes_into_head() {
+  plant_in_fixture_script "$1" 'line="$(grep -n two <<< "$text" |' 'head -n 1)"'
+}
+script_pipes_both_streams_into_quiet_grep() {
+  plant_in_fixture_script "$1" 'tool --version |&' 'grep -q two'
+}
+script_pipe_split_before_quiet_grep() {
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\"" '|'
+  plant_in_fixture_script "$1" ' ' 'grep -q two'
+}
+script_pipe_continued_before_quiet_grep() {
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\" |" '\'
+  plant_in_fixture_script "$1" ' ' 'grep -q two'
+}
+script_pipe_leads_the_quiet_grep_line() {
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\"" '\'
+  plant_in_fixture_script "$1" '  |' 'grep -q two'
+}
+nested_script_pipes_into_quiet_grep() {
+  mkdir -p "$(dirname "$1")/scripts/docs/deeper"
+  printf '%s %s\n' "printf '%s\\n' \"\$text\" |" 'grep -q two' > "$(dirname "$1")/scripts/docs/deeper/check.sh"
+}
+gate_script_pipes_into_quiet_grep() {
+  printf '%s %s\n' 'if ! rustup target list --installed |' 'grep -qx wasm32-wasip1; then exit 1; fi' >> "$(dirname "$1")/gate.sh"
+}
+workflow_step_pipes_into_head() {
+  printf '      - run: %s %s\n' 'qemu-system-arm --version |' 'head -n 1' >> "$1/qemu.yml"
+}
+script_directory_missing() {
+  mv "$(dirname "$1")/scripts" "$(dirname "$1")/scripts-moved"
+}
+script_directory_without_a_script() {
+  rm "$(dirname "$1")/scripts/ci/check-fixture.sh"
+}
+script_quiet_grep_after_an_or_list() {
+  plant_in_fixture_script "$1" 'test -n "$text" ||' 'grep -q two "$0"'
+}
+script_pipes_into_readers_that_read_to_the_end() {
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\" |" 'grep -c two'
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\" |" "sed 's/^/  /'"
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\" |" 'grep -v -- -q'
+  plant_in_fixture_script "$1" "printf '%s\\n' \"\$text\" |" 'headline'
+}
+script_pipe_in_a_comment() {
+  plant_in_fixture_script "$1" "  # printf '%s\\n' \"\$text\" |" 'grep -q two'
+}
+script_other_than_shell_pipes_into_quiet_grep() {
+  printf '%s %s\n' "printf '%s\\n' \"\$text\" |" 'grep -q two' > "$(dirname "$1")/scripts/ci/notes.txt"
+}
+evidence_workflow_pipes_into_quiet_grep() {
+  printf 'jobs:\n  evidence:\n    steps:\n      - run: %s %s\n' 'docker image inspect "$IMAGE" |' 'grep -Fq "$IMAGE"' \
+    > "$1/openmodelica-line-evidence.yml"
+  cp "$1/openmodelica-line-evidence.yml" "$1/openmodelica-reliefs-evidence.yml"
+}
+
+EARLY_READER_MESSAGE='pipes into a reader that stops before the end of its input'
+run_case script-pipes-into-quiet-grep fail script_pipes_into_quiet_grep "$EARLY_READER_MESSAGE"
+run_case script-pipes-into-quiet-grep-names-the-line fail script_pipes_into_quiet_grep \
+  "  5: printf '%s\\n' \"\$text\" | grep"
+run_case script-pipes-into-quiet-fixed-grep fail script_pipes_into_quiet_fixed_grep "$EARLY_READER_MESSAGE"
+run_case script-pipes-into-grep-with-quiet-apart fail script_pipes_into_grep_with_quiet_apart "$EARLY_READER_MESSAGE"
+run_case script-pipes-into-grep-quiet-spelled-out fail script_pipes_into_grep_quiet_spelled_out "$EARLY_READER_MESSAGE"
+run_case script-pipes-into-quiet-egrep fail script_pipes_into_quiet_egrep "$EARLY_READER_MESSAGE"
+run_case script-pipes-into-head fail script_pipes_into_head "$EARLY_READER_MESSAGE"
+run_case script-pipes-both-streams-into-quiet-grep fail script_pipes_both_streams_into_quiet_grep "$EARLY_READER_MESSAGE"
+run_case script-pipe-split-before-quiet-grep fail script_pipe_split_before_quiet_grep "$EARLY_READER_MESSAGE"
+run_case script-pipe-continued-before-quiet-grep fail script_pipe_continued_before_quiet_grep "$EARLY_READER_MESSAGE"
+run_case script-pipe-leads-the-quiet-grep-line fail script_pipe_leads_the_quiet_grep_line "$EARLY_READER_MESSAGE"
+run_case nested-script-pipes-into-quiet-grep fail nested_script_pipes_into_quiet_grep \
+  "scripts/docs/deeper/check.sh $EARLY_READER_MESSAGE"
+run_case gate-script-pipes-into-quiet-grep fail gate_script_pipes_into_quiet_grep "gate.sh $EARLY_READER_MESSAGE"
+run_case workflow-step-pipes-into-head fail workflow_step_pipes_into_head "qemu.yml $EARLY_READER_MESSAGE"
+run_case script-directory-missing fail script_directory_missing \
+  "read for pipes into early-exiting readers, is missing"
+run_case script-directory-without-a-script fail script_directory_without_a_script \
+  "to read for pipes into early-exiting readers"
+run_case script-quiet-grep-after-an-or-list pass script_quiet_grep_after_an_or_list
+run_case script-pipes-into-readers-that-read-to-the-end pass script_pipes_into_readers_that_read_to_the_end
+run_case script-pipe-in-a-comment pass script_pipe_in_a_comment
+run_case script-other-than-shell-pipes-into-quiet-grep pass script_other_than_shell_pipes_into_quiet_grep
+run_case evidence-workflow-pipes-into-quiet-grep pass evidence_workflow_pipes_into_quiet_grep
+
 pool_self_check
+verdict_self_check
 run_registered_cases
 echo "OK: workflow gate fixtures passed."
