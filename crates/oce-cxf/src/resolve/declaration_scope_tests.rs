@@ -11,9 +11,9 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::EvalResult;
 use oce_model::Value;
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
 use crate::scope_chain::ScopeFrame;
+use oce_diag::DiagnosticList;
 
 use super::declaration_scope::{Pass, TaggedFinding, evaluate_declarations, identifier_heads};
 use super::parameter_attrs::CheckedParameters;

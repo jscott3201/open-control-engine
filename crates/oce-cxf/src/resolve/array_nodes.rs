@@ -22,8 +22,8 @@ use std::collections::HashSet;
 
 use oce_diag::{Diagnostic, Severity};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
+use oce_diag::DiagnosticList;
 
 use super::composite_rules::{ARRAY_CONNECTOR, ARRAY_INSTANCE};
 use super::instance_interface::{contains_block_referents, is_derivation_shaped};

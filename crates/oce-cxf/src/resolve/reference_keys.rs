@@ -22,9 +22,9 @@ use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, IriRef};
 use crate::excerpt::named_keys;
+use oce_diag::DiagnosticList;
 
 /// Refuse every reference object of `doc` that carries a key beside its `@id`: one error per
 /// reference, subject the node that holds it (`connector at @graph[N]` for a node without an

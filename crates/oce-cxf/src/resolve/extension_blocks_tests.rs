@@ -3,9 +3,9 @@
 use oce_diag::{DiagCode, Diagnostic};
 
 use super::refuse;
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::CxfDocument;
 use crate::resolve::specialize::Specialization;
+use oce_diag::DiagnosticList;
 
 /// A document of one node typed as an extension block, and one that is no extension block.
 fn document(extension_block: bool) -> CxfDocument {

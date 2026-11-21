@@ -48,10 +48,14 @@ Enumerate the input domain and hit every boundary and degenerate case:
   `oce_graph::MAX_STATE_WORDS` are `ResourceLimitExceeded`, and an evaluation beyond
   `oce_expr::MAX_EVAL_FUEL` work units (or a document's bindings beyond
   `oce_cxf::MAX_DOCUMENT_EVAL_FUEL` together) is `ExpressionTooExpensive`. The CXF reader's
-  diagnostics themselves are held to 8 MiB of message and subject text (issue #695): the first
-  one that does not fit ends the list, and a closing `ResourceLimitExceeded` counts the rest.
+  diagnostics themselves are held to 8 MiB of message and subject text (issue #695), and so is
+  each validator pass's list (issue #726): the first one that does not fit ends the list, and a
+  closing `ResourceLimitExceeded` counts the rest.
   A new loop that can raise many diagnostics about one long string raises them through
   `DiagnosticList::raise` and gets a case in `crates/oce-api/tests/cxf_diagnostic_list_cost.rs`.
+  A rule over the elements of a shape one parameter declares raises one finding for the shape's
+  absent elements and finds them from the bound ones (`oce-validate`'s `params_absent`), never
+  by walking the shape; `crates/oce-api/tests/validate_sparse_table_cost.rs` pins the cost.
   Pin each such limit
   at its boundary (the limit accepted, one past it refused) and assert cost with deterministic
   measures — allocation counts and peak bytes, fuel units — never wall-clock time. Assert the

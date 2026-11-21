@@ -41,9 +41,9 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 use crate::{CxfError, bridge};
+use oce_diag::DiagnosticList;
 
 mod array_nodes;
 mod attrs;

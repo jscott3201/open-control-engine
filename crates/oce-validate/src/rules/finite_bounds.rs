@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{Attrs, ModelGraph, RealAttrs};
 
 use super::subject_of;
@@ -22,7 +22,7 @@ use super::subject_of;
 /// One diagnostic per offending attribute, subject = the connector's or declaration's authored
 /// identity. Reads attributes only; total and panic-free on any graph, including one whose
 /// `Attrs` variant disagrees with its value type (a non-Real variant carries no `f64`).
-pub(crate) fn check_finite_bounds(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+pub(crate) fn check_finite_bounds(model: &ModelGraph, diags: &mut DiagnosticList) {
     for connector in &model.connectors {
         report(&connector.attrs, "connector", &subject_of(connector), diags);
     }
@@ -34,7 +34,7 @@ pub(crate) fn check_finite_bounds(model: &ModelGraph, diags: &mut Vec<Diagnostic
     }
 }
 
-fn report(attrs: &Attrs, owner: &str, subject: &Arc<str>, diags: &mut Vec<Diagnostic>) {
+fn report(attrs: &Attrs, owner: &str, subject: &Arc<str>, diags: &mut DiagnosticList) {
     let Attrs::Real(RealAttrs {
         min, max, nominal, ..
     }) = attrs

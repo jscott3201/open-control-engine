@@ -19,9 +19,24 @@
 //! ascending order per the plan §2 determinism rule) is achieved by the producing crate iterating
 //! its own arena in order — `Diagnostic` deliberately carries only a string `subject`, never a
 //! structured connector id, so this crate stays a zero-dependency leaf (no `oce-model` dep).
+//!
+//! Beside the vocabulary it holds what every producer needs to keep a refusal a bounded answer:
+//! [`DiagnosticList`], a list held to [`MAX_DIAGNOSTIC_TEXT_BYTES`] of message and subject text
+//! that closes with one [`DiagCode::ResourceLimitExceeded`] error (issues #695 and #726), and the
+//! quoting its closing error and the producers' messages share: [`excerpt`] cuts a quotation to
+//! [`EXCERPT_BYTES`] and [`visible`] escapes each Unicode format or control character
+//! ([`is_format_or_control`]).
 
 use std::fmt;
 use std::sync::Arc;
+
+mod diagnostic_list;
+mod quoting;
+
+pub use diagnostic_list::{DiagnosticList, MAX_DIAGNOSTIC_TEXT_BYTES};
+pub use quoting::{
+    EXCERPT_BYTES, FORMAT_RANGES, excerpt, is_format, is_format_or_control, visible,
+};
 
 /// How severe a [`Diagnostic`] is. Only [`Severity::Error`] fails a load; warnings and info are
 /// advisory (e.g. `displayUnit` divergence is a should-warning per §7.10, never a hard error).

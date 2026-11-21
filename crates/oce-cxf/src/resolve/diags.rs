@@ -6,7 +6,7 @@ use std::sync::Arc;
 use oce_diag::Diagnostic;
 use oce_model::{Connector, ConnectorId};
 
-use crate::diagnostic_list::DiagnosticList;
+use oce_diag::DiagnosticList;
 
 /// The diagnostic subject for a connector — its source IRI when known, else a synthetic id.
 pub(super) fn subject_of(c: &Connector) -> Arc<str> {

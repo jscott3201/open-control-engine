@@ -23,9 +23,10 @@
 use std::collections::BTreeMap;
 
 use oce_blocks::{DefaultLiteral, DefaultSource, MAX_RESOLVED_PORT_WIDTH};
-use oce_diag::Diagnostic;
+use oce_diag::DiagnosticList;
 use oce_model::{BlockInstance, Value};
 
+use super::params_absent::{Absent, absent_in};
 use super::params_element_names::is_canonical_index;
 use super::params_flattened::{
     boolean_value, find_param, integer_param_or_default, integer_value, push_range_error,
@@ -74,7 +75,7 @@ fn class_default_integer(class_iri: &str, name: &str) -> Option<i64> {
 /// first of a repeated name kept (a repeat is refused as `duplicate-parameter` on its own).
 fn elements<'a>(
     blk: &'a BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     base: &str,
     n: usize,
 ) -> Elements<'a> {
@@ -119,7 +120,7 @@ fn judged<'e, 'a>(
 
 pub(super) fn check_integer_array_elements(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     base: &str,
     len: &str,
 ) {
@@ -143,7 +144,7 @@ pub(super) fn check_integer_array_elements(
 
 pub(super) fn check_integer_array_elements_in_range(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     rule: IntegerArrayRangeRule,
 ) {
     let Some(n) = integer_param_or_default(&blk.params, rule.len, rule.len_default) else {
@@ -156,28 +157,20 @@ pub(super) fn check_integer_array_elements_in_range(
         return;
     };
     let present = elements(blk, diags, rule.base, n);
-    for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
-        // The element's name when present; a defaulted selector is named only if refused.
-        let (name, member): (Option<&str>, i64) = match present.get(&idx) {
-            Some(&(name, value)) => {
-                let Some(value) = integer_value(value) else {
-                    push_range_error(
-                        blk,
-                        diags,
-                        format!(
-                            "parameter `{name}` on block `{}` must be an integer array element",
-                            blk.class_iri
-                        ),
-                    );
-                    continue;
-                };
-                (Some(name), value)
-            }
-            None if rule.default_to_index => (None, idx as i64),
-            None => continue,
+    let judged_len = n.min(MAX_RESOLVED_PORT_WIDTH);
+    for &(name, value) in present.range(1..=judged_len).map(|(_, element)| element) {
+        let Some(member) = integer_value(value) else {
+            push_range_error(
+                blk,
+                diags,
+                format!(
+                    "parameter `{name}` on block `{}` must be an integer array element",
+                    blk.class_iri
+                ),
+            );
+            continue;
         };
         if member < rule.min || member > upper {
-            let name = name.map_or_else(|| format!("{}_{idx}", rule.base), str::to_owned);
             push_range_error(
                 blk,
                 diags,
@@ -188,11 +181,69 @@ pub(super) fn check_integer_array_elements_in_range(
             );
         }
     }
+    if rule.default_to_index {
+        check_defaulted_selectors(blk, diags, &rule, upper, &present, judged_len);
+    }
+}
+
+/// The omitted elements of a `default_to_index` vector whose default, their own index, is
+/// outside `rule.min..=upper`: one finding for all of them, found from the elements present
+/// (issue #726). One such element keeps the message a present one gets; two or more are counted
+/// and the first four named, in index order.
+fn check_defaulted_selectors(
+    blk: &BlockInstance,
+    diags: &mut DiagnosticList,
+    rule: &IntegerArrayRangeRule,
+    upper: i64,
+    present: &Elements<'_>,
+    judged_len: usize,
+) {
+    // The indexes whose default is in range, `low_in..=high_in`, as `i128` so no bound wraps.
+    let low_in = i128::from(rule.min).max(1);
+    let high_in = i128::from(upper).min(judged_len as i128);
+    let absent_between = |low: i128, high: i128| -> Absent {
+        // Both ends lie in `1..=judged_len + 1` here, so they fit a `usize`.
+        let (Ok(low), Ok(high)) = (usize::try_from(low), usize::try_from(high)) else {
+            return Absent::default();
+        };
+        if low > high {
+            return Absent::default();
+        }
+        absent_in(present.range(low..=high).map(|(&idx, _)| idx), low, high)
+    };
+    let defaulted = if low_in > high_in {
+        absent_between(1, judged_len as i128)
+    } else {
+        absent_between(1, low_in - 1).then(absent_between(high_in + 1, judged_len as i128))
+    };
+    let base = rule.base;
+    match (defaulted.count, defaulted.first.as_slice()) {
+        (0, _) => {}
+        (1, &[idx]) => push_range_error(
+            blk,
+            diags,
+            format!(
+                "parameter `{base}_{idx}` on block `{}` must be in range {}..={upper}; got {idx}",
+                blk.class_iri, rule.min
+            ),
+        ),
+        (count, _) => push_range_error(
+            blk,
+            diags,
+            format!(
+                "parameter `{base}` on block `{}` omits {count} elements whose default, the \
+                 element's index, is outside range {}..={upper}: {}",
+                blk.class_iri,
+                rule.min,
+                defaulted.named(|idx| format!("{base}_{idx}"))
+            ),
+        ),
+    }
 }
 
 pub(super) fn check_real_array_elements(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     base: &str,
     len: &str,
 ) {
@@ -216,7 +267,7 @@ pub(super) fn check_real_array_elements(
 
 pub(super) fn check_boolean_array_elements(
     blk: &BlockInstance,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     base: &str,
     len: &str,
 ) {

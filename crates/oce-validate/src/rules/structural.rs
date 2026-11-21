@@ -10,7 +10,7 @@
 //! (`08` R-ERR-1 / the safety-critical testing standard).
 
 use oce_blocks::{PortKind, lookup};
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{ConnectorId, Dir, ModelGraph, ValueType};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -39,7 +39,7 @@ fn port_value_type(kind: PortKind) -> ValueType {
 ///
 /// These are malformed-document errors because `oce-graph` intentionally keeps BUILD/tick arena
 /// indexing lean and assumes validation has already proven these invariants.
-pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut DiagnosticList) {
     let block_count = model.blocks.len();
     let connector_count = model.connectors.len();
 
@@ -95,7 +95,7 @@ pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
 /// Every declared boundary output must reference an in-range `Out` connector and carry the
 /// attribute variant for that connector's value type. CXF resolution guarantees these invariants;
 /// this check protects callers that construct [`ModelGraph`] directly.
-pub(crate) fn check_boundary_outputs(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+pub(crate) fn check_boundary_outputs(model: &ModelGraph, diags: &mut DiagnosticList) {
     for output in &model.boundary_outputs {
         let Some(source) = model.connectors.get(output.source.0 as usize) else {
             diags.push(
@@ -145,7 +145,7 @@ fn check_block_port_ids(
     label: &str,
     ports: &[ConnectorId],
     connector_count: usize,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     for (port_idx, cid) in ports.iter().enumerate() {
         if cid.0 as usize >= connector_count {
@@ -170,7 +170,7 @@ fn check_block_port_ids(
 /// input (`ModelGraph::external_inputs`, the AD-2 boundary-input elision), which legally has
 /// in-degree 0. In-degree ≥ 2 is always a `shall`-error — even for a connector that *is* in
 /// `external_inputs` (an external input driven from inside is doubly-assigned).
-pub(crate) fn check_single_assignment(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+pub(crate) fn check_single_assignment(model: &ModelGraph, diags: &mut DiagnosticList) {
     let deg = in_degrees(model);
     let external: HashSet<u32> = model.external_inputs.iter().map(|c| c.0).collect();
     for c in &model.connectors {
@@ -213,7 +213,7 @@ pub(crate) fn check_single_assignment(model: &ModelGraph, diags: &mut Vec<Diagno
 /// For every connection: `from` must be an `Out` connector, `to` an `In` connector, and the two
 /// must share a [`ValueType`] (CDL forbids implicit coercion, §7.10). An out-of-range endpoint is a
 /// [`DiagCode::MalformedDocument`] (and the connection is otherwise skipped — never indexed).
-pub(crate) fn check_connections(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+pub(crate) fn check_connections(model: &ModelGraph, diags: &mut DiagnosticList) {
     let n = model.connectors.len() as u32;
     for (idx, c) in model.connections.iter().enumerate() {
         if c.from.0 >= n || c.to.0 >= n {
@@ -277,7 +277,7 @@ pub(crate) fn check_connections(model: &ModelGraph, diags: &mut Vec<Diagnostic>)
 /// An **unknown** class path is skipped (it is `oce-api`'s `OcError::Load` to report, R-IMPL-2).
 /// Out-of-range port connector ids are reported by [`check_arena_ids`]; this rule still bounds them
 /// before indexing so the validator remains panic-free even if rules are refactored later.
-pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut DiagnosticList) {
     let n = model.connectors.len() as u32;
     for blk in &model.blocks {
         let Some(entry) = lookup(&blk.class_iri) else {
@@ -324,7 +324,7 @@ pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) 
 /// Compare one direction's worth of a block's port connectors against the signature port kinds.
 fn check_ports_dir(
     model: &ModelGraph,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     n: u32,
     class_iri: &str,
     ports: &[ConnectorId],

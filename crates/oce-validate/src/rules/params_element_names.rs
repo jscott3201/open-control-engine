@@ -1,7 +1,7 @@
 //! The canonical spelling of flattened array and matrix parameter element names (GitHub #470).
 
 use oce_blocks::ParamNameTemplate;
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::BlockInstance;
 
 use super::block_subject_of;
@@ -16,7 +16,7 @@ use super::block_subject_of;
 /// indices with `usize::parse`, would read `table_01_2` and `table_1_2` as one cell and keep the
 /// later in table order, and the canonical content id, which sorts parameters by name, could not
 /// tell the two orders apart. Names outside the declared extent are GitHub #467, not this check.
-pub(super) fn check_element_name_spelling(blk: &BlockInstance, diags: &mut Vec<Diagnostic>) {
+pub(super) fn check_element_name_spelling(blk: &BlockInstance, diags: &mut DiagnosticList) {
     let Some(parameters) = oce_blocks::class_parameters(&blk.class_iri) else {
         return;
     };

@@ -50,8 +50,10 @@
 //! verbatim lexical term it always was.
 
 use crate::dto::TermAttr;
-use crate::excerpt::{excerpt, named_keys};
-use crate::format_controls::{describe, first_format_or_control, visible};
+use crate::excerpt::named_keys;
+use crate::format_controls::{describe, first_format_or_control};
+use oce_diag::excerpt;
+use oce_diag::visible;
 
 /// What a refusal calls an empty or whitespace-only string.
 pub(super) const BLANK_STRING: &str = "an empty or whitespace-only string";

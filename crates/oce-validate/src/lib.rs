@@ -45,6 +45,21 @@
 //!    array/matrix/time-table shape diagnostics — so those surface only once the non-finite value
 //!    is fixed. The load fails either way. See [`parameter_value_is_finite`].
 //!
+//! # A bounded answer
+//!
+//! Each pass ([`validate`], [`unify_attributes`], [`validate_block_parameters`]) collects its
+//! diagnostics in one [`oce_diag::DiagnosticList`], the list the CXF reader holds too: at most
+//! [`oce_diag::MAX_DIAGNOSTIC_TEXT_BYTES`] (8 MiB) of message and subject text, a subject counted
+//! for every diagnostic that carries it. The first diagnostic that does not fit ends the list;
+//! it and every later one are counted, and the pass's diagnostics close with one
+//! [`oce_diag::DiagCode::ResourceLimitExceeded`] error, after the sorted ones, that states the count
+//! and names the first left out. That error refuses the model even when everything left out was
+//! a warning, so a model never passes with warnings missing (issue #726, the ruling of GitHub #713
+//! for the reader's list). [`unify_and_validate`] returns its two passes' warnings together, so at
+//! most twice the budget. A rule that could raise a finding per element of a parameter-declared
+//! shape (a table's cells, a vector's defaulted elements) raises one finding for the shape
+//! instead, and its work is bounded by the parameters the block carries, never by the shape.
+//!
 //! It reports problems in the **shared `oce-diag` vocabulary** (AD-4) — the same
 //! [`oce_diag::Diagnostic`] the resolver emits — so `oce-api`'s `LoadReport.warnings` is one
 //! uniform stream with no dialect translation. It is **Group A** (no store, no database) and reads
@@ -64,7 +79,7 @@
 //! The deep gate is implemented against hand-built and CXF-resolved graphs. Attribute extraction
 //! from CXF feeds this gate, and hand-built tests exercise the unification rules directly.
 
-use oce_diag::Diagnostic;
+use oce_diag::{Diagnostic, DiagnosticList};
 use oce_model::{ModelGraph, Value};
 
 mod rules;
@@ -103,7 +118,7 @@ pub fn parameter_value_is_finite(value: &Value) -> bool {
 /// # Errors
 /// Returns [`ValidationError`] if any `shall`-level rule is violated.
 pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     rules::check_arena_ids(model, &mut diags);
     rules::check_boundary_outputs(model, &mut diags);
     rules::check_finite_bounds(model, &mut diags);
@@ -142,7 +157,7 @@ pub fn validate_block_parameters(
         decl_order: 0,
         instance_iri: None,
     });
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     rules::check_block_params(&model, &mut diags);
     finish(&model, diags)
 }
@@ -166,7 +181,7 @@ pub fn validate_block_parameters(
 /// or if any cluster declares
 /// conflicting unit, quantity, or bound values (R13.1).
 pub fn unify_attributes(model: &mut ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
-    let mut diags = Vec::new();
+    let mut diags = DiagnosticList::new();
     // Unification compares and propagates bounds, so a non-finite one is refused first: it is
     // the root cause, and a NaN bound would otherwise also surface as a bound mismatch.
     rules::check_finite_bounds(model, &mut diags);
@@ -212,12 +227,15 @@ pub fn unify_and_validate(model: &mut ModelGraph) -> Result<Vec<Diagnostic>, Val
     result
 }
 
-/// Sort `diags` into the pinned deterministic order, then partition: any error fails the load
-/// (returning only the errors, for a correct `shall`-count), otherwise the (all-warning) stream is
-/// the success value.
-fn finish(model: &ModelGraph, diags: Vec<Diagnostic>) -> Result<Vec<Diagnostic>, ValidationError> {
+/// Sort the listed diagnostics into the pinned deterministic order and append the list's closing
+/// error, when the list ended, after them; then partition: any error fails the load (returning
+/// only the errors, for a correct `shall`-count), otherwise the (all-warning) stream is the
+/// success value. A list that ended always fails, since its closing error is an error.
+fn finish(model: &ModelGraph, diags: DiagnosticList) -> Result<Vec<Diagnostic>, ValidationError> {
     let conn_of_iri = rules::conn_of_iri(model);
-    let diags = rules::finalize_diags(diags, &conn_of_iri);
+    let (listed, closing) = diags.into_parts();
+    let mut diags = rules::finalize_diags(listed, &conn_of_iri);
+    diags.extend(closing);
     if oce_diag::has_errors(&diags) {
         let diagnostics = diags.into_iter().filter(Diagnostic::is_error).collect();
         Err(ValidationError { diagnostics })

@@ -12,7 +12,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{Attrs, Dir, ModelGraph};
 
 // ---- shared helpers -------------------------------------------------------------------------
@@ -147,7 +147,7 @@ fn read_display_unit(attrs: &Attrs) -> Option<Arc<str>> {
 /// (`"K"` ≠ `"K "`). `displayUnit` divergence is the advisory R13.3 warning only (never an error,
 /// never propagated). `nominal`/`unbounded` are **not** unified (R13.4) — those are the *only* two
 /// §7.10 attributes excluded; `min`/`max` are NOT in R13.4 and ARE unified here.
-pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>) {
+pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut DiagnosticList) {
     let connector_attrs = model
         .connectors
         .iter()
@@ -274,7 +274,7 @@ fn unify_real(
     model: &mut ModelGraph,
     members: ClusterMembers<'_>,
     attr: RealAttr,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let mut declared: Vec<AttrVal> = Vec::new();
     for &m in members.connectors {
@@ -307,7 +307,7 @@ fn unify_int(
     model: &mut ModelGraph,
     members: ClusterMembers<'_>,
     attr: IntAttr,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let mut declared: Vec<AttrVal> = Vec::new();
     for &m in members.connectors {
@@ -363,7 +363,7 @@ fn decide_and_apply(
     declared: &[AttrVal],
     label: &str,
     conflict_code: DiagCode,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
     apply: impl Fn(&mut Attrs, &AttrVal),
 ) {
     let Some(first) = declared.first() else {
@@ -412,7 +412,7 @@ fn decide_and_apply(
 fn warn_display_unit_divergence(
     model: &ModelGraph,
     members: ClusterMembers<'_>,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let mut declared: Vec<Arc<str>> = Vec::new();
     for &m in members.connectors {

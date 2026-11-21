@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::diagnostic_list::DiagnosticList;
+use oce_diag::DiagnosticList;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Connection, Connector, ConnectorId, Dir};
 

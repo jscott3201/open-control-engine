@@ -1,4 +1,5 @@
-//! The diagnostic list one read builds, held to a budget of text (GitHub issue #695).
+//! A diagnostic list held to a budget of text: the CXF reader's (GitHub issue #695) and each list
+//! the validator builds (issue #726).
 //!
 //! A diagnostic copies document text: its subject is an `@id` as authored or expanded, and most
 //! messages name that `@id` again. Nothing else ties the number of diagnostics to the length of
@@ -35,26 +36,31 @@
 //! behind, up to twice the length, is not held.
 //!
 //! The list reads as a slice of everything it holds, the closing error included, so
-//! `is_empty()` and [`oce_diag::has_errors`] see a list that has ended as non-empty and failed.
+//! `is_empty()` and [`crate::has_errors`] see a list that has ended as non-empty and failed.
+//!
+//! Two stages build one: `oce-cxf`, the list of one read, and `oce-validate`, the list of each of
+//! its passes (unification, validation, a block's parameters). The type lives here so both hold
+//! the same budget and close with the same error (issue #726). A stage that sorts its
+//! diagnostics sorts the listed ones and appends the closing error ([`DiagnosticList::into_parts`]),
+//! so which diagnostics are listed follows the order they were raised in, and the closing error
+//! stays last.
 
 use std::fmt::{self, Write as _};
 use std::ops::Deref;
 
-use oce_diag::{DiagCode, Diagnostic};
-
-use crate::excerpt::excerpt;
-use crate::format_controls::visible;
+use crate::quoting::{excerpt, visible};
+use crate::{DiagCode, Diagnostic};
 
 /// The most message and subject text, in bytes, the diagnostics of one list hold together: 8 MiB,
 /// the size of the largest document the facade admits. The closing error is outside the count.
-pub(crate) const MAX_DIAGNOSTIC_TEXT_BYTES: usize = 8 * 1024 * 1024;
+pub const MAX_DIAGNOSTIC_TEXT_BYTES: usize = 8 * 1024 * 1024;
 
-/// The diagnostics of one read, in the order raised, within [`MAX_DIAGNOSTIC_TEXT_BYTES`] of
-/// text; see the module documentation.
+/// The diagnostics of one read or one validation pass, in the order raised, within
+/// [`MAX_DIAGNOSTIC_TEXT_BYTES`] of text; see the module documentation.
 ///
 /// Invariant: `unlisted > 0` exactly when the last element of `held` is the closing error.
 #[derive(Default)]
-pub(crate) struct DiagnosticList {
+pub struct DiagnosticList {
     /// The listed diagnostics, then the closing error when the list has ended.
     held: Vec<Diagnostic>,
     /// The text of the listed diagnostics, in bytes: each one's message and subject. Never above
@@ -69,14 +75,15 @@ pub(crate) struct DiagnosticList {
 
 impl DiagnosticList {
     /// An empty list.
-    pub(crate) fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         Self::default()
     }
 
     /// List `diagnostic` when the list has not ended and its text fits the budget; otherwise end
     /// the list, if it has not ended, and count the diagnostic. A listed message gives back the
     /// capacity it does not use.
-    pub(crate) fn push(&mut self, mut diagnostic: Diagnostic) {
+    pub fn push(&mut self, mut diagnostic: Diagnostic) {
         if self.unlisted > 0 {
             self.count_unlisted();
             return;
@@ -108,7 +115,7 @@ impl DiagnosticList {
 
     /// [`DiagnosticList::push`] the diagnostic `build` returns, without calling `build` once the
     /// list has ended: the finding is counted and nothing is formatted or copied for it.
-    pub(crate) fn raise(&mut self, build: impl FnOnce() -> Diagnostic) {
+    pub fn raise(&mut self, build: impl FnOnce() -> Diagnostic) {
         if self.unlisted == 0 {
             self.push(build());
         } else {
@@ -117,14 +124,14 @@ impl DiagnosticList {
     }
 
     /// [`DiagnosticList::push`] each of `diagnostics`, in order.
-    pub(crate) fn extend(&mut self, diagnostics: impl IntoIterator<Item = Diagnostic>) {
+    pub fn extend(&mut self, diagnostics: impl IntoIterator<Item = Diagnostic>) {
         for diagnostic in diagnostics {
             self.push(diagnostic);
         }
     }
 
     /// How many diagnostics were raised, listed or not; the closing error is not one of them.
-    pub(crate) fn raised(&self) -> u64 {
+    pub fn raised(&self) -> u64 {
         let closing = usize::from(self.unlisted > 0);
         ((self.held.len() - closing) as u64).saturating_add(self.unlisted)
     }
@@ -132,7 +139,7 @@ impl DiagnosticList {
     /// The listed diagnostics in the order raised, and the closing error when the list ended.
     /// A caller that sorts the list sorts the first and appends the second, so the count stays
     /// last.
-    pub(crate) fn into_parts(mut self) -> (Vec<Diagnostic>, Option<Diagnostic>) {
+    pub fn into_parts(mut self) -> (Vec<Diagnostic>, Option<Diagnostic>) {
         let closing = if self.unlisted > 0 {
             self.held.pop()
         } else {

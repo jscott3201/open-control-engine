@@ -28,10 +28,10 @@ use oce_expr::EvalResult;
 use oce_model::{BlockId, BlockInstance, ParamTable, Value};
 
 use crate::arrays::{ArrayElementBudget, expand_array_param};
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
 use crate::ground::ground_param_value;
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
+use oce_diag::DiagnosticList;
 
 use super::instance_interface::InstanceDerivation;
 use super::local_name;

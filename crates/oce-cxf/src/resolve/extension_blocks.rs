@@ -46,9 +46,9 @@ use std::collections::HashSet;
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
 use crate::export::S231_CONTEXT_IRI;
+use oce_diag::DiagnosticList;
 
 use super::specialize::Specialization;
 
