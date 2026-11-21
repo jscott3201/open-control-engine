@@ -195,7 +195,8 @@ fn assert_verdict(shape: Shape, source: &str, fanout: usize, diagnostics: &[Diag
 
 /// A 1 MiB authored source fanned out 65,535 times lowers and resolves to its ordinary verdict
 /// within the bound, for every shape: seven verdicts listed and the others counted where each
-/// edge has one, since every verdict carries the 1 MiB source. Before the fix each import took minutes in release.
+/// edge has one, since every verdict carries the 1 MiB source. Before the fix each import took
+/// minutes in release.
 #[test]
 fn mebibyte_authored_source_fanout_lowers_within_the_cpu_bound() {
     for shape in SHAPES {

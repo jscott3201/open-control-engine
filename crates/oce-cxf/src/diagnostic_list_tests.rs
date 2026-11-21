@@ -194,6 +194,18 @@ fn the_closing_error_quotes_a_subject_in_at_most_64_bytes_with_controls_escaped(
         hidden[1],
         closing(1, "`unknown-property` on `urn:a\\u{0007}b\\u{202E}c`")
     );
+
+    // The 64 bytes are the subject's own, cut before the escapes are written: the BEL and the
+    // override are 4 of the first 64 bytes, so 54 of the `k`s after them are quoted, where
+    // cutting the escaped text would quote 42.
+    let mut cut = DiagnosticList::new();
+    cut.push(warning(BUDGET));
+    cut.push(warning(0).with_subject(format!("urn:a\u{7}b\u{202E}{}", "k".repeat(100))));
+    let quoted = format!(
+        "`unknown-property` on `urn:a\\u{{0007}}b\\u{{202E}}{}…`",
+        "k".repeat(54)
+    );
+    assert_eq!(cut[1], closing(1, &quoted));
 }
 
 #[test]

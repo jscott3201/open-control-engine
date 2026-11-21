@@ -659,13 +659,13 @@ and a gate that accepted any text would restore exactly the false assurance desc
     property, a relative reference, the four refusals of a typing token, a reference carrying a
     key beside its `@id`, a Modelica construct that survived lowering, a re-bound declaration
     (as lowering reads it, beside a conditional child, and as it is released for a composite
-    its guard prunes), a child listed again, and a `hasInstance` member outside its owner. Each is measured through `Engine::load_cxf` on
-    a 256 KiB `@id` at 400 and 1,600 items (`crates/oce-api/tests/cxf_diagnostic_list_cost.rs`):
-    peaks of 6.1 to 11.5 MB where they were 106 to 316 MB at 400 items, and 142 to 1,966
-    requested bytes for a further item where it was 262,144 or more. Elsewhere a finding past
-    the bound is built and dropped (issue #711): memory is bounded there, time is not, so a
-    document that failed on allocation within seconds can instead run for as long as building
-    its findings takes.
+    its guard prunes), a child listed again, and a `hasInstance` member outside its owner. Each
+    is measured through `Engine::load_cxf` on a 256 KiB `@id` at 400 and 1,600 items
+    (`crates/oce-api/tests/cxf_diagnostic_list_cost.rs`): peaks of 6.1 to 11.5 MB where they
+    were 106 to 316 MB at 400 items, and 142 to 1,966 requested bytes for a further item where
+    it was 262,144 or more. Elsewhere a finding past the bound is built and dropped (issue
+    #711): memory is bounded there, time is not, so a document that failed on allocation within
+    seconds can instead run for as long as building its findings takes.
   - **Withheld findings are references.** What the specialization pass withholds until lowering
     (a re-bound declaration, a declaration cycle) is kept as references into the document and
     built into a diagnostic only when it is released, so it holds three references a finding
