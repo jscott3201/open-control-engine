@@ -208,6 +208,33 @@ fn the_exceedance_is_the_distance_outside_the_band_by_the_notes_formula() {
             }
         }
     }
+    // Exactly zero passes and anything above fails: the band's edge 10.5 is inside, and the
+    // next binary64 above it is outside by one ulp.
+    let edge = 10.5_f64;
+    let past = f64::from_bits(edge.to_bits() + 1);
+    for envelope in [FUNNEL, ALIGNED] {
+        let on = ahu_window(
+            envelope,
+            &format!("{edge:e}"),
+            (0, 120),
+            r#"{"atoly": 0.5}"#,
+            "10",
+        );
+        assert_eq!(status(&on), ScenarioStatus::Pass, "{envelope}");
+        let off = ahu_window(
+            envelope,
+            &format!("{past:e}"),
+            (0, 120),
+            r#"{"atoly": 0.5}"#,
+            "10",
+        );
+        let records = exceeded(&scenario_of(&off));
+        assert_eq!(records.len(), 3, "{envelope}");
+        assert!(
+            records.iter().all(|record| record.3 == past - edge),
+            "{envelope}"
+        );
+    }
     // A sloped band under aligned-grid, by hand: `of` 0, then 10 from 60 s, on ticks 0, 60 and
     // 120 s with atolx 60. The rectangles are x in [-60, 60] at 0, [0, 120] at 10 and [60, 180]
     // at 10; the band is the extremes of those covering each tick: [0, 10] at 0 s and at 60 s,
@@ -416,6 +443,41 @@ fn the_rounding_case_is_refused_and_each_remedy_admits_it() {
         let text = rounding(envelope, within, equal);
         assert_eq!(status(&text), ScenarioStatus::Pass, "{envelope} {within}");
     }
+}
+
+#[test]
+fn a_band_past_two_to_the_thousand_is_refused_whatever_the_output() {
+    // An expectation of 2^1000 with atoly 2^1000 has a top bound of 2^1001: finite, but past
+    // the range in which every error is finite. Near the largest binary64 the port's own
+    // arithmetic overflows. Both are `non-finite-envelope`, for any output.
+    let edge = 2.0_f64.powi(1000);
+    for (of, within) in [
+        (format!("{edge:e}"), format!(r#"{{"atoly": {edge:e}}}"#)),
+        (format!("{:e}", -edge), format!(r#"{{"ltoly": 1}}"#)),
+        ("1e308".to_owned(), r#"{"atoly": 1e308}"#.to_owned()),
+    ] {
+        for envelope in [FUNNEL, ALIGNED] {
+            for ahu_t in ["0.0", "1e300"] {
+                let text = ahu_window(envelope, ahu_t, (0, 120), &within, &of);
+                let error = compare_refusal(&text);
+                assert_eq!(
+                    (error.code(), error.cause()),
+                    ("compare-refused", Some("non-finite-envelope")),
+                    "{envelope} {of} {within}"
+                );
+            }
+        }
+    }
+    // Just inside: an expectation of 2^999 with atoly 2^999 tops out at 2^1000 exactly.
+    let half = 2.0_f64.powi(999);
+    let text = ahu_window(
+        FUNNEL,
+        &format!("{half:e}"),
+        (0, 120),
+        &format!(r#"{{"atoly": {half:e}}}"#),
+        &format!("{half:e}"),
+    );
+    assert_eq!(status(&text), ScenarioStatus::Pass);
 }
 
 #[test]
