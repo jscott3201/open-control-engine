@@ -69,7 +69,7 @@ pub(crate) fn load(source: &Source, stdin: &mut dyn Read, report: &mut Report) -
 }
 
 /// The form from `--from`, else the extension.
-fn form_of(source: &Source) -> Result<Form, (&'static str, String)> {
+pub(crate) fn form_of(source: &Source) -> Result<Form, (&'static str, String)> {
     if let Some(form) = source.from {
         return Ok(form);
     }

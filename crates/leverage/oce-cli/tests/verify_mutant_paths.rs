@@ -252,6 +252,42 @@ fn a_vector_set_whose_directory_is_a_link_reads_its_mutants_through_it() {
 
 #[cfg(unix)]
 #[test]
+fn a_vector_set_that_is_a_link_reads_its_mutants_beside_the_link() {
+    // The documented rule, pinned (orchestrator's call on issue #771): the set's own entry is
+    // followed from its directory's handle, and its mutants resolve beside the link. The
+    // target's directory holds no mutant: a run that resolved there would be refused.
+    let (root, set) = prepared("paths_set_link");
+    fs::write(set.join("m.cxf.json"), mutant_bytes()).expect("m");
+    let (code, report) = verify(&root, &set, &["m.cxf.json"]);
+    verdict(code, &report);
+    fs::create_dir(root.join("elsewhere")).expect("elsewhere");
+    fs::rename(
+        set.join("vectors.json"),
+        root.join("elsewhere/vectors.json"),
+    )
+    .expect("move");
+    std::os::unix::fs::symlink("../elsewhere/vectors.json", set.join("vectors.json"))
+        .expect("set -> elsewhere");
+    let through = oce_in(
+        &root,
+        &[
+            "verify",
+            "set/vectors.json",
+            "--subject",
+            "set/rule.cxf.jsonld",
+        ],
+        b"",
+    );
+    assert_eq!(through.code, code, "{}", through.transcript());
+    assert_eq!(
+        through.report(),
+        report,
+        "the same receipt through the link"
+    );
+}
+
+#[cfg(unix)]
+#[test]
 fn hard_links_are_one_file_on_unix() {
     let (root, set) = prepared("paths_hard_link");
     fs::write(set.join("m.cxf.json"), mutant_bytes()).expect("m");

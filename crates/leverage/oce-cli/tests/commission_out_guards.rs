@@ -16,6 +16,7 @@ mod support;
 
 use std::fs;
 use std::path::Path;
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 use std::process::Command;
 
 use support::commission::{edit, run_layout, signals_layout, tree};
@@ -163,15 +164,31 @@ fn deny_warnings_counts_a_load_warning() {
     assert_eq!(receipt["body"]["warnings_total"], 0);
 }
 
-/// Whether `path`, relative to `dir`, names an entry (a relative path a test process could not
-/// name absolutely when it is near the platform's path limit).
-fn exists_in(dir: &Path, path: &str) -> bool {
-    Command::new("test")
-        .args(["-e", path])
-        .current_dir(dir)
-        .status()
-        .expect("test runs")
-        .success()
+/// Whether `path` (relative, `/`-separated) names a regular file below `dir`, reached one
+/// component at a time from directory handles, so its length is no obstacle.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn is_file_below(dir: &Path, path: &str) -> bool {
+    use rustix::fs::{CWD, Mode, OFlags, openat};
+    let Ok(mut handle) = openat(CWD, dir, OFlags::RDONLY | OFlags::DIRECTORY, Mode::empty()) else {
+        return false;
+    };
+    let mut segments: Vec<&str> = path.split('/').collect();
+    let Some(last) = segments.pop() else {
+        return false;
+    };
+    for segment in segments {
+        match openat(
+            &handle,
+            segment,
+            OFlags::RDONLY | OFlags::DIRECTORY,
+            Mode::empty(),
+        ) {
+            Ok(next) => handle = next,
+            Err(_) => return false,
+        }
+    }
+    rustix::fs::statat(&handle, last, rustix::fs::AtFlags::empty())
+        .is_ok_and(|stat| rustix::fs::FileType::from_raw_mode(stat.st_mode).is_file())
 }
 
 /// The top directories of the long paths a sweep made under `dir`, removed when it ends, an
@@ -225,13 +242,14 @@ fn long_relative(len: usize, tag: usize) -> String {
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 #[test]
-fn a_curve_that_cannot_be_written_fails_the_run_and_the_report_lists_only_what_exists() {
+fn a_dir_just_under_the_path_limit_has_every_curve_written_through_its_handles() {
     // `DIR` a relative path just under the platform's path limit (1,024 bytes on macOS, 4,096 on
-    // Linux, the terminating NUL included), so the longer temporary names under it are refused
-    // (ENAMETOOLONG). Swept over a range of lengths, the runs fail at every stage: before the run,
-    // at `outputs/`, at an output's folder, at a curve after others were written, at the receipt,
-    // or not at all. Every run must answer consistently: a failure is exit 2 with no receipt, and
-    // `curves` lists exactly files that exist; a pass has its receipt and every listed file.
+    // Linux, the terminating NUL included). Until issue #771 the curves were written by path, so
+    // the longer names under `DIR` were refused (ENAMETOOLONG) and the runs failed at every
+    // stage; each file is now created relative to the handle of the directory it goes into, so
+    // the path's length is spent once, on `DIR`, and every run of the sweep writes its receipt
+    // and all twelve curves. The files are checked from handles too: by its full path, no file
+    // under such a `DIR` can be reached.
     let limit: usize = if cfg!(target_os = "macos") {
         1024
     } else {
@@ -242,7 +260,6 @@ fn a_curve_that_cannot_be_written_fails_the_run_and_the_report_lists_only_what_e
         dir: &dir,
         made: Vec::new(),
     };
-    let (mut curve_failure, mut partial, mut passed) = (false, false, false);
     for slack in 12..=64 {
         let out = long_relative(limit - slack, slack);
         sweep.made.push(format!("s{slack:03}"));
@@ -253,6 +270,7 @@ fn a_curve_that_cannot_be_written_fails_the_run_and_the_report_lists_only_what_e
             .expect("mkdir runs");
         assert!(made.success(), "{slack}");
         let run = commission(&dir, &["--out", &out, "--bounds"]);
+        assert_eq!(run.code, 0, "{slack}: {}", run.transcript());
         let report = run.report();
         let listed: Vec<String> = report["curves"]
             .as_array()
@@ -261,35 +279,18 @@ fn a_curve_that_cannot_be_written_fails_the_run_and_the_report_lists_only_what_e
             .flat_map(|output| output["files"].as_array().cloned().unwrap_or_default())
             .map(|file| file.as_str().expect("a name").to_owned())
             .collect();
+        assert_eq!(listed.len(), 12, "{slack}");
         for file in &listed {
             assert!(
-                exists_in(&dir, file),
+                is_file_below(&dir, file),
                 "{slack}: `{file}` is listed and absent"
             );
         }
-        let receipt = exists_in(&dir, &format!("{out}/receipt.json"));
-        match run.code {
-            0 => {
-                assert!(receipt, "{slack}: a pass has its receipt");
-                assert_eq!(listed.len(), 12, "{slack}");
-                passed = true;
-            }
-            2 => {
-                assert!(!receipt, "{slack}: a failure leaves no receipt");
-                let (code, at) = refusal(&run);
-                assert_eq!(code, "write-failed", "{slack}: {}", run.transcript());
-                if at.starts_with("outputs/") && at.ends_with(".csv") {
-                    curve_failure = true;
-                    assert!(!exists_in(&dir, &format!("{out}/{at}")), "{slack}: {at}");
-                    partial |= !listed.is_empty();
-                }
-            }
-            other => panic!("{slack}: exit {other}\n{}", run.transcript()),
-        }
+        assert!(
+            is_file_below(&dir, &format!("{out}/receipt.json")),
+            "{slack}: the receipt"
+        );
     }
-    assert!(curve_failure, "some run failed at a curve");
-    assert!(partial, "some run failed at a curve after writing others");
-    assert!(passed, "some run passed");
     assert_eq!(
         sweep.clear(),
         Vec::<String>::new(),
@@ -301,4 +302,34 @@ fn a_curve_that_cannot_be_written_fails_the_run_and_the_report_lists_only_what_e
             "s{slack:03} left"
         );
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn a_read_only_dir_is_refused_at_outputs_and_left_as_it_was() {
+    // `DIR` opens (it can be listed) but nothing can be created in it: `mkdirat` of `outputs`
+    // fails, the run is `write-failed` at `outputs` with no receipt, and `DIR` is unchanged. A
+    // user the permission bits do not bind can write anyway: nothing to test then.
+    use std::os::unix::fs::PermissionsExt;
+    let dir = run_layout("commission_guard_read_only", "pass");
+    let out = dir.join("out");
+    fs::create_dir(&out).expect("out");
+    fs::write(out.join("note.txt"), b"KEEP").expect("note");
+    fs::set_permissions(&out, fs::Permissions::from_mode(0o555)).expect("chmod");
+    let writable = fs::create_dir(out.join("probe")).is_ok();
+    let run = commission(&dir, &["--out", "out"]);
+    fs::set_permissions(&out, fs::Permissions::from_mode(0o755)).expect("chmod back");
+    if writable {
+        return;
+    }
+    let (code, at) = refusal(&run);
+    assert_eq!((code.as_str(), at.as_str()), ("write-failed", "outputs"));
+    assert!(run.report()["curves"].as_array().is_none_or(Vec::is_empty));
+    let mut left: Vec<String> = fs::read_dir(&out)
+        .expect("list")
+        .map(|e| e.expect("entry").file_name().to_string_lossy().into_owned())
+        .collect();
+    left.sort();
+    assert_eq!(left, ["note.txt"], "DIR is left as it was");
+    assert_eq!(fs::read(out.join("note.txt")).expect("note"), b"KEEP");
 }

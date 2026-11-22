@@ -1,35 +1,49 @@
 //! The one way `oce` writes a file: `fmt --write`, `emit -o`, `import -o`, `verify --out` and
-//! every file of `verify --commission --out` (issue #758; ruled by the owner on 2026-11-22).
+//! every file of `verify --commission --out` (issues #758 and #771; ruled by the owner on
+//! 2026-11-22).
 //!
 //! **The target** ([`target_accepted`]) must be absent or a regular file. A symbolic link,
 //! dangling or not, a directory, a named pipe, a socket or a device is `output-not-a-file`, and
 //! every verb asks before it reads anything, so a refusal reads and writes nothing. The target's
 //! own entry is never written through: a link planted there is refused, or, planted after the
 //! check, replaced. A caller whose output is a link gives the path of the file it names; a name
-//! that is `oce`'s own (`DIR/receipt.json`) is removed or replaced by its owner. Directories the
-//! path passes through are reached by path: the caller's are followed (the caller named them),
-//! and so are the directories `verify --commission --out` creates under `DIR`, so whoever can
-//! change `DIR` during a run can redirect the curve files below it (issue #771).
+//! that is `oce`'s own (`DIR/receipt.json`) is removed or replaced by its owner.
 //!
-//! **The write** ([`write_atomically`]): the bytes go to a uniquely named temporary file beside
-//! the target, opened with `create_new` (`O_EXCL`: it never follows a symbolic link and never
-//! truncates a file that is already there), are synced, and are renamed over the target's own
-//! directory entry, never over a file a link there names. So a link planted between the check and
-//! the write is replaced, its target untouched. On Unix the temporary file is created with an
-//! existing regular target's mode bits (`0600` when there is none, so a new file is owner-only)
-//! and the umask can only narrow that, so the new bytes are never readable by anyone the target
-//! does not already admit; the target's exact permissions are then copied through the handle
-//! before the rename. The file is replaced, not rewritten in place, so a hard link to the old
-//! inode keeps the old bytes. On a failure the target is untouched and the temporary file is
-//! removed **by its path**: if the parent directory was swapped since it was created, that path
-//! names another place, and the temporary file is left behind (issue #771).
+//! **The directory** the file goes into is opened once ([`super::directory::Directory`]), and
+//! every step of the write is relative to that handle (Unix; issue #771): for a path the caller
+//! named ([`write_atomically`]), its parent, the caller's links on the way followed (they named
+//! them); for `verify --commission --out`, `DIR` and the directories made below it
+//! (`commission_out`). A directory swapped for a link, or exchanged, after it was opened cannot
+//! redirect anything: the temporary file, the rename and the clean-up all happen in the directory
+//! the handle holds.
+//!
+//! **The write** ([`write_in`]): the bytes go to a uniquely named temporary file in that
+//! directory, created with `openat(O_CREAT | O_EXCL | O_NOFOLLOW)` (it never follows a link and
+//! never truncates a file already there), are synced, and are renamed with `renameat` over the
+//! target's own entry, never over a file a link there names. So a link planted between the check
+//! and the write is replaced, its target untouched. On Unix the temporary file is created with
+//! the mode bits of the file it replaces (`0600` when there is none, so a new file is owner-only;
+//! for `fmt --write`, the mode of the file it read, from that handle) and the umask can only
+//! narrow that; those exact permissions are then set through the handle before the rename. The
+//! file is replaced, not rewritten in place, so a hard link to the old inode keeps the old bytes.
+//! On a failure the target is untouched and the temporary file is removed with `unlinkat` from
+//! the same handle, so none is left behind even when the directory's path was swapped meanwhile.
+//! Two more conditions hold a write when its caller asks: every directory `oce` made for it must
+//! be owned by the owner of the temporary file (a directory another user swapped in is refused
+//! before a byte is written), and the entry must still be the file that was read
+//! (`fmt --write`: device and inode, checked just before the rename; a swap in the instant
+//! between that check and the rename replaces whatever was swapped in, never writes through it).
+//!
+//! **Windows** keeps the path-based write, untested: the parent is reached by path at each step.
 
-use std::ffi::OsStr;
-use std::fs::{self, File, OpenOptions};
+use std::ffi::{OsStr, OsString};
+use std::fs::File;
 use std::io::{self, ErrorKind, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use super::directory::{Directory, Entry, Kind, split};
+use super::steps::step;
 use crate::codes;
 
 /// The sentence every `output-not-a-file` refusal ends with.
@@ -60,28 +74,38 @@ pub(crate) fn target_accepted(
     shown: &str,
     named: Named,
 ) -> Result<(), (&'static str, String)> {
-    let Ok(entry) = fs::symlink_metadata(path) else {
+    let Ok(entry) = std::fs::symlink_metadata(path) else {
         return Ok(());
     };
     let kind = entry.file_type();
-    let what = if kind.is_file() {
+    let kind = if kind.is_file() {
         return Ok(());
     } else if kind.is_symlink() {
-        "a symbolic link, and oce never writes through one"
+        Kind::Link
     } else if kind.is_dir() {
-        "a directory"
+        Kind::Directory
     } else {
-        "a named pipe, a socket or a device, not a regular file"
+        Kind::Other
+    };
+    Err(not_a_target(kind, shown, named))
+}
+
+/// The `output-not-a-file` refusal of a target that is `kind` (anything but a regular file).
+pub(crate) fn not_a_target(kind: Kind, shown: &str, named: Named) -> (&'static str, String) {
+    let what = match kind {
+        Kind::Link => "a symbolic link, and oce never writes through one",
+        Kind::Directory => "a directory",
+        Kind::File | Kind::Other => "a named pipe, a socket or a device, not a regular file",
     };
     let way_out = match named {
-        Named::Caller if kind.is_symlink() => ": give the path of the file it names",
+        Named::Caller if kind == Kind::Link => ": give the path of the file it names",
         Named::Caller => "",
         Named::Tool => ": remove or replace that entry",
     };
-    Err((
+    (
         codes::OUTPUT_NOT_A_FILE,
         format!("`{shown}` is {what}{way_out}; {ONLY_FILES}"),
-    ))
+    )
 }
 
 /// How many temporary names one write tries before it gives up with `write-failed`.
@@ -94,49 +118,162 @@ const NAME_PREFIX_BYTES: usize = 200;
 
 /// The mode a new file (no target yet) is created with on Unix: owner read and write only.
 #[cfg(unix)]
-const NEW_FILE_MODE: u32 = 0o600;
+pub(crate) const NEW_FILE_MODE: u32 = 0o600;
 
 /// The per-process counter that makes each temporary name unique within this process.
 static NEXT_NAME: AtomicU64 = AtomicU64::new(0);
 
+/// Whose permissions the new file takes (module header).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Lend {
+    /// The regular file at the name when the write starts, read from the handle without
+    /// following a link; a new file (`0600` on Unix) when there is none.
+    Entry,
+    /// The file that was read (`fmt --write`): its mode bits from its handle.
+    Read(Option<u32>),
+}
+
+/// What a write must hold to beyond the bytes (module header).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Plan<'p> {
+    /// Whose permissions the new file takes.
+    pub(crate) lend: Lend,
+    /// The file that was read, which must still be the entry at the name before the rename
+    /// (device and inode, Unix).
+    pub(crate) unchanged: Option<Entry>,
+    /// The directories `oce` made for this write, each of which must be owned by the owner of
+    /// the temporary file (Unix).
+    pub(crate) made: &'p [&'p Directory],
+}
+
+impl Plan<'_> {
+    /// A plain write: the permissions of the file replaced, no other condition.
+    pub(crate) const PLAIN: Plan<'static> = Plan {
+        lend: Lend::Entry,
+        unchanged: None,
+        made: &[],
+    };
+}
+
+/// Why a write failed after its temporary file was created.
+enum Failure {
+    /// The operating system's failure.
+    Io(io::Error),
+    /// A directory `oce` made is owned by someone else: it was swapped after it was made.
+    NotMade,
+    /// The entry is no longer the file that was read.
+    Changed,
+}
+
+impl From<io::Error> for Failure {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+
 /// Write `bytes` to `path` atomically, **never following a symbolic link at `path`** (module
-/// header): a fresh temporary file beside `path`, created no more permissive than an existing
-/// regular file there, written, given that file's permissions, synced and renamed over the entry
-/// itself. Only an existing regular file at `path` lends its permissions; anything else is a new
-/// file (`0600` on Unix). The caller has asked [`target_accepted`] first; this is the backstop
-/// for an entry that changed since. The error is `write-failed` and a detail that names the
-/// failure by kind, never by an operating-system message that could carry a path.
+/// header): its parent directory is opened once, following the caller's links, and the write is
+/// [`write_in`] that directory with [`Plan::PLAIN`]. The caller has asked [`target_accepted`]
+/// first; this is the backstop for an entry that changed since. The error is `write-failed` and a
+/// detail that names the failure by kind, never by an operating-system message that could carry
+/// a path.
 pub(crate) fn write_atomically(path: &Path, bytes: &[u8]) -> Result<(), (&'static str, String)> {
-    let existing = fs::symlink_metadata(path)
-        .ok()
-        .filter(fs::Metadata::is_file);
-    let (temporary, mut file) = create_temporary(path, existing.as_ref())?;
-    let written = file
-        .write_all(bytes)
-        .and_then(|()| copy_permissions(&file, existing.as_ref()))
-        .and_then(|()| file.sync_all());
+    let Some((parent, name)) = split(path) else {
+        return Err(failed(ErrorKind::InvalidInput.into()));
+    };
+    let directory = Directory::open(parent).map_err(failed)?;
+    write_in(&directory, &name, bytes, &Plan::PLAIN)
+}
+
+/// Write `bytes` to `name` in `directory`, every step relative to that handle (module header),
+/// under `plan`.
+///
+/// # Errors
+/// `write-failed`: the target is untouched and no temporary file is left.
+pub(crate) fn write_in(
+    directory: &Directory,
+    name: &OsStr,
+    bytes: &[u8],
+    plan: &Plan<'_>,
+) -> Result<(), (&'static str, String)> {
+    let mode = match plan.lend {
+        Lend::Entry => directory
+            .entry(name, false)
+            .ok()
+            .filter(|entry| entry.kind == Kind::File)
+            .and_then(|entry| entry.mode),
+        Lend::Read(mode) => mode,
+    };
+    let (temporary, mut file) = create_temporary(directory, name, mode)?;
+    let written = fill(&mut file, bytes, mode, plan.made);
     drop(file);
-    let result = written.and_then(|()| fs::rename(&temporary, path));
-    result.map_err(|error| {
-        let _ = fs::remove_file(&temporary);
-        failed(error)
+    let result = written.and_then(|()| {
+        if let Some(read) = plan.unchanged {
+            step();
+            let now = directory.entry(name, false)?;
+            if now.kind != Kind::File || now.identity != read.identity {
+                return Err(Failure::Changed);
+            }
+        }
+        step();
+        rename(directory, &temporary, name).map_err(Failure::Io)
+    });
+    result.map_err(|failure| {
+        remove(directory, &temporary);
+        match failure {
+            Failure::Io(error) => failed(error),
+            Failure::NotMade => (
+                codes::WRITE_FAILED,
+                "the output could not be written: a directory oce made was replaced by one it \
+                 does not own; nothing is written there"
+                    .to_owned(),
+            ),
+            Failure::Changed => (
+                codes::WRITE_FAILED,
+                "the output could not be written: the file changed after it was read; nothing \
+                 is written"
+                    .to_owned(),
+            ),
+        }
     })
 }
 
-/// Create a fresh temporary file beside `target` with `create_new`, trying [`NAME_ATTEMPTS`]
-/// unique names; a name that already exists (a file, a directory or a planted link) is skipped,
-/// never opened. On Unix the file is created no more permissive than the target (`existing`), or
-/// `0600` when there is none (module header).
+/// Check the directories `made` against the temporary file's owner, then write, set the
+/// permissions and sync (module header).
+fn fill(
+    file: &mut File,
+    bytes: &[u8],
+    mode: Option<u32>,
+    made: &[&Directory],
+) -> Result<(), Failure> {
+    if !made.is_empty() {
+        let mine = owner(file)?;
+        for directory in made {
+            if directory.owner()? != mine {
+                return Err(Failure::NotMade);
+            }
+        }
+    }
+    step();
+    file.write_all(bytes)?;
+    set_mode(file, mode)?;
+    file.sync_all()?;
+    Ok(())
+}
+
+/// Create a fresh temporary file beside `name` with `O_EXCL`, trying [`NAME_ATTEMPTS`] unique
+/// names; a name that already exists (a file, a directory or a planted link) is skipped, never
+/// opened. On Unix the file is created no more permissive than `mode`, or `0600` when there is
+/// none (module header).
 fn create_temporary(
-    target: &Path,
-    existing: Option<&fs::Metadata>,
-) -> Result<(PathBuf, File), (&'static str, String)> {
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    restrict_creation_mode(&mut options, existing);
+    directory: &Directory,
+    name: &OsStr,
+    mode: Option<u32>,
+) -> Result<(OsString, File), (&'static str, String)> {
     for _ in 0..NAME_ATTEMPTS {
-        let temporary = temporary_path(target, NEXT_NAME.fetch_add(1, Ordering::Relaxed));
-        match options.open(&temporary) {
+        let temporary = temporary_name(name, NEXT_NAME.fetch_add(1, Ordering::Relaxed));
+        step();
+        match create(directory, &temporary, mode) {
             Ok(file) => return Ok((temporary, file)),
             Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
             Err(error) => return Err(failed(error)),
@@ -148,18 +285,25 @@ fn create_temporary(
     ))
 }
 
-/// `dir/.name.<pid>.<counter>.oce-tmp` beside `target`, so the rename never crosses a file system.
-pub(crate) fn temporary_path(target: &Path, counter: u64) -> PathBuf {
-    let full = target
+/// `.name.<pid>.<counter>.oce-tmp`, the temporary name beside `name`.
+fn temporary_name(name: &OsStr, counter: u64) -> OsString {
+    let full = Path::new(name)
         .file_name()
         .map_or_else(|| "output".into(), OsStr::to_string_lossy);
     let mut cut = full.len().min(NAME_PREFIX_BYTES);
     while !full.is_char_boundary(cut) {
         cut -= 1;
     }
-    let name = &full[..cut];
+    let prefix = &full[..cut];
     let pid = std::process::id();
-    target.with_file_name(format!(".{name}.{pid}.{counter}.oce-tmp"))
+    format!(".{prefix}.{pid}.{counter}.oce-tmp").into()
+}
+
+/// `dir/.name.<pid>.<counter>.oce-tmp` beside `target` (for the tests, which plant files there).
+#[cfg(test)]
+pub(crate) fn temporary_path(target: &Path, counter: u64) -> std::path::PathBuf {
+    let name = target.file_name().unwrap_or_else(|| OsStr::new("output"));
+    target.with_file_name(temporary_name(name, counter))
 }
 
 /// The counter value the next temporary name will use (for the unit tests).
@@ -168,34 +312,101 @@ pub(crate) fn peek_counter() -> u64 {
     NEXT_NAME.load(Ordering::Relaxed)
 }
 
-/// The creation mode of the temporary file (Unix): the target's mode bits (`& 0o777`) when it
-/// exists, [`NEW_FILE_MODE`] when it does not; the umask narrows it further.
+/// Create `temporary` in `directory`: `O_CREAT | O_EXCL | O_NOFOLLOW`, mode `mode & 0o777` or
+/// [`NEW_FILE_MODE`] (Unix).
 #[cfg(unix)]
-fn restrict_creation_mode(options: &mut OpenOptions, existing: Option<&fs::Metadata>) {
-    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-    let mode = existing.map_or(NEW_FILE_MODE, |metadata| {
-        metadata.permissions().mode() & 0o777
-    });
-    options.mode(mode);
+fn create(directory: &Directory, temporary: &OsStr, mode: Option<u32>) -> io::Result<File> {
+    use rustix::fs::{Mode, OFlags, openat};
+    let bits = mode.map_or(NEW_FILE_MODE, |mode| mode & 0o777);
+    let flags = OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+    Ok(File::from(openat(
+        directory.fd(),
+        temporary,
+        flags,
+        Mode::from_raw_mode(raw_mode(bits)),
+    )?))
+}
+
+/// Permission bits as the platform's raw mode type (narrower on macOS).
+#[cfg(unix)]
+#[allow(
+    clippy::unnecessary_cast,
+    clippy::cast_possible_truncation,
+    reason = "permission bits fit every platform's mode_t"
+)]
+fn raw_mode(bits: u32) -> rustix::fs::RawMode {
+    (bits & 0o7777) as rustix::fs::RawMode
 }
 
 #[cfg(not(unix))]
-fn restrict_creation_mode(_options: &mut OpenOptions, _existing: Option<&fs::Metadata>) {}
+fn create(directory: &Directory, temporary: &OsStr, _mode: Option<u32>) -> io::Result<File> {
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(directory.join(temporary))
+}
 
-/// Give the temporary file the target's permissions (Unix mode bits) through its open handle, so
-/// a `0600` or `0640` file keeps its mode. Elsewhere this does nothing: the only permission bit is
-/// read-only, and a read-only target refuses the rename regardless.
-#[cfg(unix)]
-fn copy_permissions(file: &File, existing: Option<&fs::Metadata>) -> io::Result<()> {
-    match existing {
-        Some(metadata) => file.set_permissions(metadata.permissions()),
-        None => Ok(()),
+/// The owner of the temporary file: the user this write runs as (Unix); `None` elsewhere.
+fn owner(file: &File) -> io::Result<Option<u32>> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        Ok(Some(file.metadata()?.uid()))
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = file;
+        Ok(None)
     }
 }
 
-#[cfg(not(unix))]
-fn copy_permissions(_file: &File, _existing: Option<&fs::Metadata>) -> io::Result<()> {
-    Ok(())
+/// Give the temporary file `mode` (Unix mode bits) through its handle, so a `0600` or `0640` file
+/// keeps its mode. Elsewhere this does nothing: the only permission bit is read-only, and a
+/// read-only target refuses the rename regardless.
+fn set_mode(file: &File, mode: Option<u32>) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        match mode {
+            Some(mode) => file.set_permissions(std::fs::Permissions::from_mode(mode & 0o7777)),
+            None => Ok(()),
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (file, mode);
+        Ok(())
+    }
+}
+
+/// `renameat` from the handle to itself (Unix); by path elsewhere.
+fn rename(directory: &Directory, temporary: &OsStr, name: &OsStr) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        Ok(rustix::fs::renameat(
+            directory.fd(),
+            temporary,
+            directory.fd(),
+            name,
+        )?)
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::rename(directory.join(temporary), directory.join(name))
+    }
+}
+
+/// Remove the temporary file after a failure: `unlinkat` from the handle (Unix), by path
+/// elsewhere. A failure to remove it changes nothing the caller can act on.
+fn remove(directory: &Directory, temporary: &OsStr) {
+    #[cfg(unix)]
+    {
+        let _ = rustix::fs::unlinkat(directory.fd(), temporary, rustix::fs::AtFlags::empty());
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = std::fs::remove_file(directory.join(temporary));
+    }
 }
 
 fn failed(error: io::Error) -> (&'static str, String) {
@@ -206,300 +417,5 @@ fn failed(error: io::Error) -> (&'static str, String) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Mutex;
-
-    #[cfg(unix)]
-    #[test]
-    fn a_link_that_reaches_the_write_is_replaced_and_its_target_never_written() {
-        // The backstop for a link planted after `target_accepted`: the rename replaces the
-        // entry, so neither a link to a file nor a dangling link carries the write anywhere.
-        use std::os::unix::fs::PermissionsExt;
-        let dir = scratch("no_follow");
-        let victim = dir.join("victim.txt");
-        fs::write(&victim, b"PRECIOUS").expect("victim");
-        fs::set_permissions(&victim, fs::Permissions::from_mode(0o644)).expect("chmod");
-        let target = dir.join("receipt.json");
-        std::os::unix::fs::symlink(&victim, &target).expect("a link");
-        assert_eq!(write_atomically(&target, b"new"), Ok(()));
-        assert_eq!(fs::read(&victim).expect("victim"), b"PRECIOUS");
-        let entry = fs::symlink_metadata(&target).expect("the entry");
-        assert!(
-            entry.file_type().is_file(),
-            "the link was replaced by a file"
-        );
-        assert_eq!(fs::read(&target).expect("target"), b"new");
-        // The linked file lent nothing: the new file is a new file, owner-only.
-        assert_eq!(entry.permissions().mode() & 0o777, NEW_FILE_MODE);
-        // A dangling link is replaced too, and nothing is created where it pointed.
-        let dangling = dir.join("dangling.json");
-        std::os::unix::fs::symlink(dir.join("nowhere.txt"), &dangling).expect("a link");
-        assert_eq!(write_atomically(&dangling, b"x"), Ok(()));
-        assert!(!dir.join("nowhere.txt").exists());
-        assert!(fs::symlink_metadata(&dangling).expect("entry").is_file());
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn an_absent_path_and_a_regular_file_are_accepted_and_a_directory_is_not() {
-        let dir = scratch("target_kinds");
-        assert_eq!(
-            target_accepted(&dir.join("absent"), "absent", Named::Caller),
-            Ok(())
-        );
-        fs::write(dir.join("file"), b"x").expect("file");
-        assert_eq!(
-            target_accepted(&dir.join("file"), "file", Named::Caller),
-            Ok(())
-        );
-        fs::create_dir(dir.join("dir")).expect("dir");
-        let (code, detail) =
-            target_accepted(&dir.join("dir"), "out/dir", Named::Caller).expect_err("a dir");
-        assert_eq!(code, codes::OUTPUT_NOT_A_FILE);
-        assert_eq!(
-            detail,
-            format!("`out/dir` is a directory; {ONLY_FILES}"),
-            "names the path as shown"
-        );
-        // A parent that is a file cannot hold the entry: left to the write, which fails.
-        assert_eq!(
-            target_accepted(&dir.join("file/below"), "below", Named::Caller),
-            Ok(())
-        );
-        // A name that is oce's own is removed or replaced by its owner, whatever it is.
-        let (_, detail) =
-            target_accepted(&dir.join("dir"), "out/receipt.json", Named::Tool).expect_err("dir");
-        assert_eq!(
-            detail,
-            format!(
-                "`out/receipt.json` is a directory: remove or replace that entry; {ONLY_FILES}"
-            )
-        );
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn a_link_dangling_or_not_and_a_named_pipe_are_not_a_file() {
-        let dir = scratch("target_links");
-        fs::write(dir.join("file"), b"x").expect("file");
-        std::os::unix::fs::symlink("file", dir.join("link")).expect("link");
-        std::os::unix::fs::symlink("nowhere", dir.join("dangling")).expect("link");
-        std::os::unix::fs::symlink("link", dir.join("chain")).expect("link");
-        for name in ["link", "dangling", "chain"] {
-            let (code, detail) =
-                target_accepted(&dir.join(name), name, Named::Caller).expect_err(name);
-            assert_eq!(code, codes::OUTPUT_NOT_A_FILE, "{name}");
-            assert!(
-                detail.starts_with(&format!("`{name}` is a symbolic link")),
-                "{detail}"
-            );
-            assert!(
-                detail.contains("give the path of the file it names"),
-                "{detail}"
-            );
-        }
-        let made = std::process::Command::new("mkfifo")
-            .arg(dir.join("fifo"))
-            .status()
-            .expect("mkfifo runs");
-        assert!(made.success());
-        let (code, detail) =
-            target_accepted(&dir.join("fifo"), "fifo", Named::Caller).expect_err("a fifo");
-        assert_eq!(code, codes::OUTPUT_NOT_A_FILE);
-        assert!(
-            detail.contains("a named pipe, a socket or a device"),
-            "{detail}"
-        );
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    /// Serializes the tests that predict the counter, for a runner that shares one process.
-    static COUNTER: Mutex<()> = Mutex::new(());
-
-    /// A fresh directory under the system temporary directory for one test.
-    fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "oce-cli-atomic-write-{name}-{}",
-            std::process::id()
-        ));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).expect("create the scratch directory");
-        dir
-    }
-
-    fn names(dir: &Path) -> Vec<String> {
-        let mut names: Vec<String> = fs::read_dir(dir)
-            .expect("list")
-            .map(|e| e.expect("entry").file_name().to_string_lossy().into_owned())
-            .collect();
-        names.sort();
-        names
-    }
-
-    #[test]
-    fn a_regular_file_at_the_next_temporary_names_is_never_clobbered() {
-        let _serial = COUNTER
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let dir = scratch("regular");
-        let target = dir.join("t.oce");
-        fs::write(&target, b"old").expect("target");
-        let next = peek_counter();
-        for counter in next..next + 3 {
-            fs::write(temporary_path(&target, counter), b"someone else's").expect("plant");
-        }
-        assert_eq!(write_atomically(&target, b"new"), Ok(()));
-        assert_eq!(fs::read(&target).expect("read"), b"new");
-        for counter in next..next + 3 {
-            assert_eq!(
-                fs::read(temporary_path(&target, counter)).expect("planted file"),
-                b"someone else's"
-            );
-        }
-        assert_eq!(
-            names(&dir).len(),
-            4,
-            "only the target and the planted files"
-        );
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn every_temporary_name_taken_is_a_typed_failure_and_the_target_is_untouched() {
-        let _serial = COUNTER
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let dir = scratch("exhausted");
-        let target = dir.join("t.oce");
-        fs::write(&target, b"old").expect("target");
-        let next = peek_counter();
-        for counter in next..next + NAME_ATTEMPTS {
-            fs::write(temporary_path(&target, counter), b"x").expect("plant");
-        }
-        let error = write_atomically(&target, b"new").expect_err("no free name");
-        assert_eq!(error.0, codes::WRITE_FAILED);
-        assert_eq!(fs::read(&target).expect("read"), b"old");
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn every_temporary_name_a_dangling_link_is_a_typed_failure_that_creates_nothing() {
-        let _serial = COUNTER
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let dir = scratch("exhausted_links");
-        let target = dir.join("t.oce");
-        let victim = dir.join("victim.txt");
-        fs::write(&target, b"old").expect("target");
-        let next = peek_counter();
-        for counter in next..next + NAME_ATTEMPTS {
-            std::os::unix::fs::symlink(&victim, temporary_path(&target, counter)).expect("plant");
-        }
-        let error = write_atomically(&target, b"new").expect_err("no free name");
-        assert_eq!(error.0, codes::WRITE_FAILED);
-        assert_eq!(fs::read(&target).expect("read"), b"old");
-        assert!(
-            fs::symlink_metadata(&victim).is_err(),
-            "no write went through a dangling link"
-        );
-        for counter in next..next + NAME_ATTEMPTS {
-            let planted = fs::symlink_metadata(temporary_path(&target, counter)).expect("planted");
-            assert!(
-                planted.file_type().is_symlink(),
-                "the planted link is intact"
-            );
-        }
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn the_temporary_file_is_never_more_permissive_than_the_target() {
-        use std::os::unix::fs::PermissionsExt;
-        let mode = |path: &Path| fs::metadata(path).expect("metadata").permissions().mode() & 0o777;
-        let dir = scratch("temporary_mode");
-        let target = dir.join("secret.oce");
-        fs::write(&target, b"old").expect("target");
-        for wanted in [0o600, 0o640, 0o400] {
-            fs::set_permissions(&target, fs::Permissions::from_mode(wanted)).expect("chmod");
-            let existing = fs::metadata(&target).expect("metadata");
-            let (temporary, file) = create_temporary(&target, Some(&existing)).expect("create");
-            let created = mode(&temporary);
-            drop(file);
-            let _ = fs::remove_file(&temporary);
-            assert_eq!(created & !wanted, 0, "{created:o} widens {wanted:o}");
-        }
-        let fresh = dir.join("new.oce");
-        let (temporary, file) = create_temporary(&fresh, None).expect("create");
-        let created = mode(&temporary);
-        drop(file);
-        let _ = fs::remove_file(&temporary);
-        assert_eq!(created, NEW_FILE_MODE, "a new file is owner-only");
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn a_link_planted_at_the_next_temporary_names_never_redirects_the_write() {
-        let _serial = COUNTER
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let dir = scratch("planted_link");
-        let target = dir.join("v.oce");
-        let victim = dir.join("victim.txt");
-        fs::write(&target, b"old").expect("target");
-        fs::write(&victim, b"victim").expect("victim");
-        let next = peek_counter();
-        for counter in next..next + 3 {
-            std::os::unix::fs::symlink(&victim, temporary_path(&target, counter)).expect("plant");
-        }
-        assert_eq!(write_atomically(&target, b"new"), Ok(()));
-        assert_eq!(fs::read(&victim).expect("victim"), b"victim");
-        assert_eq!(fs::read(&target).expect("target"), b"new");
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn a_failed_rename_removes_the_temporary_file() {
-        let _serial = COUNTER
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let dir = scratch("rename");
-        let target = dir.join("out");
-        fs::create_dir(&target).expect("a directory at the target");
-        fs::write(target.join("inside"), b"x").expect("non-empty");
-        let error = write_atomically(&target, b"new").expect_err("rename over a directory");
-        assert_eq!(error.0, codes::WRITE_FAILED);
-        assert_eq!(names(&dir), ["out"], "no temporary file is left behind");
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn a_long_target_name_keeps_the_temporary_name_bounded() {
-        let long = "n".repeat(240);
-        let path = temporary_path(Path::new(&long), u64::MAX);
-        let name = path
-            .file_name()
-            .expect("a name")
-            .to_string_lossy()
-            .into_owned();
-        assert!(name.len() <= 255, "{}", name.len());
-        assert!(name.starts_with(&format!(".{}.", "n".repeat(NAME_PREFIX_BYTES))));
-        assert!(name.ends_with(&format!(".{}.oce-tmp", u64::MAX)));
-    }
-
-    #[test]
-    fn a_long_multibyte_target_name_is_cut_on_bytes_at_a_character_boundary() {
-        // Three-byte characters: 200 is not a multiple of 3, so the cut must step back.
-        let long = "\u{20ac}".repeat(120);
-        let path = temporary_path(Path::new(&long), u64::MAX);
-        let name = path.file_name().expect("a name").to_str().expect("UTF-8");
-        assert!(name.len() <= 255, "{}", name.len());
-        let prefix = "\u{20ac}".repeat(NAME_PREFIX_BYTES / 3);
-        assert!(name.starts_with(&format!(".{prefix}.")), "{name}");
-        assert!(name.ends_with(&format!(".{}.oce-tmp", u64::MAX)));
-    }
-}
+#[path = "atomic_write_tests.rs"]
+pub(crate) mod tests;

@@ -3,7 +3,9 @@
 //!
 //! Order, the first refusal winning:
 //!
-//! 1. the vector file, bounded at `VerifyLimits::max_bytes` (4 MiB) from its metadata, then read
+//! 1. the vector file, read through its directory's handle (`contained::Root::read_document`:
+//!    the directory is opened once and every mutant is resolved against that handle; issue
+//!    #771), bounded at `VerifyLimits::max_bytes` (4 MiB) from that handle's metadata, then read
 //!    by `oce_verify::VectorSet::from_json_bytes`;
 //! 2. the subject, in its form ([`super::verify_subject`]);
 //! 3. the mutants, each resolved, held inside the vector file's directory and read once
@@ -24,7 +26,8 @@
 //!   regular file there is replaced;
 //! - after the reads and before the run, a `DIR/receipt.json` that is the vector file, the
 //!   subject or a mutant, by path, through a link or (on Unix) as a hard link, is
-//!   `output-is-input` (`file_identity::input_at`), so a run never replaces what it read.
+//!   `output-is-input` (`file_identity::input_at`, against the identity of each file as it was
+//!   read), so a run never replaces what it read.
 //!
 //! The two exit-only flags change the exit status and never a receipt byte (decisions 12 and 30):
 //! `--require-mutants-caught` makes exit `1` when a mutant survived or the set lists none (owner
@@ -48,6 +51,8 @@ use oce_verify::{
 use serde_json::Value;
 
 use super::commission_out::{self, RECEIPT};
+use super::contained::{Document, Root};
+use super::file_identity::{Identity, identity_of};
 use super::{
     Named, Outcome, input_at, target_accepted, verify_mutants, verify_subject, write_atomically,
 };
@@ -78,8 +83,12 @@ pub(crate) fn run(args: &VectorArgs) -> Outcome {
     let limits = VerifyLimits::default();
     let vectors = Path::new(&args.vectors);
     let bound = usize::try_from(limits.max_bytes).unwrap_or(usize::MAX);
-    let bytes = match input::read_file(vectors, bound) {
-        Ok(bytes) => bytes,
+    let Document {
+        root,
+        bytes,
+        identity,
+    } = match Root::read_document(vectors, bound) {
+        Ok(document) => document,
         Err((code, detail)) => {
             report.error(code, detail, None);
             return refused(report, "the vector file could not be read");
@@ -95,7 +104,7 @@ pub(crate) fn run(args: &VectorArgs) -> Outcome {
     let Some(subject) = verify_subject::load(args, &mut report) else {
         return refused(report, "the subject could not be read or emitted");
     };
-    let mutants = match verify_mutants::read(&set, vectors) {
+    let mutants = match verify_mutants::read(&set, &root) {
         Ok(mutants) => mutants,
         Err(refusal) => {
             report.error_at(
@@ -108,22 +117,22 @@ pub(crate) fn run(args: &VectorArgs) -> Outcome {
         }
     };
     if let Some(dir) = &args.out {
-        let mut read: Vec<(String, PathBuf)> = vec![
-            (
-                input::display_name(&args.vectors),
-                PathBuf::from(&args.vectors),
-            ),
-            (
-                input::display_name(&args.subject),
-                PathBuf::from(&args.subject),
-            ),
+        let mut read: Vec<(String, Identity)> = Vec::with_capacity(mutants.len() + 2);
+        let named = [
+            (&args.vectors, identity),
+            (&args.subject, identity_of(Path::new(&args.subject))),
         ];
+        for (name, identity) in named {
+            if let Some(identity) = identity {
+                read.push((input::display_name(name), identity));
+            }
+        }
         read.extend(
             mutants
                 .iter()
-                .map(|mutant| (mutant.path.clone(), mutant.canonical.clone())),
+                .map(|mutant| (mutant.path.clone(), mutant.identity.to_owned())),
         );
-        if let Some(name) = input_at(&receipt_path(dir), &read) {
+        if let Some(name) = input_at(identity_of(&receipt_path(dir)).as_ref(), &read) {
             let detail = format!(
                 "`{}` is `{name}`, which the run reads; nothing is written",
                 shown(dir)

@@ -33,27 +33,32 @@ pub(crate) fn identity(canonical: &Path, _metadata: &Metadata) -> Identity {
     canonical.to_path_buf()
 }
 
+/// The identity of the existing file at `path` (module header), following every symbolic link;
+/// `None` for a path that does not resolve (missing, or a dangling link).
+pub(crate) fn identity_of(path: &Path) -> Option<Identity> {
+    let canonical = std::fs::canonicalize(path).ok()?;
+    let metadata = std::fs::metadata(&canonical).ok()?;
+    Some(identity(&canonical, &metadata))
+}
+
 /// Whether `first` and `second` name one existing file (module header), following every
 /// symbolic link. A path that does not resolve (missing, or a dangling link) is no file, so the
 /// answer is no: a write to it creates a new file and replaces nothing.
 pub(crate) fn same_file(first: &Path, second: &Path) -> bool {
-    let of = |path: &Path| {
-        let canonical = std::fs::canonicalize(path).ok()?;
-        let metadata = std::fs::metadata(&canonical).ok()?;
-        Some(identity(&canonical, &metadata))
-    };
-    matches!((of(first), of(second)), (Some(first), Some(second)) if first == second)
+    matches!((identity_of(first), identity_of(second)), (Some(first), Some(second)) if first == second)
 }
 
-/// How the report names the first of `inputs` (each its name as reported and its path) that is
-/// one file with `output` ([`same_file`]); `None` when none is.
+/// How the report names the first of `inputs` (each its name as reported and the identity of
+/// the file read) that is the file `output` identifies; `None` when none is, or when `output`
+/// names no existing file.
 pub(crate) fn input_at<'i>(
-    output: &Path,
-    inputs: &'i [(String, std::path::PathBuf)],
+    output: Option<&Identity>,
+    inputs: &'i [(String, Identity)],
 ) -> Option<&'i str> {
+    let output = output?;
     inputs
         .iter()
-        .find(|(_, read)| same_file(output, read))
+        .find(|(_, read)| read == output)
         .map(|(name, _)| name.as_str())
 }
 

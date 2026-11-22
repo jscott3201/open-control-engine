@@ -10,14 +10,29 @@
 //! anything is read, a `FILE` that is a symbolic link, dangling or not, a directory or another
 //! non-file is `output-not-a-file` (`atomic_write::target_accepted`), and the way out is the
 //! path of the file a link names. A read or parse failure is exit `2`.
+//!
+//! **The file `--write` rewrites is read through its directory's handle** (Unix; issue #771):
+//! the parent, as the path gives it, is opened once, following the caller's links; the entry is
+//! judged from that handle without following a link (a link, a directory or another non-file
+//! swapped in after the first check is the same `output-not-a-file`), opened with
+//! `O_NOFOLLOW | O_NONBLOCK`, and the handle must be a regular file with the identity checked; its
+//! size and bytes come from that handle. The rewrite goes into the same directory handle, takes
+//! the mode of the file read (from its handle, never from whatever is at the name later), and is
+//! renamed over the entry only if the entry is still the file read (device and inode, checked
+//! just before the rename; `write-failed` otherwise, and nothing is written). Windows reads and
+//! writes by path (`directory`).
 
+use std::ffi::OsString;
 use std::path::Path;
 
 use oce_author::{fmt_text, from_wire_bytes, print_text, to_wire_string};
 use serde_json::Value;
 
-use super::{Named, Outcome, report_for, target_accepted, write_atomically};
-use crate::input::{self, Loaded};
+use super::atomic_write::{Lend, Plan, not_a_target, write_in};
+use super::contained::changed;
+use super::directory::{Directory, Entry, Kind, ReadError, split};
+use super::{Named, Outcome, report_for, target_accepted};
+use crate::input::{self, Loaded, io_refusal, read_bounded, too_large};
 use crate::report::Report;
 use crate::{Exit, Form, Source, Streams, codes};
 
@@ -43,8 +58,27 @@ pub(crate) fn run(source: &Source, check: bool, write: bool, streams: &mut Strea
         report.error(code, detail, None);
         return refused(report);
     }
-    let Some(loaded) = input::load(source, streams.stdin, &mut report) else {
-        return refused(report);
+    let (rewrite, loaded) = if write {
+        let form = match input::form_of(source) {
+            Ok(form) => form,
+            Err((code, detail)) => {
+                report.error(code, detail, None);
+                return refused(report);
+            }
+        };
+        let shown = input::display_name(&source.file);
+        match Rewrite::read(Path::new(&source.file), &shown, input::limit(form)) {
+            Ok((rewrite, bytes)) => (Some(rewrite), Loaded { form, bytes }),
+            Err((code, detail)) => {
+                report.error(code, detail, None);
+                return refused(report);
+            }
+        }
+    } else {
+        let Some(loaded) = input::load(source, streams.stdin, &mut report) else {
+            return refused(report);
+        };
+        (None, loaded)
     };
     report.set("form", Value::from(form_name(loaded.form)));
     if write && loaded.form == Form::Wire {
@@ -72,11 +106,8 @@ pub(crate) fn run(source: &Source, check: bool, write: bool, streams: &mut Strea
         };
         return Outcome::with_exit(exit, report);
     }
-    if write {
-        if !original_is_canonical
-            && let Err((code, detail)) =
-                write_atomically(Path::new(&source.file), canonical.as_bytes())
-        {
+    if let Some(rewrite) = rewrite {
+        if !original_is_canonical && let Err((code, detail)) = rewrite.write(canonical.as_bytes()) {
             // `changed` and `output` describe a finished write; a failed one carries neither.
             report.error(code, detail, None);
             report.verdict("refused: the file could not be rewritten");
@@ -93,6 +124,61 @@ pub(crate) fn run(source: &Source, check: bool, write: bool, streams: &mut Strea
     }
     report.verdict("canonical text on stdout");
     Outcome::document(report, canonical.into_bytes())
+}
+
+/// The file `--write` rewrites, as it was read (module header).
+struct Rewrite {
+    /// Its directory, opened once.
+    directory: Directory,
+    /// Its name in that directory.
+    name: OsString,
+    /// Its handle's metadata when it was read: the mode the rewrite takes and the identity the
+    /// entry must still have.
+    read: Entry,
+}
+
+impl Rewrite {
+    /// Read the file at `path` (shown as `shown`) through its directory's handle, at most `bound`
+    /// bytes (module header).
+    fn read(
+        path: &Path,
+        shown: &str,
+        bound: usize,
+    ) -> Result<(Self, Vec<u8>), (&'static str, String)> {
+        let Some((parent, name)) = split(path) else {
+            // No last name (`/`, `..`): a directory, which the first check already refused.
+            return Err(not_a_target(Kind::Directory, shown, Named::Caller));
+        };
+        let directory = Directory::open(parent).map_err(io_refusal)?;
+        let (file, read) = directory.read(&name, false).map_err(|error| match error {
+            ReadError::Io(error) => io_refusal(error),
+            ReadError::Link => not_a_target(Kind::Link, shown, Named::Caller),
+            ReadError::NotFile(kind) => not_a_target(kind, shown, Named::Caller),
+            ReadError::Changed => changed(),
+        })?;
+        if read.len > u64::try_from(bound).unwrap_or(u64::MAX) {
+            return Err(too_large(read.len, bound));
+        }
+        let bytes = read_bounded(file, bound)?;
+        Ok((
+            Self {
+                directory,
+                name,
+                read,
+            },
+            bytes,
+        ))
+    }
+
+    /// Replace the file with `bytes` (module header).
+    fn write(&self, bytes: &[u8]) -> Result<(), (&'static str, String)> {
+        let plan = Plan {
+            lend: Lend::Read(self.read.mode),
+            unchanged: Some(self.read),
+            made: &[],
+        };
+        write_in(&self.directory, &self.name, bytes, &plan)
+    }
 }
 
 /// The canonical text (empty for a wire file when `need_text` is false), and whether the input was
@@ -146,3 +232,7 @@ fn refused(mut report: Report) -> Outcome {
     report.verdict("refused");
     Outcome::judged(report)
 }
+
+#[cfg(test)]
+#[path = "fmt_tests.rs"]
+mod tests;

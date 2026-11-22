@@ -45,11 +45,14 @@
 use std::ffi::OsStr;
 use std::fs;
 use std::io::ErrorKind;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use oce_verify::{Curve, OutputCurves};
 
-use super::{Named, input_at, target_accepted, write_atomically};
+use super::atomic_write::{Plan, not_a_target, write_in};
+use super::directory::{Directory, Kind, MakeError};
+use super::file_identity::Identity;
+use super::{Named, input_at, target_accepted};
 use crate::{codes, input};
 
 /// The file the receipt is written to, inside `DIR`.
@@ -142,15 +145,26 @@ pub(crate) fn target(dir: &OsStr) -> Result<(), Refused> {
     })
 }
 
-/// The checks made before the run (module header). `inputs` pairs each file the run read with
-/// how the report names it: the spec as given, every other file by its path as the spec writes it.
+/// `DIR`, opened once by [`check()`]: everything [`write()`] creates is relative to this handle
+/// (module header).
+#[derive(Debug)]
+pub(crate) struct Out<'d> {
+    /// `DIR` as given, for the report.
+    dir: &'d OsStr,
+    /// `DIR`, opened once.
+    handle: Directory,
+}
+
+/// The checks made before the run (module header), which open `DIR` once. `inputs` pairs each
+/// file the run read with how the report names it (the spec as given, every other file by its
+/// path as the spec writes it) and the identity of the file as it was read.
 ///
 /// # Errors
-/// `write-failed` for a `DIR` that is not an existing directory, a `DIR/outputs` that exists (a
-/// link included) or a regular `DIR/receipt.json`; `output-is-input`, before that last, for a
-/// `DIR/receipt.json` that is one of `inputs`; `output-not-a-file` for a non-file that appeared
-/// at `DIR/receipt.json` since [`target()`].
-pub(crate) fn check(dir: &OsStr, inputs: &[(String, PathBuf)]) -> Result<(), Refused> {
+/// `write-failed` for a `DIR` that is not an existing directory or cannot be opened, a
+/// `DIR/outputs` that exists (a link included) or a regular `DIR/receipt.json`;
+/// `output-is-input`, before that last, for a `DIR/receipt.json` that is one of `inputs`;
+/// `output-not-a-file` for a non-file that appeared at `DIR/receipt.json` since [`target()`].
+pub(crate) fn check<'d>(dir: &'d OsStr, inputs: &[(String, Identity)]) -> Result<Out<'d>, Refused> {
     let root = Path::new(dir);
     match fs::metadata(root) {
         Ok(metadata) if metadata.is_dir() => {}
@@ -158,15 +172,17 @@ pub(crate) fn check(dir: &OsStr, inputs: &[(String, PathBuf)]) -> Result<(), Ref
         Err(error) if error.kind() == ErrorKind::NotFound => {
             return Err(failed(dir, ".", MISSING_DIR));
         }
-        Err(error) => {
-            return Err(failed(
-                dir,
-                ".",
-                format!("the output directory cannot be read: {}", error.kind()),
-            ));
-        }
+        Err(error) => return Err(unreadable(dir, &error)),
     }
-    match fs::symlink_metadata(root.join(OUTPUTS)) {
+    // From here on `DIR` is this handle: nothing below it is reached by its path again.
+    let handle = match Directory::open(root) {
+        Ok(handle) => handle,
+        Err(error) if error.kind() == ErrorKind::NotFound => {
+            return Err(failed(dir, ".", MISSING_DIR));
+        }
+        Err(error) => return Err(unreadable(dir, &error)),
+    };
+    match handle.entry(OsStr::new(OUTPUTS), false) {
         Err(error) if error.kind() == ErrorKind::NotFound => {}
         Ok(_) => return Err(outputs_exist(dir)),
         Err(error) => {
@@ -177,8 +193,7 @@ pub(crate) fn check(dir: &OsStr, inputs: &[(String, PathBuf)]) -> Result<(), Ref
             ));
         }
     }
-    let receipt = root.join(RECEIPT);
-    if let Some(name) = input_at(&receipt, inputs) {
+    if let Some(name) = input_at(receipt_identity(dir, &handle).as_ref(), inputs) {
         return Err(Refused {
             at: RECEIPT.to_owned(),
             code: codes::OUTPUT_IS_INPUT,
@@ -191,9 +206,17 @@ pub(crate) fn check(dir: &OsStr, inputs: &[(String, PathBuf)]) -> Result<(), Ref
     }
     // A non-file that appeared since the first check is refused as that check refuses it; a
     // regular file is a receipt this run did not write, which must never stand beside its curves.
-    target(dir)?;
-    match fs::symlink_metadata(&receipt) {
-        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+    match handle.entry(OsStr::new(RECEIPT), false) {
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(Out { dir, handle }),
+        Ok(entry) if entry.kind != Kind::File => {
+            let (code, detail) = not_a_target(entry.kind, &shown(dir, RECEIPT), Named::Tool);
+            Err(Refused {
+                at: RECEIPT.to_owned(),
+                code,
+                detail,
+                written: Vec::new(),
+            })
+        }
         Ok(_) => Err(failed(
             dir,
             RECEIPT,
@@ -207,6 +230,33 @@ pub(crate) fn check(dir: &OsStr, inputs: &[(String, PathBuf)]) -> Result<(), Ref
     }
 }
 
+/// The identity of the file `DIR/receipt.json` names, following a link there: from the handle on
+/// Unix, by its path elsewhere (no handle there).
+fn receipt_identity(dir: &OsStr, handle: &Directory) -> Option<Identity> {
+    #[cfg(unix)]
+    {
+        let _ = dir;
+        handle
+            .entry(OsStr::new(RECEIPT), true)
+            .ok()
+            .and_then(|entry| entry.identity)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = handle;
+        super::file_identity::identity_of(&Path::new(dir).join(RECEIPT))
+    }
+}
+
+/// The refusal of a `DIR` that exists and cannot be opened.
+fn unreadable(dir: &OsStr, error: &std::io::Error) -> Refused {
+    failed(
+        dir,
+        ".",
+        format!("the output directory cannot be read: {}", error.kind()),
+    )
+}
+
 fn outputs_exist(dir: &OsStr) -> Refused {
     failed(
         dir,
@@ -215,38 +265,44 @@ fn outputs_exist(dir: &OsStr) -> Refused {
     )
 }
 
-/// Write the curves, then `receipt` (module header), and list what was written for each output.
+/// Make the directory `name` (`at` within `DIR`) below `parent` (module header).
+fn make(dir: &OsStr, parent: &Directory, name: &str, at: &str) -> Result<Directory, Refused> {
+    parent.make(OsStr::new(name)).map_err(|error| match error {
+        MakeError::Exists if at == OUTPUTS => outputs_exist(dir),
+        MakeError::Exists => failed(dir, at, "it could not be created: entity already exists"),
+        MakeError::Io(error) => failed(
+            dir,
+            at,
+            format!("it could not be created: {}", error.kind()),
+        ),
+        MakeError::NotFresh => failed(
+            dir,
+            at,
+            "it was replaced after it was made by something that is not an empty directory; \
+             nothing is written there",
+        ),
+    })
+}
+
+/// Write the curves, then `receipt` (module header), each through the handle of the directory
+/// it goes into, and list what was written for each output.
 ///
 /// # Errors
 /// `write-failed`, naming the file; the files already written stay.
 pub(crate) fn write(
-    dir: &OsStr,
+    out: &Out<'_>,
     curves: &[OutputCurves],
     receipt: &[u8],
 ) -> Result<Vec<Written>, Refused> {
-    let root = Path::new(dir);
-    match fs::create_dir(root.join(OUTPUTS)) {
-        Ok(()) => {}
-        Err(error) if error.kind() == ErrorKind::AlreadyExists => return Err(outputs_exist(dir)),
-        Err(error) => {
-            return Err(failed(
-                dir,
-                OUTPUTS,
-                format!("it could not be created: {}", error.kind()),
-            ));
-        }
-    }
+    let dir = out.dir;
+    let outputs = make(dir, &out.handle, OUTPUTS, OUTPUTS)?;
     let mut written = Vec::with_capacity(curves.len());
     for (k, output) in curves.iter().enumerate() {
         let folder = format!("{OUTPUTS}/{k}");
-        if let Err(error) = fs::create_dir(root.join(OUTPUTS).join(k.to_string())) {
-            let refused = failed(
-                dir,
-                &folder,
-                format!("it could not be created: {}", error.kind()),
-            );
-            return Err(with_written(refused, written));
-        }
+        let made = match make(dir, &outputs, &k.to_string(), &folder) {
+            Ok(made) => made,
+            Err(refused) => return Err(with_written(refused, written)),
+        };
         let mut files: Vec<(&str, &Curve)> = vec![("errors.csv", &output.errors)];
         // The library keeps the bound curves only under `--bounds`, and only where an envelope
         // was built (`CommissionOptions::bounds`).
@@ -263,10 +319,16 @@ pub(crate) fn write(
             output: output.output.clone(),
             files: Vec::with_capacity(files.len()),
         });
+        let mine = [&outputs, &made];
+        let plan = Plan {
+            made: &mine,
+            ..Plan::PLAIN
+        };
         for (name, curve) in files {
             let at = format!("{folder}/{name}");
-            let path = root.join(OUTPUTS).join(k.to_string()).join(name);
-            if let Err((_, why)) = write_atomically(&path, curve.to_csv().as_bytes()) {
+            if let Err((_, why)) =
+                write_in(&made, OsStr::new(name), curve.to_csv().as_bytes(), &plan)
+            {
                 return Err(with_written(failed(dir, &at, why), written));
             }
             if let Some(entry) = written.last_mut() {
@@ -274,7 +336,7 @@ pub(crate) fn write(
             }
         }
     }
-    if let Err((_, why)) = write_atomically(&root.join(RECEIPT), receipt) {
+    if let Err((_, why)) = write_in(&out.handle, OsStr::new(RECEIPT), receipt, &Plan::PLAIN) {
         return Err(with_written(failed(dir, RECEIPT, why), written));
     }
     Ok(written)
@@ -289,208 +351,5 @@ fn with_written(mut refused: Refused, mut written: Vec<Written>) -> Refused {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "oce-cli-commission-out-{name}-{}",
-            std::process::id()
-        ));
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).expect("create the directory");
-        dir
-    }
-
-    #[test]
-    fn an_outputs_directory_made_after_the_check_still_refuses_the_write_and_writes_nothing() {
-        // The race the check before the run cannot close: `outputs/` appears between the check
-        // and the write. The plain create refuses it, and the receipt is not written.
-        let dir = scratch("race");
-        assert!(check(dir.as_os_str(), &[]).is_ok());
-        fs::create_dir(dir.join(OUTPUTS)).expect("a racing writer's outputs");
-        let refused = write(dir.as_os_str(), &[], b"{}").expect_err("refused");
-        assert_eq!(
-            (refused.code, refused.at.as_str()),
-            (codes::WRITE_FAILED, OUTPUTS)
-        );
-        // The refusal of an existing `outputs/`, not a failed create's generic one.
-        assert_eq!(refused.detail, outputs_exist(dir.as_os_str()).detail);
-        assert!(!dir.join(RECEIPT).exists());
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    /// `count` outputs' curves, each a real run's (the type cannot be built outside its crate).
-    fn curves(count: usize) -> Vec<OutputCurves> {
-        let one = sample_curves();
-        (0..count)
-            .map(|k| {
-                let mut copy = one.clone();
-                copy.output = format!("urn:doc#top.y{k}");
-                copy
-            })
-            .collect()
-    }
-
-    /// One `OutputCurves` from a real run (the type is non-exhaustive outside its crate).
-    fn sample_curves() -> OutputCurves {
-        let cxf = br#"{"@context": {"S231": "http://data.ashrae.org/S231#"}, "@graph": [
-  {"@id": "urn:doc#top", "@type": "S231:Block",
-   "S231:containsBlock": [{"@id": "urn:doc#top.not"}],
-   "S231:hasInput": [{"@id": "urn:doc#top.u"}], "S231:hasOutput": [{"@id": "urn:doc#top.y"}]},
-  {"@id": "urn:doc#top.not", "@type": "CDL.Logical.Not",
-   "S231:hasInput": {"@id": "urn:doc#top.not.u"}, "S231:hasOutput": {"@id": "urn:doc#top.not.y"}},
-  {"@id": "urn:doc#top.not.u", "@type": "S231:BooleanInput",
-   "S231:isOfDataType": {"@id": "S231:Boolean"}},
-  {"@id": "urn:doc#top.not.y", "@type": "S231:BooleanOutput",
-   "S231:isOfDataType": {"@id": "S231:Boolean"}, "S231:isConnectedTo": {"@id": "urn:doc#top.y"}},
-  {"@id": "urn:doc#top.u", "@type": "S231:BooleanInput",
-   "S231:isOfDataType": {"@id": "S231:Boolean"}, "S231:isConnectedTo": {"@id": "urn:doc#top.not.u"}},
-  {"@id": "urn:doc#top.y", "@type": "S231:BooleanOutput",
-   "S231:isOfDataType": {"@id": "S231:Boolean"}}
-]}"#;
-        let spec = oce_verify::CommissioningSpec::from_json_str(
-            r#"{"references": [{"model": "Inverter", "sequence": "inv", "cxf": "inv.json",
-  "pointNameMapping": [
-    {"cdl": {"name": "u", "type": "bool"}, "device": {"name": "Fan", "type": "bool"}},
-    {"cdl": {"name": "y", "type": "bool"}, "device": {"name": "Alarm", "type": "bool"}}],
-  "window": {"start": 0, "stop": 10}, "sampling": 10,
-  "inputs": [{"path": "fan.csv", "format": "csv", "timeColumn": "time",
-              "columns": {"Fan": "Fan"}}],
-  "expected": [{"path": "alarm.csv", "format": "csv", "timeColumn": "time",
-                "columns": {"Alarm": "Alarm"}}]}]}"#,
-            &oce_verify::SpecLimits::default(),
-        )
-        .expect("the spec loads");
-        let inputs = oce_verify::SpecInputs {
-            cxf: cxf.to_vec(),
-            files: vec![
-                (
-                    "fan.csv".to_owned(),
-                    b"time,Fan\n0,true\n10,false\n".to_vec(),
-                ),
-                (
-                    "alarm.csv".to_owned(),
-                    b"time,Alarm\n0,false\n10,true\n".to_vec(),
-                ),
-            ],
-        };
-        let run = oce_verify::run_commissioning(
-            &spec,
-            0,
-            &inputs,
-            &oce_verify::CommissionOptions::default(),
-        )
-        .expect("runs");
-        run.curves.into_iter().next().expect("one curve")
-    }
-
-    #[test]
-    fn a_receipt_write_that_fails_lists_every_curve_written_before_it() {
-        // A non-empty directory where the receipt goes (the check would refuse it; this is the
-        // write alone): the rename fails after both outputs' curves are written.
-        let dir = scratch("receipt_fails");
-        fs::create_dir_all(dir.join(RECEIPT).join("inside")).expect("a directory at the receipt");
-        let refused = write(dir.as_os_str(), &curves(2), b"{}").expect_err("refused");
-        assert_eq!(
-            (refused.code, refused.at.as_str()),
-            (codes::WRITE_FAILED, RECEIPT)
-        );
-        let shown_dir = dir.to_string_lossy().into_owned();
-        let listed: Vec<(usize, Vec<String>)> = refused
-            .written
-            .iter()
-            .map(|output| (output.index, output.files.clone()))
-            .collect();
-        assert_eq!(
-            listed,
-            [
-                (0, vec![format!("{shown_dir}/outputs/0/errors.csv")]),
-                (1, vec![format!("{shown_dir}/outputs/1/errors.csv")]),
-            ]
-        );
-        for k in 0..2 {
-            assert!(dir.join(format!("outputs/{k}/errors.csv")).is_file());
-        }
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn a_link_planted_at_the_receipt_after_the_check_is_replaced_and_its_target_untouched() {
-        // The race the check cannot close: a link appears at `receipt.json` between the check
-        // and the write. The write replaces the entry and never writes where it points.
-        let dir = scratch("planted_receipt");
-        let victim = dir.join("victim.txt");
-        fs::write(&victim, b"PRECIOUS").expect("victim");
-        let out = dir.join("out");
-        fs::create_dir(&out).expect("out");
-        assert!(check(out.as_os_str(), &[]).is_ok());
-        std::os::unix::fs::symlink(&victim, out.join(RECEIPT)).expect("a planted link");
-        let written = write(out.as_os_str(), &curves(1), b"{}\n").expect("written");
-        assert_eq!(written.len(), 1);
-        assert_eq!(fs::read(&victim).expect("victim"), b"PRECIOUS");
-        let entry = fs::symlink_metadata(out.join(RECEIPT)).expect("the receipt");
-        assert!(entry.file_type().is_file());
-        assert_eq!(fs::read(out.join(RECEIPT)).expect("receipt"), b"{}\n");
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn a_non_file_that_appears_after_the_first_check_is_refused_by_the_second() {
-        // `target()` runs before anything is read and `check()` after the reads; a link planted
-        // between them is refused as the first check refuses it, and a regular file stays the
-        // stale receipt `write-failed` names.
-        let dir = scratch("late_link");
-        let out = dir.join("out");
-        fs::create_dir(&out).expect("out");
-        assert!(target(out.as_os_str()).is_ok());
-        std::os::unix::fs::symlink(dir.join("victim.txt"), out.join(RECEIPT)).expect("a link");
-        let refused = check(out.as_os_str(), &[]).expect_err("a link");
-        assert_eq!(
-            (refused.code, refused.at.as_str()),
-            (codes::OUTPUT_NOT_A_FILE, RECEIPT)
-        );
-        assert_eq!(
-            target(out.as_os_str()).expect_err("a link").code,
-            codes::OUTPUT_NOT_A_FILE
-        );
-        fs::remove_file(out.join(RECEIPT)).expect("unlink");
-        fs::write(out.join(RECEIPT), b"{}\n").expect("a stale receipt");
-        assert!(
-            target(out.as_os_str()).is_ok(),
-            "a regular file passes the first check"
-        );
-        let refused = check(out.as_os_str(), &[]).expect_err("a stale receipt");
-        assert_eq!(refused.code, codes::WRITE_FAILED);
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn a_run_with_no_compared_output_writes_an_empty_outputs_and_the_receipt() {
-        let dir = scratch("empty");
-        let written = write(dir.as_os_str(), &[], b"{}\n").expect("written");
-        assert!(written.is_empty());
-        assert!(dir.join(OUTPUTS).is_dir());
-        assert_eq!(fs::read_dir(dir.join(OUTPUTS)).expect("list").count(), 0);
-        assert_eq!(fs::read(dir.join(RECEIPT)).expect("receipt"), b"{}\n");
-        let _ = fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn a_shown_name_keeps_dir_as_given_with_one_slash() {
-        assert_eq!(shown(OsStr::new("out"), RECEIPT), "out/receipt.json");
-        assert_eq!(shown(OsStr::new("out/"), RECEIPT), "out/receipt.json");
-        // The root directory keeps its slash; an empty DIR (refused before any report names
-        // it) is never shown as the root's file.
-        assert_eq!(shown(OsStr::new("/"), RECEIPT), "/receipt.json");
-        assert_eq!(shown(OsStr::new(""), RECEIPT), "receipt.json");
-        assert_eq!(
-            shown(OsStr::new("."), "outputs/0/errors.csv"),
-            "./outputs/0/errors.csv"
-        );
-        let missing = failed(OsStr::new("absent"), ".", "gone");
-        assert_eq!(missing.detail, "`absent`: gone");
-    }
-}
+#[path = "commission_out_tests.rs"]
+mod tests;
