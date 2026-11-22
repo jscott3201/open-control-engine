@@ -5,7 +5,7 @@ row	5.0	288.0	285.0	280.0	0.6	true	0000000000000000	0.0	off: the outdoor air has
 row	10.0	288.0	285.0	280.0	0.6	true	0000000000000000	0.0	off: the outdoor air has not passed the cut-off
 row	15.0	288.0	285.0	280.0	0.6	true	0000000000000000	0.0	off: the outdoor air has not passed the cut-off
 row	20.0	288.0	285.0	280.0	0.6	true	0000000000000000	0.0	off: the outdoor air has not passed the cut-off
-row	25.0	288.0	285.0	290.0	0.6	true	3fb70a3d70a3d70b	0.09000000000000001	pi: enabled, unlimited
+row	25.0	288.0	285.0	290.0	0.6	true	0000000000000000	0.0	pi: enabled, unlimited
 row	30.0	288.0	285.0	290.0	0.6	true	0000000000000000	0.0	pi: enabled, unlimited
 row	35.0	288.0	285.0	290.0	0.6	true	3f826e978d4fdf3c	0.009000000000000001	pi: enabled, unlimited
 row	40.0	288.0	285.0	290.0	0.6	true	3f926e978d4fdf3c	0.018000000000000002	pi: enabled, unlimited
@@ -46,21 +46,21 @@ row	217.0	288.0	285.0	290.0	0.03	true	0000000000000000	0.0	off: the fan feedback
 row	222.0	288.0	285.0	290.0	0.12	true	0000000000000000	0.0	off: the fan feedback below its uHigh
 row	227.0	288.0	285.0	290.0	0.12	true	0000000000000000	0.0	off: the fan feedback below its uHigh
 row	232.0	288.0	285.0	290.0	0.12	true	0000000000000000	0.0	off: the fan feedback below its uHigh
-row	237.0	288.0	285.0	290.0	0.2	true	3fa70a3d70a3d70b	0.045000000000000005	pi: re-enabled, the integrator reset
+row	237.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled, the integrator reset
 row	242.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled, the integrator reset
 row	247.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled, the integrator reset
 row	252.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled, the integrator reset
 row	257.0	288.0	285.0	290.0	0.2	false	0000000000000000	0.0	off: the fan status false
 row	262.0	288.0	285.0	290.0	0.2	false	0000000000000000	0.0	off: the fan status false
 row	267.0	288.0	285.0	290.0	0.2	false	0000000000000000	0.0	off: the fan status false
-row	272.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled by the fan status
+row	272.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled by the fan status
 row	277.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled by the fan status
 row	282.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled by the fan status
 row	287.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled by the fan status
 row	292.0	288.0	285.0	20.0	0.2	true	0000000000000000	0.0	off: the outdoor air below upstream's uLow
 row	297.0	288.0	285.0	20.0	0.2	true	0000000000000000	0.0	off: the outdoor air below upstream's uLow
 row	302.0	288.0	285.0	20.0	0.2	true	0000000000000000	0.0	off: the outdoor air below upstream's uLow
-row	307.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled by the outdoor air
+row	307.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled by the outdoor air
 row	312.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled by the outdoor air
 row	317.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled by the outdoor air
 row	322.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled by the outdoor air
@@ -74,3 +74,7 @@ row	357.0	288.0	285.0	290.0	0.2	true	3fae1f0b5787bd51	0.0588305992458752	pi: rec
 row	362.0	288.0	285.0	290.0	0.2	true	3fb15d589d6dda90	0.0678305992458752	pi: recovering from the lower saturation
 row	367.0	288.0	285.0	290.0	0.2	true	3fb3ab2b8f17d678	0.07683059924587521	pi: recovering from the lower saturation
 row	372.0	288.0	285.0	290.0	0.2	true	3fb5f8fe80c1d25f	0.0858305992458752	pi: recovering from the lower saturation
+row	377.0	288.0	285.0	290.0	0.2	false	0000000000000000	0.0	off: the fan status false for one frame
+row	382.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled after one frame off, Change still true at the re-enable
+row	387.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled after one frame off, Change still true at the re-enable
+row	392.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled after one frame off, Change still true at the re-enable

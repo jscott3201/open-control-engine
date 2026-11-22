@@ -159,7 +159,10 @@ pub(crate) fn sample_due(t_now: f64, t0: f64, period: f64, last_index: i64) -> (
 
 /// Mirror `CDL.Discrete.TriggeredSampler`: capture `u` on each rising trigger and otherwise hold.
 ///
-/// `y_start` is emitted before the first rising trigger. The returned trace has one row per input.
+/// `y_start` is emitted before the first rising trigger. The first row is initialisation
+/// (`y = y_start`, the `when trigger` clause inactive), so a trigger already true there is not a
+/// rising edge; only a later false-to-true transition samples. The returned trace has one row per
+/// input.
 ///
 /// # Panics
 /// Panics when `u` and `trigger` have different lengths.
@@ -172,8 +175,8 @@ pub(crate) fn triggered_sampler(u: &[f64], trigger: &[bool], y_start: f64) -> Ve
     let mut held = y_start;
     let mut previous_trigger = false;
     let mut out = Vec::with_capacity(u.len());
-    for (&input, &triggered) in u.iter().zip(trigger) {
-        if triggered && !previous_trigger {
+    for (index, (&input, &triggered)) in u.iter().zip(trigger).enumerate() {
+        if index > 0 && triggered && !previous_trigger {
             held = input;
         }
         out.push(held);

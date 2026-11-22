@@ -2,7 +2,7 @@
 # columns: time outdoor_airflow_normalized minimum_outdoor_airflow_setpoint_normalized supply_temperature_signal outdoor_air_temperature supply_fan_status operation_mode freeze_protection_stage outdoor_damper_min_limit minimum_outdoor_air_loop_enabled outdoor_damper_command return_damper_command
 double G36_multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21_reference(24,12)
 0.0 0.0 0.2 -0.5 293.0 1.0 1.0 0.0 0.4 1.0 0.4 1.0
-60.0 0.0 0.2 -0.25 295.0 1.0 1.0 0.0 0.0 1.0 0.0 1.0
+60.0 0.0 0.2 -0.25 295.0 1.0 1.0 0.0 0.4 1.0 0.4 1.0
 120.0 0.0 0.2 -0.125 295.0 1.0 1.0 0.0 1.0 1.0 1.0 0.0
 180.0 0.0 0.2 0.0 295.0 1.0 1.0 0.0 0.0 1.0 0.0 1.0
 240.0 0.0 0.2 0.125 295.0 1.0 1.0 0.0 1.0 1.0 1.0 0.0

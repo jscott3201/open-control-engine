@@ -35,8 +35,11 @@ fn decimal_ticks(n: usize) -> Vec<f64> {
 }
 
 /// Emit-before-update forward Euler: each tick emits the prior accumulator, then advances it by
-/// `k * u * dt` (first `dt = 0`), with a rising `trigger` storing `y_reset_in` instead — visible
-/// at the next emit; a held-high trigger integrates, it does not re-reset.
+/// `k * u * dt` (first `dt = 0`). `when trigger then reinit(y, y_reset_in)` fires at the instant
+/// the trigger becomes true: at a sample after the first where `trigger` is true and was false at
+/// the previous sample, that sample emits its own `y_reset_in` and stores it with no Euler step
+/// (the step covers the interval before the event). A held-high trigger integrates, it does not
+/// re-reset, and the first sample (initialisation) never resets.
 fn integrator_outputs(
     time: &[f64],
     u: &[f64],
@@ -55,11 +58,13 @@ fn integrator_outputs(
     let mut out = Vec::with_capacity(time.len());
 
     for idx in 0..time.len() {
-        out.push(r(x));
+        let event = prev_t.is_some() && trigger[idx] && !prev_trigger;
         let dt = prev_t.map_or(0.0, |prev| time[idx] - prev);
-        x = if trigger[idx] && !prev_trigger {
+        x = if event {
+            out.push(r(y_reset_in[idx]));
             y_reset_in[idx]
         } else {
+            out.push(r(x));
             x + k * u[idx] * dt
         };
         prev_t = Some(time[idx]);
@@ -87,8 +92,8 @@ fn default_gain_reset_edges() -> Golden {
         ValueKind::Real,
         time,
         y,
-        "default k=1, y_start=1.0; dt=0.1 decimal grid (non-dyadic residue); rising trigger at row 3 stores 7.0 for the next emit, held-high row 4 integrates instead of re-resetting to 11.0, second rising trigger at row 7 stores -5.0",
-        "Emit prior x; then x := y_reset_in on a rising trigger else x + k*u*dt (first dt=0); reinit is direct assignment, never scaled by k; Buildings Reals/IntegratorWithReset.mo der(y)=k*u + when trigger reinit(y, y_reset_in)",
+        "default k=1, y_start=1.0; dt=0.1 decimal grid (non-dyadic residue); rising trigger at row 3 emits and stores 7.0, held-high row 4 emits 7.0 and integrates instead of re-resetting to 11.0, second rising trigger at row 7 emits and stores -5.0",
+        "Reset at the event: at a row after the first where trigger is true and was false at the previous row, emit y_reset_in and store it with no Euler step; otherwise emit prior x, then x := x + k*u*dt (first dt=0); no reset at the first row (initialisation); reinit is direct assignment, never scaled by k; Buildings Reals/IntegratorWithReset.mo der(y)=k*u + when trigger reinit(y, y_reset_in)",
     )
     .with_inputs(vec![
         input_r("u", u),
@@ -110,8 +115,8 @@ fn gain_scales_integrand() -> Golden {
         ValueKind::Real,
         time,
         y,
-        "k=2.5, y_start=1.0; dt=0.1 decimal grid; the accumulator advances by k*u*dt (x0=1, +2.5*2*0.1 per early row), and the rising trigger at row 4 stores exactly 7.0 — NOT 2.5*7.0 — proving reinit is unscaled",
-        "Emit prior x; then x := y_reset_in on a rising trigger else x + k*u*dt (first dt=0); oracle-diff for the 2026-07-06 closeout fix (engine previously dropped the upstream gain k entirely); Buildings Reals/IntegratorWithReset.mo der(y)=k*u",
+        "k=2.5, y_start=1.0; dt=0.1 decimal grid; the accumulator advances by k*u*dt (x0=1, +2.5*2*0.1 per early row), and the rising trigger at row 4 emits and stores exactly 7.0 — NOT 2.5*7.0 — proving reinit is unscaled",
+        "Reset at the event: a rising trigger after the first row emits and stores y_reset_in with no Euler step; otherwise emit prior x, then x := x + k*u*dt (first dt=0); oracle-diff for the 2026-07-06 closeout fix (engine previously dropped the upstream gain k entirely); Buildings Reals/IntegratorWithReset.mo der(y)=k*u",
     )
     .with_scenario("gain")
     .with_inputs(vec![

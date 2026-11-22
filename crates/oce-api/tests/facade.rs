@@ -29,6 +29,8 @@ mod blob_models;
 mod blob_summary_facts;
 #[path = "support/content_id_corpus.rs"]
 mod content_id_corpus;
+#[path = "support/event_documents.rs"]
+mod event_documents;
 #[path = "support/frame_trace.rs"]
 mod frame_trace;
 #[path = "support/parameter_documents.rs"]
@@ -38,6 +40,7 @@ mod array_extent;
 mod authored_point_identity;
 mod blob_constructed_budget;
 mod blob_element_shapes;
+mod blob_event_input_schedule;
 mod blob_fuzz;
 mod blob_hostile_bytes;
 mod blob_hostile_io_schedule;
@@ -76,6 +79,8 @@ mod double_driver_refusals;
 mod element_name_spelling;
 mod engine_0_5_0_artefacts;
 mod enumerations;
+mod event_input_feedback;
+mod event_input_ordering;
 mod execute_frame;
 mod execute_frame_preservation;
 mod export_cxf;
@@ -126,6 +131,7 @@ mod non_finite_bounds;
 mod non_finite_composite_parameters;
 mod non_finite_input_policy;
 mod non_finite_parameters;
+mod param_schedule_shape;
 mod parameter_kinds;
 mod parameter_scope_kinds;
 mod prepare_frame_preservation;

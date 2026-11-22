@@ -191,6 +191,82 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
+- **A reset applies at the frame where its trigger rises** (GitHub #789, issue #768; owner
+  ruling of 2026-11-22, "fix both to match Modelica"; design note
+  [Reset timing at the event](docs/design/reset-timing.md)). **Breaking, in place:** the outputs
+  of models that still load change at every reset frame. `Reals.PIDWithReset` (PI and PID
+  modes), `Reals.IntegratorWithReset` and `Integers.OnCounter` applied a `when` event in their
+  state update, so the frame where `trigger` (or `OnCounter`'s `reset`) rose emitted the value
+  from before the event and the reset showed one frame late. Modelica's `when trigger then
+  reinit(...)` applies it at the instant. Now that frame emits the value after the event,
+  computed from its own inputs: `IntegratorWithReset` emits `y_reset_in`; `PIDWithReset`
+  back-solves the integrator to `y_reset - (P + D)` from the frame's terms and emits through the
+  normal path, `P + D + (y_reset - (P + D))` (which can differ from `y_reset` by an ulp); the
+  integrators store the reset value with no Euler step, so their state from the next frame on is
+  unchanged. `OnCounter` emits the new count at the frame of the event. Goldens re-blessed: 7 of
+  the 46 G36 determinism traces (the fixtures holding `PIDWithReset`), the golden-gen references
+  re-derived without the engine, 3 compiled-schedule blobs (byte total unchanged), 7 run digests,
+  `oce-replay`'s two `cooling_only_controller` trace goldens, the authority-claims projection
+  and the Building 33 derivation (`derive_valve.py`; 4 of its 74 frames move to 0, as the
+  continuous model gives, and 4 frames are appended). No `state_len`, layout or revision
+  changes; the workspace is already 0.6.0, so no version bump is owed (standing rule 10).
+
+- **No event fires at frame 0** (GitHub #789, issue #768). **Breaking, in place:** the outputs of
+  models whose trigger is true at frame 0 change, and a blob compiled before this change that
+  holds `TriggeredSampler` is refused with `BlobError::InitialStateMismatch` (its initial
+  previous-trigger word was `false`). Frame 0 is initialisation, where a
+  `when` without `initial()` is inactive. `PIDWithReset` and `IntegratorWithReset` reset there
+  when the trigger was already true, `Discrete.TriggeredSampler` sampled `u` instead of emitting
+  `y_start`, and `Discrete.TriggeredMax` emitted `max(u, abs(u))` instead of `u` (so a negative
+  `u` or `-0.0` lost its sign). Now a trigger true at frame 0 only becomes `pre(trigger)` for
+  frame 1, and the first event is its next false-to-true transition. `TriggeredSampler` seeds
+  its previous-trigger word `true` (its `state_len` is unchanged and the word stays a canonical
+  Boolean; the initial-state CRC of the two blobs holding it moves). `Change`, `Edge` and
+  `FallingEdge` keep their initialisation value at frame 0.
+
+- **Event inputs feed through, and feedback into one is an `algebraic-loop` naming the delay**
+  (GitHub #789, issue #768; owner ruling of 2026-11-22). **Breaking, in place:** to emit the
+  value after the event, `PIDWithReset` reads `trigger` (PI, PID), `IntegratorWithReset` reads
+  `trigger` and `y_reset_in`, and `OnCounter` reads `trigger` and `reset` at emission, so those
+  inputs now feed through to `y`: the block waits for their producers, and a model whose output
+  reaches one of them, such as `y -> GreaterThreshold -> trigger` on a reset PI or a counter that
+  resets itself through `GreaterEqualThreshold`, is refused at load with `algebraic-loop` (it
+  loaded before, with the event one frame late). The record of that input names the remedy:
+  `CDL.Logical.Pre` on the path into a Boolean event input, or `CDL.Discrete.UnitDelay` on the
+  path into `y_reset_in` (a one-frame delay only when its `samplePeriod` equals the host frame
+  period and frames land on its grid). The delay makes the model load and delays that input's
+  events by one frame; it does not reproduce the previous engine's output (the execution profile
+  states exactly what it does reproduce). No tracked document, vendored translation or
+  `open-control-library` document is refused. A blob compiled before this change whose schedule
+  fires such a block before its event input's producer is refused with
+  `InvalidSchedule { fault: EmitBefore }`. New surface: `oce_blocks::EventInputRole`,
+  `Block::event_input_role` (default `None`), `oce_graph::event_input_remedy`, and the
+  `event_inputs` field of `BuildError::AlgebraicLoop`. `PIDWithReset` in P mode is unchanged.
+
+- **`set_param` refuses a value that changes the block's schedule shape** (GitHub #789, issue
+  #768). **Breaking, in place:** `resume` re-instantiates the edited blocks but never recomputes
+  the schedule, and `PIDWithReset.controllerType` now decides whether `trigger` feeds through to
+  `y`: in PI and PID it does (the reset applies at the frame of the event); in P and PD it does
+  not (decision 10 of the [design note](docs/design/reset-timing.md): no integrator, no reset),
+  and P, holding no state, reads it when it fires while PD never reads it. A model loaded as PD
+  with a trigger producer declared after the controller ran a one-frame-late reset after an edit
+  to PI, and a feedback model a fresh PI load refuses ran. `Engine::set_param` now instantiates
+  the edited block as `resume` would, with every pending edit of that block applied, and refuses
+  with `OcError::ParamStructural` when its port counts, feedthrough, the inputs it reads when it
+  fires or an input's event role differ from the scheduled instance (one constructor call and
+  `O(inputs x outputs)` comparisons per edit). Refused now: `PIDWithReset.controllerType` between
+  {P, PD} and {PI, PID}, and between P and PD (refused even on a model without feedback, where
+  it would be harmless: P reads `trigger` when it fires and PD never does, and one rule judged on
+  the block alone keeps a halted edit consistent with a fresh load). PI and PID stay
+  interchangeable, every other
+  parameter of every class is unaffected (a registry sweep of every class and settable scalar
+  parameter over a value grid finds no other value-dependent shape), and `CDL.Reals.PID`'s
+  `controllerType` stays settable in every direction. The engine stays halted with its pending
+  edits unchanged. The `ParamStructural` message now also covers a value that changes the
+  block's schedule shape (its feedthrough, or which inputs it reads when it fires). The earlier note that no edit a subject admits can meet `param-structural`
+  on an `oce-verify` mutant no longer holds for a mutant that changes a reset PID's mode. A
+  compiled-schedule blob has no parameter edit, so it was never affected.
+
 - **The constructed budget lives in `oce-blocks`, beside what it counts** (GitHub #788, issue
   #722). `ConstructedBudget` and `MAX_CONSTRUCTED_WORDS` move from `oce-graph` to `oce-blocks`
   (beside `Block::constructed_words` and `MAX_CONSTRUCTION_PEAK_BYTES`), so the CXF resolver and

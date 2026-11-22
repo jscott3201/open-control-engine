@@ -64,8 +64,8 @@ Thus added/removed/renamed or byte-changed evidence cannot leave the projection 
 
 | Corpus | Provenance records | All members | Tier | depends_on_oce_blocks | Inventory SHA-256 |
 | --- | --- | --- | --- | --- | --- |
-| tier-a-records | 422 | 1087 | A | false | <code>ab82dfd8eaa91ef8a4c1781e19d35588fddc809178c743c4d964b98860dfdf1a</code> |
-| tier-two-records | 46 | 92 | 2 | true | <code>590097b7bae2144e3cb92ed2a2ca88510a032c2a2c3fdcefbae62df170dc53bc</code> |
+| tier-a-records | 422 | 1087 | A | false | <code>c9416eb161a9866baee61d1e005073882071fded1d7de672bf8a88414a9b5369</code> |
+| tier-two-records | 46 | 92 | 2 | true | <code>c1507dc8dfd6a1f5bb3b7e61d30f4515d07cdc47208b9c2d640407e85e176eee</code> |
 
 ## Review-only claims
 

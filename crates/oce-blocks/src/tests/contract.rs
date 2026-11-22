@@ -82,8 +82,8 @@ fn feedthrough_classification_matches_spec() {
     assert!(TriggeredSampler::default().feeds_through(0, 0)); // current u sampled on a trigger
     assert!(TriggeredSampler::default().feeds_through(1, 0)); // current trigger chooses sampling
     assert!(!IntegratorWithReset::default().feeds_through(0, 0)); // integrating loop cut
-    assert!(!IntegratorWithReset::default().feeds_through(1, 0)); // reset value is delayed
-    assert!(!IntegratorWithReset::default().feeds_through(2, 0)); // trigger is delayed
+    assert!(IntegratorWithReset::default().feeds_through(1, 0)); // reset frame emits y_reset_in
+    assert!(IntegratorWithReset::default().feeds_through(2, 0)); // reset applies at its frame
 
     // Edge is stateful (owns `prev`) but FEEDS THROUGH on the current `u` — the edge is a function
     // of the current input vs the prior bit, so it is NOT a loop cut (`01` §11.2 req 3). Getting
@@ -136,7 +136,7 @@ fn feedthrough_classification_matches_spec() {
     assert!(
         PidWithReset::default().feeds_through(0, 0)
             && PidWithReset::default().feeds_through(1, 0)
-            && !PidWithReset::default().feeds_through(2, 0)
+            && PidWithReset::default().feeds_through(2, 0) // PI by default: reset at its frame
     );
     assert_eq!(Assert::default().kind(), BlockKind::Algebraic);
     assert!(!Assert::default().feeds_through(0, 0));
@@ -441,8 +441,10 @@ fn registry_make_resolves_parameters() {
     pi_reset.init_state(&mut region, &ParamTable::default());
     let diag = NoopDiagnostics;
     let cx = Ctx::new(0.0, &diag);
+    // Frame 0 with the trigger low, then a rising trigger: that frame emits the reset target.
+    let low = [Value::Real(1.0), Value::Real(0.0), Value::Boolean(false)];
+    pi_reset.update_state(&cx, &low, &mut region);
     let inputs = [Value::Real(1.0), Value::Real(0.0), Value::Boolean(true)];
-    pi_reset.update_state(&cx, &inputs, &mut region);
     assert!(
         emit(pi_reset.as_ref(), &inputs, &region)[0].bit_eq(&Value::Real(4.25)),
         "PIDWithReset.y_reset must default to the resolved xi_start parameter"

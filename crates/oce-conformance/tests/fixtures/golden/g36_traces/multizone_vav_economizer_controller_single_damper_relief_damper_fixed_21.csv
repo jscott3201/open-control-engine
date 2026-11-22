@@ -2,7 +2,7 @@
 # columns: time http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yOutDam_min http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yEnaMinOut http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yOutDam http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yRetDam
 double multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21(24,5)
 0.0 0.4 1.0 0.4 1.0
-60.0 0.0 1.0 0.0 1.0
+60.0 0.4 1.0 0.4 1.0
 120.0 1.0 1.0 1.0 0.0
 180.0 0.0 1.0 0.0 1.0
 240.0 1.0 1.0 1.0 0.0

@@ -450,8 +450,8 @@ fn integer_comparators() -> Vec<Golden> {
 fn integer_stateful() -> Vec<Golden> {
     let mut out = Vec::new();
 
-    // OnCounter: emit start-of-tick count; after the first tick, either input's rising edge fires
-    // the Modelica `when {trigger,reset}`. The branch uses the current reset level, not reset's
+    // OnCounter: after the first tick, either input's rising edge fires the Modelica
+    // `when {trigger,reset}` at its own row. The branch uses the current reset level, not reset's
     // edge status.
     {
         let trigger = [false, true, true, false, true, true, false];
@@ -463,7 +463,7 @@ fn integer_stateful() -> Vec<Golden> {
             &reset,
             y_start,
             "y_start=0; trigger=[F,T,T,F,T,T,F], reset=[F,F,F,F,T,T,F]; includes simultaneous trigger/reset rise",
-            "emit start-of-tick count; no when fires at t0; on trigger-or-reset rising edge, y := if reset then y_start else pre(y)+1; reset level has priority; Buildings Integers/OnCounter.mo",
+            "no when fires at t0 (initialization: y = y_start); at a later row where trigger or reset rises, that row emits y := if reset then y_start else pre(y)+1; reset level has priority; Buildings Integers/OnCounter.mo",
         ));
     }
 
@@ -491,7 +491,7 @@ fn integer_stateful() -> Vec<Golden> {
             &reset,
             2,
             "scenario=trigger_initially_true, y_start=2; trigger starts true at t0, then falls and rises again",
-            "No when event fires for trigger already true at the initial tick; the later false->true transition increments by one; Buildings Integers/OnCounter.mo",
+            "No when event fires for trigger already true at the initial tick (initialization); the later false->true transition increments by one at its own row; Buildings Integers/OnCounter.mo",
         ));
     }
 
@@ -587,7 +587,9 @@ fn on_counter_y(trigger: &[bool], reset: &[bool], y_start: i64) -> Vec<Sample> {
     let mut has_history = false;
     let mut y = Vec::with_capacity(trigger.len());
     for (&trigger, &reset) in trigger.iter().zip(reset) {
-        y.push(i(count));
+        // `when trigger or reset then y = if reset then y_start else pre(y) + 1`: the event applies
+        // at the instant an input becomes true, so that row emits the new count. The first row is
+        // initialisation (pre(y) = y_start) and fires no when.
         if has_history {
             let trigger_rising = trigger && !pre_trigger;
             let reset_rising = reset && !pre_reset;
@@ -600,6 +602,7 @@ fn on_counter_y(trigger: &[bool], reset: &[bool], y_start: i64) -> Vec<Sample> {
                 };
             }
         }
+        y.push(i(count));
         pre_trigger = trigger;
         pre_reset = reset;
         has_history = true;

@@ -211,8 +211,10 @@ fn integer_and_boolean_inputs_are_unaffected() {
 #[test]
 fn a_run_that_saw_refusals_is_bit_identical_to_one_that_never_did() {
     // The integrator emits its prior accumulator, then advances it by u * dt (dt = 0 on the
-    // first tick). Hand-derived: x = 0 after t=0 (2 * 0), x = 0 + (-1) * 1 = -1 after t=1, so
-    // the output reads -1 at t=3. A non-finite sample reaching it would latch NaN forever.
+    // first tick); the frame where the trigger rises emits and stores y_reset_in instead.
+    // Hand-derived: x = 0 after t=0 (2 * 0), x = 0 + (-1) * 1 = -1 after t=1; the trigger rises
+    // at t=3, so that frame emits the reset value 0 (it would read -1 without the reset). A
+    // non-finite sample reaching it would latch NaN forever.
     let script = [
         (0.0, entries(2.0, 0.0, false, 1)),
         (1.0, entries(-1.0, 0.0, false, 1)),
@@ -227,10 +229,7 @@ fn a_run_that_saw_refusals_is_bit_identical_to_one_that_never_did() {
         .collect();
     let reference_state = clean.state_snapshot().unwrap();
     assert_eq!(reference[1][2], ("urn:fin:y".to_owned(), 0.0_f64.to_bits()));
-    assert_eq!(
-        reference[2][2],
-        ("urn:fin:y".to_owned(), (-1.0_f64).to_bits())
-    );
+    assert_eq!(reference[2][2], ("urn:fin:y".to_owned(), 0.0_f64.to_bits()));
     for bits in NON_FINITE {
         let bad = f64::from_bits(bits);
         let mut noisy = loaded();

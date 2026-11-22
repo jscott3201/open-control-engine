@@ -15,7 +15,7 @@
     { "name": "trigger", "value_kind": "Boolean", "values": [1.0, 1.0, 0.0, 1.0] }
   ],
   "input": "scenario=trigger_initially_true; u=[-2,-10,8,7]; trigger=[true,true,false,true]",
-  "reference_rule": "pre(trigger) is false at initialization; initial y=u is then used as pre(y) for the initial rising-trigger event, so negative u becomes abs(u)",
+  "reference_rule": "initial equation y=u at the first row whatever trigger is (a when-clause without initial() is inactive at initialization, Modelica 3.6 section 8.6), so negative u stays negative; that row's trigger becomes pre(trigger), so held true at row 1 is no event; the first event is the false->true edge at row 3: max(pre(y),abs(u))",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

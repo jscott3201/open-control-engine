@@ -1,12 +1,16 @@
-//! CDL-legal feedback into a proportional-only reset PID's `trigger` is refused at load with the
-//! `block-algebraic-loop` code (GitHub issue #347).
+//! Feedback from a reset PID's output into its own `trigger` is refused at load.
 //!
 //! `CDL.Reals.PIDWithReset` with `controllerType = P` holds no state, so it is an algebraic block
 //! that reads `trigger` when it fires, yet `y` depends only on `u_s` and `u_m` (upstream
 //! `PIDWithReset.mo` connects `trigger` only to the integrator, which P mode lacks). Feeding `y`
 //! back through a threshold into `trigger` leaves the connector graph acyclic, but atomic block
-//! firing cannot place the controller. In every other mode the controller is stateful and
-//! `trigger` is read only by the state update, so the same model loads.
+//! firing cannot place the controller: `block-algebraic-loop` (GitHub issue #347).
+//!
+//! In the PI and PID modes the reset applies at the frame where `trigger` rises, so `trigger`
+//! feeds through to `y` (issue #768) and the same feedback is a connector-level
+//! `algebraic-loop` through an event input, whose record names the `CDL.Logical.Pre` remedy. With
+//! a `Pre` on the fed-back trigger the model loads. In PD mode `trigger` is dormant and the
+//! feedback loads.
 
 use serde_json::{Value, json};
 
@@ -26,6 +30,12 @@ fn iri(local: &str) -> String {
 /// `us → pid.u_s`, `um → pid.u_m`, `pid.y → y` and `pid.y → thr.u`; with `feedback`,
 /// `thr.y → pid.trigger` closes the loop, otherwise boundary input `trg` drives `trigger`.
 fn reset_pid_trigger(member: &str, feedback: bool) -> Vec<u8> {
+    reset_pid_trigger_document(member, feedback, false)
+}
+
+/// As [`reset_pid_trigger`]; with `through_pre`, the fed-back `thr.y` reaches `pid.trigger`
+/// through a `CDL.Logical.Pre` named `pre`.
+fn reset_pid_trigger_document(member: &str, feedback: bool, through_pre: bool) -> Vec<u8> {
     let real = || json!({ "@id": "S231:Real" });
     let boolean = || json!({ "@id": "S231:Boolean" });
     let connector = |local: &str, kind: &str, data: Value, to: Option<&str>| {
@@ -92,9 +102,28 @@ fn reset_pid_trigger(member: &str, feedback: bool) -> Vec<u8> {
             "thr.y",
             "S231:BooleanOutput",
             boolean(),
-            feedback.then_some("pid.trigger"),
+            feedback.then_some(if through_pre { "pre.u" } else { "pid.trigger" }),
         ),
     ];
+    if feedback && through_pre {
+        graph[0]["S231:containsBlock"]
+            .as_array_mut()
+            .expect("block list")
+            .push(json!({ "@id": iri("pre") }));
+        graph.push(json!({
+            "@id": iri("pre"),
+            "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Pre",
+            "S231:hasInput": { "@id": iri("pre.u") },
+            "S231:hasOutput": { "@id": iri("pre.y") },
+        }));
+        graph.push(connector("pre.u", "S231:BooleanInput", boolean(), None));
+        graph.push(connector(
+            "pre.y",
+            "S231:BooleanOutput",
+            boolean(),
+            Some("pid.trigger"),
+        ));
+    }
     if !feedback {
         graph.push(connector(
             "trg",
@@ -146,12 +175,56 @@ fn proportional_reset_pid_trigger_feedback_is_refused_as_a_block_loop() {
 }
 
 #[test]
-fn reset_pid_trigger_feedback_loads_in_every_mode_with_state() {
-    for member in ["PI", "PD", "PID"] {
-        Engine::new()
-            .load_cxf(&reset_pid_trigger(member, true))
-            .unwrap_or_else(|err| panic!("{member} must load: {err:?}"));
+fn reset_pid_trigger_feedback_with_an_integrator_is_an_algebraic_loop_naming_pre() {
+    for member in ["PI", "PID"] {
+        let failure = refuse(&reset_pid_trigger(member, true));
+        assert_eq!(failure.stage(), DiagnosticStage::Schedule);
+        let records = failure.diagnostics().records();
+        assert!(!records.is_empty(), "{member}");
+        assert!(
+            records
+                .iter()
+                .all(|record| record.key().code() == "algebraic-loop"),
+            "{member}: {records:?}"
+        );
+        // Exactly the trigger member carries the event-input remedy.
+        let hinted: Vec<_> = records
+            .iter()
+            .filter(|record| {
+                record
+                    .message()
+                    .contains("insert CDL.Logical.Pre on the path")
+            })
+            .map(|record| record.key().subject().clone())
+            .collect();
+        assert_eq!(
+            hinted,
+            [DiagnosticSubject::Opaque(iri("pid.trigger"))],
+            "{member}"
+        );
+        let message = build_message(&failure);
+        assert!(
+            message.contains("insert CDL.Logical.Pre on the path into it"),
+            "{message}"
+        );
     }
+}
+
+#[test]
+fn reset_pid_trigger_feedback_through_pre_loads() {
+    for member in ["PI", "PID"] {
+        Engine::new()
+            .load_cxf(&reset_pid_trigger_document(member, true, true))
+            .unwrap_or_else(|err| panic!("{member} with Pre must load: {err:?}"));
+    }
+}
+
+#[test]
+fn reset_pid_trigger_feedback_loads_without_an_integrator_only_when_stateful() {
+    // PD: stateful (derivative filter), no integrator, `trigger` dormant and read by nothing.
+    Engine::new()
+        .load_cxf(&reset_pid_trigger("PD", true))
+        .unwrap_or_else(|err| panic!("PD must load: {err:?}"));
 }
 
 #[test]

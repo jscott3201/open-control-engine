@@ -85,7 +85,7 @@ fn algebraic_loop_is_rejected_with_cycle_members() {
     let err = compile(&b.model, &b.blocks).expect_err("all-feedthrough cycle is an algebraic loop");
     let msg = err.to_string();
     let members = match err {
-        BuildError::AlgebraicLoop { members } => members,
+        BuildError::AlgebraicLoop { members, .. } => members,
         other => panic!("expected connector-level AlgebraicLoop, got {other:?}"),
     };
     assert!(
@@ -276,7 +276,7 @@ fn connector_loop_members_use_authored_identities_and_fall_back_to_positions() {
     }
 
     let err = compile(&b.model, &b.blocks).expect_err("feedthrough ring is an algebraic loop");
-    let BuildError::AlgebraicLoop { members } = err else {
+    let BuildError::AlgebraicLoop { members, .. } = err else {
         panic!("expected connector-level AlgebraicLoop, got {err:?}")
     };
     let rendered: Vec<String> = members.iter().map(ToString::to_string).collect();

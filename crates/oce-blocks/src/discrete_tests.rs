@@ -244,15 +244,55 @@ fn rising_edges_sample_current_real_and_held_high_reuses_prior_sample() {
 }
 
 #[test]
-fn initial_true_trigger_samples_current_real() {
+fn trigger_true_at_frame_zero_emits_y_start_and_samples_at_the_next_rise() {
+    // Frame 0 is initialisation: `y = y_start` and the `when trigger` clause is inactive, so a
+    // trigger already true there only becomes pre(trigger). Held at frame 1 is no event; the
+    // first sample is the next false-to-true transition.
     let sampler = TriggeredSampler { y_start: -7.0 };
     let mut region = vec![0u64; sampler.state_len()];
     sampler.init_state(&mut region, &ParamTable::default());
+    assert_eq!(region[1], 1, "pre(trigger) is seeded true");
 
-    assert!(
-        sample_tick(&sampler, &mut region, 9.0, true).bit_eq(&Value::Real(9.0)),
-        "pre(trigger) is seeded false, so an initially true trigger is a rising edge"
+    let trace = [
+        sample_tick(&sampler, &mut region, 9.0, true),
+        sample_tick(&sampler, &mut region, 10.0, true),
+        sample_tick(&sampler, &mut region, 11.0, false),
+        sample_tick(&sampler, &mut region, 12.0, true),
+    ];
+    assert_trace_bits(&trace, &[-7.0, -7.0, -7.0, 12.0]);
+    assert_eq!(
+        region[1], 1,
+        "after a frame the word is a canonical Boolean"
     );
+}
+
+#[test]
+fn seeded_true_trigger_word_stays_a_canonical_boolean_and_frame_zero_samples_nothing() {
+    // The initial state is `[y_start, true]`: in the state contract's Boolean domain before and
+    // after every frame. Frame 0 samples nothing whatever the trigger; the frame-0 update stores
+    // frame 0's trigger, and only a later false-to-true transition samples.
+    let sampler = TriggeredSampler { y_start: 3.0 };
+    let mut region = vec![0u64; sampler.state_len()];
+    sampler.init_state(&mut region, &ParamTable::default());
+    assert_eq!(region, vec![3.0f64.to_bits(), 1]);
+    sampler
+        .validate_state(&region, 0.0, 0.0)
+        .expect("the seeded word is a canonical Boolean");
+    for trigger in [false, true] {
+        let mut fresh = region.clone();
+        assert!(sample_tick(&sampler, &mut fresh, 5.0, trigger).bit_eq(&Value::Real(3.0)));
+        assert_eq!(fresh[1], u64::from(trigger));
+        sampler
+            .validate_state(&fresh, 0.0, 0.0)
+            .expect("a post-frame state validates");
+        // false -> true at frame 1 samples; true held does not.
+        let next = sample_tick(&sampler, &mut fresh, 6.0, true);
+        let want = if trigger { 3.0 } else { 6.0 };
+        assert!(next.bit_eq(&Value::Real(want)), "after {trigger}: {next:?}");
+    }
+    let mut corrupt = region.clone();
+    corrupt[1] = 2;
+    assert!(sampler.validate_state(&corrupt, 0.0, 0.0).is_err());
 }
 
 #[test]
@@ -260,7 +300,11 @@ fn emit_pass_is_pure_for_rising_trigger() {
     let sampler = TriggeredSampler { y_start: 1.0 };
     let mut region = vec![0u64; sampler.state_len()];
     sampler.init_state(&mut region, &ParamTable::default());
+    // At frame 0 a true trigger is no event: the emit reads y_start and mutates nothing.
     let inputs = [Value::Real(4.0), Value::Boolean(true)];
+    assert!(emit_once(&sampler, &inputs, &region)[0].bit_eq(&Value::Real(1.0)));
+    assert_eq!(region, vec![1.0f64.to_bits(), 1]);
+    sample_tick(&sampler, &mut region, 0.0, false);
 
     let a = emit_once(&sampler, &inputs, &region);
     let b = emit_once(&sampler, &inputs, &region);
@@ -280,6 +324,7 @@ fn nan_payload_is_canonicalized_when_held() {
     let noncanonical_nan = f64::from_bits(0xfff8_0000_0000_0001);
     let canonical_nan = f64::from_bits(0x7ff8_0000_0000_0000);
 
+    assert!(sample_tick(&sampler, &mut region, 1.0, false).bit_eq(&Value::Real(0.0)));
     assert!(
         sample_tick(&sampler, &mut region, noncanonical_nan, true)
             .bit_eq(&Value::Real(canonical_nan))
@@ -301,6 +346,7 @@ fn infinite_samples_are_held_bit_exactly() {
     let mut region = vec![0u64; sampler.state_len()];
     sampler.init_state(&mut region, &ParamTable::default());
 
+    assert!(sample_tick(&sampler, &mut region, 1.0, false).bit_eq(&Value::Real(0.0)));
     assert!(
         sample_tick(&sampler, &mut region, f64::INFINITY, true).bit_eq(&Value::Real(f64::INFINITY))
     );
@@ -337,19 +383,21 @@ fn triggered_max_initial_false_emits_raw_current_input_before_any_trigger() {
 }
 
 #[test]
-fn triggered_max_initial_true_applies_event_to_initial_value() {
+fn triggered_max_trigger_true_at_frame_zero_emits_the_initial_input() {
+    // `initial equation y = u`, and the `when trigger` clause is inactive at initialisation: a
+    // negative u is emitted as is, not max(u, abs(u)).
     let max = TriggeredMax;
     let mut region = vec![0u64; max.state_len()];
     max.init_state(&mut region, &ParamTable::default());
 
     let first = sample_tick(&max, &mut region, -2.5, true);
-    assert_real_bits(&first, 2.5);
+    assert_real_bits(&first, -2.5);
     assert!(
-        sample_tick(&max, &mut region, 10.0, true).bit_eq(&Value::Real(2.5)),
-        "holding trigger high does not resample"
+        sample_tick(&max, &mut region, 10.0, true).bit_eq(&Value::Real(-2.5)),
+        "a trigger held high from frame 0 is no event at frame 1"
     );
-    assert_real_bits(&sample_tick(&max, &mut region, 10.0, false), 2.5);
-    assert_real_bits(&sample_tick(&max, &mut region, 10.0, true), 10.0);
+    assert_real_bits(&sample_tick(&max, &mut region, 10.0, false), -2.5);
+    assert_real_bits(&sample_tick(&max, &mut region, -10.0, true), 10.0);
 }
 
 #[test]
@@ -359,15 +407,25 @@ fn triggered_max_emit_pass_is_pure_for_initial_and_event_paths() {
     max.init_state(&mut region, &ParamTable::default());
     let inputs = [Value::Real(-4.0), Value::Boolean(true)];
 
+    // Frame 0: the initial value u, whatever the trigger.
     let a = emit_once(&max, &inputs, &region);
     let b = emit_once(&max, &inputs, &region);
-    assert_real_bits(&a[0], 4.0);
+    assert_real_bits(&a[0], -4.0);
     assert!(a[0].bit_eq(&b[0]));
     assert_eq!(
         region,
         vec![0, 0, 0],
         "emit_from_state must not mutate state"
     );
+
+    // A later rising frame: max(pre(y), abs(u)).
+    sample_tick(&max, &mut region, 1.0, false);
+    let before = region.clone();
+    let a = emit_once(&max, &inputs, &region);
+    let b = emit_once(&max, &inputs, &region);
+    assert_real_bits(&a[0], 4.0);
+    assert!(a[0].bit_eq(&b[0]));
+    assert_eq!(region, before, "emit_from_state must not mutate state");
 }
 
 #[test]
@@ -401,6 +459,14 @@ fn triggered_max_signed_zero_policy_matches_deterministic_max() {
     let mut region = vec![0u64; max.state_len()];
     max.init_state(&mut region, &ParamTable::default());
 
+    assert_real_bits(&sample_tick(&max, &mut region, -0.0, false), -0.0);
+    assert_real_bits(&sample_tick(&max, &mut region, -0.0, true), 0.0);
+
+    // A trigger true at frame 0 keeps the initial -0.0: the event is not applied there.
+    let mut region = vec![0u64; max.state_len()];
+    max.init_state(&mut region, &ParamTable::default());
+    assert_real_bits(&sample_tick(&max, &mut region, -0.0, true), -0.0);
+    assert_eq!(region[0], (-0.0f64).to_bits());
     assert_real_bits(&sample_tick(&max, &mut region, -0.0, false), -0.0);
     assert_real_bits(&sample_tick(&max, &mut region, -0.0, true), 0.0);
 }

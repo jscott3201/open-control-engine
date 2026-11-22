@@ -259,6 +259,13 @@ fn damper_limits_trace(time: &[f64], rows: &[Row]) -> DamperLimitsTrace {
         let error =
             row.minimum_outdoor_airflow_setpoint_normalized - row.outdoor_airflow_normalized;
         let proportional = K * error;
+        // `when trigger then reinit(I.y, y_reset - P)` at the instant the fan status rises,
+        // never at the first row (initialisation); the reset row emits from the reinitialised
+        // integrator.
+        let reset = previous_time.is_some() && row.supply_fan_status && !previous_trigger;
+        if reset {
+            integral = RESET - proportional;
+        }
         let unlimited = proportional + integral;
         let loop_signal = clamp(unlimited, Y_MIN, Y_MAX);
 
@@ -295,9 +302,8 @@ fn damper_limits_trace(time: &[f64], rows: &[Row]) -> DamperLimitsTrace {
         trace.minimum_outdoor_air_loop_enabled.push(enabled);
 
         let dt = previous_time.map_or(0.0, |previous| (t - previous).max(0.0));
-        if row.supply_fan_status && !previous_trigger {
-            integral = RESET - proportional;
-        } else {
+        // The reset row's Euler step covers the interval before the event and is not taken.
+        if !reset {
             let anti_windup_gain = (unlimited - loop_signal) / (K * NI);
             let corrected_error = error - anti_windup_gain;
             integral += (K / TI) * corrected_error * dt;

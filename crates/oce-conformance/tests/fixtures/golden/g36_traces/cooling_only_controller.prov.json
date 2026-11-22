@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "content_sha256": "58e8a5d35e9b3bc9124f0425b8964d88376e7485b5c778432129e0a6018d6a50",
+  "content_sha256": "a1d2cfcdadaedf3837095dc79075c6a5fb38b162be33948332a7d53af2d335b7",
   "reference_columns": [
     "http://example.org#g36.source.cooling_only_controller.VSet_flow",
     "http://example.org#g36.source.cooling_only_controller.yDam",

@@ -50,8 +50,11 @@ const FREEZE_PROTECTION_STAGE_VALUES: [i64; 24] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
+// The fan status is true from frame 0, which is initialisation: the minimum-OA PI does not reset
+// there, so frame 1 still carries its P term (loop 0.2 -> limit 0.4). The fan re-rises at frame
+// 15, which resets the loop at that frame (to y_reset = 0).
 const EXPECTED_OUTDOOR_DAMPER_MIN_LIMIT: [f64; 24] = [
-    0.4, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+    0.4, 0.4, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
     1.0, 0.0, 0.0, 0.0, 1.0,
 ];
 const EXPECTED_MINIMUM_OUTDOOR_AIR_LOOP_ENABLED: [bool; 24] = [
@@ -59,7 +62,7 @@ const EXPECTED_MINIMUM_OUTDOOR_AIR_LOOP_ENABLED: [bool; 24] = [
     true, true, true, true, true, false, false, true, true,
 ];
 const EXPECTED_OUTDOOR_DAMPER_COMMAND: [f64; 24] = [
-    0.4, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 1.0, 1.0,
+    0.4, 0.4, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 1.0, 1.0,
     1.0, 0.0, 0.0, 0.0, 1.0,
 ];
 const EXPECTED_RETURN_DAMPER_COMMAND: [f64; 24] = [

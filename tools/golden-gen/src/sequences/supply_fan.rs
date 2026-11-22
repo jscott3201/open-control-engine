@@ -189,6 +189,15 @@ fn supply_fan_trace(
         );
         let normalized_setpoint = held_setpoint / MAX_SET;
         let normalized_measurement = pressure / MAX_SET;
+        let error = normalized_setpoint - normalized_measurement;
+        let proportional = K * error;
+        // `when trigger then reinit(I.y, y_reset - P)` at the instant the fan status rises,
+        // never at the first row (initialisation); the reset row emits from the reinitialised
+        // integrator.
+        let rising_reset = pid_prev_time.is_some() && fan_on && !pid_prev_trigger;
+        if rising_reset {
+            pid_i = INI_SPE - proportional;
+        }
         let pid_output = pid_with_reset_pi_output(
             normalized_setpoint,
             normalized_measurement,
@@ -222,18 +231,14 @@ fn supply_fan_trace(
         hold_slope = next_hold.slope;
 
         let dt = pid_prev_time.map_or(0.0, |previous| (t - previous).max(0.0));
-        let rising_reset = fan_on && !pid_prev_trigger;
-        let error = normalized_setpoint - normalized_measurement;
-        let proportional = K * error;
-        pid_i = if rising_reset {
-            INI_SPE - proportional
-        } else {
+        // The reset row's Euler step covers the interval before the event and is not taken.
+        if !rising_reset {
             let unlimited = proportional + pid_i;
             let limited = clamp(unlimited, MIN_SPE, MAX_SPE);
             let anti_windup_gain = (unlimited - limited) / (K * 0.9);
             let corrected_error = error - anti_windup_gain;
-            pid_i + (K / TI) * corrected_error * dt
-        };
+            pid_i += (K / TI) * corrected_error * dt;
+        }
         pid_prev_time = Some(t);
         pid_prev_trigger = fan_on;
     }

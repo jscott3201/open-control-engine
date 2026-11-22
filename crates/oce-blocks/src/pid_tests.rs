@@ -134,6 +134,24 @@ fn pid_contract_feedthrough_and_state_layout_are_param_dependent() {
     assert!(p_reset.feeds_through(0, 0));
     assert!(p_reset.feeds_through(1, 0));
     assert!(!p_reset.feeds_through(2, 0));
+    assert_eq!(p_reset.event_input_role(2), None);
+
+    // `trigger` feeds through, and is an event input, exactly in the modes with an integrator.
+    for (mode, with_i) in [(P, false), (Pi, true), (Pd, false), (PidMode, true)] {
+        let block = PidWithReset { config: cfg(mode) };
+        assert!(block.feeds_through(0, 0) && block.feeds_through(1, 0));
+        assert_eq!(block.feeds_through(2, 0), with_i, "{mode:?}");
+        assert_eq!(
+            block.event_input_role(2),
+            with_i.then_some(crate::EventInputRole::Condition),
+            "{mode:?}"
+        );
+        assert_eq!(block.event_input_role(0), None);
+        assert_eq!(block.event_input_role(1), None);
+        let plain = Pid { config: cfg(mode) };
+        assert_eq!(plain.event_input_role(0), None);
+        assert_eq!(plain.event_input_role(1), None);
+    }
 
     assert_eq!(PidWithReset { config: cfg(Pi) }.state_len(), 3);
     assert_eq!(PidWithReset { config: cfg(Pd) }.state_len(), 2);
@@ -526,7 +544,7 @@ fn pid_derivative_filter_is_bounded_in_formerly_divergent_regime() {
 }
 
 #[test]
-fn pid_with_reset_back_solves_next_output_and_held_high_does_not_re_reset() {
+fn pid_with_reset_emits_the_reset_at_the_rising_frame_and_held_high_does_not_re_reset() {
     use oce_model::SimpleController::Pi;
     let block = PidWithReset {
         config: ControllerConfig {
@@ -546,13 +564,14 @@ fn pid_with_reset_back_solves_next_output_and_held_high_does_not_re_reset() {
         (3.0, 2.0, 0.0, false),
     ];
     let (trace, region) = drive_pid_with_reset(&block, &steps);
-    // Rising trigger at t=1 emits the pre-reset output 2, then stores xI=7-yP=5. Held high at
-    // t=2 emits 7 and integrates instead of re-resetting.
+    // The rising trigger at t=1 back-solves xI = 7 - yP = 5 from that frame's yP = 2 and emits
+    // 2 + 5 = 7; its update stores 5 with no Euler step. Held high at t=2: emits 7 and integrates
+    // (5 + 2 = 7) instead of re-resetting. t=3 emits 2 + 7 = 9 and integrates to 9.
     assert_trace_bits(
         &trace,
         &[
             2.0f64.to_bits(),
-            2.0f64.to_bits(),
+            7.0f64.to_bits(),
             7.0f64.to_bits(),
             9.0f64.to_bits(),
         ],
@@ -584,14 +603,15 @@ fn pid_with_reset_pid_mode_pins_derivative_ordering_across_reset() {
         (3.0, 2.0, 0.0, false),
     ];
     let (trace, region) = drive_pid_with_reset(&block, &steps);
-    // At t=1 the reset back-solve uses old yD=1, storing xI=5-(yP+yD)=2, then
-    // advances xD from 1 to 1.5. The next emit is therefore 5+(0.5-1)=4.5,
-    // pinning the discrete I/D ordering across the reset boundary.
+    // At t=1 the reset back-solve uses that frame's yD = 2 - xD = 1 (xD is still 1), so
+    // xI = 5 - (yP + yD) = 2 and the frame emits 3 + 2 = 5. The update stores xI = 2 and advances
+    // xD from 1 to 1.5, so t=2 emits 2 + 0.5 + 2 = 4.5, pinning the discrete I/D ordering across
+    // the reset frame; t=3 emits 2 + 0.25 + 4 = 6.25.
     assert_trace_bits(
         &trace,
         &[
             0x3ff0_0000_0000_0000,
-            0x4008_0000_0000_0000,
+            0x4014_0000_0000_0000,
             0x4012_0000_0000_0000,
             0x4019_0000_0000_0000,
         ],
@@ -621,9 +641,10 @@ fn pid_with_reset_extreme_reset_value_is_bit_pinned() {
         (2.0, 1.0, 0.0, false),
     ];
     let (trace, region) = drive_pid_with_reset(&block, &steps);
+    // The rising frame back-solves xI = MAX - 1 = MAX and emits 1 + MAX = MAX.
     assert_trace_bits(
         &trace,
-        &[1.0f64.to_bits(), 1.0f64.to_bits(), f64::MAX.to_bits()],
+        &[1.0f64.to_bits(), f64::MAX.to_bits(), f64::MAX.to_bits()],
     );
     assert_eq!(region[0], f64::MAX.to_bits());
 }
@@ -652,7 +673,8 @@ fn pid_with_reset_non_finite_reset_parameter_path_is_pinned() {
     let nan_block = block(quiet_nan);
     let (nan_trace, nan_region) =
         drive_pid_with_reset(&nan_block, &[(0.0, 1.0, 0.0, false), (1.0, 1.0, 0.0, true)]);
-    assert_trace_bits(&nan_trace, &[1.0f64.to_bits(), 1.0f64.to_bits()]);
+    // The reset frame emits the NaN reset canonically and stores it canonically.
+    assert_trace_bits(&nan_trace, &[1.0f64.to_bits(), 0x7ff8_0000_0000_0000]);
     assert_eq!(nan_region[0], 0x7ff8_0000_0000_0000);
 
     let negative_nan_block = block(negative_nan);
@@ -660,7 +682,10 @@ fn pid_with_reset_non_finite_reset_parameter_path_is_pinned() {
         &negative_nan_block,
         &[(0.0, 1.0, 0.0, false), (1.0, 1.0, 0.0, true)],
     );
-    assert_trace_bits(&negative_nan_trace, &[1.0f64.to_bits(), 1.0f64.to_bits()]);
+    assert_trace_bits(
+        &negative_nan_trace,
+        &[1.0f64.to_bits(), 0x7ff8_0000_0000_0000],
+    );
     assert_eq!(negative_nan_region[0], 0x7ff8_0000_0000_0000);
 
     let inf_block = block(f64::INFINITY);
@@ -674,10 +699,15 @@ fn pid_with_reset_non_finite_reset_parameter_path_is_pinned() {
     );
     assert_trace_bits(
         &inf_trace,
-        &[1.0f64.to_bits(), 1.0f64.to_bits(), f64::INFINITY.to_bits()],
+        &[
+            1.0f64.to_bits(),
+            f64::INFINITY.to_bits(),
+            f64::INFINITY.to_bits(),
+        ],
     );
-    // The reset stores +Inf and the next emit propagates it. The following update then evaluates
-    // the deferred non-finite anti-windup seam (`Inf - Inf`) and stores canonical NaN.
+    // The reset frame emits and stores +Inf, and the next emit propagates it. That frame's
+    // update then evaluates the deferred non-finite anti-windup seam (`Inf - Inf`) and stores
+    // canonical NaN.
     assert_eq!(inf_region[0], 0x7ff8_0000_0000_0000);
 }
 

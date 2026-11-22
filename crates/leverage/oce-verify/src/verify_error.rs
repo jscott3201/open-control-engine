@@ -371,7 +371,9 @@ pub const REPLAY_FAILURE_CAUSES: &[&str] = &[
 /// The classes a `param-refused` refusal carries ([`VerifyError::cause`]): the facade's refusal
 /// of the edit, `OcError::ParamRange` (outside the declared bounds or a class rule such as
 /// `uLow <= uHigh`), `OcError::ParamType` or `OcError::ParamStructural` (a conditional-instance
-/// parameter, which needs a reload). Any other refusal of `set_param` is not about the edit's
+/// parameter, or a value that changes the block's schedule shape, its feedthrough or which
+/// inputs it reads when it fires, such as `PIDWithReset.controllerType` across the modes with an
+/// integrator; either needs a reload). Any other refusal of `set_param` is not about the edit's
 /// value and is `replay-failed` with the cause `engine-setup`.
 pub const PARAM_REFUSAL_CLASSES: &[&str] = &["param-range", "param-type", "param-structural"];
 

@@ -255,7 +255,7 @@ pub fn goldens() -> Vec<Golden> {
         );
     }
 
-    // TriggeredMax scenario: an initially true trigger applies max(initial y, abs(u)).
+    // TriggeredMax scenario: an initially true trigger is not an event at initialisation.
     {
         let t = vec![0.0, 1.0, 2.0, 3.0];
         let u = [-2.0, -10.0, 8.0, 7.0];
@@ -269,7 +269,7 @@ pub fn goldens() -> Vec<Golden> {
                 t,
                 y,
                 "scenario=trigger_initially_true; u=[-2,-10,8,7]; trigger=[true,true,false,true]",
-                "pre(trigger) is false at initialization; initial y=u is then used as pre(y) for the initial rising-trigger event, so negative u becomes abs(u)",
+                "initial equation y=u at the first row whatever trigger is (a when-clause without initial() is inactive at initialization, Modelica 3.6 section 8.6), so negative u stays negative; that row's trigger becomes pre(trigger), so held true at row 1 is no event; the first event is the false->true edge at row 3: max(pre(y),abs(u))",
             )
             .with_scenario("trigger_initially_true")
             .with_inputs(vec![input_r("u", u), input_b("trigger", trigger)]),
@@ -358,7 +358,7 @@ pub fn goldens() -> Vec<Golden> {
         );
     }
 
-    // TriggeredSampler scenario: trigger true at the initial tick is a rising edge from pre=false.
+    // TriggeredSampler scenario: trigger true at the initial tick is initialisation, not an event.
     {
         let t = vec![0.0, 1.0, 2.0, 3.0];
         let u = [9.0, 10.0, 11.0, 12.0];
@@ -372,7 +372,7 @@ pub fn goldens() -> Vec<Golden> {
                 t,
                 y,
                 "scenario=trigger_initially_true; y_start=-7.0; u=[9,10,11,12]; trigger=[true,true,false,true]",
-                "pre(trigger) is false at initialization, so trigger=true at t=0 samples current u; held true does not resample until trigger falls and rises",
+                "initial equation y=y_start at the first row whatever trigger is (the when-clause is inactive at initialization, Modelica 3.6 section 8.6); that row's trigger becomes pre(trigger), so held true at t=1 does not sample; the first sample is the false->true edge at t=3",
             )
             .with_scenario("trigger_initially_true")
             .with_inputs(vec![input_r("u", u), input_b("trigger", trigger)]),
@@ -446,11 +446,13 @@ fn triggered_max_y(u: &[f64], trigger: &[bool]) -> Vec<Sample> {
     let mut has_history = false;
     let mut y = Vec::with_capacity(u.len());
     for (&cur, &trig) in u.iter().zip(trigger) {
-        let base = if has_history { held } else { cur };
-        let out = if trig && !prev_trigger {
-            oracle_max(base, cur.abs())
+        // The first row is initialisation: y = u, and no when-clause fires.
+        let out = if !has_history {
+            cur
+        } else if trig && !prev_trigger {
+            oracle_max(held, cur.abs())
         } else {
-            base
+            held
         };
         y.push(r(out));
         held = out;
@@ -465,8 +467,9 @@ fn triggered_sampler_y(y_start: f64, u: &[f64], trigger: &[bool]) -> Vec<Sample>
     let mut held = y_start;
     let mut prev_trigger = false;
     let mut y = Vec::with_capacity(u.len());
-    for (&cur, &trig) in u.iter().zip(trigger) {
-        if trig && !prev_trigger {
+    for (index, (&cur, &trig)) in u.iter().zip(trigger).enumerate() {
+        // The first row is initialisation (y = y_start); only a later false->true edge samples.
+        if index > 0 && trig && !prev_trigger {
             held = cur;
         }
         y.push(r(held));
