@@ -23,6 +23,7 @@ mod params_arrays;
 mod params_element_names;
 mod params_finite;
 mod params_flattened;
+mod params_kinds;
 mod structural;
 mod unify;
 

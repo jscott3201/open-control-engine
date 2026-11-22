@@ -36,6 +36,11 @@
 //! no tagged findings; its cycle/duplicate participants simply fail to ground, and the leaf's
 //! members are grounded (and diagnosed) at the fenced member level.
 //!
+//! Each grounded declaration is held in the type its `S231:isOfDataType` declares before it enters
+//! the scope (`real_parameters::hold_in_declared_type`, issue #735): an Integer on a declared Real
+//! is that Real to every sibling, child and guard that reads it, and a value of another kind than
+//! a declared Real, Integer or Boolean is refused on the declaration.
+//!
 //! Dependency edges come from outer-scope identifier references in parsed `Expr` bindings (see
 //! [`identifier_heads`]); non-`Expr` values contribute no edges. Everything here is deterministic:
 //! iteration is always in chained declaration order, topological ties break toward the smallest
@@ -61,6 +66,7 @@ use oce_diag::DiagnosticList;
 use super::composite_rules::{ARRAY_PARAMETER, DECLARATION_CYCLE, DUPLICATE_DECLARATION};
 use super::local_name;
 use super::parameter_attrs::CheckedParameters;
+use super::real_parameters::hold_in_declared_type;
 use super::specialize::{Specialization, validate_g36_parameter_value};
 
 /// Which import pass is invoking the shared own-declaration evaluation.
@@ -492,11 +498,24 @@ fn evaluate_one(
         ground_param_value(cxf_val, &scope)
     };
     match outcome {
-        Ok(value) => grounded.push(
-            index,
-            Arc::from(declaration.name),
-            EvalResult::Scalar(value),
-        ),
+        Ok(value) => {
+            // Held in its declared type before any sibling, child or guard reads it (issue
+            // #735): the Real of an Integer on a declared Real. A value of another kind is
+            // refused on the declaration, at the lowering invocation only (generic machinery).
+            let value = match hold_in_declared_type(pnode, value) {
+                Ok(value) => value,
+                Err((fault, value)) => {
+                    let diagnostic = fault.diagnostic(declaration.iri, declaration.name, &value);
+                    emit_generic(pass, diagnostic);
+                    value
+                }
+            };
+            grounded.push(
+                index,
+                Arc::from(declaration.name),
+                EvalResult::Scalar(value),
+            );
+        }
         Err(e) => emit_generic(pass, ground_failure(&e, declaration.iri, owner)),
     }
 }

@@ -385,23 +385,32 @@ fn integer_and_real_siblings_of_one_block_are_each_held_in_their_catalog_type() 
 }
 
 #[test]
-fn a_later_sibling_expression_reads_the_value_the_document_wrote() {
-    // The sibling scope keeps the grounded value: `period = 4` is an Integer to the expression
-    // that reads it, so `amplitude = period` is the Integer 4 on an Integer parameter, while
-    // `period` itself is held as the Real 4.0.
-    let doc = document(
-        "CDL.Integers.Sources.Pulse",
-        "Integer",
-        &[value("period", "4"), value("amplitude", r#""period""#)],
-        &[],
-    );
-    assert_params(
-        &doc,
-        &[
-            ("period", Value::Real(4.0)),
-            ("amplitude", Value::Integer(4)),
-        ],
-    );
+fn a_later_sibling_expression_reads_the_real_the_parameter_holds() {
+    // Issue #735, the owner's ruling: the sibling scope sees the Real a Real parameter holds, so
+    // `amplitude = period` reads the Real 4.0 whether `period` is written `4` or `4.0`, and the
+    // two documents import to one model. That model binds a Real to the Integer `amplitude`,
+    // which the engine's load gate refuses (`oce-api`'s `parameter_scope_kinds.rs`); before, the
+    // `4` spelling loaded with amplitude 4 and the `4.0` spelling ran on the default amplitude 1.
+    let models: Vec<String> = ["4", "4.0", r#""2 + 2""#]
+        .into_iter()
+        .map(|period| {
+            let doc = document(
+                "CDL.Integers.Sources.Pulse",
+                "Integer",
+                &[value("period", period), value("amplitude", r#""period""#)],
+                &[],
+            );
+            assert_params(
+                &doc,
+                &[
+                    ("period", Value::Real(4.0)),
+                    ("amplitude", Value::Real(4.0)),
+                ],
+            );
+            render(&import_ok(&doc))
+        })
+        .collect();
+    assert!(models.windows(2).all(|pair| pair[0] == pair[1]));
 }
 
 /// A `Reals.Sources.TimeTable` whose `table[2,2]` and `offset[1]` are written as `table` and
@@ -524,4 +533,66 @@ fn bare_json_number_outside_the_integer_range_was_never_an_integer_and_is_read_a
     let diags = refusal(&real_constant(&typed("9223372036854775808", "integer")));
     assert_eq!(diags.len(), 1);
     assert_eq!(diags[0].code, DiagCode::GroundingFailed);
+}
+
+#[test]
+fn a_sequence_parameter_declared_real_is_the_real_to_every_binding_that_reads_it() {
+    // Issue #735: the scope holds a declared-Real sequence parameter as a Real, so an Integer
+    // block parameter bound to it imports the Real (and the engine refuses it); before, `2` kept
+    // the Integer and imported clean. A Real block parameter reads the same Real either way.
+    for literal in ["2", "2.0", &typed("2", "integer"), r#""1 + 1""#] {
+        let root = [Param {
+            name: "p",
+            members: format!(
+                r#""@type": "S231:Parameter", "S231:isOfDataType": {{ "@id": "S231:Real" }}, "S231:value": {literal}"#
+            ),
+        }];
+        let integer = document(INTEGER_CONSTANT, "Integer", &[value("k", r#""p""#)], &root);
+        assert_params(&integer, &[("k", Value::Real(2.0))]);
+        let real = document(REAL_CONSTANT, "Real", &[value("k", r#""p * 3""#)], &root);
+        assert_params(&real, &[("k", Value::Real(6.0))]);
+    }
+}
+
+#[test]
+fn a_value_of_another_kind_than_a_sequence_parameters_declared_type_is_refused_on_it() {
+    for (datatype, literal, kind) in [
+        ("Integer", "2.0", "Real"),
+        ("Integer", "true", "Boolean"),
+        ("Real", "true", "Boolean"),
+        ("Boolean", "1", "Integer"),
+    ] {
+        let doc = document(
+            REAL_CONSTANT,
+            "Real",
+            &[value("k", "1.0")],
+            &[Param {
+                name: "p",
+                members: format!(
+                    r#""@type": "S231:Parameter", "S231:isOfDataType": {{ "@id": "S231:{datatype}" }}, "S231:value": {literal}"#
+                ),
+            }],
+        );
+        assert_eq!(
+            refusal(&doc),
+            vec![
+                Diagnostic::error(
+                    DiagCode::ParameterKindMismatch,
+                    format!(
+                        "parameter `p` is declared {datatype} and binds a value of kind {kind}"
+                    ),
+                )
+                .with_subject("http://example.org#S.p".to_owned())
+            ],
+            "{datatype} {literal}"
+        );
+    }
+    // Its own kind loads, and an untyped sequence parameter keeps whatever kind it was written in.
+    let integer = document(
+        INTEGER_CONSTANT,
+        "Integer",
+        &[value("k", r#""p""#)],
+        &[value("p", "2")],
+    );
+    assert_params(&integer, &[("k", Value::Integer(2))]);
 }

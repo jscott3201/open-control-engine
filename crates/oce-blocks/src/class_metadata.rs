@@ -38,6 +38,7 @@ use alloc::vec::Vec;
 
 use oce_model::{EnumClassId, ValueType, enum_descriptor};
 
+#[cfg(feature = "std")]
 use crate::class_descriptions::CLASS_DESCRIPTIONS;
 use crate::class_signature::is_reserved;
 use crate::{DefaultLiteral, DefaultSource, ParamNameTemplate, ParamRule, RegistryEntry, registry};
@@ -58,6 +59,7 @@ pub struct ClassParameter {
 }
 
 /// The one-sentence description of a registered class, or `None` for an unregistered path.
+#[cfg(feature = "std")]
 #[must_use]
 pub fn class_description(class_path: &str) -> Option<&'static str> {
     CLASS_DESCRIPTIONS
@@ -107,9 +109,7 @@ pub fn parameter_value_type(class_path: &str, name: &str) -> Option<ValueType> {
     let entry = registry::lookup(class_path)?;
     let covers = |catalog_name: &str| ParamNameTemplate::parse(catalog_name).names(name);
     let typed = |catalog_name: &str, default: Option<DefaultSource>| {
-        parameter_type_evidence(entry, catalog_name, default)
-            .into_iter()
-            .next()
+        first_type_evidence(entry, catalog_name, default)
     };
     if let Some(param) = registry::param_defaults(entry.class_path)
         .iter()
@@ -127,17 +127,42 @@ pub fn parameter_value_type(class_path: &str, name: &str) -> Option<ValueType> {
 
 /// The value type of one class parameter (see the module documentation), or `Real` for a
 /// parameter no evidence types. The `every_parameter_has_one_agreed_type` test requires
-/// [`parameter_type_evidence`] to type every registered parameter, so the fallback is unreachable
+/// `parameter_type_evidence` to type every registered parameter, so the fallback is unreachable
 /// for the registry as shipped.
 fn parameter_type(entry: &RegistryEntry, name: &str, default: Option<DefaultSource>) -> ValueType {
-    parameter_type_evidence(entry, name, default)
-        .into_iter()
-        .next()
-        .unwrap_or(ValueType::Real)
+    first_type_evidence(entry, name, default).unwrap_or(ValueType::Real)
+}
+
+/// The first entry `parameter_type_evidence` (a test oracle) would list, found without collecting
+/// the list: the load gate and the blob decoder type every bound parameter through it, so it
+/// allocates nothing (issue #734).
+fn first_type_evidence(
+    entry: &RegistryEntry,
+    name: &str,
+    default: Option<DefaultSource>,
+) -> Option<ValueType> {
+    if let Some(DefaultSource::Literal(literal)) = default
+        && let Some(value_type) = literal_type(entry, name, literal)
+    {
+        return Some(value_type);
+    }
+    entry
+        .param_rules()
+        .iter()
+        .flat_map(|rule| rule_parameters(rule).into_iter().flatten())
+        .find_map(|(rule_name, value_type)| value_type.filter(|_| rule_name == name))
+        .or_else(|| {
+            UNRULED_DERIVED_TYPES
+                .iter()
+                .find(|(class, param, _)| *class == entry.class_path && *param == name)
+                .map(|(_, _, value_type)| *value_type)
+        })
 }
 
 /// Every type the registry's own data assigns to one parameter, literal default first, then each
-/// rule in declaration order, then the untyped-derived table.
+/// rule in declaration order, then the untyped-derived table. The tests hold every source to agree;
+/// the library reads only the first ([`first_type_evidence`]).
+#[cfg(test)]
 pub(crate) fn parameter_type_evidence(
     entry: &RegistryEntry,
     name: &str,

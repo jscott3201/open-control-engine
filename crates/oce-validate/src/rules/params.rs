@@ -7,7 +7,7 @@ use oce_blocks::{ParamRule, lookup};
 use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{BlockInstance, ModelGraph, ParamTable, Value, ValueType, enum_descriptor};
 
-use super::{block_subject_of, params_arrays, params_flattened};
+use super::{block_subject_of, params_arrays, params_flattened, params_kinds};
 
 /// Check raw resolved block parameters against the registry-published class rules.
 ///
@@ -58,6 +58,9 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut DiagnosticList)
         if has_non_finite {
             continue;
         }
+        // Every parameter the catalog types holds a value of its kind (issue #734). The class
+        // rules below judge the kind of the parameters they name; this fills the rest.
+        params_kinds::check_parameter_kinds(blk, entry.param_rules(), diags);
         for rule in entry.param_rules() {
             check_rule(blk, *rule, diags);
         }

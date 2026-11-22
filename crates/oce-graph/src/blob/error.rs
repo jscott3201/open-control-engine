@@ -109,6 +109,15 @@ pub enum BlobError {
         /// Index in the block's parameter list.
         parameter: u32,
     },
+    /// A parameter holds a value its class's catalog type does not admit: a Real on an Integer
+    /// parameter, an Integer past 2^53 on a Real one, an enumeration value of another class, an
+    /// ordinal naming no member (issue #734). Load refuses those; a blob never carries one.
+    ParameterKindMismatch {
+        /// The block id.
+        block: u32,
+        /// Index in the block's parameter list.
+        parameter: u32,
+    },
     /// An Enum value names a class path this build does not know.
     UnknownEnumClass {
         /// Byte offset of the value.
@@ -409,6 +418,10 @@ impl core::fmt::Display for BlobError {
             Self::NonFiniteParameter { block, parameter } => {
                 write!(f, "block {block} parameter {parameter} is not finite")
             }
+            Self::ParameterKindMismatch { block, parameter } => write!(
+                f,
+                "block {block} parameter {parameter} holds a value its catalog type does not admit"
+            ),
             Self::UnknownEnumClass { offset } => {
                 write!(f, "enum value at byte {offset} names an unknown class")
             }

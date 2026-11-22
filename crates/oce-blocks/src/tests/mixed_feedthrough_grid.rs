@@ -43,8 +43,6 @@
 
 use std::collections::BTreeSet;
 
-use oce_model::EnumClassId;
-
 use super::common::*;
 use crate::{DefaultLiteral, DefaultSource, ParamRule, RegistryEntry, registry};
 
@@ -339,12 +337,11 @@ fn extensions(axis: &Axis, point: &[(String, Value)]) -> Vec<Point> {
     }
 }
 
-/// An enumeration value by 1-based source ordinal, as the resolver grounds it.
+/// An enumeration member by its 1-based source ordinal, in the ordinal stand-in spelling every
+/// enumeration reader decodes to that member whatever the enumeration (an enumeration value
+/// carries its class, and a reader takes one of its own class only; issue #734).
 pub(super) fn enum_value(ordinal: u32) -> Value {
-    Value::Enum {
-        class: EnumClassId(0),
-        ordinal,
-    }
+    Value::Integer(i64::from(ordinal))
 }
 
 /// Every grid point of `axes`. Scalars are expanded before arrays, so an array's length and bound

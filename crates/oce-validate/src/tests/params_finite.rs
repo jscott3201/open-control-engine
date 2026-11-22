@@ -172,11 +172,20 @@ fn class_rules_are_suppressed_only_on_the_block_carrying_the_non_finite_value() 
 fn integer_promoted_real_parameter_is_never_non_finite() {
     let model = real_to_real_model(
         "CDL.Reals.MultiplyByParameter",
-        vec![(Arc::from("k"), Value::Integer(i64::MAX))],
+        vec![(Arc::from("k"), Value::Integer(1 << 53))],
     );
     assert!(
         validate(&model)
             .expect("an Integer literal on a Real gain is finite")
             .is_empty()
     );
+    // Past 2^53 the Integer is not exact as a Real: refused for its range, never as non-finite
+    // (issue #734).
+    let model = real_to_real_model(
+        "CDL.Reals.MultiplyByParameter",
+        vec![(Arc::from("k"), Value::Integer(i64::MAX))],
+    );
+    let refusal = validate(&model).expect_err("an inexact Integer on a Real gain");
+    assert_eq!(refusal.diagnostics.len(), 1);
+    assert_eq!(refusal.diagnostics[0].code, DiagCode::ParameterOutOfRange);
 }

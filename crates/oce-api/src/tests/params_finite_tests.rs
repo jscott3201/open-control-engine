@@ -320,17 +320,32 @@ fn unconstrained_real_parameters_accept_every_finite_boundary_at_load_and_at_res
 #[test]
 fn integer_and_boolean_parameters_are_outside_the_finiteness_gate() {
     // The gate is value-based: Integer extremes (always finite, also when promoted to a Real
-    // parameter) and Booleans never trip it.
+    // parameter) and Booleans never trip it. An Integer on a Real parameter is promoted only up
+    // to 2^53, where it is exact (issue #734); past that it is refused for its range instead.
     let mut engine = Engine::new();
     engine
         .build_model_in_memory(
             one_block_model(
                 "CDL.Reals.MultiplyByParameter",
-                vec![(Arc::from("k"), Value::Integer(i64::MAX))],
+                vec![(Arc::from("k"), Value::Integer(1 << 53))],
             ),
             None,
         )
         .expect("an Integer-valued Real gain is finite");
+    let mut engine = Engine::new();
+    let refused = engine.build_model_in_memory(
+        one_block_model(
+            "CDL.Reals.MultiplyByParameter",
+            vec![(Arc::from("k"), Value::Integer(i64::MAX))],
+        ),
+        None,
+    );
+    assert!(
+        matches!(&refused, Err(crate::OcError::Validate(error))
+            if error.diagnostics.len() == 1
+                && error.diagnostics[0].code == oce_diag::DiagCode::ParameterOutOfRange),
+        "{refused:?}"
+    );
     let mut engine = Engine::new();
     engine
         .build_model_in_memory(

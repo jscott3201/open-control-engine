@@ -70,6 +70,8 @@ fn enum_ordinal(point: &[(String, Value)], name: &str, default: u32) -> u32 {
         .iter()
         .find_map(|(n, v)| match v {
             Value::Enum { ordinal, .. } if n == name => Some(*ordinal),
+            // The grid's ordinal stand-in (`mixed_feedthrough_grid::enum_value`).
+            Value::Integer(ordinal) if n == name => u32::try_from(*ordinal).ok(),
             _ => None,
         })
         .unwrap_or(default)
@@ -300,7 +302,7 @@ fn each_listed_class_has_a_concrete_mixed_parameterization() {
             &[(
                 "controllerType",
                 Value::Enum {
-                    class: oce_model::EnumClassId(0),
+                    class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
                     ordinal: 1,
                 },
             )],

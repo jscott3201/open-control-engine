@@ -4,7 +4,7 @@ use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use oce_model::{ParamTable, SimpleController, Value, ZeroTime};
+use oce_model::{EnumClassId, ParamTable, SimpleController, Value, ZeroTime};
 
 use crate::source_pulse::SOURCE_PULSE_PARAM_RULES;
 use crate::{ParamRule, RegistryEntry};
@@ -347,31 +347,57 @@ pub(crate) fn string_param(params: &ParamTable, name: &str, default: &'static st
     }
 }
 
+/// A `SimpleController` parameter's value, `default` when unbound or naming no member. Reads the
+/// three spellings [`crate::admits_parameter_value`] admits for an enumeration, each to the member
+/// it names: an enumeration value of `CDL.Types.SimpleController` by ordinal, the ordinal itself
+/// as an Integer, and a String by its last dotted segment. An enumeration value of another class
+/// is no member here (issue #734): before, its ordinal was read as if it were a controller's.
 pub(super) fn controller_type_param(
     params: &ParamTable,
     name: &str,
     default: SimpleController,
 ) -> SimpleController {
+    let member = |ordinal: i64| match ordinal {
+        1 => Some(SimpleController::P),
+        2 => Some(SimpleController::Pi),
+        3 => Some(SimpleController::Pd),
+        4 => Some(SimpleController::Pid),
+        _ => None,
+    };
     match find(params, name) {
-        Some(Value::Enum { ordinal: 1, .. }) => SimpleController::P,
-        Some(Value::Enum { ordinal: 2, .. }) => SimpleController::Pi,
-        Some(Value::Enum { ordinal: 3, .. }) => SimpleController::Pd,
-        Some(Value::Enum { .. }) => SimpleController::Pid,
-        Some(Value::String(s)) => SimpleController::from_qualified(s).unwrap_or(default),
-        _ => default,
+        Some(Value::Enum { class, ordinal }) if *class == EnumClassId::SIMPLE_CONTROLLER => {
+            member(i64::from(*ordinal))
+        }
+        Some(Value::Integer(ordinal)) => member(*ordinal),
+        Some(Value::String(s)) => match s.rsplit('.').next().unwrap_or(s) {
+            "P" => Some(SimpleController::P),
+            "PI" => Some(SimpleController::Pi),
+            "PD" => Some(SimpleController::Pd),
+            "PID" => Some(SimpleController::Pid),
+            _ => None,
+        },
+        _ => None,
     }
+    .unwrap_or(default)
 }
 
+/// A `ZeroTime` parameter's value, `default` when unbound or naming no member. Reads the three
+/// spellings [`crate::admits_parameter_value`] admits for an enumeration: an enumeration value of
+/// `CDL.Types.ZeroTime` by ordinal, the ordinal as an Integer, and a String by its last dotted
+/// segment (a bare `NY2017` as well as a qualified one, as the load gate accepts both; issue
+/// #734). An enumeration value of another class is no member here.
 pub(super) fn zero_time_param(params: &ParamTable, name: &str, default: ZeroTime) -> ZeroTime {
     match find(params, name) {
-        Some(Value::Enum { ordinal, .. }) => ZeroTime::from_ordinal(*ordinal).unwrap_or(default),
+        Some(Value::Enum { class, ordinal }) if *class == EnumClassId::ZERO_TIME => {
+            ZeroTime::from_ordinal(*ordinal)
+        }
         Some(Value::Integer(ordinal)) => u32::try_from(*ordinal)
             .ok()
-            .and_then(ZeroTime::from_ordinal)
-            .unwrap_or(default),
-        Some(Value::String(s)) => ZeroTime::from_qualified(s).unwrap_or(default),
-        _ => default,
+            .and_then(ZeroTime::from_ordinal),
+        Some(Value::String(s)) => ZeroTime::from_member(s.rsplit('.').next().unwrap_or(s)),
+        _ => None,
     }
+    .unwrap_or(default)
 }
 
 #[cfg(test)]
@@ -401,23 +427,40 @@ mod tests {
     }
 
     #[test]
-    fn controller_type_param_reads_grounded_enum_ordinals() {
-        let class = EnumClassId(9);
+    fn controller_type_reads_each_member_of_its_own_enumeration_and_nothing_else() {
         let cases = [
             (1, SimpleController::P),
             (2, SimpleController::Pi),
             (3, SimpleController::Pd),
             (4, SimpleController::Pid),
-            (99, SimpleController::Pid),
         ];
-        for (ordinal, want) in cases {
+        let read = |value: Value| {
             let params = ParamTable {
-                values: vec![(Arc::from("controllerType"), Value::Enum { class, ordinal })],
+                values: vec![(Arc::from("controllerType"), value)],
             };
-            assert_eq!(
-                controller_type_param(&params, "controllerType", SimpleController::P),
-                want
-            );
+            controller_type_param(&params, "controllerType", SimpleController::P)
+        };
+        for (ordinal, want) in cases {
+            let class = EnumClassId::SIMPLE_CONTROLLER;
+            assert_eq!(read(Value::Enum { class, ordinal }), want);
+            assert_eq!(read(Value::Integer(i64::from(ordinal))), want);
+        }
+        // An ordinal naming no member, and a member of another enumeration, are no controller:
+        // the load gate refuses them, and the reader no longer takes their ordinal (issue #734).
+        for value in [
+            Value::Enum {
+                class: EnumClassId::SIMPLE_CONTROLLER,
+                ordinal: 99,
+            },
+            Value::Enum {
+                class: EnumClassId::SMOOTHNESS,
+                ordinal: 2,
+            },
+            Value::Integer(0),
+            Value::Integer(5),
+            Value::Real(2.0),
+        ] {
+            assert_eq!(read(value.clone()), SimpleController::P, "{value:?}");
         }
     }
 
@@ -434,6 +477,15 @@ mod tests {
         assert_eq!(
             controller_type_param(&params, "controllerType", SimpleController::P),
             SimpleController::Pid
+        );
+
+        // A bare member name is read by its name, as the load gate admits it (issue #734).
+        let bare = ParamTable {
+            values: vec![(Arc::from("controllerType"), Value::String(Arc::from("PI")))],
+        };
+        assert_eq!(
+            controller_type_param(&bare, "controllerType", SimpleController::P),
+            SimpleController::Pi
         );
 
         let unknown = ParamTable {
@@ -492,6 +544,30 @@ mod tests {
         };
         assert_eq!(
             zero_time_param(&invalid, "zerTim", ZeroTime::NewYear(2016)),
+            ZeroTime::NewYear(2016)
+        );
+
+        // A bare member name is read by its name, as the load gate admits it (issue #734).
+        let bare = ParamTable {
+            values: vec![(Arc::from("zerTim"), Value::String(Arc::from("NY2017")))],
+        };
+        assert_eq!(
+            zero_time_param(&bare, "zerTim", ZeroTime::NewYear(2016)),
+            ZeroTime::NewYear(2017)
+        );
+
+        // A member of another enumeration is not read by its ordinal.
+        let other_class = ParamTable {
+            values: vec![(
+                Arc::from("zerTim"),
+                Value::Enum {
+                    class: EnumClassId::SMOOTHNESS,
+                    ordinal: 2,
+                },
+            )],
+        };
+        assert_eq!(
+            zero_time_param(&other_class, "zerTim", ZeroTime::NewYear(2016)),
             ZeroTime::NewYear(2016)
         );
     }

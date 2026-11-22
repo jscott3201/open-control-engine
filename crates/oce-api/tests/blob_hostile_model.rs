@@ -159,9 +159,47 @@ fn parameter_defects_are_refused() {
             "{ordinal}"
         );
     }
+    // An ordinal inside its enumeration decodes as a value; on the Real `k` of a constant it is
+    // still not a value the parameter admits, so the blob is refused for its kind rather than
+    // built on the constant's default (issue #734).
     let mut in_range = chain();
     in_range.instances[0].params[0].1 = Val::Enum(b"CDL.Types.SimpleController".to_vec(), 4);
-    decode(&in_range.to_bytes()).unwrap();
+    assert_eq!(
+        refusal(&in_range),
+        BlobError::ParameterKindMismatch {
+            block: 0,
+            parameter: 0
+        }
+    );
+}
+
+#[test]
+fn a_parameter_of_a_kind_its_class_does_not_admit_is_refused_by_the_decoder() {
+    // Every value here reached the constructor before, whose reader fell back to a default: the
+    // constant ran as `k = 0`, not as the value the blob carried.
+    for (value, parameter) in [
+        (Val::Boolean(1), 0),
+        (Val::Integer((1 << 53) + 1), 0),
+        (Val::Integer(i64::MIN), 0),
+        (Val::Str(b"1.5".to_vec()), 0),
+    ] {
+        let mut image = chain();
+        image.instances[0].params[0].1 = value;
+        assert_eq!(
+            refusal(&image),
+            BlobError::ParameterKindMismatch {
+                block: 0,
+                parameter
+            }
+        );
+    }
+    // The kinds the parameter admits decode: a Real, and an Integer exact as a Real.
+    for value in [Val::real(-1.5), Val::Integer(-3), Val::Integer(1 << 53)] {
+        let mut image = chain();
+        image.instances[0].params[0].1 = value;
+        let bytes = image.to_bytes();
+        decode(&bytes).unwrap();
+    }
 }
 
 #[test]

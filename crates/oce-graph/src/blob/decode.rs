@@ -176,7 +176,8 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
         }
         let (entry, class_path) = (*entry, Arc::clone(class_path));
 
-        // Parameters: unique names, finite Reals, resolvable enums.
+        // Parameters: unique names, finite Reals, resolvable enums, each of a kind its catalog
+        // type admits.
         let mut names = record.params.reader();
         names_scratch.clear();
         for _ in 0..record.params.count {
@@ -214,7 +215,17 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
                     parameter: index_u32(parameter_index),
                 });
             }
-            params.push((Arc::from(name), value(raw, at)?));
+            let value = value(raw, at)?;
+            // A value its catalog type does not admit would reach the constructor, whose readers
+            // fall back to a default for it (issue #734); the load gate refuses such a document,
+            // so no encoder writes one.
+            if oce_blocks::parameter_kind_fault(&class_path, name, &value).is_some() {
+                return Err(BlobError::ParameterKindMismatch {
+                    block,
+                    parameter: index_u32(parameter_index),
+                });
+            }
+            params.push((Arc::from(name), value));
         }
         let params = ParamTable { values: params };
 

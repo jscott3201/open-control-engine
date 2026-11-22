@@ -144,6 +144,16 @@ pinned documents: `cooling_only_controller`, `multizone_vav_supply_fan`,
 meaning under the unchanged `oce:canon1:` tag: the workspace version moved to 0.6.0 with it, and
 a 0.5.0 blob or snapshot is refused with `EngineVersionMismatch`.
 
+*Amended 2026-11-21 (issue #735, inside 0.6.0).* The held Real is also what every later binding
+reads: a sibling member's expression or reference, and a block parameter bound to a sequence
+parameter declared `S231:Real`. Before, the scope kept the Integer the document wrote, so a
+document that read an Integer out of a Real parameter (an Integer parameter bound to it, or an
+Integer expression over it) had one table for `2` and another for `2.0`. Now both spellings are
+one table, one blob and one id, or one refusal (an Integer parameter bound to a Real is
+`parameter-kind-mismatch`). No tracked document and no `open-control-library` rule reads one, so
+no pinned id moved; `crates/oce-api/tests/integer_respelling_identity.rs` holds every tracked
+document to one model in both spellings.
+
 Sorting is sound only if no class reads two entries as the same parameter, and today one can.
 Duplicate detection is by exact name, but `TimeTable` walks `params.values` in table order and
 parses `table_<r>_<c>` and `offset_<i>` with `usize::parse` (`source_timetable.rs`

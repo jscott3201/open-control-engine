@@ -225,7 +225,12 @@ pub enum DiagCode {
     CrossedBounds,
     /// A block instance omitted a parameter that the class requires at build time.
     MissingRequiredParameter,
-    /// A required block parameter has a scalar kind the block constructor does not consume.
+    /// A block parameter holds a value of a kind its class's catalog type does not admit (a Real,
+    /// `2.0` included, on an Integer parameter; a Boolean on a Real one; an enumeration value of
+    /// another class), which the block would otherwise have replaced with its default (issue
+    /// #734). Raised by the load gate for every parameter the catalog types, and by the CXF
+    /// resolver on a composite parameter whose value is not of its declared `S231:isOfDataType`
+    /// (issue #735).
     ParameterKindMismatch,
     /// One block instance carries the same raw parameter name more than once.
     DuplicateParameter,
@@ -237,9 +242,10 @@ pub enum DiagCode {
     NonCanonicalElementName,
     /// A block parameter violates a class-level range or ordering rule, or binds an Integer above
     /// 2^53 in magnitude to a Real parameter. The second is raised by the CXF resolver on the
-    /// parameter node (issue #683): an Integer bound to a Real parameter is held as the Real of
-    /// the same value, and past 2^53 a binary64 does not hold every integer exactly, so the
-    /// document is refused instead of rounded.
+    /// parameter node (issue #683; for a composite parameter declared Real, issue #735) and by
+    /// the load gate: an Integer bound to a Real parameter is held as the Real of the same value,
+    /// and past 2^53 a binary64 does not hold every integer exactly, so the document is refused
+    /// instead of rounded. Also an enumeration stand-in (an ordinal or a String) naming no member.
     ParameterOutOfRange,
     /// A parameter holds, or its binding expression produced, a non-finite Real value (`NaN`,
     /// `+inf` or `-inf`). Engine-wide: every Real parameter at every level — root, composite and

@@ -426,17 +426,24 @@ fn a_boundary_type_and_a_ground_value_are_spelled_as_the_authoring_form_spells_t
         };
         assert_eq!(diff["graph"], expected, "{member}");
     }
-    // The rules check an optional enumeration parameter's ordinal and not its kind, so a string
-    // there is a value the diff spells, as a string.
+    // A string naming a member is the established stand-in the rules admit, so it is a value
+    // the diff spells, as a string; one naming no member is refused like an ordinal outside the
+    // enumeration (issue #734: before, `x` loaded and ran as the default controller).
     let mut head = pid.clone();
-    head.blocks[at].params[0].1 = Value::String("x".into());
+    head.blocks[at].params[0].1 = Value::String("PD".into());
     let diff = support::json(&support::loaded::compare_topologies(&pid, &head));
-    assert_eq!(diff["graph"][0]["new"], json!({ "text": "x" }));
-    for ordinal in [0, 5] {
-        let refused = Value::Enum {
+    assert_eq!(diff["graph"][0]["new"], json!({ "text": "PD" }));
+    for refused in [
+        Value::String("x".into()),
+        Value::Enum {
             class: controller,
-            ordinal,
-        };
+            ordinal: 0,
+        },
+        Value::Enum {
+            class: controller,
+            ordinal: 5,
+        },
+    ] {
         let mut head = pid.clone();
         head.blocks[at].params[0].1 = refused;
         let error = support::loaded::refusal(&pid, &head);

@@ -3,8 +3,9 @@
 //!
 //! Three input shapes (verified against `dto::CxfValue`):
 //! - bare JSON literals (`Bool`/`Int`/`Float`) ground **literal-natural** to the matching `Value`
-//!   variant. A bare `Int` feeding a Real-typed parameter with no `isOfDataType` is *not* re-typed
-//!   here; the block constructor owns any accepted Int→Real parameter promotion.
+//!   variant. A bare `Int` feeding a Real-typed parameter is *not* re-typed here: the resolver
+//!   holds each grounded binding in its parameter's type right after this, before anything reads
+//!   it (`resolve::real_parameters`, issues #683, #735).
 //! - typed XSD literals (`{"@value","@type"}`) parse the lexical form per the datatype suffix.
 //! - `Expr(string)` is handed to [`oce_expr::eval_str`] against a [`Scope`] of the
 //!   already-ground parameters visible to the binding. For a leaf *member* binding that is

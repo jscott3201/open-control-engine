@@ -1,43 +1,39 @@
-//! An Integer bound to a catalog-Real parameter is held as a Real, exactly or not at all
-//! (issue #683).
+//! An Integer bound to a Real parameter is held as a Real, exactly or not at all (issues #683,
+//! #735): a block member by its catalog type, a composite parameter by its declared type.
 //!
-//! These tests drive the table pass alone, on tables built by hand, so every case states the
-//! parameter's class, name and grounded value. `tests/real_parameter_literals.rs` runs the same
-//! rule through documents.
+//! These tests drive the two holds alone, on values built by hand, so every case states the
+//! parameter's class (or declaration), name and grounded value. `tests/real_parameter_literals.rs`
+//! runs the same rule through documents, and `oce-api`'s `parameter_scope_kinds.rs` through the
+//! scope, end to end.
 
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic, Severity};
-use oce_model::{EnumClassId, Value};
+use oce_model::{EnumClassId, Value, ValueType};
 
 use oce_diag::DiagnosticList;
 
-use super::real_parameters::{
-    MAX_EXACT_INTEGER_AS_REAL, exact_real, hold_real_parameters_as_reals,
-};
+use crate::dto::Node;
+
+use super::real_parameters::{DeclaredTypeFault, hold_in_catalog_type, hold_in_declared_type};
 
 const TWO_POW_53: i64 = 1 << 53;
 const OWNER: &str = "urn:test#Seq.blk";
 
 type Table = Vec<(Arc<str>, Value)>;
 
-fn table(entries: &[(&str, Value)]) -> Table {
-    entries
-        .iter()
-        .map(|(name, value)| (Arc::from(*name), value.clone()))
-        .collect()
-}
-
-/// Run the pass with one source IRI per entry, `urn:test#Seq.blk.<name>`.
+/// Hold each entry in its catalog type, in order, with the source IRI `urn:test#Seq.blk.<name>`.
 fn held(class_path: &str, entries: &[(&str, Value)]) -> (Table, Vec<Diagnostic>) {
-    let mut table = table(entries);
-    let sources: Vec<String> = entries
-        .iter()
-        .map(|(name, _)| format!("{OWNER}.{name}"))
-        .collect();
-    let sources: Vec<&str> = sources.iter().map(String::as_str).collect();
     let mut diags = DiagnosticList::new();
-    hold_real_parameters_as_reals(class_path, OWNER, &mut table, &sources, &mut diags);
+    let table = entries
+        .iter()
+        .map(|(name, value)| {
+            let source = format!("{OWNER}.{name}");
+            let value =
+                hold_in_catalog_type(class_path, OWNER, &source, name, value.clone(), &mut diags);
+            (Arc::from(*name), value)
+        })
+        .collect();
     (table, diags.to_vec())
 }
 
@@ -50,68 +46,6 @@ fn assert_bit_eq(actual: &Table, expected: &[(&str, Value)]) {
             "{name}: {value:?} is not {expected_value:?}"
         );
     }
-}
-
-#[test]
-fn the_exact_bound_is_two_to_the_fifty_third() {
-    assert_eq!(MAX_EXACT_INTEGER_AS_REAL, 9_007_199_254_740_992);
-    assert_eq!(MAX_EXACT_INTEGER_AS_REAL, TWO_POW_53.unsigned_abs());
-}
-
-#[test]
-fn every_integer_up_to_the_bound_converts_to_the_real_of_the_same_value() {
-    for integer in [
-        0,
-        1,
-        -1,
-        2,
-        i64::from(i32::MAX),
-        i64::from(i32::MIN),
-        TWO_POW_53 - 1,
-        -(TWO_POW_53 - 1),
-        TWO_POW_53,
-        -TWO_POW_53,
-    ] {
-        let real = exact_real(integer).expect("within the bound");
-        // Exact both ways: the Real is integral and reads back as the Integer it came from.
-        assert_eq!(real as i64, integer, "{integer}");
-        assert_eq!(real.to_bits(), (integer as f64).to_bits(), "{integer}");
-    }
-    assert_eq!(
-        exact_real(TWO_POW_53).unwrap().to_bits(),
-        0x4340_0000_0000_0000
-    );
-    assert_eq!(
-        exact_real(-TWO_POW_53).unwrap().to_bits(),
-        0xc340_0000_0000_0000
-    );
-}
-
-#[test]
-fn integer_zero_converts_to_positive_zero() {
-    // No Integer spells a negative zero: `-0` parses to the one Integer zero.
-    let zero = exact_real(0).unwrap();
-    assert_eq!(zero.to_bits(), 0.0f64.to_bits());
-    assert_ne!(zero.to_bits(), (-0.0f64).to_bits());
-}
-
-#[test]
-fn every_integer_past_the_bound_is_refused_including_the_exact_powers_of_two() {
-    for integer in [
-        TWO_POW_53 + 1,
-        -(TWO_POW_53 + 1),
-        TWO_POW_53 + 2,
-        1 << 54,
-        1 << 62,
-        i64::MAX,
-        i64::MIN + 1,
-        // -2^63 is exact as a binary64, and has no `i64` magnitude: refused by its magnitude.
-        i64::MIN,
-    ] {
-        assert_eq!(exact_real(integer), None, "{integer}");
-    }
-    // What a cast would have done at the first refused value: land on its neighbour.
-    assert_eq!((TWO_POW_53 + 1) as f64 as i64, TWO_POW_53);
 }
 
 #[test]
@@ -345,15 +279,6 @@ fn each_refused_entry_is_reported_once_in_table_order_and_the_rest_still_convert
 }
 
 #[test]
-fn a_refusal_without_a_recorded_source_is_located_on_the_owning_instance() {
-    let mut table = table(&[("uLow", Value::Integer(i64::MAX))]);
-    let mut diags = DiagnosticList::new();
-    hold_real_parameters_as_reals("CDL.Reals.Hysteresis", OWNER, &mut table, &[], &mut diags);
-    assert_eq!(diags.len(), 1);
-    assert_eq!(diags[0].subject.as_deref(), Some(OWNER));
-}
-
-#[test]
 fn the_pass_is_idempotent_and_repeats_bit_for_bit() {
     let entries = [
         ("uLow", Value::Integer(-2)),
@@ -369,4 +294,111 @@ fn the_pass_is_idempotent_and_repeats_bit_for_bit() {
     assert_bit_eq(&twice, &again);
     let (repeat, _) = held("CDL.Reals.Hysteresis", &entries);
     assert_bit_eq(&repeat, &again);
+}
+
+/// A composite parameter node declared `datatype` (`None`: no `S231:isOfDataType`).
+fn declared(datatype: Option<&str>) -> Node {
+    let typed = datatype
+        .map(|id| format!(r#", "S231:isOfDataType": {{ "@id": "{id}" }}"#))
+        .unwrap_or_default();
+    serde_json::from_str(&format!(r#"{{ "@id": "urn:test#Seq.p"{typed} }}"#)).expect("a node")
+}
+
+#[test]
+fn an_integer_on_a_declared_real_is_held_as_the_real_and_exactly_or_not_at_all() {
+    let real = declared(Some("S231:Real"));
+    for integer in [0, 4, -4, TWO_POW_53, -TWO_POW_53] {
+        let held = hold_in_declared_type(&real, Value::Integer(integer)).expect("exact");
+        assert!(held.bit_eq(&Value::Real(integer as f64)), "{integer}");
+    }
+    assert!(
+        hold_in_declared_type(&real, Value::Integer(0))
+            .unwrap()
+            .bit_eq(&Value::Real(0.0))
+    );
+    for integer in [TWO_POW_53 + 1, i64::MAX, i64::MIN] {
+        let (fault, kept) = hold_in_declared_type(&real, Value::Integer(integer)).unwrap_err();
+        assert_eq!(fault, DeclaredTypeFault::InexactInteger(integer));
+        assert!(kept.bit_eq(&Value::Integer(integer)), "kept as grounded");
+        let diagnostic = fault.diagnostic("urn:test#Seq.p", "p", &kept);
+        assert_eq!(diagnostic.code, DiagCode::ParameterOutOfRange);
+        assert_eq!(diagnostic.subject.as_deref(), Some("urn:test#Seq.p"));
+    }
+    // A Real stays the Real it was, bit for bit.
+    for real_value in [-0.0, 2.5, f64::MAX] {
+        assert!(
+            hold_in_declared_type(&real, Value::Real(real_value))
+                .unwrap()
+                .bit_eq(&Value::Real(real_value))
+        );
+    }
+}
+
+#[test]
+fn a_value_of_another_kind_than_the_declared_one_is_refused_on_the_declaration() {
+    for (datatype, declared_type, value) in [
+        ("S231:Integer", ValueType::Integer, Value::Real(2.0)),
+        ("S231:Integer", ValueType::Integer, Value::Real(-0.0)),
+        ("S231:Integer", ValueType::Integer, Value::Boolean(true)),
+        ("S231:Real", ValueType::Real, Value::Boolean(false)),
+        ("S231:Real", ValueType::Real, Value::String(Arc::from("2"))),
+        ("S231:Boolean", ValueType::Boolean, Value::Integer(1)),
+    ] {
+        let node = declared(Some(datatype));
+        let (fault, kept) = hold_in_declared_type(&node, value.clone()).unwrap_err();
+        assert_eq!(
+            fault,
+            DeclaredTypeFault::WrongKind {
+                declared: declared_type
+            }
+        );
+        assert!(kept.bit_eq(&value));
+        let diagnostic = fault.diagnostic("urn:test#Seq.p", "p", &kept);
+        assert_eq!(diagnostic.code, DiagCode::ParameterKindMismatch);
+        assert_eq!(diagnostic.severity, Severity::Error);
+        assert_eq!(diagnostic.subject.as_deref(), Some("urn:test#Seq.p"));
+        assert!(
+            diagnostic.message.starts_with("parameter `p` is declared"),
+            "{}",
+            diagnostic.message
+        );
+    }
+}
+
+#[test]
+fn an_undeclared_or_enumeration_declared_parameter_keeps_what_the_document_wrote() {
+    for datatype in [
+        None,
+        Some("S231:NotAType"),
+        Some("Buildings.Controls.OBC.CDL.Types.SimpleController"),
+    ] {
+        let node = declared(datatype);
+        for value in [
+            Value::Integer(4),
+            Value::Real(4.0),
+            Value::Boolean(true),
+            Value::Enum {
+                class: EnumClassId::SIMPLE_CONTROLLER,
+                ordinal: 1,
+            },
+        ] {
+            assert!(
+                hold_in_declared_type(&node, value.clone())
+                    .unwrap()
+                    .bit_eq(&value),
+                "{datatype:?} {value:?}"
+            );
+        }
+    }
+    // A declared Integer or Boolean keeps its own kind untouched.
+    assert!(
+        hold_in_declared_type(&declared(Some("S231:Integer")), Value::Integer(i64::MAX))
+            .unwrap()
+            .bit_eq(&Value::Integer(i64::MAX))
+    );
+    assert!(
+        hold_in_declared_type(&declared(Some("S231:Boolean")), Value::Boolean(false))
+            .unwrap()
+            .bit_eq(&Value::Boolean(false))
+    );
 }
