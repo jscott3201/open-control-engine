@@ -92,15 +92,16 @@ fn refused(bytes: &[u8]) -> (Vec<Diagnostic>, AllocationInfo) {
     (error.all_diagnostics().cloned().collect(), info)
 }
 
-/// The string budget's refusal of a value of `bytes` bytes on the parameter `subject`, when the
-/// document's tables already hold `used` bytes of strings, stated by hand.
-fn over_strings(subject: &str, bytes: usize, used: usize) -> Diagnostic {
+/// The string budget's refusal of a value of `bytes` bytes on the parameter `subject` of the
+/// instance `owner`, when the document's tables already hold `used` bytes of strings, stated by
+/// hand.
+fn over_strings(subject: &str, owner: &str, bytes: usize, used: usize) -> Diagnostic {
     Diagnostic::error(
         DiagCode::ResourceLimitExceeded,
         format!(
-            "string parameter value of {bytes} byte(s) does not fit: the parameter tables of the \
-             document already hold {used} of the 8388608 bytes of string values a document may \
-             hold, each table entry counted"
+            "string parameter value of {bytes} byte(s) on `{owner}` does not fit: the parameter \
+             tables of the document already hold {used} of the 8388608 bytes of string values a \
+             document may hold, each table entry counted"
         ),
     )
     .with_subject(subject.to_owned())
@@ -143,7 +144,7 @@ fn a_broadcast_string_past_the_budget_is_refused_at_the_cost_of_reading_the_docu
         let (diagnostics, info) = refused(&document);
         assert_eq!(
             diagnostics,
-            [over_strings(&format!("{CON}.q"), each, 136 * each)]
+            [over_strings(&format!("{CON}.q"), CON, each, 136 * each)]
         );
         assert!(
             info.bytes_max <= 48 * bytes(document.len()),
@@ -196,7 +197,7 @@ fn a_broadcast_string_that_fills_the_budget_loads_and_one_byte_more_is_refused()
     );
 
     let (diagnostics, refusal) = refused(&edge(rest + 1));
-    assert_eq!(diagnostics, [over_strings(&r, rest + 1, 136 * each)]);
+    assert_eq!(diagnostics, [over_strings(&r, CON, rest + 1, 136 * each)]);
     assert!(
         refusal.bytes_max <= bytes(STRING_BUDGET) / 8,
         "{} bytes held refusing",
@@ -246,7 +247,12 @@ fn a_string_node_listed_by_two_instances_is_counted_once_for_each() {
     let (diagnostics, _) = refused(&shared(half + 1));
     assert_eq!(
         diagnostics,
-        [over_strings("urn:shared.q", half + 1, half + 1)]
+        [over_strings(
+            "urn:shared.q",
+            "http://example.org#MinLoop.gain",
+            half + 1,
+            half + 1
+        )]
     );
 }
 
@@ -274,4 +280,38 @@ fn array_parameters_on_one_leaf_cost_a_fixed_amount_each_however_many_there_are(
             "{size}: {further} more bytes requested for 1,000 more arrays"
         );
     }
+}
+
+#[test]
+fn a_positional_array_listed_again_grounds_its_values_once() {
+    // One array of two 60 KiB literals that do not parse, listed 10,000 times: each value is
+    // grounded on the first listing and its error kept, so the later listings copy nothing and
+    // their findings are counted once the diagnostic list has ended. [measured: a 598,576-byte
+    // document, a peak of 11,738,786 bytes and 41,547,026 requested; 4.94 GB requested when each
+    // listing grounded the values again, by the review of GitHub #752]
+    let q = format!("{CON}.q");
+    let bad = format!(
+        "{{ \"@value\": \"{}\", \"@type\": \"http://www.w3.org/2001/XMLSchema#double\" }}",
+        "y".repeat(60 * 1024)
+    );
+    let node = array(&q, 2, &format!("[ {bad}, {bad} ]"));
+    let document = document(&vec![q; 10_000], &[node]);
+    let (diagnostics, info) = refused(&document);
+    assert_eq!(
+        diagnostics.last().map(|d| d.code),
+        Some(DiagCode::ResourceLimitExceeded)
+    );
+    // The diagnostic list's budget is also 8 MiB; what is requested is a few times it.
+    assert!(
+        info.bytes_max <= bytes(STRING_BUDGET) + 48 * bytes(document.len()),
+        "{} bytes held for a document of {}",
+        info.bytes_max,
+        document.len()
+    );
+    assert!(
+        info.bytes_total <= 8 * bytes(STRING_BUDGET),
+        "{} bytes requested for a document of {}",
+        info.bytes_total,
+        document.len()
+    );
 }

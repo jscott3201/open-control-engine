@@ -707,10 +707,14 @@ Their values are bounded by two rules of their own (issue #736). The one value o
 (`q[n]` with the value `[v]`) is grounded once and every element shares it, and so is every value
 of a parameter node an instance lists more than once; before, each element and each listing
 grounded it again, a string value a copy of its own each time, so `q[4096]` with a 60 KB string, a
-67 KB document, loaded at 506 MB. And the string values of every parameter table of a document are
-held to 8 MiB, each entry counted, shared or not: a value shared by many entries is still written
-out once per entry by every consumer of the table, the content id's canonical bytes, the loaded
-model's projection and a compiled blob among them. So `q[4096]` with a 60 KB string is refused at
+67 KB document, loaded at 506 MB. Grounding once is also evaluating once: a broadcast or repeated
+value is charged against the document's evaluation budget (2^26 work units) once, where it was
+charged once per read, so a document refused before for the cost of evaluating the same value
+again can now load; the same values written out once per element are charged each, as before.
+And the string values of every parameter table of a document are held to 8 MiB, each entry
+counted, shared or not (owner ruling of 2026-11-21): a value shared by many entries is still
+written out once per entry by every consumer of the table, the content id's canonical bytes, the
+loaded model's projection and a compiled blob among them. So `q[4096]` with a 60 KB string is refused at
 its 137th element, holding 672 KB, and a document whose string values fill the budget to the byte
 loads at a peak of 8.6 MB. A value is counted where it enters a table, so one node of 4 MiB that two
 instances list takes the whole budget. The string parameters of the catalog are messages

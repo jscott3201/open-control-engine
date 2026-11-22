@@ -150,7 +150,7 @@ pub(super) fn ground_instance_params(
                             siblings.push(Arc::clone(&name), EvalResult::Scalar(v.clone()));
                             table.push((name, v.clone()));
                         }
-                        Err(refusal) => diags.raise(|| refusal.diagnostic(piri)),
+                        Err(refusal) => diags.raise(|| refusal.diagnostic(piri, &inst.node.id)),
                     },
                     Err(e) => {
                         diags.raise(|| crate::ground::ground_failure(e, piri, &inst.node.id));

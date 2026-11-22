@@ -123,12 +123,12 @@ fn the_string_budget_reserves_string_bytes_alone_and_refuses_without_reserving()
     let two = Value::String(Arc::from("ss"));
     let refusal = budget.take(&two).expect_err("one byte over");
     assert_eq!(
-        refusal.diagnostic("urn:p.q"),
+        refusal.diagnostic("urn:p.q", "urn:o"),
         Diagnostic::error(
             DiagCode::ResourceLimitExceeded,
-            "string parameter value of 2 byte(s) does not fit: the parameter tables of the \
-             document already hold 8388607 of the 8388608 bytes of string values a document \
-             may hold, each table entry counted",
+            "string parameter value of 2 byte(s) on `urn:o` does not fit: the parameter tables \
+             of the document already hold 8388607 of the 8388608 bytes of string values a \
+             document may hold, each table entry counted",
         )
         .with_subject("urn:p.q".to_owned())
     );
@@ -136,6 +136,16 @@ fn the_string_budget_reserves_string_bytes_alone_and_refuses_without_reserving()
     assert!(budget.take(&Value::String(Arc::from("s"))).is_ok());
     assert!(budget.take(&Value::String(Arc::from("s"))).is_err());
     assert!(budget.take(&Value::Real(0.0)).is_ok());
+}
+
+#[test]
+fn the_string_budget_counts_bytes_not_characters() {
+    // Two-byte characters filling the budget by their bytes leave nothing; a count of characters
+    // would leave half of it.
+    let mut budget = StringParameterBudget::per_document();
+    let wide = Value::String(Arc::from("é".repeat(STRING_BUDGET / 2)));
+    assert!(budget.take(&wide).is_ok());
+    assert!(budget.take(&Value::String(Arc::from("s"))).is_err());
 }
 
 #[test]
@@ -153,6 +163,7 @@ fn every_parameter_listed_more_than_once_is_found_once() {
     }
     assert!(Groundings::of(&[]).repeated.is_empty());
     assert!(Groundings::of(&["a"]).repeated.is_empty());
+    assert_eq!(Groundings::of(&["a", "a"]).repeated, ["a"]);
     assert!(Groundings::of(&["a", "b"]).repeated.is_empty());
 }
 
@@ -249,6 +260,73 @@ fn a_sibling_listed_first_still_refuses_the_element_it_names() {
 }
 
 #[test]
+fn a_sibling_is_compared_by_its_whole_local_name_label_included() {
+    // `q_1[3]` beside `q[2]`: the sibling's local name is `q_1[3]`, not `q_1`, so `q`'s first
+    // element is minted as before and sits beside the array named `q_1` (whose own elements are
+    // `q_1_1` to `q_1_3`).
+    let (labelled, q) = (format!("{CON}.q_1[3]"), format!("{CON}.q[2]"));
+    let ids = [labelled.clone(), q.clone()];
+    let nodes = [
+        array(&labelled, &[3], "[ 1.0 ]"),
+        array(&q, &[2], "[ 2.0 ]"),
+    ];
+    let table = constant_table(&document(&ids, &nodes));
+    let names: Vec<&str> = table.iter().map(|(name, _)| name.as_ref()).collect();
+    assert_eq!(names, ["k", "q_1_1", "q_1_2", "q_1_3", "q_1", "q_2"]);
+}
+
+#[test]
+fn a_positional_array_listed_again_grounds_each_of_its_values_once() {
+    // Two values, listed three times: two groundings, kept for the later listings, and three
+    // copies of the two entries in the table, as before.
+    let q = format!("{CON}.q");
+    let bytes = document(
+        &vec![q.clone(); 3],
+        &[array(&q, &[2], "[ \"\\\"a\\\"\", \"\\\"b\\\"\" ]")],
+    );
+    let (_, grounded, table) = reads_counted_by(|| constant_table(&bytes));
+    assert_eq!(grounded, 2);
+    let names: Vec<&str> = table.iter().map(|(name, _)| name.as_ref()).collect();
+    assert_eq!(names, ["k", "q_1", "q_2", "q_1", "q_2", "q_1", "q_2"]);
+}
+
+#[test]
+fn a_broadcast_is_charged_its_evaluation_once_and_the_explicit_spelling_once_an_element() {
+    // The per-document evaluation budget bounds the work done. A broadcast's one value is now
+    // evaluated once, so forty elements of `sum(1:1048576)` load, each the same Integer, where
+    // each element used to be charged again and the ninth ran out. Written out forty times, the
+    // same values are forty evaluations, and the document is still refused for its cost.
+    let q = format!("{CON}.q");
+    let sum = "\"sum(1:1048576)\"";
+    let broadcast = document(
+        std::slice::from_ref(&q),
+        &[array(&q, &[40], &format!("[ {sum} ]"))],
+    );
+    let table = constant_table(&broadcast);
+    assert_eq!(table.len(), 41);
+    assert!(
+        table[1..]
+            .iter()
+            .all(|(_, value)| value.bit_eq(&Value::Integer(549_756_338_176)))
+    );
+    let explicit = vec![sum; 40].join(", ");
+    let explicit = document(
+        std::slice::from_ref(&q),
+        &[array(&q, &[40], &format!("[ {explicit} ]"))],
+    );
+    let diagnostics = refused(&explicit);
+    assert!(!diagnostics.is_empty());
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| d.code == DiagCode::GroundingFailed
+                && d.subject.as_deref() == Some(q.as_str())
+                && d.message.contains("too expensive")),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn a_broadcast_value_is_grounded_once_and_every_element_shares_it() {
     // A string over 1,024 elements: one grounding, one allocation shared by every entry.
     let q = format!("{CON}.q");
@@ -334,9 +412,9 @@ fn string_values_that_fill_the_budget_exactly_load_and_one_byte_more_is_refused(
         [Diagnostic::error(
             DiagCode::ResourceLimitExceeded,
             format!(
-                "string parameter value of {} byte(s) does not fit: the parameter tables of the \
-                 document already hold {} of the 8388608 bytes of string values a document may \
-                 hold, each table entry counted",
+                "string parameter value of {} byte(s) on `{CON}` does not fit: the parameter \
+                 tables of the document already hold {} of the 8388608 bytes of string values a \
+                 document may hold, each table entry counted",
                 rest + 1,
                 7 * each
             ),
@@ -353,12 +431,11 @@ fn string_values_that_fill_the_budget_exactly_load_and_one_byte_more_is_refused(
     assert_eq!(diagnostics[0].code, DiagCode::ResourceLimitExceeded);
     assert_eq!(diagnostics[0].subject.as_deref(), Some(q.as_str()));
     assert!(
-        diagnostics[0]
+        diagnostics[0].message.starts_with(&format!(
+            "string parameter value of {each} byte(s) on `{CON}`"
+        )) && diagnostics[0]
             .message
-            .starts_with(&format!("string parameter value of {each} byte(s)"))
-            && diagnostics[0]
-                .message
-                .contains(&format!("already hold {} of", 8 * each)),
+            .contains(&format!("already hold {} of", 8 * each)),
         "{}",
         diagnostics[0].message
     );

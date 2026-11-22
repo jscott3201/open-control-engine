@@ -15,7 +15,9 @@ use oce_model::Value;
 
 use crate::dto::{CxfValue, Node};
 use crate::ground::GroundErr;
-use crate::parameter_reads::{InstanceReads, SiblingNames, StringParameterBudget};
+use crate::parameter_reads::{
+    InstanceReads, SiblingNames, StringBudgetRefusal, StringParameterBudget,
+};
 use crate::resolve::local_name;
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
 use oce_diag::DiagnosticList;
@@ -366,26 +368,21 @@ fn collides_with_sibling(
 
 /// Append one minted per-element entry to both the param table and the incremental sibling
 /// scope (so a later sibling binding can reference it by its `k_i` name), once its string bytes,
-/// if it is a string, are reserved from the document's `strings` budget (issue #736). Returns
-/// `false`, minting nothing, when they do not fit: the array is refused there with one
-/// `ResourceLimitExceeded` on `piri`, and the caller mints none of its later elements.
+/// if it is a string, are reserved from the document's `strings` budget (issue #736). Mints
+/// nothing and returns the refusal when they do not fit: the caller refuses the array there with
+/// one `ResourceLimitExceeded` and mints none of its later elements.
 fn mint_element(
     ename: &str,
     value: Value,
-    piri: &str,
     table: &mut Vec<(Arc<str>, Value)>,
     siblings: &mut IndexedEntries,
     strings: &mut StringParameterBudget,
-    diags: &mut DiagnosticList,
-) -> bool {
-    if let Err(refusal) = strings.take(&value) {
-        diags.raise(|| refusal.diagnostic(piri));
-        return false;
-    }
+) -> Result<(), StringBudgetRefusal> {
+    strings.take(&value)?;
     let key: Arc<str> = Arc::from(ename);
     siblings.push(Arc::clone(&key), EvalResult::Scalar(value.clone()));
     table.push((key, value));
-    true
+    Ok(())
 }
 
 /// Expand one **preserved** array parameter (`isArray=true`) into per-element scalar entries on the
@@ -527,8 +524,8 @@ pub(crate) fn expand_array_param(
                         continue;
                     }
                 };
-                if !mint_element(ename, value, piri, table, siblings, strings, diags) {
-                    return;
+                if let Err(refusal) = mint_element(ename, value, table, siblings, strings) {
+                    return diags.raise(|| refusal.diagnostic(piri, owner));
                 }
             }
         }
@@ -551,8 +548,10 @@ pub(crate) fn expand_array_param(
                         if collides_with_sibling(&reads.sibling_names, ename, piri, diags) {
                             continue;
                         }
-                        if !mint_element(ename, v.clone(), piri, table, siblings, strings, diags) {
-                            return;
+                        if let Err(refusal) =
+                            mint_element(ename, v.clone(), table, siblings, strings)
+                        {
+                            return diags.raise(|| refusal.diagnostic(piri, owner));
                         }
                     }
                 }

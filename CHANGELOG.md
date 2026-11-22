@@ -357,17 +357,18 @@ so far, and no tag is cut by the bump.
     shares the result: one allocation for a string, one error for a failure, raised once an
     element as before. So is every value of a parameter node an instance lists more than once.
   - **String parameter values are held to 8 MiB a document** (`MAX_DOCUMENT_STRING_PARAMETER_BYTES`,
-    issue #736). A value shared by many table entries is still written out once per entry by
-    each consumer of the table (the content id's canonical bytes, the loaded model's projection,
-    a compiled blob), so sharing alone left the issue's `q[4096]` at a peak of 254 MB. The string
-    values of every parameter table of a document are now counted once per entry, shared or not,
-    and the first that does not fit is refused as `resource-limit-exceeded`, subject the
-    parameter: ``string parameter value of 61440 byte(s) does not fit: the parameter tables of
-    the document already hold 8355840 of the 8388608 bytes of string values a document may
-    hold, each table entry counted``. An array mints none of its later elements. The issue's
-    documents are refused at their 137th element at a peak of 672,380 bytes; a document whose
-    strings fill the budget to the byte loads at 8,593,382. The catalog's string parameters are
-    `Utilities.Assert` messages, and no tracked or library model holds more than 176 bytes of them.
+    issue #736; owner ruling of 2026-11-21, recorded on GitHub #752). A value shared by many table
+    entries is still written out once per entry by each consumer of the table (the content id's
+    canonical bytes, the loaded model's projection, a compiled blob), so sharing alone left the
+    issue's `q[4096]` at a peak of 254 MB. The string values of every parameter table of a document
+    are now counted once per entry, shared or not, and the first that does not fit is refused as
+    `resource-limit-exceeded`, subject the parameter and naming its instance: ``string parameter
+    value of 61440 byte(s) on `http://example.org#MinLoop.con` does not fit: the parameter tables of
+    the document already hold 8355840 of the 8388608 bytes of string values a document may hold,
+    each table entry counted``. An array mints none of its later elements. The issue's documents are
+    refused at their 137th element at a peak of 672,380 bytes; a document whose strings fill the
+    budget to the byte loads at 8,593,382. The catalog's string parameters are `Utilities.Assert`
+    messages, and no tracked or library model holds more than 176 bytes of them.
   - **Sibling names are built once per leaf** (issue #731). Each array parameter rebuilt the set
     of the leaf's parameter names its minted names are checked against, so `P` arrays cost `P²`:
     2,000 empty arrays on one leaf, a 415 KB document, took 1.6 s and requested 293,333,683
@@ -384,12 +385,20 @@ so far, and no tag is cut by the bump.
     onto a 12 KiB output add 17,480,217 bytes where they added 76,830,733. A parameter node
     listed again no longer copies its `@id` to find it was checked. The `@context` route of the
     issue was raised by GitHub #730, and the validator's list by GitHub #732.
-  - **What grounding once changes:** nothing for a document that loads. A later read could only
-    differ if a name the value reads were bound in between in the region the reads share; for a
-    broadcast that is another array of the same instance minting the same element name, and a
-    node listed twice is always refused (`duplicate-parameter`, or its failed grounding). In
-    those refused documents the reader's diagnostics may differ from grounding each read again.
-    The 257 tracked documents that hold an `@graph` and the 139 CXF documents of
+  - **A broadcast or repeated value is charged its evaluation once** (the coordinator's call in
+    the review of GitHub #752). The per-document evaluation budget (`MAX_DOCUMENT_EVAL_FUEL`,
+    2^26 work units) bounds the work evaluation does, and that work is now done once: so a
+    document refused before for the cost of evaluating the same value again now loads.
+    `minimal_loop.jsonld` with `q[40]` broadcasting `sum(1:1048576)` was refused with nine
+    `grounding-failed` (expression too expensive) and now loads, each element
+    `Integer(549756338176)`. The same values written out forty times are forty evaluations,
+    charged each, and that document is still refused.
+  - **What else grounding once changes:** nothing for a document that loads either way. A later
+    read could only differ if a name the value reads were bound in between in the region the
+    reads share; for a broadcast that is another array of the same instance minting the same
+    element name, and a node listed twice is always refused (`duplicate-parameter`, or its failed
+    grounding). In those refused documents the reader's diagnostics may differ from grounding
+    each read again. The 257 tracked documents that hold an `@graph` and the 139 CXF documents of
     `open-control-library` (as written and with the retired namespace rewritten), 535 loads, give
     byte-identical outcomes, diagnostics, `Engine::params()`, resolved models and content ids
     before and after. A seeded comparison of 2,000 random leaves against a reader that shares

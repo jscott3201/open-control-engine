@@ -25,15 +25,21 @@
 //!   document hold are counted once per entry, shared or not, against
 //!   [`MAX_DOCUMENT_STRING_PARAMETER_BYTES`] ([`StringParameterBudget`]).
 //!
-//! What grounding once changes: nothing, for any document that loads. A later read could only
-//! ground differently if a name the value reads were bound between the two reads in the sibling
-//! region the reads share. The names bound there between two elements of one broadcast are the
-//! array's own element names, and a name that a sibling parameter has is never minted (it is the
-//! collision refusal); so an element name the value reads was bound before by another array of
-//! the same instance minting the same name, and the validator refuses the instance for that
-//! duplicate. A node listed twice on one instance is refused in every case: by
+//! What grounding once changes, for a document that loads either way: nothing. A later read
+//! could only ground differently if a name the value reads were bound between the two reads in
+//! the sibling region the reads share. The names bound there between two elements of one
+//! broadcast are the array's own element names, and a name that a sibling parameter has is never
+//! minted (it is the collision refusal); so an element name the value reads was bound before by
+//! another array of the same instance minting the same name, and the validator refuses the
+//! instance for that duplicate. A node listed twice on one instance is refused in every case: by
 //! `duplicate-parameter` when both listings ground, by the failed grounding otherwise. In those
 //! refused documents the reader's diagnostics may differ from grounding each read again.
+//!
+//! What it does change: the document's evaluation budget (`MAX_DOCUMENT_EVAL_FUEL`) bounds the
+//! work evaluation does, and the work is now done once. A broadcast or repeated value is charged
+//! its evaluation once where it was charged once per read, so a document refused before for the
+//! cost of evaluating the same value again (`q[40]` broadcasting `sum(1:1048576)`) now loads. The
+//! same values written out once per element are as many evaluations, charged each, as before.
 //!
 //! Every set and map here is looked up, never iterated, so none of them orders anything.
 
@@ -108,15 +114,17 @@ impl StringParameterBudget {
 }
 
 impl StringBudgetRefusal {
-    /// The refusal as a diagnostic on the parameter node `parameter_iri`.
-    pub(crate) fn diagnostic(self, parameter_iri: &str) -> Diagnostic {
+    /// The refusal as a diagnostic on the parameter node `parameter_iri`, naming the instance
+    /// `owner` whose table the value would enter.
+    pub(crate) fn diagnostic(self, parameter_iri: &str, owner: &str) -> Diagnostic {
         let Self { bytes, used } = self;
         Diagnostic::error(
             DiagCode::ResourceLimitExceeded,
             format!(
-                "string parameter value of {bytes} byte(s) does not fit: the parameter tables of \
-                 the document already hold {used} of the {MAX_DOCUMENT_STRING_PARAMETER_BYTES} \
-                 bytes of string values a document may hold, each table entry counted"
+                "string parameter value of {bytes} byte(s) on `{owner}` does not fit: the \
+                 parameter tables of the document already hold {used} of the \
+                 {MAX_DOCUMENT_STRING_PARAMETER_BYTES} bytes of string values a document may \
+                 hold, each table entry counted"
             ),
         )
         .with_subject(parameter_iri.to_owned())
