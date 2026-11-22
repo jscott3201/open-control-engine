@@ -168,12 +168,12 @@ fn malformed_headers_and_cells_are_typed_errors() {
         })
     );
     assert_eq!(
-        read(b"H\n0, 1,2\n"),
+        read(b"H\n0,1 1,2\n"),
         Err(SourceError::BadCell {
             row: 1,
             column: TSET.to_owned()
         }),
-        "no trimming"
+        "padding inside a cell is part of it (csv_padding.rs has the trimming rule)"
     );
     assert_eq!(
         read(b"H\nnow,1,2\n"),
