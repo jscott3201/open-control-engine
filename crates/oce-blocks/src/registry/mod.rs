@@ -4,7 +4,7 @@ use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use oce_model::{ParamTable, SimpleController, Value, ZeroTime};
+use oce_model::{EnumClassId, ParamTable, SimpleController, Value, ZeroTime};
 
 use crate::source_pulse::SOURCE_PULSE_PARAM_RULES;
 use crate::{ParamRule, RegistryEntry};
@@ -347,31 +347,44 @@ pub(crate) fn string_param(params: &ParamTable, name: &str, default: &'static st
     }
 }
 
+/// A `SimpleController` parameter's value: the member an enumeration value of
+/// `CDL.Types.SimpleController` names, `default` when unbound. Nothing else is read (the owner's
+/// ruling R2 on issue #734): an ordinal, a string or another enumeration's member is refused by
+/// the load gate and the blob decoder before a block is built, so the default stands only for an
+/// absent parameter. (Before, any enumeration value was read by its ordinal, another class's
+/// included, a dotted string by its last segment whatever its path, and every other value fell
+/// back to the default.)
 pub(super) fn controller_type_param(
     params: &ParamTable,
     name: &str,
     default: SimpleController,
 ) -> SimpleController {
     match find(params, name) {
-        Some(Value::Enum { ordinal: 1, .. }) => SimpleController::P,
-        Some(Value::Enum { ordinal: 2, .. }) => SimpleController::Pi,
-        Some(Value::Enum { ordinal: 3, .. }) => SimpleController::Pd,
-        Some(Value::Enum { .. }) => SimpleController::Pid,
-        Some(Value::String(s)) => SimpleController::from_qualified(s).unwrap_or(default),
-        _ => default,
+        Some(Value::Enum { class, ordinal }) if *class == EnumClassId::SIMPLE_CONTROLLER => {
+            match ordinal {
+                1 => Some(SimpleController::P),
+                2 => Some(SimpleController::Pi),
+                3 => Some(SimpleController::Pd),
+                4 => Some(SimpleController::Pid),
+                _ => None,
+            }
+        }
+        _ => None,
     }
+    .unwrap_or(default)
 }
 
+/// A `ZeroTime` parameter's value: the member an enumeration value of `CDL.Types.ZeroTime`
+/// names, `default` when unbound. Nothing else is read (the owner's ruling R2 on issue #734):
+/// the ordinal and string readings this had are refused by the load gate and the blob decoder.
 pub(super) fn zero_time_param(params: &ParamTable, name: &str, default: ZeroTime) -> ZeroTime {
     match find(params, name) {
-        Some(Value::Enum { ordinal, .. }) => ZeroTime::from_ordinal(*ordinal).unwrap_or(default),
-        Some(Value::Integer(ordinal)) => u32::try_from(*ordinal)
-            .ok()
-            .and_then(ZeroTime::from_ordinal)
-            .unwrap_or(default),
-        Some(Value::String(s)) => ZeroTime::from_qualified(s).unwrap_or(default),
-        _ => default,
+        Some(Value::Enum { class, ordinal }) if *class == EnumClassId::ZERO_TIME => {
+            ZeroTime::from_ordinal(*ordinal)
+        }
+        _ => None,
     }
+    .unwrap_or(default)
 }
 
 #[cfg(test)]
@@ -401,99 +414,87 @@ mod tests {
     }
 
     #[test]
-    fn controller_type_param_reads_grounded_enum_ordinals() {
-        let class = EnumClassId(9);
-        let cases = [
+    fn controller_type_reads_each_member_of_its_own_enumeration_and_nothing_else() {
+        let read = |value: Value| {
+            let params = ParamTable {
+                values: vec![(Arc::from("controllerType"), value)],
+            };
+            controller_type_param(&params, "controllerType", SimpleController::P)
+        };
+        for (ordinal, want) in [
             (1, SimpleController::P),
             (2, SimpleController::Pi),
             (3, SimpleController::Pd),
             (4, SimpleController::Pid),
-            (99, SimpleController::Pid),
-        ];
-        for (ordinal, want) in cases {
-            let params = ParamTable {
-                values: vec![(Arc::from("controllerType"), Value::Enum { class, ordinal })],
-            };
-            assert_eq!(
-                controller_type_param(&params, "controllerType", SimpleController::P),
-                want
-            );
+        ] {
+            let class = EnumClassId::SIMPLE_CONTROLLER;
+            assert_eq!(read(Value::Enum { class, ordinal }), want);
+        }
+        // Nothing else is a controller (ruling R2, issue #734): the load gate and the blob
+        // decoder refuse each of these, and the reader leaves the default for none of them to
+        // reach. Before, an ordinal fell back to the default, a dotted string was read by its last
+        // segment and another class's member by its ordinal.
+        for value in [
+            Value::Enum {
+                class: EnumClassId::SIMPLE_CONTROLLER,
+                ordinal: 99,
+            },
+            Value::Enum {
+                class: EnumClassId::SMOOTHNESS,
+                ordinal: 2,
+            },
+            Value::Integer(2),
+            Value::Integer(4),
+            Value::String(Arc::from("PI")),
+            Value::String(Arc::from(
+                "Buildings.Controls.OBC.CDL.Types.SimpleController.PID",
+            )),
+            Value::Real(2.0),
+        ] {
+            assert_eq!(read(value.clone()), SimpleController::P, "{value:?}");
         }
     }
 
     #[test]
-    fn controller_type_param_accepts_qualified_string_fallback() {
-        let params = ParamTable {
-            values: vec![(
-                Arc::from("controllerType"),
-                Value::String(Arc::from(
-                    "Buildings.Controls.OBC.CDL.Types.SimpleController.PID",
-                )),
-            )],
+    fn zero_time_reads_each_member_of_its_own_enumeration_and_nothing_else() {
+        let read = |value: Value| {
+            let params = ParamTable {
+                values: vec![(Arc::from("zerTim"), value)],
+            };
+            zero_time_param(&params, "zerTim", ZeroTime::NewYear(2016))
         };
         assert_eq!(
-            controller_type_param(&params, "controllerType", SimpleController::P),
-            SimpleController::Pid
-        );
-
-        let unknown = ParamTable {
-            values: vec![(
-                Arc::from("controllerType"),
-                Value::String(Arc::from(
-                    "Buildings.Controls.OBC.CDL.Types.SimpleController.X",
-                )),
-            )],
-        };
-        assert_eq!(
-            controller_type_param(&unknown, "controllerType", SimpleController::Pd),
-            SimpleController::Pd
-        );
-    }
-
-    #[test]
-    fn zero_time_param_reads_enum_integer_and_qualified_string_ordinals() {
-        let enum_params = ParamTable {
-            values: vec![(
-                Arc::from("zerTim"),
-                Value::Enum {
-                    class: EnumClassId::ZERO_TIME,
-                    ordinal: 11,
-                },
-            )],
-        };
-        assert_eq!(
-            zero_time_param(&enum_params, "zerTim", ZeroTime::NewYear(2016)),
+            read(Value::Enum {
+                class: EnumClassId::ZERO_TIME,
+                ordinal: 11,
+            }),
             ZeroTime::NewYear(2017)
         );
-
-        let int_params = ParamTable {
-            values: vec![(Arc::from("zerTim"), Value::Integer(44))],
-        };
         assert_eq!(
-            zero_time_param(&int_params, "zerTim", ZeroTime::NewYear(2016)),
-            ZeroTime::NewYear(2050)
-        );
-
-        let string_params = ParamTable {
-            values: vec![(
-                Arc::from("zerTim"),
-                Value::String(Arc::from(
-                    "Buildings.Controls.OBC.CDL.Types.ZeroTime.UnixTimeStampGMT",
-                )),
-            )],
-        };
-        assert_eq!(
-            zero_time_param(&string_params, "zerTim", ZeroTime::NewYear(2016)),
+            read(Value::Enum {
+                class: EnumClassId::ZERO_TIME,
+                ordinal: 2,
+            }),
             ZeroTime::UnixTimeStampGmt
         );
-
-        let invalid = ParamTable {
-            values: vec![(Arc::from("zerTim"), Value::Integer(45))],
-        };
-        assert_eq!(
-            zero_time_param(&invalid, "zerTim", ZeroTime::NewYear(2016)),
-            ZeroTime::NewYear(2016)
-        );
+        for value in [
+            Value::Integer(11),
+            Value::Integer(44),
+            Value::String(Arc::from("NY2017")),
+            Value::String(Arc::from(
+                "Buildings.Controls.OBC.CDL.Types.ZeroTime.UnixTimeStampGMT",
+            )),
+            Value::Enum {
+                class: EnumClassId::SMOOTHNESS,
+                ordinal: 2,
+            },
+            Value::Enum {
+                class: EnumClassId::ZERO_TIME,
+                ordinal: 45,
+            },
+        ] {
+            assert_eq!(read(value.clone()), ZeroTime::NewYear(2016), "{value:?}");
+        }
     }
 
     #[test]

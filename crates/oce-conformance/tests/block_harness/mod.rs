@@ -69,6 +69,9 @@ pub(crate) enum ParamValue {
     Real(&'static str),
     Integer(&'static str),
     Boolean(&'static str),
+    /// A qualified enumeration member, written as the expression that names it: the one
+    /// spelling an enumeration parameter admits (issue #734, ruling R2).
+    Member(&'static str),
 }
 
 #[derive(Copy, Clone)]
@@ -542,14 +545,16 @@ fn block_node(case: &BlockCase, block_id: &str, output_ids: &[String]) -> String
 }
 
 fn param_node(block_id: &str, param: &Param) -> String {
-    let (value, ty) = match param.value {
-        ParamValue::Real(value) => (value, "http://www.w3.org/2001/XMLSchema#double"),
-        ParamValue::Integer(value) => (value, "http://www.w3.org/2001/XMLSchema#integer"),
-        ParamValue::Boolean(value) => (value, "http://www.w3.org/2001/XMLSchema#boolean"),
+    let typed = |value: &str, ty: &str| format!(r#"{{ "@value": "{value}", "@type": "{ty}" }}"#);
+    let value = match param.value {
+        ParamValue::Real(value) => typed(value, "http://www.w3.org/2001/XMLSchema#double"),
+        ParamValue::Integer(value) => typed(value, "http://www.w3.org/2001/XMLSchema#integer"),
+        ParamValue::Boolean(value) => typed(value, "http://www.w3.org/2001/XMLSchema#boolean"),
+        ParamValue::Member(member) => format!(r#""{member}""#),
     };
     object(vec![
         format!(r#""@id": "{block_id}.{}""#, param.name),
-        format!(r#""S231:value": {{ "@value": "{value}", "@type": "{ty}" }}"#),
+        format!(r#""S231:value": {value}"#),
     ])
 }
 

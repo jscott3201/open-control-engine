@@ -1,71 +1,75 @@
-//! A Real parameter holds a Real (issue #683).
+//! A Real parameter holds a Real, and every reader of it sees that Real (issues #683, #735).
 //!
 //! Grounding is literal-natural: a bare JSON integer, a typed `xsd:integer` literal, an Integer
-//! expression and a reference to an Integer-valued sequence parameter all ground to
-//! [`Value::Integer`], whatever the parameter they are bound to. CDL widens an Integer bound to a
-//! Real parameter, and every block constructor already reads it that way, so the two spellings
-//! of one number (`0` and `0.0`) ran identically while the resolved model, the parameter table,
-//! the compiled-schedule blob and the canonical content id told them apart.
+//! expression and a reference to an Integer-valued parameter all ground to [`Value::Integer`],
+//! whatever the parameter they are bound to. CDL widens an Integer bound to a Real parameter, and
+//! every block constructor already reads it that way, so the two spellings of one number (`0` and
+//! `0.0`) ran identically while the resolved model, the parameter table, the compiled-schedule
+//! blob and the canonical content id told them apart (issue #683).
 //!
-//! [`hold_real_parameters_as_reals`] closes that once, at the end of an instance's grounding and
-//! before anything else reads its table: an Integer bound to a parameter the block catalog types
-//! Real ([`oce_blocks::parameter_value_type`]: scalars and flattened array elements alike)
-//! becomes the Real of the same value. The conversion is refused, never rounded: an integer above
-//! 2^53 in magnitude ([`MAX_EXACT_INTEGER_AS_REAL`]) is not exact as a binary64 in general, so it
-//! is [`DiagCode::ParameterOutOfRange`] on the parameter node that bound it, the code the
-//! authoring stage uses for the same literal. The bound is the magnitude, not exactness of the
-//! one value: `i64::MIN` is a power of two and still refused, so the rule is one comparison a
-//! reader can check.
+//! Each binding is therefore held in its parameter's type **as it is grounded, before anything
+//! reads it**: before it enters the parameter table, and before it enters the scope a later
+//! binding evaluates against (the sibling members of the same instance, or the composite scope
+//! its children inherit). Modelica's rule is the owner's ruling (issue #735): the value of
+//! `parameter Real period = 4` is the Real 4.0, so a later `parameter Integer amplitude = period`
+//! reads a Real (and the load gate refuses it as the wrong kind), in both spellings alike.
 //!
-//! Nothing else moves. An Integer on an Integer, enumeration or unregistered parameter stays an
+//! - A block member ([`hold_in_catalog_type`]): an Integer bound to a parameter the block catalog
+//!   types Real ([`oce_blocks::parameter_value_type`]: scalars and flattened array elements alike)
+//!   becomes the Real of the same value.
+//! - A composite (sequence) parameter ([`hold_in_declared_type`]): an Integer bound to a
+//!   parameter whose `S231:isOfDataType` is `S231:Real` becomes the Real of the same value. A
+//!   value of another kind than the declared Real, Integer or Boolean (a Real on a declared
+//!   Integer, `2.0` included; a Boolean on a declared Real) is refused with
+//!   [`DiagCode::ParameterKindMismatch`] on the declaration: no binding of it reaches a reader.
+//!
+//! The conversion is refused, never rounded: an Integer above 2^53 in magnitude
+//! ([`oce_blocks::MAX_EXACT_INTEGER_AS_REAL`]) is not exact as a binary64 in general, so it is
+//! [`DiagCode::ParameterOutOfRange`] on the parameter node that bound it, the code the authoring
+//! stage uses for the same literal. The bound is the magnitude, not exactness of the one value:
+//! `i64::MIN` is a power of two and still refused.
+//!
+//! Nothing else moves. An Integer on an Integer, enumeration or untyped parameter stays an
 //! Integer; a Real stays the Real it was, `-0.0` included. No Integer spells a negative zero: a
 //! typed `xsd:integer` of `-0` is the Integer zero and so `+0.0`, while a bare JSON `-0` is
-//! already the float `-0.0` to the JSON reader and was never an Integer. The sibling scope a
-//! later binding of the same instance reads keeps the grounded value: an expression is evaluated
-//! over what the document wrote.
-
-use std::sync::Arc;
+//! already the float `-0.0` to the JSON reader and was never an Integer. A refused binding is
+//! kept as grounded so the rest of the document is still checked; the document is refused, so the
+//! value reaches nothing.
 
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Value, ValueType};
 
 use oce_diag::DiagnosticList;
 
-/// The largest magnitude an Integer bound to a Real parameter may have: 2^53. Every integer up to
-/// it is exact as a binary64; 2^53 + 1 is the first that is not.
-pub(crate) const MAX_EXACT_INTEGER_AS_REAL: u64 = 1 << 53;
+use crate::dto::Node;
 
-/// The Real of `integer`, or `None` when its magnitude is above
-/// [`MAX_EXACT_INTEGER_AS_REAL`]. Total: `i64::MIN` has no `i64` magnitude and is read unsigned.
-pub(crate) fn exact_real(integer: i64) -> Option<f64> {
-    // The cast is exact for every value the comparison admits.
-    (integer.unsigned_abs() <= MAX_EXACT_INTEGER_AS_REAL).then_some(integer as f64)
-}
+use super::value_types::declared_parameter_type;
 
-/// Replace every Integer bound to a catalog-Real parameter of `class_path` in `table` with the
-/// Real of the same value, in place and in table order. `sources[i]` is the IRI of the parameter
-/// node that produced `table[i]` (one node produces every element of a preserved array), and is
-/// the subject of a refusal. An entry that cannot be converted exactly is left as grounded and
-/// reported; the document is then refused, so the unconverted value reaches nothing.
-pub(super) fn hold_real_parameters_as_reals(
+/// `value`, bound to the parameter `name` of a block of class `class_path`, held in the type the
+/// block catalog gives that parameter: the Real of an Integer on a Real parameter, `value`
+/// itself otherwise. `owner` is the instance and `source` the parameter node that bound it (one
+/// node binds every element of a preserved array); an Integer that cannot be converted exactly
+/// is refused on `source` and returned as grounded.
+pub(crate) fn hold_in_catalog_type(
     class_path: &str,
     owner: &str,
-    table: &mut [(Arc<str>, Value)],
-    sources: &[&str],
+    source: &str,
+    name: &str,
+    value: Value,
     diags: &mut DiagnosticList,
-) {
-    for (index, (name, value)) in table.iter_mut().enumerate() {
-        let Value::Integer(integer) = *value else {
-            continue;
-        };
-        if oce_blocks::parameter_value_type(class_path, name) != Some(ValueType::Real) {
-            continue;
-        }
-        match exact_real(integer) {
-            Some(real) => *value = Value::Real(real),
+) -> Value {
+    let Value::Integer(integer) = value else {
+        return value;
+    };
+    if oce_blocks::parameter_value_type(class_path, name) != Some(ValueType::Real) {
+        return value;
+    }
+    match oce_blocks::exact_real(integer) {
+        Some(real) => Value::Real(real),
+        None => {
             // Raised, not pushed: every element of one array can be refused, and each message
             // names the owner, so nothing is built once the list has ended.
-            None => diags.raise(|| {
+            diags.raise(|| {
                 Diagnostic::error(
                     DiagCode::ParameterOutOfRange,
                     format!(
@@ -74,8 +78,72 @@ pub(super) fn hold_real_parameters_as_reals(
                          exact as a Real"
                     ),
                 )
-                .with_subject(sources.get(index).copied().unwrap_or(owner).to_owned())
-            }),
+                .with_subject(source.to_owned())
+            });
+            value
+        }
+    }
+}
+
+/// Why a composite parameter's grounded value does not fit its declared type.
+#[derive(Debug, PartialEq)]
+pub(super) enum DeclaredTypeFault {
+    /// An Integer above 2^53 in magnitude on a parameter declared Real.
+    InexactInteger(i64),
+    /// A value of another kind than the declared Real, Integer or Boolean.
+    WrongKind {
+        /// The declared type.
+        declared: ValueType,
+    },
+}
+
+impl DeclaredTypeFault {
+    /// The diagnostic refusing the declaration `iri` (local name `name`) for this fault.
+    pub(super) fn diagnostic(&self, iri: &str, name: &str, value: &Value) -> Diagnostic {
+        let (code, message) = match self {
+            Self::InexactInteger(integer) => (
+                DiagCode::ParameterOutOfRange,
+                format!(
+                    "parameter `{name}` is declared Real and binds the Integer {integer}; an \
+                     Integer above 2^53 in magnitude is not exact as a Real"
+                ),
+            ),
+            Self::WrongKind { declared } => (
+                DiagCode::ParameterKindMismatch,
+                format!(
+                    "parameter `{name}` is declared {declared:?} and binds a value of kind {:?}",
+                    value.value_type()
+                ),
+            ),
+        };
+        Diagnostic::error(code, message).with_subject(iri.to_owned())
+    }
+}
+
+/// `value`, bound to the composite parameter `node`, held in the type its `S231:isOfDataType`
+/// declares: the Real of an Integer on a declared Real. `Err` names the fault for a value of
+/// another kind than the declared Real, Integer or Boolean, or an Integer a declared Real cannot
+/// hold exactly; the caller reports it (or not, in the specialize pass) and keeps `value`. A
+/// parameter with no declared type, or one declared an enumeration, is returned untouched: its
+/// value is what the document wrote. Total; never panics.
+pub(super) fn hold_in_declared_type(
+    node: &Node,
+    value: Value,
+) -> Result<Value, (DeclaredTypeFault, Value)> {
+    let Some(declared) = declared_parameter_type(node) else {
+        return Ok(value);
+    };
+    match (declared, &value) {
+        (ValueType::Real, Value::Integer(integer)) => match oce_blocks::exact_real(*integer) {
+            Some(real) => Ok(Value::Real(real)),
+            None => Err((DeclaredTypeFault::InexactInteger(*integer), value)),
+        },
+        (ValueType::Real, Value::Real(_))
+        | (ValueType::Integer, Value::Integer(_))
+        | (ValueType::Boolean, Value::Boolean(_))
+        | (ValueType::Enum(_) | ValueType::String, _) => Ok(value),
+        (ValueType::Real | ValueType::Integer | ValueType::Boolean, _) => {
+            Err((DeclaredTypeFault::WrongKind { declared }, value))
         }
     }
 }

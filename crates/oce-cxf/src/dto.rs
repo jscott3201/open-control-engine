@@ -386,10 +386,12 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for OneOrMany<T> {
 /// load-bearing (serde tries top-down): `false`→`Bool`, `0`→`Int`, `1.5`→`Float`, a
 /// `{@value,@type}` object→`Typed`, and any remaining string→`Expr`. (A JSON integer matches
 /// `Int` before `Float`.) The resolver grounds each variant **literal-natural** (a bare `Int`
-/// becomes `Value::Integer`) and does not re-type against a declared `isOfDataType`. Once an
-/// instance's parameters are grounded, an Integer bound to a parameter the block catalog types
-/// Real is held as the Real of the same value, and refused above 2^53 in magnitude (issue #683,
-/// `resolve::real_parameters`), so a resolved model never carries an Integer on a Real parameter.
+/// becomes `Value::Integer`). Each binding is then held in its parameter's type as it is grounded,
+/// before the table or any later binding reads it: an Integer bound to a parameter the block
+/// catalog types Real, or to a composite parameter declared `S231:Real`, is held as the Real of
+/// the same value and refused above 2^53 in magnitude (issues #683, #735,
+/// `resolve::real_parameters`), so a resolved model never carries an Integer on a Real parameter
+/// and the scope never shows one.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum CxfValue {

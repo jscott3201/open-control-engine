@@ -553,14 +553,27 @@ mod tests {
             assert_eq!(block.state_contract_revision(), 1, "{class_path}");
         }
 
-        for controller_type in [2, 3, 4] {
+        // PI, PD and PID as the enumeration values a qualified member grounds to: the reader
+        // takes nothing else (issue #734, ruling R2), so an Integer here built PI three times.
+        // Each variant really is built: its state words differ (PI, PD, PID).
+        for (ordinal, pid_words, reset_words) in [(2, 2, 3), (3, 2, 2), (4, 3, 4)] {
             let params = ParamTable {
-                values: vec![(Arc::from("controllerType"), Value::Integer(controller_type))],
+                values: vec![(
+                    Arc::from("controllerType"),
+                    Value::Enum {
+                        class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
+                        ordinal,
+                    },
+                )],
             };
-            for class_path in ["CDL.Reals.PID", "CDL.Reals.PIDWithReset"] {
+            for (class_path, words) in [
+                ("CDL.Reals.PID", pid_words),
+                ("CDL.Reals.PIDWithReset", reset_words),
+            ] {
                 let block = (crate::lookup(class_path).unwrap().make)(&params);
-                assert_eq!(block.kind(), BlockKind::Stateful, "{class_path}");
-                assert_eq!(block.state_contract_revision(), 1, "{class_path}");
+                assert_eq!(block.kind(), BlockKind::Stateful, "{class_path} {ordinal}");
+                assert_eq!(block.state_contract_revision(), 1, "{class_path} {ordinal}");
+                assert_eq!(block.state_len(), words, "{class_path} {ordinal}");
             }
         }
     }

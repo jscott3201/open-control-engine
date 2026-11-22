@@ -385,23 +385,32 @@ fn integer_and_real_siblings_of_one_block_are_each_held_in_their_catalog_type() 
 }
 
 #[test]
-fn a_later_sibling_expression_reads_the_value_the_document_wrote() {
-    // The sibling scope keeps the grounded value: `period = 4` is an Integer to the expression
-    // that reads it, so `amplitude = period` is the Integer 4 on an Integer parameter, while
-    // `period` itself is held as the Real 4.0.
-    let doc = document(
-        "CDL.Integers.Sources.Pulse",
-        "Integer",
-        &[value("period", "4"), value("amplitude", r#""period""#)],
-        &[],
-    );
-    assert_params(
-        &doc,
-        &[
-            ("period", Value::Real(4.0)),
-            ("amplitude", Value::Integer(4)),
-        ],
-    );
+fn a_later_sibling_expression_reads_the_real_the_parameter_holds() {
+    // Issue #735, the owner's ruling: the sibling scope sees the Real a Real parameter holds, so
+    // `amplitude = period` reads the Real 4.0 whether `period` is written `4` or `4.0`, and the
+    // two documents import to one model. That model binds a Real to the Integer `amplitude`,
+    // which the engine's load gate refuses (`oce-api`'s `parameter_scope_kinds.rs`); before, the
+    // `4` spelling loaded with amplitude 4 and the `4.0` spelling ran on the default amplitude 1.
+    let models: Vec<String> = ["4", "4.0", r#""2 + 2""#]
+        .into_iter()
+        .map(|period| {
+            let doc = document(
+                "CDL.Integers.Sources.Pulse",
+                "Integer",
+                &[value("period", period), value("amplitude", r#""period""#)],
+                &[],
+            );
+            assert_params(
+                &doc,
+                &[
+                    ("period", Value::Real(4.0)),
+                    ("amplitude", Value::Real(4.0)),
+                ],
+            );
+            render(&import_ok(&doc))
+        })
+        .collect();
+    assert!(models.windows(2).all(|pair| pair[0] == pair[1]));
 }
 
 /// A `Reals.Sources.TimeTable` whose `table[2,2]` and `offset[1]` are written as `table` and
@@ -524,4 +533,193 @@ fn bare_json_number_outside_the_integer_range_was_never_an_integer_and_is_read_a
     let diags = refusal(&real_constant(&typed("9223372036854775808", "integer")));
     assert_eq!(diags.len(), 1);
     assert_eq!(diags[0].code, DiagCode::GroundingFailed);
+}
+
+#[test]
+fn a_sequence_parameter_declared_real_is_the_real_to_every_binding_that_reads_it() {
+    // Issue #735: the scope holds a declared-Real sequence parameter as a Real, so an Integer
+    // block parameter bound to it imports the Real (and the engine refuses it); before, `2` kept
+    // the Integer and imported clean. A Real block parameter reads the same Real either way.
+    for literal in ["2", "2.0", &typed("2", "integer"), r#""1 + 1""#] {
+        let root = [Param {
+            name: "p",
+            members: format!(
+                r#""@type": "S231:Parameter", "S231:isOfDataType": {{ "@id": "S231:Real" }}, "S231:value": {literal}"#
+            ),
+        }];
+        let integer = document(INTEGER_CONSTANT, "Integer", &[value("k", r#""p""#)], &root);
+        assert_params(&integer, &[("k", Value::Real(2.0))]);
+        let real = document(REAL_CONSTANT, "Real", &[value("k", r#""p * 3""#)], &root);
+        assert_params(&real, &[("k", Value::Real(6.0))]);
+    }
+}
+
+#[test]
+fn a_value_of_another_kind_than_a_sequence_parameters_declared_type_is_refused_on_it() {
+    for (datatype, literal, kind) in [
+        ("Integer", "2.0", "Real"),
+        ("Integer", "true", "Boolean"),
+        ("Real", "true", "Boolean"),
+        ("Boolean", "1", "Integer"),
+    ] {
+        let doc = document(
+            REAL_CONSTANT,
+            "Real",
+            &[value("k", "1.0")],
+            &[Param {
+                name: "p",
+                members: format!(
+                    r#""@type": "S231:Parameter", "S231:isOfDataType": {{ "@id": "S231:{datatype}" }}, "S231:value": {literal}"#
+                ),
+            }],
+        );
+        assert_eq!(
+            refusal(&doc),
+            vec![
+                Diagnostic::error(
+                    DiagCode::ParameterKindMismatch,
+                    format!(
+                        "parameter `p` is declared {datatype} and binds a value of kind {kind}"
+                    ),
+                )
+                .with_subject("http://example.org#S.p".to_owned())
+            ],
+            "{datatype} {literal}"
+        );
+    }
+    // Its own kind loads, and an untyped sequence parameter keeps whatever kind it was written in.
+    let integer = document(
+        INTEGER_CONSTANT,
+        "Integer",
+        &[value("k", r#""p""#)],
+        &[value("p", "2")],
+    );
+    assert_params(&integer, &[("k", Value::Integer(2))]);
+}
+
+/// A root `S` whose `p` is declared Real and written `literal`, whose `flag = p + 1 > p`
+/// (declared Boolean) guards a conditional constant `cond`; `blk` always drives the output.
+fn guarded_by_a_real_sum(literal: &str) -> String {
+    let ns = "http://example.org#";
+    format!(
+        r#"{{ "@context": {{ "S231": "http://data.ashrae.org/S231#" }}, "@graph": [
+  {{ "@id": "{ns}S", "@type": "S231:Block",
+    "S231:hasParameter": [ {{ "@id": "{ns}S.p" }}, {{ "@id": "{ns}S.flag" }} ],
+    "S231:containsBlock": [ {{ "@id": "{ns}S.blk" }}, {{ "@id": "{ns}S.cond" }} ],
+    "S231:hasOutput": {{ "@id": "{ns}S.out" }} }},
+  {{ "@id": "{ns}S.p", "@type": "S231:Parameter",
+    "S231:isOfDataType": {{ "@id": "S231:Real" }}, "S231:value": {literal} }},
+  {{ "@id": "{ns}S.flag", "@type": "S231:Parameter",
+    "S231:isOfDataType": {{ "@id": "S231:Boolean" }}, "S231:value": "p + 1 > p" }},
+  {{ "@id": "{ns}S.blk", "@type": "{ns}Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+    "S231:hasParameter": {{ "@id": "{ns}S.blk.k" }}, "S231:hasOutput": {{ "@id": "{ns}S.blk.y" }} }},
+  {{ "@id": "{ns}S.blk.k", "S231:value": 1.0 }},
+  {{ "@id": "{ns}S.blk.y", "@type": "S231:RealOutput", "S231:isOfDataType": {{ "@id": "S231:Real" }},
+    "S231:isConnectedTo": {{ "@id": "{ns}S.out" }} }},
+  {{ "@id": "{ns}S.cond", "@type": "{ns}Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+    "S231:isConditionalComponent": true, "S231:conditionalExpression": "flag",
+    "S231:hasParameter": {{ "@id": "{ns}S.cond.k" }}, "S231:hasOutput": {{ "@id": "{ns}S.cond.y" }} }},
+  {{ "@id": "{ns}S.cond.k", "S231:value": 2.0 }},
+  {{ "@id": "{ns}S.cond.y", "@type": "S231:RealOutput", "S231:isOfDataType": {{ "@id": "S231:Real" }} }},
+  {{ "@id": "{ns}S.out", "@type": "S231:RealOutput", "S231:isOfDataType": {{ "@id": "S231:Real" }} }}
+] }}"#
+    )
+}
+
+#[test]
+fn a_conditional_guard_reads_the_real_a_declared_real_parameter_holds() {
+    // Issue #735, the specialize pass: the guard scope holds `p` as a Real too. At 2^53 the Real
+    // `p + 1` rounds back to `p`, so `flag` is false and `cond` is pruned in both spellings;
+    // over the Integer as written, `p + 1 > p` would hold and keep `cond` in one spelling only.
+    let instances = |literal: &str| -> Vec<String> {
+        import_ok(&guarded_by_a_real_sum(literal))
+            .blocks
+            .iter()
+            .filter_map(|block| block.instance_iri.as_deref().map(str::to_owned))
+            .collect()
+    };
+    let expected = vec!["http://example.org#S.blk".to_owned()];
+    for literal in [
+        "9007199254740992",
+        "9007199254740992.0",
+        &typed("9007199254740992", "integer"),
+    ] {
+        assert_eq!(instances(literal), expected, "{literal}");
+    }
+    // Below the rounding the sum is greater, and `cond` is kept in both spellings alike.
+    for literal in ["4", "4.0"] {
+        assert_eq!(instances(literal).len(), 2, "{literal}");
+    }
+}
+
+/// Two constants, `a` an Integer one and `b` a Real one, both listing the one parameter node
+/// `S.k` written `literal` (`b` lists it `b_listings` times); each drives a root output.
+fn one_node_listed_by_two_kinds(literal: &str, b_listings: usize) -> String {
+    let ns = "http://example.org#";
+    let k = format!(r#"{{ "@id": "{ns}S.k" }}"#);
+    let b_params = vec![k.clone(); b_listings].join(", ");
+    let constant = |name: &str, class: &str, signal: &str, params: &str| {
+        format!(
+            r#"  {{ "@id": "{ns}S.{name}", "@type": "{ns}Buildings.Controls.OBC.CDL.{class}",
+    "S231:hasParameter": [ {params} ], "S231:hasOutput": {{ "@id": "{ns}S.{name}.y" }} }},
+  {{ "@id": "{ns}S.{name}.y", "@type": "S231:{signal}Output", "S231:isOfDataType": {{ "@id": "S231:{signal}" }},
+    "S231:isConnectedTo": {{ "@id": "{ns}S.{name}_out" }} }},
+  {{ "@id": "{ns}S.{name}_out", "@type": "S231:{signal}Output", "S231:isOfDataType": {{ "@id": "S231:{signal}" }} }},
+"#
+        )
+    };
+    format!(
+        r#"{{ "@context": {{ "S231": "http://data.ashrae.org/S231#" }}, "@graph": [
+  {{ "@id": "{ns}S", "@type": "S231:Block",
+    "S231:containsBlock": [ {{ "@id": "{ns}S.a" }}, {{ "@id": "{ns}S.b" }} ],
+    "S231:hasOutput": [ {{ "@id": "{ns}S.a_out" }}, {{ "@id": "{ns}S.b_out" }} ] }},
+{a}{b}  {{ "@id": "{ns}S.k", "S231:value": {literal} }}
+] }}"#,
+        a = constant("a", "Integers.Sources.Constant", "Integer", &k),
+        b = constant("b", "Reals.Sources.Constant", "Real", &b_params),
+    )
+}
+
+/// The `k` entries of the instance `name` in table order.
+fn k_of(graph: &ModelGraph, name: &str) -> Vec<Value> {
+    let iri = format!("http://example.org#S.{name}");
+    graph
+        .blocks
+        .iter()
+        .find(|block| block.instance_iri.as_deref() == Some(iri.as_str()))
+        .expect("the instance")
+        .params
+        .values
+        .iter()
+        .map(|(_, value)| value.clone())
+        .collect()
+}
+
+#[test]
+fn one_shared_value_is_held_in_the_type_of_each_parameter_that_lists_it() {
+    // The node is read by an Integer `k` and a Real `k`: the value as grounded is shared
+    // (GitHub #752), and each listing holds its own copy in its own parameter's type.
+    let graph = import_ok(&one_node_listed_by_two_kinds("4", 1));
+    assert!(k_of(&graph, "a")[0].bit_eq(&Value::Integer(4)));
+    assert!(k_of(&graph, "b")[0].bit_eq(&Value::Real(4.0)));
+    // Written `4.0`, the Integer `k` reads a Real (the engine refuses it for its kind) and the
+    // Real `k` is unchanged.
+    let graph = import_ok(&one_node_listed_by_two_kinds("4.0", 1));
+    assert!(k_of(&graph, "a")[0].bit_eq(&Value::Real(4.0)));
+    assert!(k_of(&graph, "b")[0].bit_eq(&Value::Real(4.0)));
+    // Listed twice by `b`, the one grounding is held once per listing, each a Real (the
+    // repeat is the validator's `duplicate-parameter`).
+    let graph = import_ok(&one_node_listed_by_two_kinds("4", 2));
+    let b = k_of(&graph, "b");
+    assert_eq!(b.len(), 2);
+    assert!(
+        b.iter().all(|value| value.bit_eq(&Value::Real(4.0))),
+        "{b:?}"
+    );
+    assert!(k_of(&graph, "a")[0].bit_eq(&Value::Integer(4)));
+    // Past 2^53 the Real listing is refused on the node and the Integer one keeps it exactly.
+    let diags = refusal(&one_node_listed_by_two_kinds("9007199254740993", 1));
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::ParameterOutOfRange);
+    assert_eq!(diags[0].subject.as_deref(), Some("http://example.org#S.k"));
 }

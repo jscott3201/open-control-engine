@@ -12,9 +12,10 @@
 //! `param_iris` itself (issue #731); that set is lookup-only and never iterated into a model id or
 //! a vector order.
 //!
-//! Once an instance's table is complete, an Integer bound to a parameter its class types Real is
-//! held as that Real, or refused above 2^53 in magnitude (`real_parameters`, issue #683). The
-//! sibling scope keeps the grounded value.
+//! Each binding is held in its catalog type as it is grounded (`real_parameters`): an Integer
+//! bound to a parameter its class types Real becomes that Real, or is refused above 2^53 in
+//! magnitude (issue #683), before it enters the table **and** the sibling scope, so a later
+//! member's expression or reference reads the Real the parameter holds (issue #735).
 //!
 //! Bounded on hostile input: each instance reads its enclosing scope through the shared,
 //! hash-indexed [`ScopeFrame`] its parent composite built (never a per-instance copy), siblings
@@ -40,7 +41,7 @@ use oce_diag::DiagnosticList;
 use super::instance_interface::InstanceDerivation;
 use super::local_name;
 use super::parameter_attrs::CheckedParameters;
-use super::real_parameters::hold_real_parameters_as_reals;
+use super::real_parameters::hold_in_catalog_type;
 use super::specialize::validate_g36_parameter_value;
 
 /// One resolved instance's wiring state, carried from Step 3 through Steps 5-8.
@@ -75,8 +76,7 @@ pub(super) fn ground_instance_params(
     let mut string_budget = StringParameterBudget::per_document();
     for inst in insts {
         let mut table: Vec<(Arc<str>, Value)> = Vec::new();
-        // The parameter node each table entry came from, in step with `table`.
-        let mut sources: Vec<&str> = Vec::new();
+        let class_path = Arc::clone(&blocks[inst.id.0 as usize].class_iri);
         // The instance's own grounded members; the inherited scope stays in its shared frame.
         let mut siblings = IndexedEntries::default();
         let enclosing: &ScopeFrame = &inst.inherited_scope;
@@ -129,6 +129,7 @@ pub(super) fn ground_instance_params(
                 expand_array_param(
                     piri,
                     &inst.node.id,
+                    &class_path,
                     pnode,
                     cxf_val,
                     enclosing,
@@ -146,9 +147,19 @@ pub(super) fn ground_instance_params(
                 match &*reads.groundings.ground(cxf_val, &scope, repeated) {
                     Ok(v) => match string_budget.take(v) {
                         Ok(()) => {
+                            // The shared grounding stays as grounded; each listing holds its
+                            // own copy in this parameter's catalog type (issues #683, #735).
                             let name: Arc<str> = Arc::from(local_name(piri));
+                            let v = hold_in_catalog_type(
+                                &class_path,
+                                &inst.node.id,
+                                piri,
+                                &name,
+                                v.clone(),
+                                diags,
+                            );
                             siblings.push(Arc::clone(&name), EvalResult::Scalar(v.clone()));
-                            table.push((name, v.clone()));
+                            table.push((name, v));
                         }
                         Err(refusal) => diags.raise(|| refusal.diagnostic(piri, &inst.node.id)),
                     },
@@ -157,10 +168,7 @@ pub(super) fn ground_instance_params(
                     }
                 }
             }
-            sources.resize(table.len(), piri);
         }
-        let block = &mut blocks[inst.id.0 as usize];
-        hold_real_parameters_as_reals(&block.class_iri, &inst.node.id, &mut table, &sources, diags);
-        block.params = ParamTable { values: table };
+        blocks[inst.id.0 as usize].params = ParamTable { values: table };
     }
 }

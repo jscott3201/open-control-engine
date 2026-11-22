@@ -31,6 +31,16 @@ fn value_type_of_datatype(iri: &str) -> Option<ValueType> {
     }
 }
 
+/// The value type a parameter node's `S231:isOfDataType` declares, or `None` when it declares
+/// none or one this engine does not recognise (that IRI is reported where connectors read it; a
+/// parameter keeps the value the document wrote). The `@type` fallback connectors use is not
+/// read: a parameter's `@type` is `S231:Parameter`, not a data type.
+pub(super) fn declared_parameter_type(node: &Node) -> Option<ValueType> {
+    node.is_of_data_type
+        .as_ref()
+        .and_then(|datatype| value_type_of_datatype(&datatype.id))
+}
+
 /// Derive a connector type, using `Real` only as dense-storage recovery after a diagnostic.
 pub(super) fn derive_value_type(node: &Node, diags: &mut DiagnosticList) -> ValueType {
     try_derive_value_type(node, diags).unwrap_or(ValueType::Real)

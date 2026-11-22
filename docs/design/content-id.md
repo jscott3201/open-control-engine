@@ -144,6 +144,33 @@ pinned documents: `cooling_only_controller`, `multizone_vav_supply_fan`,
 meaning under the unchanged `oce:canon1:` tag: the workspace version moved to 0.6.0 with it, and
 a 0.5.0 blob or snapshot is refused with `EngineVersionMismatch`.
 
+*Amended 2026-11-21 (issue #735, inside 0.6.0).* The held Real is also what every later binding
+reads: a sibling member's expression or reference, and a block parameter bound to a sequence
+parameter declared `S231:Real`. Before, the scope kept the Integer the document wrote, so a
+document that read an Integer out of a Real parameter (an Integer parameter bound to it, or an
+Integer expression over it) had one table for `2` and another for `2.0`. Now both spellings are
+one table, one blob and one id, or one refusal (an Integer parameter bound to a Real is
+`parameter-kind-mismatch`). No tracked document and no `open-control-library` rule reads one, so
+no pinned id moved; `crates/oce-api/tests/integer_respelling_identity.rs` holds every tracked
+document to one model in both spellings.
+
+*Amended 2026-11-21 (issue #734, the owner's rulings R1 and R2, inside 0.6.0).* A parameter's value
+must be of the kind its catalog type admits: `2.0` on an Integer parameter is refused (R1), and an
+enumeration parameter takes a qualified member of its own enumeration only (R2), so an ordinal, a G36
+integer constant, an Integer expression or parameter, a string and another enumeration's member are
+refused where the engine loaded them before. No content id moves: a document that loads both before
+and after this change has the same parameter table, so the same id and blob, and runs the same
+(every reader decodes an enumeration value of its own class as it did). What changes is which
+documents load: one that wrote such a value loaded and ran a value it did not name (`zerTim = 11`
+ran `NY2017`, `PID.controllerType = OperationModes.occupied` ran the default PI, `controllerType =
+Extrapolation.Periodic` ran PD, an Integer parameter given
+`4.0` ran its default) and is refused now, with no id. A 0.6.0 compiled-schedule blob written before
+the change and carrying such a value is refused by the decoder (`ParameterKindMismatch`), not read
+with another meaning, and a state snapshot can only be restored into an engine that loaded its
+document. No version bump is owed: no release has been tagged since 0.6.0 (standing rule 10), so
+no released artefact of the earlier meaning exists. No tracked document or `open-control-library`
+rule writes such a value.
+
 Sorting is sound only if no class reads two entries as the same parameter, and today one can.
 Duplicate detection is by exact name, but `TimeTable` walks `params.values` in table order and
 parses `table_<r>_<c>` and `offset_<i>` with `usize::parse` (`source_timetable.rs`

@@ -171,12 +171,14 @@ fn required_parameters(entry: &oce_api::CatalogEntry) -> Vec<(String, Value)> {
                     CatalogValueKind::Integer => Value::Integer(2),
                     CatalogValueKind::Boolean => Value::Boolean(true),
                     CatalogValueKind::String => Value::String("message".into()),
-                    CatalogValueKind::Enum {
-                        class_path,
-                        members,
-                    } => Value::String(
-                        format!("Buildings.Controls.OBC.{class_path}.{}", members[0]).into(),
-                    ),
+                    // The first member as an enumeration value of the class: the one spelling
+                    // an enumeration parameter admits (issue #734, ruling R2).
+                    CatalogValueKind::Enum { class_path, .. } => Value::Enum {
+                        class: oce_api::enumeration(class_path)
+                            .and_then(|row| row.id)
+                            .expect("a known enumeration"),
+                        ordinal: 1,
+                    },
                 };
                 values.push(((*name).to_owned(), value));
             }

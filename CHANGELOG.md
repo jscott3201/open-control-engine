@@ -191,6 +191,86 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
+- **A parameter of the wrong kind is refused, never run on the block's default** (GitHub #754,
+  issues #734, #735; owner rulings R1 and R2 of 2026-11-21). **Breaking, in place:** a document
+  or a blob that binds a block parameter a value of another kind than its class's catalog type
+  loaded and ran before, on the block's default or on a value it did not name, and is refused
+  now. No format byte changes and no version bump (the workspace is at 0.6.0 since GitHub #720,
+  and no release has been tagged since, so standing rule 10 owes none).
+  - **What was wrong.** Every block reads its parameters through readers that fall back to a
+    default when a parameter is absent, and they did the same for a present parameter of
+    another kind. The load gate judged a parameter's kind only where a class rule named it, so
+    243 of the 647 wrong-kind cells of the catalog (every parameter of every one of the 136
+    classes, each given each wrong kind) loaded clean: `Integers.Sources.Pulse { period = 4,
+    amplitude = 4.0 }` output the default amplitude 1, as did `amplitude` written `true`, a
+    string or a JSON number past `i64`; the comparators' threshold `t`, the PID output limits
+    (named only by a rule over both, which reads neither unless both are present and numeric),
+    the logical blocks' `pre_u_start` and the rest went the same way. An enumeration value of
+    another class passed the member rule (it read only the ordinal), so
+    `smoothness = Extrapolation.LastTwoPoints` ran linear segments (the default). On
+    `PID.controllerType`, which no rule judged, an Integer, a Real, a Boolean, a bare string or a
+    dotted string naming no member ran the default PI; a dotted string ran its last segment's
+    member whatever its path (`"Foo.Bar.PD"` ran PD); and another enumeration's member ran the
+    controller its ordinal names (`Extrapolation.HoldLastPoint` ran P, `Extrapolation.Periodic`
+    ran PD, an ordinal past 3 ran PID).
+  - **The rulings.** R1: `2.0` on an Integer parameter is refused, not narrowed (no Integer
+    binding in the vendored translations, the tracked documents or the library writes a Real).
+    R2: an enumeration parameter takes a qualified member of its own enumeration, which the
+    resolver grounds to an enumeration value of that class, and nothing else, everywhere. An
+    Integer ordinal (`zerTim = 11`, `smoothness = 2`), a G36 integer constant
+    (`controllerType = OperationModes.occupied`, the Integer 1, which ran the default PI), an
+    Integer
+    expression (`"1+2"`) or Integer parameter, a string (bare `"NY2017"` or qualified, whatever
+    its path: `"Foo.Bar.PD"`, `".PD"`, `"…Types.Smoothness.PD"`; no tracked document, vendored
+    translation or library rule carries an enumeration as a string, so strings are refused
+    outright) and another enumeration's member are `parameter-kind-mismatch`. This removes
+    ordinal and string readings that predate this change: the `TimeTable` smoothness and
+    extrapolation readers and the `EnumMembers` rule took ordinals and strings (by the last
+    dotted segment: `smoothness = "ConstantSegments"` ran ConstantSegments); the `zerTim` reader
+    took ordinals and dotted strings (`zerTim = 11` ran NY2017; a bare `"NY2017"` passed the
+    member rule and ran the default year); the `controllerType` reader took dotted strings and
+    read any enumeration value by its ordinal.
+  - **The rule, table-driven.** `oce_blocks::admits_parameter_value` (new, with
+    `parameter_kind_fault`, `parameter_kind_is_ruled`, `ParameterKindFault`, `exact_real` and
+    `MAX_EXACT_INTEGER_AS_REAL`) says what a catalog type admits: a Real parameter a Real or an
+    Integer up to 2^53 in magnitude (widened exactly); an Integer parameter an Integer only; a
+    Boolean or String parameter its own kind; an enumeration parameter an enumeration value of
+    its class naming a member. The load gate (`oce-validate`, new rule `params_kinds`) applies it
+    to every parameter `oce_blocks::parameter_value_type` types, so a class added to the registry
+    is covered with no rule to write: a wrong kind is `parameter-kind-mismatch` (subject the
+    block, the message naming the parameter, as every class-level parameter finding), an Integer
+    past 2^53 on a Real parameter is `parameter-out-of-range`. Each wrong value is reported once:
+    a `Required` rule keeps its own identical finding, a single-parameter bound or array rule
+    keeps its own finding for another scalar kind, and the `EnumMembers` rule now judges
+    members only, so `zerTim = Smoothness.ConstantSegments` or `smoothness = SimpleController.PD`
+    is one `parameter-kind-mismatch` (it was a mismatch beside a member finding, or nothing).
+  - **The blob decoder applies the same predicate** and refuses with
+    `BlobError::ParameterKindMismatch { block, parameter }` (new variant), before the block is
+    constructed: a hand-built blob carrying an Enum on `Constant.k` decoded and ran `k = 0`
+    before. No encoder writes one now. A 0.6.0 blob written before this change and carrying such
+    a value (an ordinal on `zerTim` or `smoothness`, a string on `controllerType`) is refused,
+    not read with another meaning.
+  - **What moves.** No content id, golden or blob fixture: a document that loads both before and
+    after has the same parameter table and runs the same, since every reader decodes an
+    enumeration value of its own class as it did. Measured over the tracked documents (258 at
+    GitHub #752's head, 144 loading) and the 139 `open-control-library` rules: nothing moved and
+    nothing is newly refused. Which documents load changes: one that wrote a value listed above
+    is refused, with no id. A state snapshot restores only into an engine that loaded its
+    document, so none is read with another meaning.
+  - **Evidence.** `oce-validate`'s `params_kinds` sweep gives every parameter of every class
+    each wrong kind beside a table the gate otherwise admits and requires a refusal naming the
+    parameter, and every enumeration parameter each refused spelling with exactly one finding;
+    `oce-blocks`' `param_kinds` tests hold the predicate cell by cell and the readers read only
+    their own class; `oce-api`'s `parameter_kinds.rs` ticks each admitted value and observes an
+    output that depends on it (a PID's controller included), round-trips a blob and resumes a
+    snapshot; `blob_hostile_model.rs` holds the decoder; `oce-cli`'s
+    `enumeration_parameter_agreement.rs` holds the engine and `oce import` / `oce emit` to one
+    verdict on every refused spelling and on each qualified member. The conformance harness now
+    writes its enumeration parameters as qualified members. The parameter typing
+    (`class_metadata`, `param_templates`) is built `no_std + alloc` for the decoder, and
+    `parameter_value_type` allocates nothing. A parameter name the class does not declare is
+    still outside every rule (GitHub issue #748).
+
 - **A model-wide budget on what block constructors allocate from parameters** (GitHub #721,
   issue #700). **Breaking, in place:** a blob or a CXF document whose blocks together hold more
   than 4,194,304 words (32 MiB) outside their state decoded or loaded before and is refused
@@ -408,6 +488,49 @@ so far, and no tag is cut by the bump.
     listed by two instances. Tightening accepted CXF input is not a format change (as for GitHub
     #713 and #724), so no format, content id, blob or golden moves and the workspace version is
     not bumped.
+
+- **The parameter scope sees the Real a Real parameter holds** (GitHub #754, issues #735,
+  #734; owner ruling of 2026-11-21). **Breaking, in place**, inside 0.6.0 with no further bump.
+  GitHub #720 held an Integer bound to a Real parameter as a Real in the block's own table only:
+  the sibling scope a later member reads and the composite scope its children inherit kept the
+  Integer the document wrote, and a sequence parameter's declared `S231:isOfDataType` was not
+  read. So `2` and `2.0` were still two models wherever another binding read the value:
+  `Integers.Sources.Pulse { period = 4, amplitude = period }` loaded with amplitude 4 while the
+  `4.0` spelling ran on the default 1; a root `p` declared `S231:Real` bound to
+  `Integers.Sources.Constant.k` loaded written `4` and was refused written `4.0`, where the
+  authoring layer refused both; and `Sin { amplitude = 134217728, offset = amplitude*amplitude }`
+  was refused (2^54) in the Integer spelling and loaded in the Real one.
+  - **The rule.** Each binding is held in its parameter's type as it is grounded, before it
+    enters the table or any scope: a block member by the catalog type (scalars and preserved
+    array elements alike; `resolve::real_parameters::hold_in_catalog_type`), a composite or root
+    parameter by its declared type (`hold_in_declared_type`). The three counterexamples now
+    behave identically in both spellings: the first two are refused with
+    `parameter-kind-mismatch` on the Integer parameter (the engine and `oce import` / `oce emit`
+    agree), the third loads with `offset` the exact Real 2^54 (and 2^64 for 4294967296). An
+    explicit `integer(period)` is the author's conversion and runs as written.
+  - **Newly refused.** A sequence parameter whose value is of another kind than its declared
+    `S231:Real`, `S231:Integer` or `S231:Boolean` (`2.0` on a declared Integer, a Boolean on a
+    declared Real): `parameter-kind-mismatch` on the declaration. An Integer past 2^53 on a
+    declared Real: `parameter-out-of-range` on the declaration. A parameter with no declared type,
+    or one declared an enumeration, keeps the kind the document wrote. An Integer block parameter
+    bound to a Real one, through a reference or an Integer expression over it, is refused by the
+    kind rule above.
+  - **What moves.** A document that reads an Integer out of a Real parameter now loads to the
+    Real reading or is refused; none does among the tracked documents and the 139
+    `open-control-library` rules, so no golden, pin, blob fixture or content id moved. The
+    specialize pass holds a composite's or the root's declarations the same way, so a guard over
+    a declared-Real sum (`p + 1 > p` at 2^53) prunes alike in both spellings; a leaf's own chain
+    there still reads its members as written (refusals only, never a wrong value: GitHub issue
+    #759). A value a document lists more than once and GitHub #752 grounds once is held per
+    listing, in the type of each parameter that lists it. The claim is a test now:
+    `oce-api`'s `integer_respelling_identity.rs` respells every integral Real `S231:value`
+    literal of every tracked document as a bare Integer and as a typed `xsd:integer` and requires
+    the same content id, blob and parameter table, or the same refusal (one fixture, whose
+    constant carries two parameters its class does not declare, is told apart: GitHub issue
+    #748). `parameter_scope_kinds.rs` holds the counterexamples and a property test over random
+    kinds, values and arrival paths (a literal, a root parameter untyped or declared, a reference
+    or an expression) to the exact value or a typed refusal; `oce-cli`'s
+    `parameter_scope_agreement.rs` holds the engine and the authoring layer to one verdict.
 
 - **Breaking in place: a Real parameter written as an Integer loads as a Real, and the workspace
   moves to 0.6.0** (GitHub #720, issue #683). A CXF document may write a Real parameter's number

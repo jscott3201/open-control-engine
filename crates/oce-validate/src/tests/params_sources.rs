@@ -72,21 +72,27 @@ fn calendar_time_parameters_bind_zero_time_and_source_year_bounds() {
     assert_eq!(err.diagnostics[0].severity, Severity::Error);
     assert!(err.diagnostics[0].message.contains("`zerTim`"));
 
+    // Ruling R2 (issue #734): only a qualified member of `ZeroTime` is admitted, so an ordinal,
+    // a string and a Boolean are each one kind mismatch (the member rule judges members only),
+    // and an enumeration value outside the class is out of range.
+    let zero_time = |ordinal| Value::Enum {
+        class: oce_model::EnumClassId::ZERO_TIME,
+        ordinal,
+    };
     for (value, expected_codes) in [
-        (Value::Integer(0), vec![DiagCode::ParameterOutOfRange]),
-        (Value::Integer(45), vec![DiagCode::ParameterOutOfRange]),
+        (Value::Integer(0), vec![DiagCode::ParameterKindMismatch]),
+        (Value::Integer(11), vec![DiagCode::ParameterKindMismatch]),
+        (Value::Integer(45), vec![DiagCode::ParameterKindMismatch]),
         (
             Value::String(Arc::from(
-                "Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2051",
+                "Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017",
             )),
-            vec![DiagCode::ParameterOutOfRange],
+            vec![DiagCode::ParameterKindMismatch],
         ),
+        (Value::Boolean(true), vec![DiagCode::ParameterKindMismatch]),
         (
-            Value::Boolean(true),
-            vec![
-                DiagCode::ParameterKindMismatch,
-                DiagCode::ParameterOutOfRange,
-            ],
+            zero_time(45),
+            vec![DiagCode::ParameterOutOfRange, DiagCode::ParameterOutOfRange],
         ),
     ] {
         let invalid = one_block_model(
@@ -119,7 +125,7 @@ fn calendar_time_parameters_bind_zero_time_and_source_year_bounds() {
             &[],
             &outputs,
             vec![
-                (Arc::from("zerTim"), Value::Integer(11)),
+                (Arc::from("zerTim"), zero_time(11)),
                 (Arc::from("yearRef"), value),
             ],
         );
@@ -152,7 +158,7 @@ fn calendar_time_parameters_bind_zero_time_and_source_year_bounds() {
             &[],
             &outputs,
             vec![
-                (Arc::from("zerTim"), Value::Integer(11)),
+                (Arc::from("zerTim"), zero_time(11)),
                 (Arc::from("offset"), value.clone()),
             ],
         );
@@ -162,16 +168,9 @@ fn calendar_time_parameters_bind_zero_time_and_source_year_bounds() {
         assert!(err.diagnostics[0].message.contains("`offset`"));
     }
 
-    for zer_tim in [
-        Value::Integer(11),
-        Value::Enum {
-            class: oce_model::EnumClassId::ZERO_TIME,
-            ordinal: 11,
-        },
-        Value::String(Arc::from(
-            "Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017",
-        )),
-    ] {
+    // The qualified member is the one admitted spelling (ruling R2, issue #734); the ordinal
+    // and string stand-ins this test accepted before are refused above.
+    for zer_tim in [zero_time(11), zero_time(1), zero_time(44)] {
         assert!(
             validate(&one_block_model(
                 "CDL.Reals.Sources.CalendarTime",

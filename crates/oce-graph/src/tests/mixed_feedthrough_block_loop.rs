@@ -65,10 +65,15 @@ fn pass_through(from: PortKind, to: PortKind) -> Box<dyn Block> {
     }
 }
 
+/// The `SimpleController` member `member` as the resolver grounds a qualified member: an
+/// enumeration value of that class (the one spelling a reader takes; issue #734, ruling R2).
 fn controller(member: &str) -> Value {
-    Value::String(Arc::from(format!(
-        "Buildings.Controls.OBC.CDL.Types.SimpleController.{member}"
-    )))
+    let ordinal = oce_model::enum_member_ordinal(oce_model::EnumClassId::SIMPLE_CONTROLLER, member)
+        .unwrap_or_else(|| panic!("{member} is no SimpleController member"));
+    Value::Enum {
+        class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
+        ordinal,
+    }
 }
 
 /// One mixed-feedthrough parameterization: class, parameters, and the `(input, output)` pair

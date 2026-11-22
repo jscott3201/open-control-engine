@@ -54,8 +54,14 @@ const REAL_TABLE_PARAMS: &[Param] = &[
     rp("table_5_1", "3.0"),
     rp("table_5_2", "9.0"),
     rp("table_5_3", "50.0"),
-    ip("smoothness", "1"),
-    ip("extrapolation", "2"),
+    member(
+        "smoothness",
+        "Buildings.Controls.OBC.CDL.Types.Smoothness.LinearSegments",
+    ),
+    member(
+        "extrapolation",
+        "Buildings.Controls.OBC.CDL.Types.Extrapolation.LastTwoPoints",
+    ),
     rp("offset_1", "0.5"),
     rp("offset_2", "-1.0"),
 ];
@@ -155,9 +161,10 @@ const fn rp(name: &'static str, value: &'static str) -> Param {
     }
 }
 
-const fn ip(name: &'static str, value: &'static str) -> Param {
+/// A qualified enumeration member, the one spelling an enumeration parameter admits (R2, #734).
+const fn member(name: &'static str, value: &'static str) -> Param {
     Param {
         name,
-        value: ParamValue::Integer(value),
+        value: ParamValue::Member(value),
     }
 }
