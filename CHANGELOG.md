@@ -1287,7 +1287,7 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
-- **`oce` reads and writes through directory handles everywhere** (GitHub #@@PR@@, issue #771;
+- **`oce` reads and writes through directory handles everywhere** (GitHub #777, issue #771;
   Unix). Three places in `crates/leverage/oce-cli` still reached a directory or a file by path
   after their checks, so whoever could change the directories during a run could redirect them;
   each predates GitHub #764, and the review of that PR reproduced each on macOS.
@@ -1413,7 +1413,7 @@ so far, and no tag is cut by the bump.
     `forbid(unsafe_code)`. Windows has less, untested there: the entry is checked and the file
     opened by path, and nothing ties the handle to the entry checked (std has no stable file
     index).
-  - **What stayed open (issue #771, since closed by GitHub #@@PR@@):** the directories `verify
+  - **What stayed open (issue #771, since closed by GitHub #777):** the directories `verify
     --commission --out` creates under `DIR` (`outputs/`, `outputs/<k>/`) were reached by path, so
     whoever could change `DIR` during the run could redirect the curve files (the review
     reproduced it 50 times in 50); a document was read by path before its directory was resolved;
