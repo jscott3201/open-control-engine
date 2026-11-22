@@ -290,6 +290,7 @@ dependencies = [
  "oce-diff",
  "oce-verify",
  "oce-vocab",
+ "rustix",
  "serde_json",
 ]
 

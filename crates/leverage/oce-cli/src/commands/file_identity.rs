@@ -1,5 +1,6 @@
 //! What makes two paths one file, for the mutant reader's duplicate check and for the guard that
-//! keeps `emit -o` and `import -o` from replacing their own input.
+//! keeps `emit -o`, `import -o` and both forms of `verify --out` from replacing their own input
+//! (`output-is-input`).
 //!
 //! On Unix one file is one (device, inode), read from the metadata of the resolved path. So two
 //! spellings of a path, a symbolic link and its target, a hard link, and a case or normalization
@@ -42,6 +43,18 @@ pub(crate) fn same_file(first: &Path, second: &Path) -> bool {
         Some(identity(&canonical, &metadata))
     };
     matches!((of(first), of(second)), (Some(first), Some(second)) if first == second)
+}
+
+/// How the report names the first of `inputs` (each its name as reported and its path) that is
+/// one file with `output` ([`same_file`]); `None` when none is.
+pub(crate) fn input_at<'i>(
+    output: &Path,
+    inputs: &'i [(String, std::path::PathBuf)],
+) -> Option<&'i str> {
+    inputs
+        .iter()
+        .find(|(_, read)| same_file(output, read))
+        .map(|(name, _)| name.as_str())
 }
 
 /// Whether standard input is a regular file that is the file at `output`, so that writing

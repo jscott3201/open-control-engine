@@ -194,6 +194,31 @@ fn a_link_out_of_the_spec_directory_is_file_outside_directory_and_a_link_inside_
     assert_eq!(commission(&spec_dir).stdout, reference.stdout);
 }
 
+#[cfg(unix)]
+#[test]
+fn a_spec_whose_directory_is_a_link_reads_its_files_through_it() {
+    // `bundle -> real`: every file resolves against the directory the link names, whose
+    // identity is the one each read's directory handle must have (issue #758). Taken from the
+    // link itself, every read would be refused.
+    let dir = run_layout("commission_bundle_link", "pass");
+    let real = dir.join("real");
+    fs::create_dir(&real).expect("real");
+    for file in [
+        "spec.json",
+        "points.json",
+        "inputs.csv",
+        "outputs.csv",
+        "fan.csv",
+        "plant.cxf.json",
+    ] {
+        fs::rename(dir.join(file), real.join(file)).expect("move");
+    }
+    std::os::unix::fs::symlink("real", dir.join("bundle")).expect("bundle -> real");
+    let run = oce_in(&dir, &["verify", "--commission", "bundle/spec.json"], b"");
+    assert_eq!(run.code, 0, "{}", run.transcript());
+    assert_eq!(run.stdout, support::commission::golden_receipt("pass"));
+}
+
 #[test]
 fn a_directory_where_a_file_is_named_is_not_a_file() {
     let dir = run_layout("commission_directory", "pass");

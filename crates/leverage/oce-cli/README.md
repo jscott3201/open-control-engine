@@ -122,11 +122,20 @@ note](../../../docs/design/vectors.md), "CLI"; the owner's rulings in "Part 4's 
   (`oce/receipt/v1`, exactly `oce-verify`'s canonical bytes), for exit `0` and for exit `1`.
   Otherwise it is the JSON report, exit `2`.
 - **With `--out DIR`** the receipt is written atomically to `DIR/receipt.json`: a fresh temporary
-  file beside it, synced, then renamed over it, so no reader ever sees part of a receipt. Stdout
-  is the report, with `passed`, `status`, `receipt_id` and `output`. `DIR` must exist. On exit `2`
-  nothing is written. A `receipt.json` that is a symbolic link is written through to its target,
-  as `emit -o` writes through its own target. Any other non-file there is replaced by the
-  receipt, a named pipe included, and is never opened.
+  file beside it, synced, then renamed over its directory entry, so no reader ever sees part of a
+  receipt. Stdout is the report, with `passed`, `status`, `receipt_id` and `output`. `DIR` must
+  exist. On exit `2` nothing is written. A regular file already at `DIR/receipt.json` is
+  replaced (ruled by the owner on 2026-11-22). Two guards, each `at` `receipt.json` (issue #758,
+  ruled by the owner on 2026-11-22; **breaking in place**: until then a link there was written
+  through to its target, a named pipe there was replaced, and a vector set or subject there was
+  replaced by its own receipt):
+  - before anything is read, an empty `DIR` is `write-failed` (a missing directory, as
+    `--commission` refuses it), and a `DIR/receipt.json` that is a symbolic link, dangling or
+    not, a directory, a named pipe, a socket or a device is `output-not-a-file`, whose detail
+    says to remove or replace that entry ([below](#writing-a-file));
+  - after the reads and before the run, a `DIR/receipt.json` that is the vector file, the subject
+    or a mutant, by path, through a link the input is named by, or (on Unix) as a hard link, is
+    `output-is-input`, naming the input as given.
 - **Exit-only flags.** These never change a receipt byte:
   - `--require-mutants-caught` makes exit `1` when a mutant survived or the set lists none (owner
     ruling of 2026-11-11);
@@ -167,12 +176,12 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   canonicalized, following links, and a path that resolves outside is `file-outside-directory`
   (the rule `mutant-outside-directory` holds a mutant to; the spec reader has already refused an
   absolute path, an empty, `.` or `..` segment and a backslash as `path-invalid`). The canonical
-  path's own entry, read without following a link, must be a regular file before it is opened
-  (`not-a-file`; a named pipe never blocks the run; a link found there was swapped in after the
-  canonicalization and is `read-failed`), the file is opened once, and its size is judged from
-  that handle before a byte is read. A file that grows after its metadata is read is read up to
-  its bound and one byte more, then refused. What stays racy is an intermediate directory swapped
-  for a link after the canonicalization, which std's opens follow (issue #758):
+  path is then opened without following a link anywhere below the directory
+  ([below](#reading-a-file-a-document-names)): its last entry must be a regular file
+  (`not-a-file`; a named pipe never blocks the run), a link or a changed directory met on the way
+  was swapped in after the canonicalization and is `read-failed`, the file is opened once, and its
+  size is judged from that handle before a byte is read. A file that grows after its metadata is
+  read is read up to its bound and one byte more, then refused:
 
   | File | Bound | Refusal |
   | --- | --- | --- |
@@ -213,16 +222,23 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   stretch a missing sample left uncovered) is `nan`; every compared instant of an output failed by
   a non-finite engine sample is `inf`. A CSV file holds numbers under a fixed header and no name,
   and is named by index, so no name a spec, mapping or CXF writes reaches a file name or a cell.
-  `DIR` must be an existing directory (it is never created) and `DIR/outputs` must not exist
-  (`write-failed`: the curves of two runs are never mixed); a `DIR/receipt.json` that is the spec
-  or a file the run reads, by path, link or (on Unix) hard link, is `output-is-input`, and any
-  other entry at `DIR/receipt.json`, a file, a directory or a symbolic link, dangling or not, is
-  `write-failed`, so a receipt this run did not write never stands beside its curves and a link
-  never carries a write out of `DIR` (the orchestrator's call in the review of GitHub #757). These
-  are checked after the reads and **before the run**, so a refusal leaves nothing written. Each
-  file goes through the atomic writer without following a link at its name (a link planted after
-  the check is replaced, its target untouched), and is created owner-only (`0600` on Unix; the
-  directories `outputs/` and `outputs/<k>/` take the process's default mode). A write that fails
+  Before anything is read, an empty `DIR` is `write-failed` (a missing directory), and a
+  `DIR/receipt.json` that is a symbolic link, dangling or not, a directory, a named pipe, a socket
+  or a device is `output-not-a-file`, the rule of every verb that writes, whose detail says to
+  remove or replace that entry ([below](#writing-a-file); issue #758, ruled by the owner on 2026-11-22; until then
+  these were `write-failed`, and the orchestrator's call on issue #758 moved them so one cause has
+  one code). After the reads and **before the run**: `DIR` must be an existing directory (it is
+  never created) and `DIR/outputs` must not exist (`write-failed`: the curves of two runs are
+  never mixed); a `DIR/receipt.json` that is the spec or a file the run reads, by path, through a
+  link the input is named by or (on Unix) as a hard link, is `output-is-input`; and a regular file
+  at `DIR/receipt.json` is `write-failed`, so a receipt this run did not write never stands beside
+  its curves (the orchestrator's call in the review of GitHub #757). A refusal leaves nothing
+  written. Each file goes through the atomic writer, which never follows a link at its name (a
+  link planted after the check is replaced, its target untouched); the directories `outputs/`
+  and `outputs/<k>/` are reached by path, so whoever can change `DIR` during the run can redirect
+  the curve files below them (issue #771). Each file is created owner-only
+  (`0600` on Unix; the directories `outputs/` and `outputs/<k>/` take the process's default
+  mode). A write that fails
   part-way is `write-failed` naming the file; the files already written stay (without
   `receipt.json` they are not a run's output), and the report's `curves` lists them. No trace file
   is written.
@@ -303,10 +319,12 @@ oce import rule.cxf.jsonld | oce emit - --from text | oce id - --from cxf
 - **The output is never the input.** `-o` naming the input file is `output-is-input` (exit
   `2`, nothing written), for `import` and for `emit` alike (owner ruling of 2026-11-21).
   "The input file" is file identity, not spelling: the same path written another way
-  (`./rule`, `dir/../rule`), a symbolic link to it and, on Unix, a hard link to it, where one
-  file is one (device, inode). On Windows one file is one canonical path, so a hard link is
-  not recognised there. An output that does not exist yet, a dangling link included, is no
-  file and replaces nothing. Stdin (`-`) is the input when, on Unix, the shell made it a
+  (`./rule`, `dir/../rule`), the file an input named through a symbolic link resolves to and,
+  on Unix, a hard link to it, where one file is one (device, inode). On Windows one file is one
+  canonical path, so a hard link is not recognised there. An output that does not exist yet is
+  no file and replaces nothing. An `-o` that is itself a symbolic link, dangling or not, a
+  directory or another non-file is refused before this guard as `output-not-a-file`
+  ([below](#writing-a-file)), whatever it names. Stdin (`-`) is the input when, on Unix, the shell made it a
   regular file (`oce import - -o doc < doc`, `oce emit - --from text -o doc < doc`): file
   descriptor 0 is compared by (device, inode), and a pipe, a terminal or a closed descriptor is
   no file, so `cat doc | oce emit - --from text -o doc` is not refused and replaces `doc`.
@@ -449,7 +467,7 @@ oce import rule.cxf.jsonld | oce diff draft.oce - --from text
 | --- | --- | --- |
 | `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, under `--require-mutants-caught` the set lists a mutant and none survived, under `--deny-warnings` no warning; `verify --commission`: every compared output passed, under `--deny-warnings` no load or run-time warning; `id`: the input has an id; `import`: the document is imported and written; `diff`: the diff is `equal`; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
 | `1` | no | an error finding (`validate`, `emit`, which then writes nothing); `fmt --check`: not canonical; `catalog`: an unknown class, or the class rules refuse the parameter table (including a required parameter with no default); `verify`: a scenario failed or the set is `no_data`, or, under their flags, a surviving mutant, a set that lists no mutant, or a warning; `verify --commission`: an output failed or the run is `no_data`, or, under `--deny-warnings`, a warning; `diff`: any difference, a reordering or a comment included |
-| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal; for `verify --commission`, also a refused spec, mapping, unit or key, a spec with several references and no `--reference`, a reference with no `cxf`, `window` or `sampling`, an unreadable, over-size or refused trend source, a path out of the spec's directory, a CXF that does not load, an engine refusal of a frame, a comparison the limits refuse, an `--out` whose `outputs/` exists or whose `receipt.json` is an input; for `id`, also a document the engine does not load, an authored file with an error finding, or `--namespace` beside a CXF document; for `import`, also a document the importer refuses, a sequence the output form cannot spell, or an `-o` name that reads as another form (`import` never exits `1`); for `emit` and `import`, an `-o` that is the input file; for `diff`, also a mixed pair, stdin on both sides, a CXF side the engine does not load, or a document whose blocks are not named under its root |
+| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal; for `verify --commission`, also a refused spec, mapping, unit or key, a spec with several references and no `--reference`, a reference with no `cxf`, `window` or `sampling`, an unreadable, over-size or refused trend source, a path out of the spec's directory, a CXF that does not load, an engine refusal of a frame, a comparison the limits refuse, an `--out` whose `outputs/` or a regular `receipt.json` exists; for both forms of `verify`, an `--out` whose `receipt.json` is an input; for `id`, also a document the engine does not load, an authored file with an error finding, or `--namespace` beside a CXF document; for `import`, also a document the importer refuses, a sequence the output form cannot spell, or an `-o` name that reads as another form (`import` never exits `1`); for `emit` and `import`, an `-o` that is the input file; for `emit`, `import`, `fmt --write` and both forms of `verify --out`, an output that is a symbolic link, a directory or another non-file; for `diff`, also a mixed pair, stdin on both sides, a CXF side the engine does not load, or a document whose blocks are not named under its root |
 
 ## Output
 
@@ -545,7 +563,7 @@ The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-
 `write-needs-file`, `write-needs-text`, `malformed-param`, `unknown-param`, `duplicate-param`,
 `malformed-value`, `ports-unresolvable`, `emit-refused`, `unknown-subject-form`,
 `mutant-outside-directory`, `namespace-needs-authored`, `not-loadable`, `no-content-id`,
-`output-form-mismatch`, `output-is-input`, `mixed-forms`, `stdin-twice`.
+`output-form-mismatch`, `output-is-input`, `output-not-a-file`, `mixed-forms`, `stdin-twice`.
 `unspellable` is `fmt`'s for a wire file the text form cannot spell and `import`'s for a
 sequence the output form cannot spell. The wire-form refusal codes are `oce-author`'s: the tool reports
 `oce_author::WireError::code()` and `location()` and names no refusal itself (issue #495), so the
@@ -649,23 +667,100 @@ mean; a cap on the output is a separate change.
 An `import` report quotes the document: a refusal's `at`, and each `dropped` entry's `subject`
 and `value`. Its size is bounded by the input's, which is bounded at 8 MiB.
 
-`fmt --write`, `emit -o` and `import -o` write a uniquely named temporary file beside the target
-(`.NAME.<pid>.<counter>.oce-tmp`), opened with `create_new` so it never follows a link or
-truncates a file already there, sync it, give it the target's permissions (Unix mode bits) and
-rename it over the target; on any failure the temporary file is removed and the target is
-untouched. On Unix the temporary file is created no more permissive than the target, and a new
-file (no target yet) is created with mode `0600` whatever the umask allows. The rename replaces
-whatever directory entry is at the target, so a FIFO or device there becomes a regular file. The
-replace is atomic, but the directory itself is not fsynced. A target that is a symbolic link is followed: the file it names is replaced and the
-link stays a link (a dangling link is `write-failed`). **The file is replaced, not rewritten in
-place: a hard link to the old inode keeps the old bytes.** `fmt --write` rewrites only when the
-text changes. `emit -o` and `import -o` refuse an output that is their own input file before
-anything is read (`output-is-input`; [above](#oce-import) says what one file is, and that on
-Unix it includes the file stdin was opened from), so neither can replace an authored sequence
-with its CXF or a CXF document with its import. `emit -o` also refuses a name that reads as text
-or wire (`output-form-mismatch`): the CXF it writes goes to `.jsonld`, `.cxf.json` or a name
-with no known extension, never to `.oce` or `.json`, which `oce validate`, `fmt` and `id` would
-read as another form.
+### Writing a file
+
+One rule holds every verb that writes a file: `emit -o`, `import -o`, `fmt --write` (whose file
+is its input) and `verify --out` (the vector receipt, and every file of `--commission`) (issue
+#758, ruled by the owner on 2026-11-22). **Breaking in place:** until then a target that was a
+symbolic link was followed and the file it named replaced, and a named pipe or device at the
+target became a regular file.
+
+- **The target must be absent or a regular file.** A symbolic link, dangling or not, a
+  directory, a named pipe, a socket or a device is `output-not-a-file`, exit `2`, decided before
+  anything is read, so nothing is read or written. The detail names the path as given, what it
+  is and the way out. The target's own entry is never written through: a link planted there is
+  refused, or, planted after the check, replaced (below). **A caller whose output is a link gives
+  the path of the file it names** (`oce emit rule.oce -o "$(realpath out.cxf.json)"`, `oce fmt
+  --write "$(realpath link.oce)"`); `DIR/receipt.json` is a name `oce` chooses, so whatever is
+  there is the caller's to remove or replace. `-o -` is stdout, so `/dev/stdout` (a link) is
+  never needed; `-o /dev/null` (a device) is refused, where until then the temporary file could
+  not be created beside it and the write failed. An empty `--out` is refused by both forms of
+  `verify` as a missing directory (`write-failed`, before anything is read; the vector form
+  wrote `./receipt.json` until issue #758's review).
+- **Directories on the way are reached by path.** One the caller's path passes through (`-o
+  lnk/x`, `--out lnk`) is followed: the caller named it. So are `DIR/outputs` and
+  `DIR/outputs/<k>`, which `verify --commission --out` creates and then reaches again by path:
+  whoever can change `DIR` while the run writes can swap one for a link and carry the curve files
+  outside `DIR` (the report still lists them under `DIR`). Writing them through directory
+  handles is issue #771.
+- **The write** goes to a uniquely named temporary file beside the target
+  (`.NAME.<pid>.<counter>.oce-tmp`), opened with `create_new` so it never follows a link or
+  truncates a file already there, synced, given an existing regular target's permissions (Unix
+  mode bits) and renamed over the target's own directory entry; on a failure the target is
+  untouched and the temporary file is removed by its path, so if the parent directory was
+  swapped since it was created one `.oce-tmp` can be left behind (issue #771). A link planted
+  between the check and the write is replaced, its target untouched. On Unix the temporary file is created no more permissive than
+  the target, and a new file (no target yet) is created with mode `0600` whatever the umask
+  allows. The replace is atomic, but the directory itself is not fsynced. **The file is replaced,
+  not rewritten in place: a hard link to the old inode keeps the old bytes.** `fmt --write`
+  rewrites only when the text changes.
+- **The output is never an input.** `emit -o` and `import -o` refuse an output that is their own
+  input file before anything is read, and both forms of `verify --out` a `DIR/receipt.json` that
+  is a file the run reads, after the reads and before the run (`output-is-input`; [above](#oce-import)
+  says what one file is, and that on Unix it includes the file stdin was opened from), so no run
+  replaces what it read.
+- `emit -o` also refuses a name that reads as text or wire (`output-form-mismatch`): the CXF it
+  writes goes to `.jsonld`, `.cxf.json` or a name with no known extension, never to `.oce` or
+  `.json`, which `oce validate`, `fmt` and `id` would read as another form.
+
+On Windows a symbolic link or a junction at the target is refused by the same check (std reports
+both as links), and a hard link is not recognised as an input; neither is tested there.
+
+### Reading a file a document names
+
+A vector set's mutants and a commissioning spec's CXF, mapping and trend files are named by
+relative paths and must stay inside the document's directory. Each path is joined onto that
+directory and canonicalized, following links, so a link that stays inside is honoured and one
+that leaves is refused (`mutant-outside-directory`, `file-outside-directory`). On Unix the
+canonical path is then opened **component by component without following a link** (issue #758,
+ruled by the owner on 2026-11-22): the directory by its canonical path, which must still have the
+device and inode it had when resolved; each directory below it with `openat` from its parent's
+handle and `O_DIRECTORY | O_NOFOLLOW`; the last entry's own metadata, read from its directory's
+handle without following a link, must be a regular file (`not-a-file`), and it is opened with
+`O_NOFOLLOW | O_NONBLOCK` and must be the entry checked, and the handle the caller reads is then
+cleared of `O_NONBLOCK`. A link met on the way, or a directory that is no longer one (a named
+pipe swapped in for a directory is refused by `O_DIRECTORY` before it is opened), was swapped in
+after the canonicalization and is `read-failed`. A document reached through a directory that is
+a link (`bundle -> real`, `oce verify --commission bundle/spec.json`) reads the files of the
+directory the link names. The opens use the workspace's `rustix`, a third-party dependency beside
+`clap` and `serde_json` (ruled by the owner on 2026-11-22); the crate stays
+`forbid(unsafe_code)`. What this does not cover: the document itself is read by path before its
+directory is resolved, so a folder exchanged in between can pair a document with another
+folder's files (issue #771).
+
+Each handle pins what it names, so a rename in the directory cannot redirect a later step. Issue
+#758's harness swapped an intermediate directory for a link to a directory outside, atomically
+and as fast as it could, against 1,000,000 reads, and tried every schedule of swaps between two of
+the reader's calls (an adversary that acts between any two of them):
+
+| Reader | Adversary schedules that read outside | Race, macOS arm64 | Race, Linux aarch64 |
+| --- | --- | --- | --- |
+| GitHub #757's path-based checks | 1 of 8 (one swap before the entry's check) | 135 in 1,000,000 | 168,695 in 1,000,000 |
+| the same, re-checked against a second canonicalization after the open (std only) | 1 of 32 (three swaps) | 0 in 1,000,000 | 410,340 in 1,000,000 |
+| this `openat` walk | 0 of 16 | 0 in 1,000,000 | 0 in 1,000,000 |
+
+Through the built binary on macOS, 3,000 `oce verify --commission` runs against the same swap
+read outside 141 times with GitHub #757's checks and never with these opens.
+`src/commands/contained_tests.rs` is the adversary (the path-based checks are its control and
+must be beaten) and `tests/read_containment_race.rs` the race through the binary. Both need an
+atomic exchange (Linux, macOS); on a file system that refuses it they skip with a note, and the
+rule is then untested there (CI's Linux runners and APFS support it). **Windows** has less, and
+none of it is tested there: the canonical path's own entry must be a regular file, it is opened
+by path, and the handle must be a regular file. Nothing ties the handle to the entry checked,
+since std has no stable file index there (a file's identity is its canonical path), so a link
+swapped in for an intermediate directory or the last entry after the check is followed (std has
+no `openat`). A hard link inside the directory to a file outside it is read on every platform:
+it has no other path.
 
 ## Tests and goldens
 
@@ -680,7 +775,12 @@ class's JSON report and requires the binary's text to be exactly that, for the 1
 resolve at a table of plain values (every port's and parameter's `unit:` line included); `tests/files.rs` covers `fmt`
 over the `oce-author` text fixtures (referenced in place), `--write`, `-o` and a warning-free
 engine load of every emitted bundle; `tests/atomic_writes.rs` the write hardening (a planted link
-or file at the temporary name, permissions, a link target, a failed write's report);
+or file at the temporary name, permissions, a link or directory target refused, a failed write's
+report); `tests/output_targets.rs` every verb that writes against every kind of target (absent,
+a regular file, a link inside, outside, dangling and to an input, a hard link to an input, an
+empty and a full directory, a named pipe, a linked parent directory) with every entry unchanged
+after a refusal, and the vector `--out`'s `output-is-input` against the set, the subject and a
+mutant; `tests/read_containment_race.rs` the containment rule raced through the binary;
 `tests/hostile_inputs.rs` the bounds. For `verify`:
 - `tests/verify_runs.rs` pins one transcript per verdict and refusal class, with each exit-only
   flag flipping the status over the same receipt bytes;
@@ -707,7 +807,9 @@ run fixture, read in place, `tests/support/commission.rs`):
   `receipt.json`; a link there to a file outside `DIR`, to an unread file, dangling; a dangling
   link at `outputs`; a `DIR` that is a file), a curve that cannot be written (a `DIR` path swept
   across the platform's path limit, so writes fail at every stage, each run's `curves` holding
-  exactly the files that exist), and `--deny-warnings` on a load warning;
+  exactly the files that exist; the long directories are removed when the sweep ends, an
+  assertion failing included, since a path past the limit left under `target/` keeps `git
+  worktree remove` from removing a worktree), and `--deny-warnings` on a load warning;
 - `tests/commission_reads.rs` covers the reads: each bound from metadata at and one past its
   edge, the files together, links out of and inside the spec's directory, a directory and a named
   pipe;

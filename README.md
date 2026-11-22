@@ -337,7 +337,13 @@ re-stamped); the
 every CXF fixture under `crates/` does. Neither `import -o` nor `emit -o` will replace
 the input file named on the command line, nor, on Unix, a regular file redirected as stdin
 (`< doc`); a pipe (`cat doc | oce emit - -o doc`) and, on Windows, stdin are not checked. Each
-refuses a name `oce` would read as another form.
+refuses a name `oce` would read as another form. No verb writes through a symbolic link at its
+target: the path `emit -o`, `import -o`, `fmt --write` or `verify --out` writes must be absent or
+a regular file, or the run is refused before it reads anything (`output-not-a-file`; owner ruling
+of 2026-11-22, #758), and a file a commissioning spec or a vector set names is opened component
+by component without following a link (on Unix). The directories `verify --commission --out`
+creates under `DIR` are still reached by path, so whoever can change `DIR` during a run can
+redirect the curve files (#771).
 
 Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457) and checking a
 sequence parameter's unit suffix against the block parameter it feeds (#590); `oce check` (#574)

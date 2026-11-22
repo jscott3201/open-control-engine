@@ -1275,7 +1275,10 @@ open:
    `output-is-input`), a file, a directory or a link, dangling or not, is now `write-failed`,
    before the run; and every file is written without following a link at its name, so a link
    planted after the check is replaced and its target untouched. A `receipt.json` beside the
-   curves is therefore always the run's own, as "Output" promises.
+   curves is therefore always the run's own, as "Output" promises. *(Since issue #758, ruled by
+   the owner on 2026-11-22: a link, a directory or another non-file there is `output-not-a-file`,
+   decided before anything is read, the rule of every `oce` verb that writes; a regular file there
+   stays `write-failed`.)*
 6. **A failed write lists what was written.** The report of a write that fails part-way carries
    `curves`, the files written before it, so a reader need not walk the directory.
 7. **The last component is checked without following a link.** The file reader checks the
@@ -1283,7 +1286,12 @@ open:
    there is a path that changed under the check (`read-failed`). The residual, an intermediate
    directory swapped for a link, needs a component-by-component no-follow open std does not
    offer; it is issue #758, beside the vector `--out`, which still writes through a link at its
-   `receipt.json`.
+   `receipt.json`. *(Closed by issue #758, ruled by the owner on 2026-11-22: on Unix each
+   component is opened with `openat` and `O_DIRECTORY | O_NOFOLLOW` through `rustix`, the last
+   with `O_NOFOLLOW | O_NONBLOCK`; a harness that swapped an intermediate directory 1,000,000
+   times read outside 168,695 times on Linux with the path-based checks and never with the walk.
+   Windows keeps the path-based checks. The vector `--out` no longer writes through a link at its
+   `receipt.json`; the curve files `--commission --out` writes are still reached by path, #771.)*
 8. **Two usage lines.** `oce verify --help` and every usage error print the vector form and the
    commissioning form as two lines, so clap never prints the combination it refuses.
 
