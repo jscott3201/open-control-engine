@@ -113,13 +113,25 @@ fn authored_defaults_match_explicit_values_and_non_defaults_change_outputs() {
     for (name, default, non_default) in [
         (
             "smoothness",
-            Value::String("LinearSegments".into()),
-            Value::String("ConstantSegments".into()),
+            Value::Enum {
+                class: EnumClassId::SMOOTHNESS,
+                ordinal: 1,
+            },
+            Value::Enum {
+                class: EnumClassId::SMOOTHNESS,
+                ordinal: 2,
+            },
         ),
         (
             "extrapolation",
-            Value::String("Periodic".into()),
-            Value::String("HoldLastPoint".into()),
+            Value::Enum {
+                class: EnumClassId::EXTRAPOLATION,
+                ordinal: 3,
+            },
+            Value::Enum {
+                class: EnumClassId::EXTRAPOLATION,
+                ordinal: 1,
+            },
         ),
         ("offset_1", Value::Real(0.0), Value::Real(5.0)),
         ("timeScale", Value::Real(1.0), Value::Real(2.0)),
@@ -171,11 +183,17 @@ fn enum_catalog_members_map_to_the_authored_typed_defaults() {
         TimeTableExtrapolation::Periodic
     );
     assert_eq!(
-        TimeTableSmoothness::from_value(&Value::String("LinearSegments".into())),
+        TimeTableSmoothness::from_value(&Value::Enum {
+            class: EnumClassId::SMOOTHNESS,
+            ordinal: 1,
+        }),
         Some(TimeTableSmoothness::LinearSegments)
     );
     assert_eq!(
-        TimeTableExtrapolation::from_value(&Value::String("Periodic".into())),
+        TimeTableExtrapolation::from_value(&Value::Enum {
+            class: EnumClassId::EXTRAPOLATION,
+            ordinal: 3,
+        }),
         Some(TimeTableExtrapolation::Periodic)
     );
 }
@@ -378,18 +396,32 @@ fn source_time_table_registry_constructors_resolve_parameters() {
 
 #[test]
 fn member_token_mappings_agree_with_from_value_for_every_member() {
-    for member in SMOOTHNESS_MEMBERS {
+    // A member is read from an enumeration value of its own class only (ruling R2, issue #734):
+    // the member at ordinal `i` is the token at index `i - 1`.
+    for (index, member) in SMOOTHNESS_MEMBERS.iter().enumerate() {
+        let ordinal = u32::try_from(index + 1).unwrap();
+        let class = EnumClassId::SMOOTHNESS;
         assert_eq!(
             Some(smoothness_from_member(member)),
-            TimeTableSmoothness::from_value(&Value::String((*member).into())),
+            TimeTableSmoothness::from_value(&Value::Enum { class, ordinal }),
             "{member}"
         );
+        assert_eq!(
+            TimeTableSmoothness::from_value(&Value::String((*member).into())),
+            None
+        );
     }
-    for member in EXTRAPOLATION_MEMBERS {
+    for (index, member) in EXTRAPOLATION_MEMBERS.iter().enumerate() {
+        let ordinal = u32::try_from(index + 1).unwrap();
+        let class = EnumClassId::EXTRAPOLATION;
         assert_eq!(
             Some(extrapolation_from_member(member)),
-            TimeTableExtrapolation::from_value(&Value::String((*member).into())),
+            TimeTableExtrapolation::from_value(&Value::Enum { class, ordinal }),
             "{member}"
+        );
+        assert_eq!(
+            TimeTableExtrapolation::from_value(&Value::String((*member).into())),
+            None
         );
     }
 }
@@ -477,19 +509,21 @@ fn no_parameter_value_reaches_a_member_token_unreachable() {
     for value in &values {
         let smoothness = TimeTableSmoothness::from_value(value);
         let extrapolation = TimeTableExtrapolation::from_value(value);
-        if let Value::String(s) = value {
-            let token = s.rsplit('.').next().unwrap_or(s);
-            assert_eq!(
-                smoothness.is_some(),
-                SMOOTHNESS_MEMBERS.contains(&token),
-                "{s:?}"
-            );
-            assert_eq!(
-                extrapolation.is_some(),
-                EXTRAPOLATION_MEMBERS.contains(&token),
-                "{s:?}"
-            );
-        }
+        // Only an enumeration value of the reader's own class, at a member's ordinal, is read.
+        let member_of = |own: EnumClassId, count: usize| {
+            matches!(value, Value::Enum { class, ordinal }
+                if *class == own && (1..=count).contains(&(*ordinal as usize)))
+        };
+        assert_eq!(
+            smoothness.is_some(),
+            member_of(EnumClassId::SMOOTHNESS, SMOOTHNESS_MEMBERS.len()),
+            "{value:?}"
+        );
+        assert_eq!(
+            extrapolation.is_some(),
+            member_of(EnumClassId::EXTRAPOLATION, EXTRAPOLATION_MEMBERS.len()),
+            "{value:?}"
+        );
         for class in [
             "CDL.Reals.Sources.TimeTable",
             "CDL.Integers.Sources.TimeTable",

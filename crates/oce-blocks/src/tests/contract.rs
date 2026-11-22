@@ -398,9 +398,10 @@ fn registry_make_resolves_parameters() {
         values: vec![
             (
                 Arc::from("controllerType"),
-                Value::String(Arc::from(
-                    "Buildings.Controls.OBC.CDL.Types.SimpleController.PID",
-                )),
+                Value::Enum {
+                    class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
+                    ordinal: 4,
+                },
             ),
             (Arc::from("xi_start"), Value::Real(2.0)),
         ],
@@ -411,9 +412,10 @@ fn registry_make_resolves_parameters() {
     let p_reset = (lookup("CDL.Reals.PIDWithReset").unwrap().make)(&ParamTable {
         values: vec![(
             Arc::from("controllerType"),
-            Value::String(Arc::from(
-                "Buildings.Controls.OBC.CDL.Types.SimpleController.P",
-            )),
+            Value::Enum {
+                class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
+                ordinal: 1,
+            },
         )],
     });
     assert_eq!(p_reset.kind(), BlockKind::Algebraic);
@@ -423,9 +425,10 @@ fn registry_make_resolves_parameters() {
         values: vec![
             (
                 Arc::from("controllerType"),
-                Value::String(Arc::from(
-                    "Buildings.Controls.OBC.CDL.Types.SimpleController.PI",
-                )),
+                Value::Enum {
+                    class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
+                    ordinal: 2,
+                },
             ),
             (Arc::from("k"), Value::Real(1.0)),
             (Arc::from("Ti"), Value::Real(1.0)),

@@ -14,8 +14,8 @@ use oce_api::Value;
 use oce_graph::blob::decode;
 use oce_graph::{EvalContext, eval_tick};
 use parameter_documents::{
-    Param, Shape, Values, document, loaded, outputs, param, refusal_codes, source, table, typed,
-    value, vector,
+    Param, Shape, Values, document, loaded, outputs, outputs_driven, param, refusal_codes, source,
+    table, typed, value, vector,
 };
 
 const PULSE: &str = "CDL.Integers.Sources.Pulse";
@@ -116,7 +116,7 @@ fn a_comparators_integer_threshold_runs_as_written_and_a_real_one_is_refused() {
     let shape = Shape {
         class: "CDL.Integers.GreaterThreshold",
         output: "Boolean",
-        input: Some("Integer"),
+        inputs: &[("u", "Integer")],
     };
     for (t, expected) in [("2", true), ("3", false), (r#""1 + 1""#, true)] {
         let mut engine = loaded(&document(&shape, &[value("t", t)], &[]));
@@ -140,7 +140,7 @@ fn a_real_threshold_widens_an_integer_and_refuses_another_kind() {
     let shape = Shape {
         class: "CDL.Reals.GreaterThreshold",
         output: "Boolean",
-        input: Some("Real"),
+        inputs: &[("u", "Real")],
     };
     for (t, expected) in [
         ("2", true),
@@ -179,20 +179,14 @@ fn time_table(smoothness: &str) -> String {
 }
 
 #[test]
-fn an_enumeration_runs_as_the_member_each_admitted_spelling_names() {
-    for literal in [
+fn an_enumeration_runs_as_the_qualified_member_it_names() {
+    let mut engine = loaded(&time_table(
         r#""Buildings.Controls.OBC.CDL.Types.Smoothness.ConstantSegments""#,
-        "2",
-        r#""\"ConstantSegments\"""#,
-        r#""\"Buildings.Controls.OBC.CDL.Types.Smoothness.ConstantSegments\"""#,
-    ] {
-        let mut engine = loaded(&time_table(literal));
-        assert_eq!(
-            outputs(&mut engine, &[0.0, 1.0], None),
-            [Value::Real(0.0), Value::Real(0.0)],
-            "{literal}"
-        );
-    }
+    ));
+    assert_eq!(
+        outputs(&mut engine, &[0.0, 1.0], None),
+        [Value::Real(0.0), Value::Real(0.0)]
+    );
     let mut engine = loaded(&time_table(
         r#""Buildings.Controls.OBC.CDL.Types.Smoothness.LinearSegments""#,
     ));
@@ -203,20 +197,90 @@ fn an_enumeration_runs_as_the_member_each_admitted_spelling_names() {
 }
 
 #[test]
-fn a_member_of_another_enumeration_is_refused_where_it_ran_as_the_default() {
-    // `LastTwoPoints` is ordinal 2 of `Extrapolation`: before, it passed the ordinal check and
-    // the reader, finding no `Smoothness`, ran linear segments (the default).
-    assert_eq!(
-        refusal_codes(&time_table(
-            r#""Buildings.Controls.OBC.CDL.Types.Extrapolation.LastTwoPoints""#
-        )),
-        ["parameter-kind-mismatch"]
-    );
-    // Stand-ins naming no member are refused by the class's member rule, as before.
-    for literal in ["9", "2.0", "true", r#""\"Nope\"""#] {
+fn an_enumeration_spelt_any_other_way_is_refused_where_it_ran_as_a_member() {
+    // Ruling R2 (2026-11-21). Before: `2` and the strings ran as `ConstantSegments`;
+    // `OperationModes.occupied` (the Integer 1) ran linear segments; `LastTwoPoints` (ordinal 2
+    // of `Extrapolation`) passed the ordinal check and ran the default.
+    for literal in [
+        "2",
+        "1",
+        r#""1 + 1""#,
+        r#""Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied""#,
+        r#""\"ConstantSegments\"""#,
+        r#""\"Buildings.Controls.OBC.CDL.Types.Smoothness.ConstantSegments\"""#,
+        r#""Buildings.Controls.OBC.CDL.Types.Extrapolation.LastTwoPoints""#,
+        "9",
+        "2.0",
+        "true",
+        r#""\"Nope\"""#,
+    ] {
         assert_eq!(
             refusal_codes(&time_table(literal)),
-            ["parameter-out-of-range"],
+            ["parameter-kind-mismatch"],
+            "{literal}"
+        );
+    }
+}
+
+/// A `Reals.PID` driven by `u_s` and `u_m` whose `controllerType` is written `literal`.
+fn pid(controller: &str, root: &[Param]) -> String {
+    document(
+        &Shape {
+            class: "CDL.Reals.PID",
+            output: "Real",
+            inputs: &[("u_s", "Real"), ("u_m", "Real")],
+        },
+        &[value("controllerType", controller)],
+        root,
+    )
+}
+
+#[test]
+fn a_controller_runs_as_the_qualified_member_and_every_other_spelling_is_refused() {
+    // With the error 0.25 held, `P` holds 0.25 and `PI` integrates it (Ti = 0.5 s).
+    let error = [("u_s", Value::Real(0.25)), ("u_m", Value::Real(0.0))];
+    let run = |member: &str| {
+        let mut engine = loaded(&pid(
+            &format!(r#""Buildings.Controls.OBC.CDL.Types.SimpleController.{member}""#),
+            &[],
+        ));
+        outputs_driven(&mut engine, &[0.0, 1.0, 2.0, 3.0], &error)
+    };
+    let (p, pi) = (run("P"), run("PI"));
+    assert!(
+        p[0].bit_eq(&Value::Real(0.25)) && p[1].bit_eq(&Value::Real(0.25)),
+        "{p:?}"
+    );
+    assert!(!pi[3].bit_eq(&p[3]), "PI integrates: {pi:?} against {p:?}");
+    // Before the ruling `OperationModes.occupied` (the Integer 1) ran as `P`, `3` as `PD`, a
+    // string by its last segment whatever its path.
+    let integer_root = [parameter_documents::declared("n", "Integer", "3")];
+    for (literal, root) in [
+        (
+            r#""Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied""#,
+            &[][..],
+        ),
+        (r#""1+2""#, &[][..]),
+        ("3", &[][..]),
+        (r#""n""#, &integer_root[..]),
+        (r#""\"Foo.Bar.PD\"""#, &[][..]),
+        (r#""\".PD\"""#, &[][..]),
+        (
+            r#""\"Buildings.Controls.OBC.CDL.Types.Smoothness.PD\"""#,
+            &[][..],
+        ),
+        (
+            r#""\"Buildings.Controls.OBC.CDL.Types.SimpleController.PD\"""#,
+            &[][..],
+        ),
+        (
+            r#""Buildings.Controls.OBC.CDL.Types.Smoothness.ConstantSegments""#,
+            &[][..],
+        ),
+    ] {
+        assert_eq!(
+            refusal_codes(&pid(literal, root)),
+            ["parameter-kind-mismatch"],
             "{literal}"
         );
     }

@@ -45,7 +45,9 @@ use crate::{ConstructedBudget, MAX_STATE_WORDS, Schedule, allocate_state, build_
 ///    canonical list order and exact consumption ([`BlobError::Malformed`]);
 /// 7. each class in turn (registered, same signature hash); then each block in turn (class index,
 ///    unique parameter names, each parameter in order a finite Real or a known enum class and
-///    ordinal, then the constructed budget
+///    ordinal and then a value its class's catalog type admits
+///    ([`BlobError::ParameterKindMismatch`]: the load gate's own predicate,
+///    `oce_blocks::admits_parameter_value`, issue #734), then the constructed budget
 ///    ([`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS), charged the moment the block is
 ///    constructed: [`BlobError::ConstructedTooLarge`]), then the constructed block's kind, state
 ///    length and arity, and each of its connector ids in range and not already claimed); then

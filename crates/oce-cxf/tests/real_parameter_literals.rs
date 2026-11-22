@@ -596,3 +596,130 @@ fn a_value_of_another_kind_than_a_sequence_parameters_declared_type_is_refused_o
     );
     assert_params(&integer, &[("k", Value::Integer(2))]);
 }
+
+/// A root `S` whose `p` is declared Real and written `literal`, whose `flag = p + 1 > p`
+/// (declared Boolean) guards a conditional constant `cond`; `blk` always drives the output.
+fn guarded_by_a_real_sum(literal: &str) -> String {
+    let ns = "http://example.org#";
+    format!(
+        r#"{{ "@context": {{ "S231": "http://data.ashrae.org/S231#" }}, "@graph": [
+  {{ "@id": "{ns}S", "@type": "S231:Block",
+    "S231:hasParameter": [ {{ "@id": "{ns}S.p" }}, {{ "@id": "{ns}S.flag" }} ],
+    "S231:containsBlock": [ {{ "@id": "{ns}S.blk" }}, {{ "@id": "{ns}S.cond" }} ],
+    "S231:hasOutput": {{ "@id": "{ns}S.out" }} }},
+  {{ "@id": "{ns}S.p", "@type": "S231:Parameter",
+    "S231:isOfDataType": {{ "@id": "S231:Real" }}, "S231:value": {literal} }},
+  {{ "@id": "{ns}S.flag", "@type": "S231:Parameter",
+    "S231:isOfDataType": {{ "@id": "S231:Boolean" }}, "S231:value": "p + 1 > p" }},
+  {{ "@id": "{ns}S.blk", "@type": "{ns}Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+    "S231:hasParameter": {{ "@id": "{ns}S.blk.k" }}, "S231:hasOutput": {{ "@id": "{ns}S.blk.y" }} }},
+  {{ "@id": "{ns}S.blk.k", "S231:value": 1.0 }},
+  {{ "@id": "{ns}S.blk.y", "@type": "S231:RealOutput", "S231:isOfDataType": {{ "@id": "S231:Real" }},
+    "S231:isConnectedTo": {{ "@id": "{ns}S.out" }} }},
+  {{ "@id": "{ns}S.cond", "@type": "{ns}Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+    "S231:isConditionalComponent": true, "S231:conditionalExpression": "flag",
+    "S231:hasParameter": {{ "@id": "{ns}S.cond.k" }}, "S231:hasOutput": {{ "@id": "{ns}S.cond.y" }} }},
+  {{ "@id": "{ns}S.cond.k", "S231:value": 2.0 }},
+  {{ "@id": "{ns}S.cond.y", "@type": "S231:RealOutput", "S231:isOfDataType": {{ "@id": "S231:Real" }} }},
+  {{ "@id": "{ns}S.out", "@type": "S231:RealOutput", "S231:isOfDataType": {{ "@id": "S231:Real" }} }}
+] }}"#
+    )
+}
+
+#[test]
+fn a_conditional_guard_reads_the_real_a_declared_real_parameter_holds() {
+    // Issue #735, the specialize pass: the guard scope holds `p` as a Real too. At 2^53 the Real
+    // `p + 1` rounds back to `p`, so `flag` is false and `cond` is pruned in both spellings;
+    // over the Integer as written, `p + 1 > p` would hold and keep `cond` in one spelling only.
+    let instances = |literal: &str| -> Vec<String> {
+        import_ok(&guarded_by_a_real_sum(literal))
+            .blocks
+            .iter()
+            .filter_map(|block| block.instance_iri.as_deref().map(str::to_owned))
+            .collect()
+    };
+    let expected = vec!["http://example.org#S.blk".to_owned()];
+    for literal in [
+        "9007199254740992",
+        "9007199254740992.0",
+        &typed("9007199254740992", "integer"),
+    ] {
+        assert_eq!(instances(literal), expected, "{literal}");
+    }
+    // Below the rounding the sum is greater, and `cond` is kept in both spellings alike.
+    for literal in ["4", "4.0"] {
+        assert_eq!(instances(literal).len(), 2, "{literal}");
+    }
+}
+
+/// Two constants, `a` an Integer one and `b` a Real one, both listing the one parameter node
+/// `S.k` written `literal` (`b` lists it `b_listings` times); each drives a root output.
+fn one_node_listed_by_two_kinds(literal: &str, b_listings: usize) -> String {
+    let ns = "http://example.org#";
+    let k = format!(r#"{{ "@id": "{ns}S.k" }}"#);
+    let b_params = vec![k.clone(); b_listings].join(", ");
+    let constant = |name: &str, class: &str, signal: &str, params: &str| {
+        format!(
+            r#"  {{ "@id": "{ns}S.{name}", "@type": "{ns}Buildings.Controls.OBC.CDL.{class}",
+    "S231:hasParameter": [ {params} ], "S231:hasOutput": {{ "@id": "{ns}S.{name}.y" }} }},
+  {{ "@id": "{ns}S.{name}.y", "@type": "S231:{signal}Output", "S231:isOfDataType": {{ "@id": "S231:{signal}" }},
+    "S231:isConnectedTo": {{ "@id": "{ns}S.{name}_out" }} }},
+  {{ "@id": "{ns}S.{name}_out", "@type": "S231:{signal}Output", "S231:isOfDataType": {{ "@id": "S231:{signal}" }} }},
+"#
+        )
+    };
+    format!(
+        r#"{{ "@context": {{ "S231": "http://data.ashrae.org/S231#" }}, "@graph": [
+  {{ "@id": "{ns}S", "@type": "S231:Block",
+    "S231:containsBlock": [ {{ "@id": "{ns}S.a" }}, {{ "@id": "{ns}S.b" }} ],
+    "S231:hasOutput": [ {{ "@id": "{ns}S.a_out" }}, {{ "@id": "{ns}S.b_out" }} ] }},
+{a}{b}  {{ "@id": "{ns}S.k", "S231:value": {literal} }}
+] }}"#,
+        a = constant("a", "Integers.Sources.Constant", "Integer", &k),
+        b = constant("b", "Reals.Sources.Constant", "Real", &b_params),
+    )
+}
+
+/// The `k` entries of the instance `name` in table order.
+fn k_of(graph: &ModelGraph, name: &str) -> Vec<Value> {
+    let iri = format!("http://example.org#S.{name}");
+    graph
+        .blocks
+        .iter()
+        .find(|block| block.instance_iri.as_deref() == Some(iri.as_str()))
+        .expect("the instance")
+        .params
+        .values
+        .iter()
+        .map(|(_, value)| value.clone())
+        .collect()
+}
+
+#[test]
+fn one_shared_value_is_held_in_the_type_of_each_parameter_that_lists_it() {
+    // The node is read by an Integer `k` and a Real `k`: the value as grounded is shared
+    // (GitHub #752), and each listing holds its own copy in its own parameter's type.
+    let graph = import_ok(&one_node_listed_by_two_kinds("4", 1));
+    assert!(k_of(&graph, "a")[0].bit_eq(&Value::Integer(4)));
+    assert!(k_of(&graph, "b")[0].bit_eq(&Value::Real(4.0)));
+    // Written `4.0`, the Integer `k` reads a Real (the engine refuses it for its kind) and the
+    // Real `k` is unchanged.
+    let graph = import_ok(&one_node_listed_by_two_kinds("4.0", 1));
+    assert!(k_of(&graph, "a")[0].bit_eq(&Value::Real(4.0)));
+    assert!(k_of(&graph, "b")[0].bit_eq(&Value::Real(4.0)));
+    // Listed twice by `b`, the one grounding is held once per listing, each a Real (the
+    // repeat is the validator's `duplicate-parameter`).
+    let graph = import_ok(&one_node_listed_by_two_kinds("4", 2));
+    let b = k_of(&graph, "b");
+    assert_eq!(b.len(), 2);
+    assert!(
+        b.iter().all(|value| value.bit_eq(&Value::Real(4.0))),
+        "{b:?}"
+    );
+    assert!(k_of(&graph, "a")[0].bit_eq(&Value::Integer(4)));
+    // Past 2^53 the Real listing is refused on the node and the Integer one keeps it exactly.
+    let diags = refusal(&one_node_listed_by_two_kinds("9007199254740993", 1));
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::ParameterOutOfRange);
+    assert_eq!(diags[0].subject.as_deref(), Some("http://example.org#S.k"));
+}

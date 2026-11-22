@@ -213,54 +213,109 @@ fn an_integer_past_two_to_the_fifty_third_on_a_real_parameter_is_out_of_range() 
     );
 }
 
+/// One enumeration parameter: its class, its name, its enumeration and the other parameters a
+/// table the gate admits needs beside it.
+type EnumCase<'a> = (&'a str, &'a str, EnumClassId, &'a [(&'a str, Value)]);
+
 #[test]
-fn an_enumeration_stand_in_naming_no_member_is_reported_once() {
-    // `PID.controllerType` has no `EnumMembers` rule: the kind rule reports the stand-in.
-    let pid = "CDL.Reals.PID";
-    assert_eq!(
-        refusal(pid, &[("controllerType", Value::Integer(9))]),
-        vec![
-            Diagnostic::error(
-                DiagCode::ParameterOutOfRange,
-                "parameter `controllerType` on block `CDL.Reals.PID` must name one of the 4 \
-                 members of `CDL.Types.SimpleController`"
-            )
-            .with_subject("block#0".to_owned())
-        ]
-    );
-    for value in [
-        Value::Integer(2),
-        Value::String(Arc::from("PI")),
-        Value::String(Arc::from(
-            "Buildings.Controls.OBC.CDL.Types.SimpleController.PI",
-        )),
-        Value::Enum {
-            class: EnumClassId::SIMPLE_CONTROLLER,
-            ordinal: 2,
-        },
-    ] {
-        assert_eq!(
-            refusal(pid, &[("controllerType", value.clone())]),
-            Vec::new(),
-            "{value:?}"
-        );
-    }
-    // `TimeTable.smoothness` has one: it alone reports, so the finding is not doubled.
-    let time_table = "CDL.Reals.Sources.TimeTable";
-    let rows = [
+fn an_enumeration_parameter_admits_a_qualified_member_only_and_reports_each_refusal_once() {
+    // Ruling R2 (2026-11-21): no ordinal, no string, no other enumeration's member, on every
+    // enumeration parameter, whatever rules the class has for it, each reported once.
+    let time_table_rows = [
         ("table_1_1", Value::Real(0.0)),
         ("table_1_2", Value::Real(0.0)),
         ("table_2_1", Value::Real(1.0)),
         ("table_2_2", Value::Real(1.0)),
     ];
-    let mut entries = rows.to_vec();
-    entries.push(("smoothness", Value::Integer(9)));
-    let diags = refusal(time_table, &entries);
-    assert_eq!(diags.len(), 1, "{diags:?}");
-    assert!(
-        diags[0].message.contains("source enum members"),
-        "{diags:?}"
-    );
+    let cases: [EnumCase<'_>; 4] = [
+        // No member rule.
+        (
+            "CDL.Reals.PID",
+            "controllerType",
+            EnumClassId::SIMPLE_CONTROLLER,
+            &[],
+        ),
+        // A member rule only.
+        (
+            "CDL.Reals.Sources.TimeTable",
+            "smoothness",
+            EnumClassId::SMOOTHNESS,
+            &time_table_rows,
+        ),
+        (
+            "CDL.Reals.Sources.TimeTable",
+            "extrapolation",
+            EnumClassId::EXTRAPOLATION,
+            &time_table_rows,
+        ),
+        // A `Required` kind and a member rule.
+        (
+            "CDL.Reals.Sources.CalendarTime",
+            "zerTim",
+            EnumClassId::ZERO_TIME,
+            &[],
+        ),
+    ];
+    for (class, name, own, base) in cases {
+        let with = |value: Value| {
+            let mut entries = base.to_vec();
+            entries.push((name, value));
+            refusal(class, &entries)
+        };
+        assert_eq!(
+            with(Value::Enum {
+                class: own,
+                ordinal: 2
+            }),
+            Vec::new(),
+            "{class} {name}"
+        );
+        let other = if own == EnumClassId::SMOOTHNESS {
+            EnumClassId::SIMPLE_CONTROLLER
+        } else {
+            EnumClassId::SMOOTHNESS
+        };
+        let declared = format!("{:?}", ValueType::Enum(own));
+        for (value, got) in [
+            (Value::Integer(2), "Integer"),
+            (Value::Integer(99), "Integer"),
+            (Value::String(Arc::from("PD")), "String"),
+            (Value::String(Arc::from(".PD")), "String"),
+            (Value::String(Arc::from("Foo.Bar.PD")), "String"),
+            (
+                Value::String(Arc::from("Buildings.Controls.OBC.CDL.Types.Smoothness.PD")),
+                "String",
+            ),
+            (
+                Value::String(Arc::from(
+                    "Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017",
+                )),
+                "String",
+            ),
+            (
+                Value::Enum {
+                    class: other,
+                    ordinal: 2,
+                },
+                "Enum",
+            ),
+            (
+                Value::Enum {
+                    class: other,
+                    ordinal: 1,
+                },
+                "Enum",
+            ),
+            (Value::Real(2.0), "Real"),
+            (Value::Boolean(true), "Boolean"),
+        ] {
+            assert_eq!(
+                with(value.clone()),
+                vec![kind_mismatch(name, class, &declared, got)],
+                "{class} {name} = {value:?}"
+            );
+        }
+    }
 }
 
 #[test]

@@ -10,27 +10,28 @@
 //! registry is covered by the same table, with no rule to write.
 //!
 //! - A value of the wrong kind is [`DiagCode::ParameterKindMismatch`]: a Real (`2.0` included),
-//!   Boolean or String on an Integer parameter, an Integer on a Boolean one, an enumeration value
-//!   of another class.
+//!   Boolean or String on an Integer parameter, an Integer on a Boolean one, and on an enumeration
+//!   parameter anything but a qualified member of that enumeration (an ordinal, a G36 integer
+//!   constant, a string, another enumeration's member; the owner's ruling R2).
 //! - An Integer above 2^53 in magnitude on a Real parameter is [`DiagCode::ParameterOutOfRange`],
 //!   the code the CXF resolver refuses the same binding with.
-//! - An ordinal or String stand-in on an enumeration parameter that names no member is
-//!   [`DiagCode::ParameterOutOfRange`], unless the class's `EnumMembers` rule for the parameter
-//!   reports it already; an enumeration value whose ordinal is outside its own class is reported
-//!   by the enumeration-ordinal check beside this one.
+//! - An enumeration value whose ordinal is outside its own class is reported by the
+//!   enumeration-ordinal check beside this one, not here.
 //!
-//! A class rule that types a parameter (a `Required` kind, a bound, an array element rule) judges
-//! that parameter's kind itself and keeps its own finding; this rule then adds only the two faults
-//! no class rule checks, an enumeration value of another class and an Integer past 2^53 on a Real
-//! parameter. Every other parameter, the ones typed by their default alone, is judged here, which
-//! is where the silent defaults were: `Pulse.amplitude`, the threshold `t` of the comparators,
-//! `PID.k` and its siblings, and the rest the catalog-wide test lists. The subject is the block, as
-//! for every class-level parameter finding, and the message names the parameter. A parameter the
-//! catalog does not type is outside the rule.
+//! One wrong value is reported once. A `Required` rule reports a present value of another kind
+//! with the same finding, so a parameter it names is left to it. A single-parameter class rule
+//! that types the parameter (a bound, an array element rule) refuses another scalar kind itself
+//! and keeps its own finding; this rule then adds only what no class rule checks, an enumeration
+//! value of another class and an Integer past 2^53 on a Real parameter. An `EnumMembers` rule
+//! judges members only and leaves every other kind here. Every other parameter, the ones typed
+//! by their default alone, is judged here, which is where the silent defaults were:
+//! `Pulse.amplitude`, the threshold `t` of the comparators, the PID limits and the rest the
+//! catalog-wide test lists. The subject is the block, as for every class-level parameter finding,
+//! and the message names the parameter. A parameter the catalog does not type is outside the rule.
 
 use oce_blocks::{ParamRule, ParameterKindFault, parameter_kind_fault, parameter_kind_is_ruled};
 use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
-use oce_model::{BlockInstance, Value, enum_descriptor};
+use oce_model::{BlockInstance, Value};
 
 use super::block_subject_of;
 
@@ -47,8 +48,11 @@ pub(super) fn check_parameter_kinds(
         };
         let class = &blk.class_iri;
         let (code, message) = match fault {
-            // A rule that judges the parameter's kind refuses a value of another kind itself,
-            // except an enumeration value of another class (`EnumMembers` reads its ordinal).
+            // A `Required` rule reports a present value of another kind with this very finding,
+            // an enumeration value of another class included.
+            ParameterKindFault::WrongKind { .. } if required_by_rule(rules, name) => continue,
+            // A single-parameter rule that judges the parameter's kind refuses any other kind
+            // itself, except an enumeration value of another class.
             ParameterKindFault::WrongKind { .. }
                 if !matches!(value, Value::Enum { .. }) && parameter_kind_is_ruled(class, name) =>
             {
@@ -69,28 +73,20 @@ pub(super) fn check_parameter_kinds(
                     integer_text(value)
                 ),
             ),
-            ParameterKindFault::UnknownMember { declared } => {
-                let reported_elsewhere = matches!(value, Value::Enum { .. })
-                    || rules.iter().any(|rule| {
-                        matches!(rule, ParamRule::EnumMembers { name: ruled, .. } if *ruled == name.as_ref())
-                    });
-                if reported_elsewhere {
-                    continue;
-                }
-                let (members, path) = enum_descriptor(declared).map_or((0, ""), |descriptor| {
-                    (descriptor.members.len(), descriptor.class_path)
-                });
-                (
-                    DiagCode::ParameterOutOfRange,
-                    format!(
-                        "parameter `{name}` on block `{class}` must name one of the {members} \
-                         members of `{path}`"
-                    ),
-                )
-            }
+            // Only an enumeration value of the parameter's own class names no member, and the
+            // enumeration-ordinal check beside this rule reports it.
+            ParameterKindFault::UnknownMember { .. } => continue,
         };
         diags.raise(|| Diagnostic::error(code, message).with_subject(block_subject_of(blk)));
     }
+}
+
+/// Whether a `Required` rule names the parameter `name`: that rule refuses a present value of
+/// another kind with the finding this rule would raise.
+fn required_by_rule(rules: &[ParamRule], name: &str) -> bool {
+    rules
+        .iter()
+        .any(|rule| matches!(rule, ParamRule::Required { name: required, .. } if *required == name))
 }
 
 /// The kind of a value as a parameter-kind finding names it.

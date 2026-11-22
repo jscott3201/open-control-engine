@@ -127,7 +127,9 @@ fn a_boolean_or_string_parameter_admits_its_own_kind_only() {
 }
 
 #[test]
-fn an_enumeration_parameter_admits_each_member_in_each_of_its_three_spellings() {
+fn an_enumeration_parameter_admits_a_member_of_its_own_enumeration_and_nothing_else() {
+    // Ruling R2 (2026-11-21): a qualified member of the enumeration, which grounds to an
+    // enumeration value of its class, and no ordinal, no string, no other enumeration's member.
     for class in [
         EnumClassId::SIMPLE_CONTROLLER,
         EnumClassId::SMOOTHNESS,
@@ -137,47 +139,36 @@ fn an_enumeration_parameter_admits_each_member_in_each_of_its_three_spellings() 
         let declared = ValueType::Enum(class);
         let descriptor = enum_descriptor(class).expect("a CDL enumeration");
         let count = descriptor.members.len();
+        let wrong = Err(ParameterKindFault::WrongKind { declared });
         for (index, member) in descriptor.members.iter().enumerate() {
             let ordinal = u32::try_from(index + 1).expect("small");
+            assert_eq!(
+                admits_parameter_value(declared, &Value::Enum { class, ordinal }),
+                Ok(()),
+                "{member}"
+            );
+            // The member's ordinal and its names, bare and qualified, are refused.
             for value in [
-                Value::Enum { class, ordinal },
                 Value::Integer(i64::from(ordinal)),
                 string(member),
                 Value::String(Arc::from(alloc::format!(
                     "Buildings.Controls.OBC.{}.{member}",
                     descriptor.class_path
                 ))),
+                Value::String(Arc::from(alloc::format!(".{member}"))),
+                Value::String(Arc::from(alloc::format!("Foo.Bar.{member}"))),
             ] {
-                assert_eq!(
-                    admits_parameter_value(declared, &value),
-                    Ok(()),
-                    "{value:?}"
-                );
+                assert_eq!(admits_parameter_value(declared, &value), wrong, "{value:?}");
             }
         }
-        let unknown = Err(ParameterKindFault::UnknownMember { declared: class });
         let past = u32::try_from(count + 1).expect("small");
-        for value in [
-            Value::Enum { class, ordinal: 0 },
-            Value::Enum {
-                class,
-                ordinal: past,
-            },
-            Value::Integer(0),
-            Value::Integer(-1),
-            Value::Integer(i64::from(past)),
-            Value::Integer(i64::MIN),
-            string(""),
-            string("Nope"),
-            string("Types.Nope"),
-        ] {
+        for ordinal in [0, past, u32::MAX] {
             assert_eq!(
-                admits_parameter_value(declared, &value),
-                unknown,
-                "{value:?}"
+                admits_parameter_value(declared, &Value::Enum { class, ordinal }),
+                Err(ParameterKindFault::UnknownMember { declared: class }),
+                "{ordinal}"
             );
         }
-        // A member of another enumeration is the wrong kind, whatever its ordinal.
         let other = if class == EnumClassId::SMOOTHNESS {
             EnumClassId::EXTRAPOLATION
         } else {
@@ -188,14 +179,13 @@ fn an_enumeration_parameter_admits_each_member_in_each_of_its_three_spellings() 
                 class: other,
                 ordinal: 1,
             },
+            Value::Integer(0),
+            Value::Integer(i64::MIN),
+            string(""),
             Value::Real(1.0),
             Value::Boolean(true),
         ] {
-            assert_eq!(
-                admits_parameter_value(declared, &value),
-                Err(ParameterKindFault::WrongKind { declared }),
-                "{value:?}"
-            );
+            assert_eq!(admits_parameter_value(declared, &value), wrong, "{value:?}");
         }
     }
 }
@@ -244,21 +234,10 @@ fn every_parameter_of_every_class_refuses_every_wrong_kind_and_admits_its_own() 
                     let fault = parameter_kind_fault(entry.class_path, &name, &value);
                     let own_kind = value.value_type() == declared
                         || (declared == ValueType::Real
-                            && value.value_type() == ValueType::Integer)
-                        || (matches!(declared, ValueType::Enum(_))
-                            && matches!(value, Value::Integer(_)));
+                            && value.value_type() == ValueType::Integer);
                     if own_kind {
                         assert_eq!(fault, None, "{} {name} {value:?}", entry.class_path);
                         admitted += 1;
-                    } else if let (ValueType::Enum(class), Value::String(_)) = (declared, &value) {
-                        // A String is an enumeration stand-in; `x` names no member.
-                        assert_eq!(
-                            fault,
-                            Some(ParameterKindFault::UnknownMember { declared: class }),
-                            "{} {name}",
-                            entry.class_path
-                        );
-                        refused += 1;
                     } else {
                         assert_eq!(
                             fault,

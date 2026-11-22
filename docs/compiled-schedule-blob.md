@@ -287,7 +287,10 @@ For **semantics** a blob is trusted: a well-formed but wrong parameter executes 
 the validator's parameter rules are not linked on a target. One check is linked: a parameter of a
 kind its catalog type does not admit is refused (`ParameterKindMismatch`, issue #734), since a
 block would otherwise run on its default rather than on anything the blob wrote. A value of the
-right kind outside a class rule's range still executes. Authenticate and authorize blobs in your
+right kind outside a class rule's range still executes. A 0.6.0 blob written before that check
+(GitHub #754) and carrying such a value, for example an ordinal on `zerTim` or `smoothness`, which
+the readers then decoded, is refused rather than read with another meaning; no version bump is
+owed, since no release has been tagged since 0.6.0. Authenticate and authorize blobs in your
 host's envelope before decoding them, as you would snapshot bytes.
 
 For **memory safety** a blob is hostile: `decode` never panics, refuses malformed bytes with a
@@ -343,9 +346,10 @@ tags, canonical list order, no trailing bytes);
 each class (registered, same hash), then each instance in turn (class index, unique parameter
 names, finite Reals, known enum classes and in-range ordinals, each parameter a value its class's
 catalog type admits (`ParameterKindMismatch`: a Real on an Integer parameter, an Integer past
-2^53 on a Real one, an enumeration value of another class, a stand-in naming no member; the load
-gate's own predicate, `oce_blocks::admits_parameter_value`, so a block is never built on the
-default its reader falls back to, issue #734), the constructed budget
+2^53 on a Real one, and on an enumeration parameter anything but an enumeration value of its own
+class: an ordinal, a string, another enumeration's member; the load gate's own predicate,
+`oce_blocks::admits_parameter_value`, so a block is never built on the default its reader falls
+back to, issue #734 and the owner's ruling R2), the constructed budget
 (`MAX_CONSTRUCTED_WORDS`, charged the moment the block is constructed), the constructed block's
 kind, state length and arity, connectors in range and not already claimed), then every class
 used and every connector claimed; boundary inputs (not Enum-typed, typed targets used once,

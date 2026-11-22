@@ -202,6 +202,49 @@ fn a_parameter_of_a_kind_its_class_does_not_admit_is_refused_by_the_decoder() {
     }
 }
 
+/// One `CalendarTime` whose `zerTim` is written `value`, its six outputs claimed in order.
+fn calendar(value: Val) -> Image {
+    let mut image = Image::new();
+    image.classes = vec![class("CDL.Reals.Sources.CalendarTime")];
+    image.connectors = 6;
+    let zero_time = Value::Enum {
+        class: oce_api::EnumClassId::ZERO_TIME,
+        ordinal: 11,
+    };
+    image.instances = vec![inst(
+        0,
+        "CDL.Reals.Sources.CalendarTime",
+        &[("zerTim", zero_time)],
+        &[],
+        &[0, 1, 2, 3, 4, 5],
+    )];
+    image.instances[0].params[0].1 = value;
+    image.schedule = vec![0];
+    image
+}
+
+#[test]
+fn an_enumeration_parameter_in_a_blob_is_a_qualified_member_or_refused() {
+    // Ruling R2 (issue #734): a 0.6.0 blob written before it could carry an ordinal or a string
+    // on an enumeration parameter, which the reader decoded; this build refuses it rather than
+    // read it with another meaning.
+    decode(&calendar(Val::Enum(b"CDL.Types.ZeroTime".to_vec(), 11)).to_bytes()).unwrap();
+    for value in [
+        Val::Integer(11),
+        Val::Str(b"NY2017".to_vec()),
+        Val::Str(b"Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017".to_vec()),
+        Val::Enum(b"CDL.Types.Smoothness".to_vec(), 2),
+    ] {
+        assert_eq!(
+            refusal(&calendar(value)),
+            BlobError::ParameterKindMismatch {
+                block: 0,
+                parameter: 0
+            }
+        );
+    }
+}
+
 #[test]
 fn connector_ids_must_cover_the_arena_exactly_once() {
     let mut duplicated = chain();

@@ -56,18 +56,13 @@ impl TimeTableSmoothness {
             Value::Enum {
                 class: EnumClassId::SMOOTHNESS,
                 ordinal: 1,
-            }
-            | Value::Integer(1) => Some(Self::LinearSegments),
+            } => Some(Self::LinearSegments),
             Value::Enum {
                 class: EnumClassId::SMOOTHNESS,
                 ordinal: 2,
-            }
-            | Value::Integer(2) => Some(Self::ConstantSegments),
-            Value::String(s) => match s.rsplit('.').next().unwrap_or(s) {
-                "LinearSegments" => Some(Self::LinearSegments),
-                "ConstantSegments" => Some(Self::ConstantSegments),
-                _ => None,
-            },
+            } => Some(Self::ConstantSegments),
+            // No ordinal or string stand-in: the load gate and the blob decoder refuse them
+            // (the owner's ruling R2 on issue #734).
             _ => None,
         }
     }
@@ -101,24 +96,17 @@ impl TimeTableExtrapolation {
             Value::Enum {
                 class: EnumClassId::EXTRAPOLATION,
                 ordinal: 1,
-            }
-            | Value::Integer(1) => Some(Self::HoldLastPoint),
+            } => Some(Self::HoldLastPoint),
             Value::Enum {
                 class: EnumClassId::EXTRAPOLATION,
                 ordinal: 2,
-            }
-            | Value::Integer(2) => Some(Self::LastTwoPoints),
+            } => Some(Self::LastTwoPoints),
             Value::Enum {
                 class: EnumClassId::EXTRAPOLATION,
                 ordinal: 3,
-            }
-            | Value::Integer(3) => Some(Self::Periodic),
-            Value::String(s) => match s.rsplit('.').next().unwrap_or(s) {
-                "HoldLastPoint" => Some(Self::HoldLastPoint),
-                "LastTwoPoints" => Some(Self::LastTwoPoints),
-                "Periodic" => Some(Self::Periodic),
-                _ => None,
-            },
+            } => Some(Self::Periodic),
+            // No ordinal or string stand-in: the load gate and the blob decoder refuse them
+            // (the owner's ruling R2 on issue #734).
             _ => None,
         }
     }

@@ -95,7 +95,7 @@ const CALENDAR_OUTPUTS: &[Port] = &[
 const CALENDAR_PARAMS: &[Param] = &[
     Param {
         name: "zerTim",
-        value: ParamValue::Integer("11"),
+        value: ParamValue::Member("Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017"),
     },
     Param {
         name: "yearRef",
@@ -109,7 +109,7 @@ const CALENDAR_PARAMS: &[Param] = &[
 const CALENDAR_ANOMALY_PARAMS: &[Param] = &[
     Param {
         name: "zerTim",
-        value: ParamValue::Integer("18"),
+        value: ParamValue::Member("Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2024"),
     },
     Param {
         name: "yearRef",

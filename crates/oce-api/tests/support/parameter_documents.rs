@@ -1,5 +1,5 @@
 //! One-block CXF documents built in the test, for the parameter-kind tests (issues #734, #735):
-//! a root `S` holding one block `blk`, optionally driven by one root input `u`, its output wired
+//! a root `S` holding one block `blk`, driven by root inputs of the block's input names, its output wired
 //! to the root output `out`, with block and root parameters each written as the case states.
 
 use oce_api::{Engine, OcError, Value};
@@ -56,12 +56,12 @@ pub(crate) fn typed(lexical: &str, datatype: &str) -> String {
     format!(r#"{{ "@value": "{lexical}", "@type": "{XSD}{datatype}" }}"#)
 }
 
-/// The shape of one document: the block's class, its output type and, if it has one input, the
-/// input's type.
+/// The shape of one document: the block's class, its output type, and its inputs by name and
+/// type, each driven by a root input of the same name.
 pub(crate) struct Shape<'a> {
     pub(crate) class: &'a str,
     pub(crate) output: &'a str,
-    pub(crate) input: Option<&'a str>,
+    pub(crate) inputs: &'a [(&'a str, &'a str)],
 }
 
 /// A source block of `class` with output type `output` and no input.
@@ -69,7 +69,7 @@ pub(crate) fn source<'a>(class: &'a str, output: &'a str) -> Shape<'a> {
     Shape {
         class,
         output,
-        input: None,
+        inputs: &[],
     }
 }
 
@@ -94,20 +94,35 @@ pub(crate) fn document(shape: &Shape<'_>, params: &[Param], root: &[Param]) -> S
             .collect::<String>()
     };
     let output = shape.output;
-    let (root_input, block_input, input_nodes) = match shape.input {
-        None => (String::new(), String::new(), String::new()),
-        Some(input) => (
-            format!(r#", "S231:hasInput": {{ "@id": "{NS}S.u" }}"#),
-            format!(r#", "S231:hasInput": {{ "@id": "{NS}S.blk.u" }}"#),
-            format!(
-                "    {{ \"@id\": \"{NS}S.u\", \"@type\": \"S231:{input}Input\", \
-                 \"S231:isOfDataType\": {{ \"@id\": \"S231:{input}\" }}, \
-                 \"S231:isConnectedTo\": {{ \"@id\": \"{NS}S.blk.u\" }} }},\n    \
-                 {{ \"@id\": \"{NS}S.blk.u\", \"@type\": \"S231:{input}Input\", \
-                 \"S231:isOfDataType\": {{ \"@id\": \"S231:{input}\" }} }},\n"
-            ),
-        ),
+    let list = |owner: &str| {
+        shape
+            .inputs
+            .iter()
+            .map(|(name, _)| format!(r#"{{ "@id": "{NS}{owner}.{name}" }}"#))
+            .collect::<Vec<_>>()
+            .join(", ")
     };
+    let (root_input, block_input) = if shape.inputs.is_empty() {
+        (String::new(), String::new())
+    } else {
+        (
+            format!(r#", "S231:hasInput": [ {} ]"#, list("S")),
+            format!(r#", "S231:hasInput": [ {} ]"#, list("S.blk")),
+        )
+    };
+    let input_nodes: String = shape
+        .inputs
+        .iter()
+        .map(|(name, input)| {
+            format!(
+                "    {{ \"@id\": \"{NS}S.{name}\", \"@type\": \"S231:{input}Input\", \
+                 \"S231:isOfDataType\": {{ \"@id\": \"S231:{input}\" }}, \
+                 \"S231:isConnectedTo\": {{ \"@id\": \"{NS}S.blk.{name}\" }} }},\n    \
+                 {{ \"@id\": \"{NS}S.blk.{name}\", \"@type\": \"S231:{input}Input\", \
+                 \"S231:isOfDataType\": {{ \"@id\": \"S231:{input}\" }} }},\n"
+            )
+        })
+        .collect();
     format!(
         r#"{{
   "@context": {{ "S231": "http://data.ashrae.org/S231#" }},
@@ -196,17 +211,32 @@ impl PartialEq for Values {
     }
 }
 
-/// The root output after one frame at each time of `times`, driving the input `u` (if any) with
-/// `input`.
+/// The root output after one frame at each time of `times`, driving the root input `u` (a shape
+/// whose one input is named `u`) with `input`, if given.
 pub(crate) fn outputs(engine: &mut Engine, times: &[f64], input: Option<Value>) -> Values {
+    let inputs: Vec<(&str, Value)> = input.into_iter().map(|value| ("u", value)).collect();
+    outputs_driven(engine, times, &inputs)
+}
+
+/// The root output after one frame at each time of `times`, driving each named root input with
+/// its value.
+pub(crate) fn outputs_driven(
+    engine: &mut Engine,
+    times: &[f64],
+    inputs: &[(&str, Value)],
+) -> Values {
+    let inputs: Vec<(String, Value)> = inputs
+        .iter()
+        .map(|(name, value)| (format!("{NS}S.{name}"), value.clone()))
+        .collect();
+    let inputs: Vec<(&str, Value)> = inputs
+        .iter()
+        .map(|(path, value)| (path.as_str(), value.clone()))
+        .collect();
     Values(
         times
             .iter()
             .map(|&time| {
-                let inputs: Vec<(&str, Value)> = input
-                    .iter()
-                    .map(|value| ("http://example.org#S.u", value.clone()))
-                    .collect();
                 let frame = engine
                     .prepare_frame(time, &inputs)
                     .expect("the frame prepares");

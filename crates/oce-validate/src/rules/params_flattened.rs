@@ -550,16 +550,16 @@ fn validate_periodic_step_table(
     }
 }
 
+/// Whether `value` is `Extrapolation.Periodic`. Only an enumeration value of that class is a
+/// member: an ordinal or string stand-in is refused by the kind rule (R2, issue #734).
 fn extrapolation_is_periodic(value: &Value) -> bool {
-    match value {
-        Value::Enum { ordinal: 3, .. } => true,
-        Value::Integer(3) => true,
-        Value::String(s) => s
-            .rsplit('.')
-            .next()
-            .is_some_and(|member| member == "Periodic"),
-        _ => false,
-    }
+    matches!(
+        value,
+        Value::Enum {
+            class: oce_model::EnumClassId::EXTRAPOLATION,
+            ordinal: 3,
+        }
+    )
 }
 
 pub(super) fn boolean_value(value: &Value) -> Option<bool> {

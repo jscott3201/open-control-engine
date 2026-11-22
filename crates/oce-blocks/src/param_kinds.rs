@@ -15,13 +15,16 @@
 //!   every reader widens exactly (CDL's Integer-to-Real widening). A larger Integer is not exact
 //!   as a binary64 in general and is [`ParameterKindFault::InexactInteger`].
 //! - **Integer**: an Integer. A Real is never narrowed, `2.0` included: CDL does not convert a
-//!   Real to an Integer implicitly (`parameter Integer n = 2.0` is a type error in Modelica).
+//!   Real to an Integer implicitly (`parameter Integer n = 2.0` is a type error in Modelica; the
+//!   owner's ruling R1 of 2026-11-21).
 //! - **Boolean**, **String**: a value of that kind.
-//! - **an enumeration**: a member of that enumeration, as an enumeration value of the same class,
-//!   or as one of the two established stand-ins the readers decode the same way: the member's
-//!   one-based ordinal as an Integer, or a String whose last dotted segment is the member's name.
-//!   An enumeration value of another class is [`ParameterKindFault::WrongKind`]; a stand-in or an
-//!   ordinal naming no member is [`ParameterKindFault::UnknownMember`].
+//! - **an enumeration**: a qualified member of that enumeration, which the resolver grounds to an
+//!   enumeration value of the same class, and nothing else (the owner's ruling R2 of 2026-11-21).
+//!   An enumeration value of another class, an Integer (an ordinal, a G36 integer constant such
+//!   as `OperationModes.occupied`, an Integer expression) and a String (bare or qualified; no
+//!   tracked document, vendored translation or library rule carries an enumeration as a string)
+//!   are [`ParameterKindFault::WrongKind`]; an enumeration value of the class whose ordinal names
+//!   no member (a hand-built model or blob) is [`ParameterKindFault::UnknownMember`].
 //!
 //! A parameter the catalog does not type (an unregistered class, a name the class does not
 //! declare) is outside this rule: [`parameter_kind_fault`] returns `None` for it.
@@ -57,8 +60,7 @@ pub enum ParameterKindFault {
     /// An Integer above 2^53 in magnitude on a Real parameter: no binary64 holds it exactly in
     /// general, so it is refused rather than rounded.
     InexactInteger,
-    /// An enumeration value, ordinal stand-in or String stand-in on an enumeration parameter that
-    /// names no member of the enumeration.
+    /// An enumeration value of the parameter's own enumeration whose ordinal names no member.
     UnknownMember {
         /// The enumeration the catalog gives the parameter.
         declared: EnumClassId,
@@ -83,9 +85,17 @@ pub fn admits_parameter_value(
         (ValueType::Real, Value::Integer(integer)) => exact_real(*integer)
             .map(|_| ())
             .ok_or(ParameterKindFault::InexactInteger),
-        (ValueType::Enum(class), Value::Enum { class: actual, .. }) if *actual != class => wrong,
-        (ValueType::Enum(class), Value::Enum { .. } | Value::Integer(_) | Value::String(_)) => {
-            if enum_member_of(class, value) {
+        // An enumeration parameter takes a qualified member of its own enumeration, which the
+        // resolver grounds to an enumeration value of that class, and nothing else: no ordinal,
+        // no string (the owner's ruling R2 of 2026-11-21 on issue #734).
+        (
+            ValueType::Enum(class),
+            Value::Enum {
+                class: actual,
+                ordinal,
+            },
+        ) if *actual == class => {
+            if enum_ordinal_names_member(class, *ordinal) {
                 Ok(())
             } else {
                 Err(ParameterKindFault::UnknownMember { declared: class })
@@ -111,15 +121,17 @@ pub fn parameter_kind_fault(
 
 /// Whether a parameter rule of the registered class `class_path` judges the kind of the bound
 /// parameter `name` (a scalar's name or a flattened array element) whenever it is present: a
-/// `Required` kind, a single-parameter bound (`Real…`, `Integer…`, `Boolean`), an `EnumMembers`
-/// list, or the elements of an array or table rule. Such a rule refuses a value of another kind
-/// itself, so the load gate's table-driven kind rule adds to it only what it does not check: an
-/// enumeration value of another class and an Integer past 2^53 on a Real parameter.
+/// `Required` kind, a single-parameter bound (`Real…`, `Integer…`, `Boolean`), or the elements of
+/// an array or table rule. Such a rule refuses a value of another kind itself, so the load gate's
+/// table-driven kind rule adds to it only what it does not check: an Integer past 2^53 on a Real
+/// parameter, and, beside a `Required` enumeration kind, nothing.
 ///
-/// A rule over two parameters (`RealLessOrEqual`, `IntegerProductLessOrEqualConstant`, …) and a
-/// rule's length, count, shape or option parameters do not count: they read their operands only
-/// when every one is present and of its kind, so a lone wrong value passed them (issue #734).
-/// `false` for an unregistered class or an undeclared name. Total; never panics.
+/// An `EnumMembers` list does not count: it judges which member an enumeration value names, and
+/// leaves every other kind to the kind rule. Nor does a rule over two parameters
+/// (`RealLessOrEqual`, `IntegerProductLessOrEqualConstant`, …) or a rule's length, count, shape or
+/// option parameters: they read their operands only when every one is present and of its kind, so
+/// a lone wrong value passed them (issue #734). `false` for an unregistered class or an undeclared
+/// name. Total; never panics.
 #[must_use]
 pub fn parameter_kind_is_ruled(class_path: &str, name: &str) -> bool {
     let Some(entry) = crate::registry::lookup(class_path) else {
@@ -135,8 +147,7 @@ pub fn parameter_kind_is_ruled(class_path: &str, name: &str) -> bool {
         | ParamRule::RealGreaterOrEqual { name: ruled, .. }
         | ParamRule::RealLessOrEqualConstant { name: ruled, .. }
         | ParamRule::IntegerGreaterOrEqual { name: ruled, .. }
-        | ParamRule::IntegerLessOrEqualConstant { name: ruled, .. }
-        | ParamRule::EnumMembers { name: ruled, .. } => ruled == name,
+        | ParamRule::IntegerLessOrEqualConstant { name: ruled, .. } => ruled == name,
         ParamRule::IntegerArrayElements { base, .. }
         | ParamRule::IntegerArrayElementsInRange { base, .. }
         | ParamRule::RealArrayElements { base, .. }
@@ -147,6 +158,7 @@ pub fn parameter_kind_is_ruled(class_path: &str, name: &str) -> bool {
             ParamNameTemplate::Matrix { base }.names(name)
         }
         ParamRule::Structural { .. }
+        | ParamRule::EnumMembers { .. }
         | ParamRule::StructuralArrayElements { .. }
         | ParamRule::RealTimesIntegerInclusiveRange { .. }
         | ParamRule::IntegerProductLessOrEqualConstant { .. }
@@ -157,25 +169,12 @@ pub fn parameter_kind_is_ruled(class_path: &str, name: &str) -> bool {
     })
 }
 
-/// Whether `value` (an enumeration value of `class`, an ordinal or a String) names a member of
-/// the enumeration `class`, the way the block readers decode it.
-fn enum_member_of(class: EnumClassId, value: &Value) -> bool {
-    let Some(descriptor) = enum_descriptor(class) else {
-        return false;
-    };
-    let ordinal_names_member = |ordinal: i64| {
+/// Whether `ordinal` is the one-based ordinal of a member of the enumeration `class`.
+fn enum_ordinal_names_member(class: EnumClassId, ordinal: u32) -> bool {
+    enum_descriptor(class).is_some_and(|descriptor| {
         usize::try_from(ordinal)
             .is_ok_and(|ordinal| (1..=descriptor.members.len()).contains(&ordinal))
-    };
-    match value {
-        Value::Enum { ordinal, .. } => ordinal_names_member(i64::from(*ordinal)),
-        Value::Integer(ordinal) => ordinal_names_member(*ordinal),
-        Value::String(text) => {
-            let member = text.rsplit('.').next().unwrap_or(text);
-            descriptor.members.contains(&member)
-        }
-        _ => false,
-    }
+    })
 }
 
 #[cfg(test)]
