@@ -375,8 +375,10 @@ vendored**: upstream's modelica-json translation does not load (issue #760), so 
 ruling the example runs from a transcription of the vendored `.mo`, written in the oce text form
 and emitted with `oce emit`. **The verdict is about that transcription, not about upstream's
 translation.** The trends are the six vendored files, read in place. The spec is the design
-note's worked spec unchanged: the window 0 to 86,400 s from 2018-06-07 00:00 PDT, compared every
-5 s, the funnel built around the engine series, `atolx` 1 s and `rtoly` 0.01, no parameter edit.
+note's worked spec unchanged: the window 0 to 86,400 s from 2018-06-07 00:00 PDT, the funnel
+built around the engine series, no parameter edit. Of its tolerances, `atolx` 1 s and `rtoly`
+0.01 are §12.6's (Fig. 12.12's caption: 1 s in time, 1 % in y); `atoly` 0, `rtolx` 0 and the 5 s
+comparison grid are the design note's choices, 5 s being the trend interval.
 
 | Output | Status | Compared | Masked | Uncovered | Worst exceedance | First exceedance | Time outside the band |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -384,7 +386,11 @@ note's worked spec unchanged: the window 0 to 86,400 s from 2018-06-07 00:00 PDT
 
 The band is 1 s wide and 0.01 high everywhere (`half_width` 1.0, `half_height` 0.01): 1 % of the
 engine series' range, which spans 0 to 1 on this day. Outside 61,770 to 67,755 s, about 17:09 to
-18:49 local time, the trended valve is inside the band at every instant.
+18:49 local time, the trended valve is inside the band at every instant. The receipt's `frames`
+block (`executed` 2, `substituted` 75,566, `refused` 15) counts the whole replay, every frame the
+trend files hold to 493,800 s, not the compared day; the 15 refused frames lie at 485,400 to
+493,800 s, after the supply-air trend ends. Its `model` field names upstream's example model, as
+the spec writes it; only its `content_id` identifies the transcription that ran.
 
 **What the figures rest on.** Four checks, each from outside the authored file
 ([fixture README](../crates/leverage/oce-verify/tests/fixtures/commissioning/building33/README.md)):
@@ -392,12 +398,17 @@ engine series' range, which spans 0 to 1 on this day. Outside 61,770 to 67,755 s
 - *Structure*: every parameter value, connector (type, unit, quantity, display unit, bounds),
   block class, modifier and the 21 connections of the emitted CXF and the loaded engine equal
   what a script read from the `.mo` with its own parser.
-- *Behaviour*: over 64 synthetic frames that take every branch (PI active, the supply-air high
-  limit, the outdoor-air and fan-feedback hysteresis, the fan status, each reset), the engine's
-  valve signal equals a derivation written from the `.mo` and the vendored CDL block sources, bit
-  for bit. Ten mutants of the transcription (a swapped connection, a wrong gain, a dropped limit,
-  reverse acting, …) are each caught by it; the day's receipt alone catches four, because on this
-  day the high limit never cuts the signal and the enable is on throughout.
+- *Behaviour*: over 74 synthetic frames that take every branch the valve signal can show (PI
+  active, its upper saturation under the supply-air high limit and its lower saturation with the
+  anti-windup acting, the line clamped below, the outdoor-air and fan-feedback hysteresis, the
+  fan status, each reset), the engine's valve signal equals a derivation written from the `.mo`
+  and the vendored CDL block sources, bit for bit, under the engine's discrete-time convention.
+  One modifier cannot show in the valve signal for any input, the line's upper clamp
+  (`limitAbove`), because the PI's output never exceeds `yMax = 1`, the line's `f2`; only the
+  structural check sees it. Eleven mutants of the transcription (a swapped connection, a wrong
+  gain, a dropped limit, a lower PI limit below zero, reverse acting, …) are each caught by the
+  derivation; the day's receipt alone catches five, because on this day the high limit never
+  cuts the signal and the enable is on throughout.
 - *The continuous model*: OpenModelica 1.25.1, in the digest-pinned container the other
   OpenModelica cases use, simulated upstream's own `ControlsVerification_CoolingCoilValve`,
   unmodified at the pin, over the same day (cvode, tolerance 1e-6, trends interpolated linearly).
@@ -409,29 +420,35 @@ engine series' range, which spans 0 to 1 on this day. Outside 61,770 to 67,755 s
   the pinned `pyfunnel==2.1.1` printed them for the same two series on x86_64 Linux, the
   Building 33 day of the funnel differential (decision 13).
 
-**OBC reports the same afternoon.** OBC §12.6 says only that the computed and the trended signals
+**What OBC shows for the same example.** OBC §12.6's text says only that the computed and the trended signals
 "show good agreement, which is also demonstrated by verifying the time series with the funnel
-software", under the same tolerances. Its funnel figure (Fig. 12.12, `funnel_valve_control.svg`,
-read 2026-11-22) plots the error over about 0 to 315,700 s: it is zero everywhere except about
+software", under the same tolerances. Its Fig. 12.12, as we read the published SVG
+(`funnel_valve_control.svg`, read 2026-11-22), plots the error over about 0 to 315,700 s: it is
+zero everywhere except about
 62,000 to 68,000 s on the first day, where it reaches about 0.02 (read from the plotted path; the
 axis tops out at 0.02). Our verdict differs from OBC's prose, not from OBC's figure. Run over
 OBC's whole window, 0 to 315,710 s (upstream's `StopTime`), the same spec gives the same worst
 instant and 4,120 s outside the band, 35 s more than the first day alone. And OpenModelica's run of
 upstream's own model, put through the same funnel against the same trend, leaves the band from
-the same first instant, 61,770 s, to 67,755 s (834 instants, worst 0.0234 at 67,335 s). So the
-`fail` is the recorded controller's departure from the CDL sequence that afternoon, which §12.6
-attributes to the ALC controller's discrete time step and its proprietary anti-windup, and not a
-defect the transcription introduced. The tolerances were taken from §12.6 and not tuned; with the
-trend as the funnel's reference instead, the day fails too (worst 0.0210 at 65,965 s).
+the same first instant, 61,770 s, to 67,755 s (834 instants, worst 0.0234 at 67,335 s). We
+attribute the `fail` to the recorded controller's departure from the CDL sequence that afternoon,
+which §12.6 puts down to the ALC controller's discrete time step and its proprietary anti-windup,
+and not to the transcription. The basis: the transcription is at most 0.0034 from OpenModelica's
+run of upstream's model, which cannot account for an excess of 0.02 beyond a band 0.01 high, and
+that OpenModelica run fails over the same stretch. No tolerance was tuned; with the trend as the
+funnel's reference instead, the day fails too (worst 0.0210 at 65,965 s).
 
 **What an honest reader may conclude:**
 
 - the transcribed `CoolingCoilValve`, run by this engine, reproduces upstream's model as
-  OpenModelica runs it within 0.0034 over this day, and takes every branch as the `.mo` and the
-  CDL sources say;
+  OpenModelica runs it within 0.0034 over this day, and takes every branch its valve signal can
+  show as the `.mo` and the CDL sources say, under the engine's discrete-time convention: a reset
+  shows at the next frame (in the derivation's frames at 25 s and 237 s the valve is 0.09 and
+  0.045 for one frame, where the continuous model gives 0 at the event); the OpenModelica run is
+  the comparison with the continuous model;
 - under OBC §12.6's own tolerances, LBNL Building 33's recorded valve signal on 2018-06-07 leaves
   the funnel for about 68 minutes of the late afternoon, by at most 0.021, and is inside it the
-  rest of the day, which is what OBC's own figure shows.
+  rest of the day, which is what OBC's Fig. 12.12 shows as we read the published SVG.
 
 **What they may not conclude:**
 
@@ -460,7 +477,9 @@ and a 36 MB peak for one run of the library in a debug build, about 0.7 s and 36
 `oce` binary, and 0.1 s and 33 MB for a release `oce`, which prints the same receipt bytes. The
 replay runs every frame the trend files hold, 75,583 frames to 493,800 s, and compares only the
 window's instants; over OBC's whole window, 0 to 315,710 s, the debug binary takes 1.2 s and
-44 MB. Each test that runs the day takes under 3 s. No CI job runs Python, Docker, pyfunnel or
+44 MB. In a parallel run of both crates' suites (debug), a test that runs the day once takes
+0.7 to 1.2 s, and the longest, five mutants of a day each, about 6 s, against the `ci` profile's
+60 s slow-test mark. No CI job runs Python, Docker, pyfunnel or
 OpenModelica: the derivations, the capture and the OpenModelica run are scripts checked in beside
 their outputs, and the tests read the outputs.
 

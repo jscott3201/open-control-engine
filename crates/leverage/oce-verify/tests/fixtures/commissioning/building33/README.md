@@ -20,12 +20,12 @@ under the spec's `data/` paths, and the CLI test copies them into a scratch dire
 | --- | --- | --- |
 | `cooling_coil_valve.oce` | The transcription, in canonical `oce fmt` form; a comment above each statement names the `.mo` line it comes from. | by hand |
 | `cooling_coil_valve.cxf.json` | Its CXF. `oce-cli`'s `building_33_commission.rs` holds it to `oce emit`'s output byte for byte. | `oce emit cooling_coil_valve.oce -o cooling_coil_valve.cxf.json` |
-| `spec.json` | The commissioning note's worked spec, with `cxf` naming the file above. Every other value is the note's: one day (0 to 86,400 s) at 5 s, `atolx` 1 s, `rtoly` 0.01, `funnel` with the engine series as the reference, holds of 10 s and, for the daily fan-enable log, 90,000 s, the indicator `cooValSta.uFanSta`, `parameters: {}`. | by hand |
+| `spec.json` | The commissioning note's worked spec, with `cxf` naming the file above. Every other value is the note's: one day (0 to 86,400 s) at 5 s, `atolx` 1 s and `rtoly` 0.01 (§12.6, Fig. 12.12's caption: 1 s in time, 1 % in y), `atoly` 0 and `rtolx` 0 (the design note's), the 5 s sampling (the design note's: the trend interval), `funnel` with the engine series as the reference, holds of 10 s and, for the daily fan-enable log, 90,000 s, the indicator `cooValSta.uFanSta`, `parameters: {}`. | by hand |
 | `b33-points.json` | The point mapping: `degF` to `K` for the three temperatures, `percent` to `1` for the valve, a `float` read as a `bool` for the fan enable, and **no unit on either side for the fan feedback** (below). | by hand |
 | `receipts/day.receipt.json` | The day's receipt. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
 | `declarations.txt` | What `CoolingCoilValve.mo` declares: parameters with their bindings evaluated, connectors, blocks with their modifiers, connections; headed by the `.mo`'s digest. | `python3 -I derive_declarations.py <the .mo> > declarations.txt`, by hand; never blessed |
 | `derive_declarations.py` | Reads the `.mo` with its own parser and a closed expression evaluator; never reads the `.oce`. | nobody: it is the reference |
-| `valve_oracle.txt` | The valve signal over 64 synthetic frames that take every branch (below), with the frames' inputs. | `python3 -I derive_valve.py > valve_oracle.txt`, by hand; never blessed |
+| `valve_oracle.txt` | The valve signal over 74 synthetic frames, with their inputs: every branch the valve signal can show (below; the line's upper clamp cannot show). | `python3 -I derive_valve.py > valve_oracle.txt`, by hand; never blessed |
 | `derive_valve.py` | The sequence written out from the `.mo` and the vendored CDL block sources, under the engine's documented discrete time. | nobody: it is the reference |
 | `openmodelica/run_openmodelica.sh`, `simulate.mos`, `extract_day.py` | Simulate upstream's own `ControlsVerification_CoolingCoilValve`, unmodified, in the pinned OpenModelica 1.25.1 container, offline, and take its `yCooVal` at the day's 5 s instants. | by hand |
 | `openmodelica/yCooVal_day.csv`, `provenance.json` | That signal (17,281 rows, as OpenModelica printed it) and the record of the run (image digest, `omc` version, architecture, the two library commits and trees). | `sh openmodelica/run_openmodelica.sh <buildings checkout> <msl checkout>`, by hand |
@@ -45,14 +45,21 @@ Four checks, each from outside the authored file:
    engine grounds it and as a reference where the `.mo` names a parameter; and the 21 `connect`
    statements as unordered pairs, no more and no fewer. `declarations.txt` carries the digest of
    the `.mo` it was read from, and a test checks it against the vendored bytes.
-2. **Behaviour on every branch** (same file): the engine's valve signal equals
-   `derive_valve.py`'s bit for bit at all 64 frames. The frames take, in turn: off before the
-   outdoor air first passes the cut-off; the PI controller active, at 5 s, 2 s and 13 s steps and
-   with a negative error; the outdoor-air hysteresis holding below the cut-off; the supply-air
-   high limit cutting the PI's signal, and the line clamped at its lower end; the fan feedback
-   hysteresis holding, then disabling below `uLow` and staying off below `uHigh`; the fan status
-   disabling; the outdoor air below upstream's `uLow`; and each re-enable resetting the
-   integrator.
+2. **Behaviour on every branch the valve signal can show** (same file): the engine's valve
+   signal equals `derive_valve.py`'s bit for bit at all 74 frames, 17 labelled stretches. The
+   frames take, in turn: off before the outdoor air first passes the cut-off; the PI controller
+   active, at 5 s, 2 s and 13 s steps and with a negative error; the outdoor-air hysteresis
+   holding below the cut-off; the supply-air high limit cutting the PI's signal (the PI saturated
+   at `yMax` beneath it), and the line clamped at its lower end; the fan feedback hysteresis
+   holding, then disabling below `uLow` and staying off below `uHigh`; the fan status disabling;
+   the outdoor air below upstream's `uLow`; each re-enable resetting the integrator; and the PI
+   driven below `yMin`, its lower saturation with the anti-windup acting, and its recovery. One
+   modifier no input can show: the line's upper clamp (`higLim.limitAbove`) acts only above the
+   line's upper support point, where the line would pass `f2 = 1`, and the valve is the minimum
+   of the line and a PI signal that never exceeds `yMax = 1`. Only check 1 sees it, and a test
+   says so. The derivation is in the engine's discrete time: a reset shows at the next frame
+   (at 25 s and 237 s the valve is 0.09 and 0.045 for one frame, where the continuous model gives
+   0 at the event); check 3 is the comparison with the continuous model.
 3. **Upstream's model in OpenModelica** (`building_33_openmodelica.rs`): over the day, the
    engine's signal stays within **0.0034** of OpenModelica's at every 5 s instant (largest at
    67,375 s, the valve near 0.71; mean absolute difference under 1.5e-4). OpenModelica's run is
@@ -60,13 +67,16 @@ Four checks, each from outside the authored file:
    and upstream's own `CoolingCoilValve`, under cvode at tolerance 1e-6; the engine runs the
    transcription at the trends' frames with each sample held. The two differ by those choices,
    well inside the funnel's 0.01.
-4. **Mutants** (`oce-cli`'s `building_33_mutants.rs`): ten plausible mistakes in the authored
-   text, each emitted and held to checks 2 and the day's receipt. Check 2 catches all ten. The
-   day catches four (the setpoint and measurement swapped, the gain without its 9/5, the
-   integral time a tenth, reverse acting); it cannot see the other six, because on this day the
-   high limit never cuts the signal (the supply air is below 50 degF at 56 instants, where the
-   limit is about 0.99 and the valve at most 0.91) and the enable is on throughout. No mutant
-   survives both. The structural check 1 catches every one by construction.
+4. **Mutants** (`oce-cli`'s `building_33_mutants.rs`): eleven plausible mistakes in the
+   authored text, each emitted and held to check 2 and the day's receipt. Check 2 catches all
+   eleven. The day catches five (the setpoint and measurement swapped, the gain without its 9/5,
+   the integral time a tenth, reverse acting, the PI's `yMin` at -0.5); it cannot see the other
+   six, because on this day the high limit never cuts the signal (the supply air is below 50 degF
+   at 56 instants, 71,875 to 73,975 s, where the limit ranges from 0.85 at 48.8 degF to 0.99 and
+   stays above the valve by at least 0.068, at 71,905 s) and the enable is on throughout. No
+   mutant survives both. A twelfth, the line's upper clamp turned off, survives both by
+   construction (above) and is caught only by check 1, which catches every mutant since each
+   changes the document.
 
 ## The transcription, line by line
 
@@ -115,6 +125,15 @@ Modelica. The spec edits no parameter (`parameters: {}`).
 | 224–290 | `annotation(defaultComponentName, Icon, Diagram, Documentation)` | — | Graphics and documentation only. |
 
 The `.mo` has no conditional component and no `if` equation; nothing was dropped for that reason.
+
+## What the receipt says, and does not
+
+- **`frames` counts the whole replay**, not the compared day: `executed` 2, `substituted` 75,566
+  and `refused` 15 are over every frame the trend files hold, to 493,800 s. The 15 refused frames
+  lie at 485,400 to 493,800 s, after the supply-air trend ends, long after the compared day.
+- **`model` names upstream's example model** (`…ControlsVerification_CoolingCoilValve`), as the
+  spec writes it, a label only; the receipt's `content_id` is the one field that identifies the
+  transcription that ran.
 
 ## The rulings this example carries
 

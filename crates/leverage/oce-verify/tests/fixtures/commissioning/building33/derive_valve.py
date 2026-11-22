@@ -33,8 +33,12 @@ takes it), chosen so that the valve signal goes through every branch the README 
 before the outdoor air first passes the cut-off, the PI controller active, the hysteresis
 holding below the cut-off, the supply-air high limit cutting the signal (and the line clamped
 at its lower end), the fan feedback hysteresis holding and then disabling, the fan status
-disabling, the outdoor air below upstream's `uLow`, and each re-enable resetting the
-integrator. Irregular frame steps exercise the time step.
+disabling, the outdoor air below upstream's `uLow`, each re-enable resetting the integrator,
+and the PI driven below `yMin` (its lower saturation, with the anti-windup acting) and back.
+Irregular frame steps exercise the time step. The PI's upper saturation at `yMax` is reached
+under the high limit, where the line cuts it; the line's own upper clamp (`limitAbove`) can never
+show in the valve signal, because the PI's output never exceeds `yMax = 1 = f2`, so only the
+structural check sees that modifier.
 
 Each output row is the frame's time, its five inputs, the valve signal as 16 hex digits of
 bits and as `repr`, and the branch label. The test compares the engine with it bit for bit.
@@ -102,6 +106,8 @@ def scenario():
     add(4, 5.0, 288.0, 285.0, 290.0, 0.2, True, "pi: re-enabled by the fan status")
     add(3, 5.0, 288.0, 285.0, 20.0, 0.2, True, "off: the outdoor air below upstream's uLow")
     add(4, 5.0, 288.0, 285.0, 290.0, 0.2, True, "pi: re-enabled by the outdoor air")
+    add(6, 5.0, 280.0, 290.0, 290.0, 0.2, True, "pi: saturated at yMin, the anti-windup acting")
+    add(4, 5.0, 288.0, 285.0, 290.0, 0.2, True, "pi: recovering from the lower saturation")
     return rows
 
 

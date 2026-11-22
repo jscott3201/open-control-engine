@@ -64,3 +64,13 @@ row	307.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: r
 row	312.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled by the outdoor air
 row	317.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled by the outdoor air
 row	322.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled by the outdoor air
+row	327.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	332.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	337.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	342.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	347.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	352.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	357.0	288.0	285.0	290.0	0.2	true	3fae1f0b5787bd51	0.0588305992458752	pi: recovering from the lower saturation
+row	362.0	288.0	285.0	290.0	0.2	true	3fb15d589d6dda90	0.0678305992458752	pi: recovering from the lower saturation
+row	367.0	288.0	285.0	290.0	0.2	true	3fb3ab2b8f17d678	0.07683059924587521	pi: recovering from the lower saturation
+row	372.0	288.0	285.0	290.0	0.2	true	3fb5f8fe80c1d25f	0.0858305992458752	pi: recovering from the lower saturation

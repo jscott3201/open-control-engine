@@ -10,7 +10,8 @@
 //!   parameter table; its first line is the digest of the `.mo` it was read from, checked
 //!   against the vendored bytes.
 //! - `valve_oracle.txt` (`derive_valve.py`, from the `.mo` and the CDL block sources): the valve
-//!   signal frame by frame over synthetic inputs that take every branch of the sequence.
+//!   signal frame by frame over synthetic inputs that take every branch the valve signal can
+//!   show (the line's upper clamp cannot show; only the structural check sees it).
 //!   Checked against the engine bit for bit.
 
 use std::collections::BTreeSet;
@@ -364,7 +365,7 @@ pub(super) fn valve_series(cxf: &[u8]) -> Vec<f64> {
 }
 
 #[test]
-fn the_valve_signal_matches_the_independent_derivation_bit_for_bit_on_every_branch() {
+fn the_valve_signal_matches_the_independent_derivation_bit_for_bit_on_every_branch_it_can_show() {
     let rows = oracle_rows();
     let engine = valve_series(&example_file("cooling_coil_valve.cxf.json"));
     for (row, y) in rows.iter().zip(&engine) {
@@ -378,12 +379,12 @@ fn the_valve_signal_matches_the_independent_derivation_bit_for_bit_on_every_bran
     }
     // Every branch the README lists is taken, and the comparison is not vacuous.
     let branches: BTreeSet<&str> = rows.iter().map(|row| row.branch.as_str()).collect();
-    assert_eq!(branches.len(), 15, "{branches:?}");
+    assert_eq!(branches.len(), 17, "{branches:?}");
     let kinds: BTreeSet<&str> = branches
         .iter()
         .map(|branch| branch.split(':').next().expect("a kind"))
         .collect();
     assert_eq!(kinds, BTreeSet::from(["limited", "off", "pi"]));
-    assert_eq!(rows.len(), 64);
+    assert_eq!(rows.len(), 74);
     assert!(engine.iter().any(|y| *y > 0.5) && engine.contains(&0.0));
 }

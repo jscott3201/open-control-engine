@@ -5,7 +5,7 @@
 //! evidence:
 //!
 //! - **the derivation**: `derive_valve.py`'s valve signal over the synthetic frames that take
-//!   every branch, compared bit for bit (`valve_oracle.txt`);
+//!   every branch the valve signal can show, compared bit for bit (`valve_oracle.txt`);
 //! - **the day**: the Building 33 day's receipt, whose body (the verdict, every figure and the
 //!   warnings) must equal the golden's.
 //!
@@ -13,7 +13,9 @@
 //! modifier and connection against what `derive_declarations.py` read from the `.mo`) catches
 //! every one of them by construction, since each changes the document; these tests ask what the
 //! behaviour shows. Each mutant's row pins which of the two catches it, so a change in the
-//! evidence's power shows here. A mutant neither catches is a survivor and is listed as one.
+//! evidence's power shows here. A mutant neither catches is a survivor and is listed as one: the
+//! one there is, the line's upper clamp turned off, cannot change the valve signal for any input,
+//! and its own test says so.
 
 mod support;
 
@@ -31,7 +33,7 @@ struct Mutant {
     caught_by_day: bool,
 }
 
-const MUTANTS: [Mutant; 10] = [
+const MUTANTS: [Mutant; 11] = [
     Mutant {
         name: "the setpoint and the measurement swapped at the PI",
         edits: &[
@@ -62,6 +64,12 @@ const MUTANTS: [Mutant; 10] = [
             "param reverseActing : Boolean = false",
             "param reverseActing : Boolean = true",
         )],
+        caught_by_derivation: true,
+        caught_by_day: true,
+    },
+    Mutant {
+        name: "the PI's lower limit below zero",
+        edits: &[("  yMin = 0,", "  yMin = -0.5,")],
         caught_by_derivation: true,
         caught_by_day: true,
     },
@@ -194,15 +202,16 @@ fn check(range: std::ops::Range<usize>) {
 
 #[test]
 fn mutants_of_the_pi_controller_are_caught() {
-    check(0..4);
+    check(0..5);
 }
 
 #[test]
 fn mutants_of_the_high_limit_are_caught_by_the_derivation_and_the_day_cannot_see_them() {
     // The day's supply air is below 50 degF (the line's upper support point) at 56 instants,
-    // 71,875 to 73,975 s, where the limit is about 0.99 and the valve at most 0.91: the limit
-    // never cuts the signal on this data, so only the derivation's frames can show it.
-    check(4..6);
+    // 71,875 to 73,975 s, where the limit ranges from 0.85 (at 48.8 degF) to 0.99 and stays above
+    // the valve by at least 0.068 (at 71,905 s): the limit never cuts the signal on this data,
+    // so only the derivation's frames can show it.
+    check(5..7);
 }
 
 #[test]
@@ -210,5 +219,21 @@ fn mutants_of_the_enable_are_caught_by_the_derivation_and_the_day_cannot_see_the
     // The fan was enabled, its feedback 60.9 to 72.5 % and the outdoor air above 48.89 degF all
     // day, so the enable is on throughout the day's data and no mistake in it shows there: the
     // derivation's synthetic frames are the evidence for that part of the sequence.
-    check(6..10);
+    check(7..11);
+}
+
+#[test]
+fn the_line_s_upper_clamp_cannot_show_in_behaviour_and_only_the_structural_check_sees_it() {
+    // `higLim(limitAbove = false)` changes the line only above its upper support point, where
+    // it would rise past `f2 = 1`; the valve is the minimum of the line and the PI's product,
+    // which never exceeds `yMax = 1`, so no input can make the mutant's valve differ. Neither
+    // behavioural check sees it; the emitted document differs, which the structural check in
+    // `oce-verify` (`building_33_transcription.rs`, every modifier against the `.mo`) refuses.
+    let cxf = emitted(&mutated(&[(
+        "block higLim = CDL.Reals.Line(limitBelow = true, limitAbove = true)",
+        "block higLim = CDL.Reals.Line(limitBelow = true, limitAbove = false)",
+    )]));
+    assert!(matches_oracle(&cxf), "the derivation cannot see it");
+    assert_eq!(day_body(cxf.clone()), golden_body(), "nor can the day");
+    assert!(cxf != example_file("cooling_coil_valve.cxf.json"));
 }
