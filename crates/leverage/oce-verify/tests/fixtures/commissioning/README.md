@@ -17,6 +17,7 @@ What the commissioning readers are tested against (design note `docs/design/comm
 | `trends/status.csv` | A `csv` of seconds with CRLF line ends (kept by `trends/.gitattributes`), a missing cell and `true`/`1`/`false`/`0`. | nobody: edit by hand |
 | `trends/limits.csv` | A `csv` of RFC 3339 instants in three offsets, one before the origin, two equal, an `NA` cell and an unmapped column. | nobody: edit by hand |
 | `trends/controller_output.csv` | A `controllerOutput` in OBC §12.7.3's shape: the first header the time, the others device points. | nobody: edit by hand |
+| `trends/obc_reference_input.csv`, `trends/obc_indicator.csv` | OBC §12.7.3's `reference_input.csv` and `indicator.csv`, **verbatim**, padded with spaces as the specification prints them (issue #733). | nobody: it is the published text |
 | `trends/merged.golden.txt`, `trends/controller_output.golden.txt` | The merged inputs and records, and the `controllerOutput` series, as `tests/commissioning/trend_fixture.rs` and `trend_controller_output.rs` write them. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
 | `trends/trends_oracle.txt` | The digests, the merged cells and what replay feeds the engine at each frame, derived independently. | `python3 -I derive_trends.py trends_oracle.txt` in `trends/`, by hand; never blessed |
 | `trends/derive_trends.py` | The independent derivation: its own parsing of the three files, its own union and holds, FNV-1a-128 over Python integers. | nobody: it is the reference |
@@ -40,6 +41,19 @@ What the commissioning readers are tested against (design note `docs/design/comm
 
 The specification is published by Lawrence Berkeley National Laboratory. The two listings are
 quoted here as test inputs for a reader of the format they define.
+
+## Where the two §12.7.3 files come from
+
+- **Source:** the same chapter's §12.7.3 "Scenario 2: Control Input Obtained by Trending a Real
+  Controller", on the same page: the `<pre>` block that follows "write the converted input time
+  series to a new file reference_input.csv, using the format", and the one that follows "the file
+  indicator.csv looks like".
+- **Read on:** 2026-11-21, the same way as the listings: fetched with `curl`, the markup removed
+  and the entities unescaped, nothing else changed. Each ends with the one line feed its block
+  ends with: `obc_reference_input.csv` is 300 bytes and `obc_indicator.csv` 33.
+- **What they hold.** Spaces around every value and header after the first, as the
+  specification prints them; `tests/commissioning/trend_padded_files.rs` reads both as they are
+  and pins their length and their first bytes.
 
 ## The canonical goldens are not blessed
 

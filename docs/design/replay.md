@@ -58,7 +58,7 @@ validity bit are all `None`, never a value, whatever `NonFiniteInputPolicy` says
 | Adapter | Input | Missing marker | Typical caller |
 | --- | --- | --- | --- |
 | `ColumnarSource` | one time column and one owned typed column per input (numpy or pandas shape) | NaN (Real); validity mask (Integer, Boolean, Enum) | `oce-py`, `oce-wasm`, the benchmark |
-| `CsvSource` | a byte reader, a header row, a time column and a `ColumnMap` | empty cell or a configured token (`NaN`, `NA`) | `oce-verify`, `oce-host`, #436 |
+| `CsvSource` | a byte reader, a header row, a time column and a `ColumnMap` | empty cell (once its padding is trimmed) or a configured token (`NaN`, `NA`) | `oce-verify`, `oce-host`, #436 |
 | `StepSource` | per input, a list of `(t, value)` changes; a constant is a one-step list | none: a step list defines a value on every interval it covers | `oce-verify` vector format |
 
 The columnar adapter owns its columns. Python and JavaScript copy their arrays in before the run, so
@@ -366,6 +366,33 @@ The decisions stand; where one could not be built as written, the gap is named.
 - **The trace byte cap** is checked before each frame against its row bytes (each output counted at
   8 bytes until the first accepted frame fixes the set) and after it for its sparse rows and
   snapshots, so it holds to within one frame's sparse output.
+- **Padding (GitHub #NNN, issue #733).** `CsvSource` trims the ASCII spaces and tabs, and only
+  those two bytes, around every cell and header name `csv-core` reads unquoted, before the
+  missing-token comparison, the parse and the header match, so OBC §12.7.3's padded example files
+  read as printed. A no-break space, a zero-width space, a byte-order mark, a vertical tab and a
+  form feed stay part of the cell. A cell is quoted when a `"` is its first byte, as RFC 4180 and
+  `csv-core` read it, and is kept as `csv-core` unquotes it: `" a "` is ` a `. A byte outside the
+  quotes is outside RFC 4180; `csv-core` joins it to the cell, and that reading is kept
+  untrimmed, so `"1" ` reads as `1 ` and ` "1"` as `"1"`, each refused by its parse rather than
+  read by a guess. A cell of padding alone is empty, so missing. Two header names equal once
+  trimmed are `DuplicateColumn`. `max_cell_bytes` counts a cell before it is trimmed: the cap is
+  enforced as the bytes arrive, before trailing padding can be told from the cell, and it bounds
+  memory with no second counter. Unpadded input reads as before, bit for bit.
+- **Text columns (GitHub #NNN, issue #728).** `CsvFormat::text_columns` names header columns whose
+  cells `CsvSource::text_cells` hands over unparsed, after each row, under the same caps, the
+  same padding rule and the same missing rule (`None` for an empty cell or a token). A text
+  column is no input slot: frames never carry it, so it stays among the ignored columns, and the
+  trace is the same with or without it. It is resolved once from the header (`MissingColumn` after
+  the time and the mapped columns) and checked as UTF-8 after a row's time and mapped cells.
+  Replay gives no spelling a meaning: `oce-verify` reads a commissioning `bool` column as text by
+  its own rule (`active`/`inactive` included).
+- **The first fill** reads seven bytes, or all there are, before the reader looks for a
+  byte-order mark, so `csv-core`, which strips a second mark from its own first input of three
+  bytes or more, reads a doubled mark the same way whatever a reader returns per call. Before
+  GitHub #NNN a reader of one byte per call kept the second mark as a cell's bytes while a whole
+  slice had it stripped. Which refusal an input over `max_source_bytes` gets first still depends
+  on how far ahead the reader's calls buffered (a whole slice crosses the cap on its first fill),
+  though such an input is refused however it is split.
 
 ## Decisions
 

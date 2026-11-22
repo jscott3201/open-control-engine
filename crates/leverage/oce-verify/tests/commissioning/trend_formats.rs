@@ -167,10 +167,12 @@ fn a_half_in_a_boolean_column_is_refused_with_its_file_row_and_column() {
         ("cell-refused", Some("not-boolean"))
     );
     assert_eq!((error.row(), error.column()), (Some(2), Some("F")));
-    // A `bool` device column in csv is read by replay's Boolean parse, so `0.5` is a bad cell.
+    // A `bool` device column in csv is read as text by the Boolean text rule, so `0.5` is no
+    // Boolean spelling.
+    let error = csv(r#""B": "B""#, "time,B\n0,0.5\n").unwrap_err();
     assert_eq!(
-        place(csv(r#""B": "B""#, "time,B\n0,0.5\n")),
-        refusal("bad-cell", 1, "B")
+        (error.code(), error.cause(), error.row(), error.column()),
+        ("cell-refused", Some("not-boolean-text"), Some(1), Some("B"))
     );
     // A combiTimeTable `bool` device column holds numbers: exactly 0 and 1 only.
     let error = combi(r#""2": "B""#, "#1\ndouble t(1,2)\n0 0.5\n").unwrap_err();
@@ -181,21 +183,50 @@ fn a_half_in_a_boolean_column_is_refused_with_its_file_row_and_column() {
 }
 
 #[test]
-fn a_csv_boolean_reads_true_false_one_and_zero_and_refuses_the_bacnet_words() {
-    let read = csv(r#""B": "B""#, "time,B\n0,true\n1,false\n2,1\n3,0\n4,\n").expect("reads");
+fn a_csv_boolean_reads_the_type_table_s_six_spellings_and_refuses_every_other_text() {
+    // The type table's "CSV text → bool" row: `true`/`false`, `active`/`inactive` (BACnet binary
+    // present value), `1`/`0`; replay hands the cell over as text (issue #728), its padding
+    // trimmed (issue #733), and a missing cell is no sample.
+    let read = csv(
+        r#""B": "B""#,
+        "time,B\n0,true\n1,false\n2,1\n3,0\n4,\n5,active\n6,inactive\n7, active\t\n8,NA\n9,\" 1\"\n",
+    );
+    let error = read.expect_err("a quoted padded spelling is refused");
+    assert_eq!(
+        (error.code(), error.cause(), error.row()),
+        ("cell-refused", Some("not-boolean-text"), Some(10))
+    );
+    let read = csv(
+        r#""B": "B""#,
+        "time,B\n0,true\n1,false\n2,1\n3,0\n4,\n5,active\n6,inactive\n7, active\t\n8,NA\n",
+    )
+    .expect("reads");
+    assert_eq!(read.expected[0].times, [0.0, 1.0, 2.0, 3.0, 5.0, 6.0, 7.0]);
     assert_eq!(
         read.expected[0].values,
-        SeriesValues::Boolean(vec![true, false, true, false])
+        SeriesValues::Boolean(vec![true, false, true, false, true, false, true])
     );
-    // The owner's ruling of 2026-11-21: replay's reader hands no text over, so `active` and
-    // `inactive` are refused until it does.
-    for word in ["active", "inactive", "True", "TRUE", " 1", "1.0", "yes"] {
+    // Byte for byte otherwise: no case folding, no number grammar, no other word.
+    for word in [
+        "True", "TRUE", "ACTIVE", "Inactive", "1.0", "+1", "yes", "on", "nan",
+    ] {
+        let error = csv(r#""B": "B""#, &format!("time,B\n0,{word}\n")).unwrap_err();
         assert_eq!(
-            place(csv(r#""B": "B""#, &format!("time,B\n0,{word}\n"))),
-            refusal("bad-cell", 1, "B"),
+            (error.code(), error.cause(), error.row(), error.column()),
+            ("cell-refused", Some("not-boolean-text"), Some(1), Some("B")),
             "{word}"
         );
     }
+    // A `bool` device column mapped to a CDL Integer reads the same text, as 0 and 1.
+    let spec = trend_spec_with(
+        None,
+        &format!("[{}]", point(("occ", None, "int"), ("Occ", None, "bool"))),
+        r#""expected": [{"path": "d/f", "format": "csv", "timeColumn": "time",
+            "columns": {"Occ": "Occ"}}]"#,
+    );
+    let read =
+        super::read_trends(&spec, &[("d/f", b"time,Occ\n0,active\n1,inactive\n")]).expect("reads");
+    assert_eq!(read.expected[0].values, SeriesValues::Integer(vec![1, 0]));
 }
 
 #[test]
@@ -358,6 +389,12 @@ fn a_column_the_map_names_that_the_file_lacks_is_refused() {
     );
     let error = csv(r#""T": "T""#, "").unwrap_err();
     assert_eq!(error.code(), "column-missing");
+    // A `bool` column, read as text, is missed before the time column's kind is asked for.
+    let error = csv(r#""B": "B""#, "time,T\n2018-06-07T00:00:01Z,1\n").unwrap_err();
+    assert_eq!(
+        (error.code(), error.column()),
+        ("column-missing", Some("B"))
+    );
 }
 
 #[test]

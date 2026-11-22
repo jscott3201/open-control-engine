@@ -133,9 +133,13 @@ fn the_first_header_is_the_time_whatever_it_is_named() {
     // Quoted, with a doubled quote inside, after a byte-order mark and blank lines.
     let quoted = read(b"\xef\xbb\xbf\n\r\n\"ti\"\"me\",yCoo\n0,10\n").expect("reads");
     assert_eq!(quoted.expected[0].times, [0.0]);
-    // A header is compared byte for byte: OBC's `time, uHea` writes ` uHea`, which a mapping
-    // must name with its space.
-    let error = read(b"time, yCoo\n0,10\n").expect_err("refused");
+    // Replay trims the spaces and tabs around a header name (issue #733), the first one
+    // included, so OBC's `time, uHea` names `uHea`.
+    let padded = read(b" time\t, yCoo \n  0,\t10\n").expect("reads");
+    assert_eq!(padded.expected[0].times, [0.0]);
+    assert_eq!(padded.expected[0].device, "yCoo");
+    // A quoted name keeps its spaces, so it names no mapped point.
+    let error = read(b"time,\" yCoo\"\n0,10\n").expect_err("refused");
     assert_eq!(
         (error.code(), error.column()),
         ("unmapped-point", Some(" yCoo"))
