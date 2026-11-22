@@ -4,7 +4,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ParamTable, ValueType};
+use oce_model::{
+    Attrs, BlockId, BlockInstance, Connector, ConnectorId, Dir, ParamTable, ValueType,
+};
 
 use crate::dto::{CxfDocument, Node};
 use oce_diag::DiagnosticList;
@@ -84,6 +86,15 @@ fn try_derive_pass_through_value_type(
 /// Append reserved identity blocks after authored nodes have received their stable positions.
 /// `by_id` locates each declared output's node so its authored §7.4.1 attributes ride the
 /// minted output connector instead of being silently replaced by the type's empty defaults.
+///
+/// A declared output's attributes are read once for each type a pair reads them as, and every
+/// pair that reads them shares that reading (issue #750): its terms (`Arc<str>`) are one
+/// allocation however many pairs a boundary output is wired from, and its findings, recorded
+/// once, are raised again for each pair in the order the read raised them, so the list is the
+/// one a read per pair makes. Before, each pair copied the output's `quantity`, `unit` and
+/// `displayUnit` again: a 64 KiB `quantity` wired from 1,024 boundary inputs, a 232 KB
+/// document, peaked at 74 MB before the multiply driven output was refused. The readings are
+/// looked up, never iterated.
 pub(super) fn materialize(
     pairs: Vec<(String, String)>,
     boundary_types: &HashMap<&str, Option<ValueType>>,
@@ -93,6 +104,7 @@ pub(super) fn materialize(
     external_inputs: &mut Vec<ConnectorId>,
     diags: &mut DiagnosticList,
 ) {
+    let mut readings: HashMap<(&str, ValueType), (Attrs, Vec<Diagnostic>)> = HashMap::new();
     for (input_iri, output_iri) in pairs {
         let value_type = boundary_types
             .get(input_iri.as_str())
@@ -126,8 +138,18 @@ pub(super) fn materialize(
         // §7.10 cluster; declared boundary aliases are joined to their source separately.
         // A missing node cannot happen on a surviving graph (Step 2 refuses it); the default
         // attrs it would leave behind are withheld with the graph.
-        if let Some(node) = by_id.get(output_iri.as_str()) {
-            output.attrs = connector_attrs(node, value_type, diags);
+        if let Some(node) = by_id.get(output_iri.as_str()).copied() {
+            let (attrs, findings) = readings
+                .entry((node.id.as_str(), value_type))
+                .or_insert_with(|| {
+                    let mut findings = Vec::new();
+                    let attrs = connector_attrs(node, value_type, &mut findings);
+                    (attrs, findings)
+                });
+            for finding in &*findings {
+                diags.raise(|| finding.clone());
+            }
+            output.attrs = attrs.clone();
         }
         output.iri = Some(Arc::from(output_iri));
         connectors.push(input);

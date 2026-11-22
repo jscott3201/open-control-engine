@@ -7,7 +7,7 @@
 //! Rejecting at plan time also names the offender better than re-import can — the owning block's
 //! `instance_iri`, against re-import's positional `connector#N`.
 
-use oce_diag::Diagnostic;
+use oce_diag::DiagnosticList;
 use oce_model::ModelGraph;
 
 use super::{owner_subject, reject};
@@ -43,11 +43,11 @@ const MSG_DRIVEN_EXTERNAL_INPUT: &str = "export subset: input connector is liste
 pub(super) fn refuse_multiply_driven(
     g: &ModelGraph,
     multiply_driven: &[bool],
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     for (i, c) in g.connectors.iter().enumerate() {
         if multiply_driven.get(i).copied().unwrap_or(false) {
-            diags.push(reject(MSG_MULTIPLY_DRIVEN, &owner_subject(g, c, i)));
+            diags.raise(|| reject(MSG_MULTIPLY_DRIVEN, &owner_subject(g, c, i)));
         }
     }
 }
@@ -58,10 +58,10 @@ pub(super) fn refuse_multiply_driven(
 pub(super) fn refuse_driven_external(
     wired: bool,
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     if wired {
-        diags.push(reject(MSG_DRIVEN_EXTERNAL_INPUT, subject));
+        diags.raise(|| reject(MSG_DRIVEN_EXTERNAL_INPUT, subject));
     }
     wired
 }

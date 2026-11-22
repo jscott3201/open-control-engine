@@ -10,6 +10,26 @@ use crate::ground::ground_value;
 use crate::scope_chain::ParamScope;
 use oce_diag::DiagnosticList;
 
+/// Where the findings of a connector's attributes go: the import's [`DiagnosticList`], or a
+/// `Vec` that records every finding of one read so a caller that reads the same node again can
+/// replay them in order without reading it again (issue #750).
+pub(super) trait Findings {
+    /// Raise the finding `build` makes; a sink that would not keep it need not build it.
+    fn raise(&mut self, build: impl FnOnce() -> Diagnostic);
+}
+
+impl Findings for DiagnosticList {
+    fn raise(&mut self, build: impl FnOnce() -> Diagnostic) {
+        DiagnosticList::raise(self, build);
+    }
+}
+
+impl Findings for Vec<Diagnostic> {
+    fn raise(&mut self, build: impl FnOnce() -> Diagnostic) {
+        self.push(build());
+    }
+}
+
 /// Parse a connector node's declared §7.4.1 attributes
 /// (`unit`/`quantity`/`displayUnit`/`min`/`max`/`nominal`) into the `Attrs` variant matching its
 /// [`ValueType`] (doc 02 §3.3). `Real` carries unit/quantity/displayUnit, numeric bounds and
@@ -23,10 +43,11 @@ use oce_diag::DiagnosticList;
 /// non-finite one (`non-finite-bound`), and export round-trips it. It is still excluded from
 /// §7.10 unification (R13.4) and never read on the tick. `unbounded` is not parsed.
 ///
-/// Every finding is raised: a boundary output wired from many boundary inputs is read once per
-/// pass-through pair, and each finding names its `@id`, so once the diagnostic list has ended a
-/// finding costs a count and copies nothing (issue #711).
-pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut DiagnosticList) -> Attrs {
+/// Every finding is raised into `diags`: the import's list, where once the list has ended a
+/// finding costs a count and copies nothing (issue #711), or a node's own record of its findings
+/// ([`Findings`]). A boundary output wired from many boundary inputs is read once for all its
+/// pass-through pairs and its findings replayed for each (issue #750).
+pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut impl Findings) -> Attrs {
     let subject = node.id.as_str();
     match vt {
         ValueType::Real => Attrs::Real(RealAttrs {
@@ -86,7 +107,7 @@ pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Diagnostic
 
 /// Refuse a declared `S231:nominal` on a non-Real connector: CDL gives only Real a nominal
 /// (§7.4.1), so it is a `malformed-document` error rather than an attribute silently dropped.
-fn refuse_nominal(node: &Node, kind: &str, subject: &str, diags: &mut DiagnosticList) {
+fn refuse_nominal(node: &Node, kind: &str, subject: &str, diags: &mut impl Findings) {
     if node.nominal.is_some() {
         diags.raise(|| {
             Diagnostic::error(
@@ -103,7 +124,7 @@ fn term_attr(
     t: Option<&crate::dto::TermAttr>,
     which: &str,
     subject: &str,
-    diags: &mut DiagnosticList,
+    diags: &mut impl Findings,
 ) -> Option<Arc<str>> {
     let term = t?;
     if refuse_term(term, which, subject, diags) {
@@ -120,7 +141,7 @@ fn unit_attr(
     t: Option<&crate::dto::TermAttr>,
     which: &str,
     subject: &str,
-    diags: &mut DiagnosticList,
+    diags: &mut impl Findings,
 ) -> Option<Arc<str>> {
     let term = t?;
     if refuse_term(term, which, subject, diags) {
@@ -144,7 +165,7 @@ fn refuse_term(
     term: &crate::dto::TermAttr,
     which: &str,
     subject: &str,
-    diags: &mut DiagnosticList,
+    diags: &mut impl Findings,
 ) -> bool {
     let Some(found) = super::term_shape::problem(term) else {
         return false;
@@ -166,7 +187,7 @@ fn real_connector_number(
     v: Option<&CxfValue>,
     which: &str,
     subject: &str,
-    diags: &mut DiagnosticList,
+    diags: &mut impl Findings,
 ) -> Option<f64> {
     let v = v?;
     let role = if which == "nominal" {
@@ -204,7 +225,7 @@ fn int_connector_bound(
     v: Option<&CxfValue>,
     which: &str,
     subject: &str,
-    diags: &mut DiagnosticList,
+    diags: &mut impl Findings,
 ) -> Option<i64> {
     let v = v?;
     match ground_value(v, &ParamScope::empty()) {

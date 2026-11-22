@@ -83,7 +83,8 @@ pub enum CxfError {
     /// diagnostic that does not fit ends the list, and its last entry is then one
     /// [`oce_diag::DiagCode::ResourceLimitExceeded`] error, with no subject, whose message
     /// starts with how many diagnostics were raised and are not listed and names the first of
-    /// them. An export's list is not held to that bound.
+    /// them. An export's list is held to the same bound, its deferral warnings included
+    /// (issue #753).
     #[error("CXF validation failed with {} diagnostic(s)", .0.len())]
     Validation(Vec<oce_diag::Diagnostic>),
 }

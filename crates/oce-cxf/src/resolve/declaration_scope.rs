@@ -59,7 +59,8 @@ use oce_expr::{EvalResult, ExprAst, Scope};
 use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal};
 
 use crate::dto::{CxfValue, Node};
-use crate::ground::{ground_failure, ground_param_value};
+use crate::ground::ground_failure;
+use crate::parameter_reads::DocumentGroundings;
 use crate::scope_chain::{IndexedEntries, ScopeFrame};
 use oce_diag::DiagnosticList;
 
@@ -238,11 +239,16 @@ struct Declaration<'a> {
 ///
 /// Returns the extended scope entries plus (for the specialize pass) the withheld tagged
 /// findings. Total and panic-free on any input document.
+///
+/// `groundings` is the pass's [`DocumentGroundings`]: a declaration whose node other owners list
+/// too is parsed for its dependencies and grounded once for the document when it reads no name
+/// (issue #749).
 pub(super) fn evaluate_declarations<'a>(
     node: &'a Node,
     appended: &[&'a str],
     enclosing: &Arc<ScopeFrame>,
     by_id: &HashMap<&str, &'a Node>,
+    groundings: &mut DocumentGroundings,
     mut pass: Pass<'_>,
 ) -> Evaluation<'a> {
     let mut withheld: Vec<TaggedFinding<'a>> = Vec::new();
@@ -306,11 +312,12 @@ pub(super) fn evaluate_declarations<'a>(
         if lowering && pnode.is_array == Some(true) {
             continue;
         }
-        let Some(CxfValue::Expr(text)) = &pnode.value else {
+        let Some(value @ CxfValue::Expr(text)) = &pnode.value else {
             continue;
         };
-        let mut references: Vec<usize> = identifier_heads(text)
-            .into_iter()
+        let mut references: Vec<usize> = groundings
+            .identifier_heads(pnode, value, text)
+            .iter()
             .filter_map(|head| first_of_name.get(head.as_str()).copied())
             .collect();
         references.sort_unstable();
@@ -372,6 +379,7 @@ pub(super) fn evaluate_declarations<'a>(
             enclosing,
             &own_names,
             &mut grounded,
+            groundings,
             &mut pass,
         );
         for &dependent in &dependents[index] {
@@ -449,7 +457,10 @@ fn emit_generic(pass: &mut Pass<'_>, diag: Diagnostic) {
 }
 
 /// Validate and ground one surviving declaration against the own-first scope view, recording
-/// the grounded entry or reporting the failure per the pass's emission policy.
+/// the grounded entry or reporting the failure per the pass's emission policy. A value the
+/// pass's other owners share is grounded once through `groundings` (issue #749).
+#[allow(clippy::too_many_arguments)] // The chain's state, the scope it grounds under and the two
+// accumulators; a one-shot struct bundling them would only rename the arguments.
 fn evaluate_one(
     declaration: &Declaration<'_>,
     owner: &str,
@@ -457,6 +468,7 @@ fn evaluate_one(
     enclosing: &ScopeFrame,
     own_names: &HashSet<&str>,
     grounded: &mut OwnGrounded,
+    groundings: &mut DocumentGroundings,
     pass: &mut Pass<'_>,
 ) {
     let Some(pnode) = declaration.node else {
@@ -504,10 +516,11 @@ fn evaluate_one(
         if let Pass::Lowering { diags, .. } = pass {
             validate_enumeration_parameter_value(pnode, cxf_val, &scope, diags);
         }
-        ground_param_value(cxf_val, &scope)
+        groundings.ground(pnode, cxf_val, &scope)
     };
-    match outcome {
+    match &*outcome {
         Ok(value) => {
+            let value = value.clone();
             // Held in its declared type before any sibling, child or guard reads it (issue
             // #735): the Real of an Integer on a declared Real. A value of another kind is
             // refused on the declaration, at the lowering invocation only (generic machinery).
@@ -536,7 +549,7 @@ fn evaluate_one(
                 EvalResult::Scalar(value),
             );
         }
-        Err(e) => emit_generic(pass, ground_failure(&e, declaration.iri, owner)),
+        Err(e) => emit_generic(pass, ground_failure(e, declaration.iri, owner)),
     }
 }
 
@@ -574,7 +587,7 @@ impl Scope for OwnDeclarationScope<'_> {
 /// scope; its iterator shadows the body. A multi-iterator comprehension contributes no edges because
 /// evaluation rejects its clause count before reading any source or body. An expression that cannot
 /// parse also contributes no edges because it cannot reach evaluation. Total; never panics.
-pub(super) fn identifier_heads(text: &str) -> Vec<String> {
+pub(crate) fn identifier_heads(text: &str) -> Vec<String> {
     let Ok(expression) = oce_expr::parse(text) else {
         return Vec::new();
     };

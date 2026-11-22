@@ -13,6 +13,7 @@ use oce_model::{
 use crate::bridge::class_path_of;
 use crate::dto::{IriRef, Node};
 use crate::ground::non_canonical_enumeration_message;
+use crate::parameter_reads::DocumentGroundings;
 use crate::scope_chain::ScopeFrame;
 use oce_diag::DiagnosticList;
 
@@ -59,6 +60,9 @@ pub(super) fn specialize<'a>(
     let mut withheld = WithheldFindings::default();
     let mut decisions: HashMap<&str, bool> = HashMap::new();
     let contains_referents = contains_block_referents(doc);
+    // A declaration many guard scopes list is grounded once for all of them when it reads no
+    // name (issue #749).
+    let mut groundings = DocumentGroundings::of(&doc.graph, by_id);
 
     for parent in &doc.graph {
         let derivation_shaped = is_derivation_shaped(parent, &contains_referents);
@@ -85,7 +89,7 @@ pub(super) fn specialize<'a>(
         } else {
             Vec::new()
         };
-        let scope = complete_scope(parent, &members, by_id, &mut withheld);
+        let scope = complete_scope(parent, &members, by_id, &mut groundings, &mut withheld);
         for child in conditional_children {
             let active = match decisions.get(child.id.as_str()).copied() {
                 Some(active) => active,
@@ -217,6 +221,7 @@ fn complete_scope<'a>(
     parent: &'a Node,
     members: &[&'a str],
     by_id: &HashMap<&str, &'a Node>,
+    groundings: &mut DocumentGroundings,
     withheld: &mut WithheldFindings<'a>,
 ) -> CompleteScope {
     let composite_chain = is_runtime_composite(parent);
@@ -225,6 +230,7 @@ fn complete_scope<'a>(
         members,
         &ScopeFrame::root(),
         by_id,
+        groundings,
         Pass::Specialize {
             composite_chain,
             leaf_class: (!composite_chain)

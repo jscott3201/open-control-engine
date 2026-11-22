@@ -70,6 +70,15 @@
 //! [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics whose `subject` identifies the
 //! offending block, connector owner, or declared boundary node — never a panic.
 //!
+//! The list is held to the budget the reader's and the validator's lists are held to
+//! ([`oce_diag::DiagnosticList`], 8 MiB of message and subject text; issue #753). A finding
+//! copies its block's `instance_iri`, and a hand-built graph can raise one per parameter,
+//! connector or connection of a block whose IRI is long: unbounded, 1,024 non-finite parameters
+//! on a block with a 64 KiB IRI were a list of 64 MiB. Each finding is raised, so once the list
+//! has ended it is counted, not built, and the list closes with one
+//! [`oce_diag::DiagCode::ResourceLimitExceeded`] error that counts the rest. The deferral
+//! warnings are raised into the same list, so an export never succeeds with warnings left out.
+//!
 //! Some rejections prevent silent loss rather than enforce the subset: a connector listed twice in
 //! `external_inputs`, a boundary alias whose source has no emitted port, a connection involving a
 //! reserved pass-through connector, an input driven by more than one surviving output, and an
@@ -87,7 +96,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use oce_diag::{DiagCode, Diagnostic, has_errors};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList, has_errors};
 use oce_model::{Connector, Dir, ModelGraph, Value, ValueType};
 
 use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
@@ -262,10 +271,10 @@ fn claim_emitted_id(
     seen: &mut BTreeSet<String>,
     id: &str,
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     if !seen.insert(id.to_owned()) {
-        diags.push(reject(MSG_DUPLICATE_ID, subject));
+        diags.raise(|| reject(MSG_DUPLICATE_ID, subject));
     }
 }
 
@@ -313,8 +322,8 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // cascade fixpoint, and emit the `ExportDeferred` warnings (Warning, non-aborting). A
     // deferred block contributes ZERO entries to the plan below (no `@id` claimed, no param
     // diag, no `PlannedBlock`); its connectors are placeholder-indexed but never emitted.
-    let (deferred, warnings) = deferral_set(g);
-    let mut diags: Vec<Diagnostic> = warnings;
+    let mut diags = DiagnosticList::new();
+    let deferred = deferral_set(g, &mut diags);
     let mut port_iri: Vec<Option<String>> = vec![None; g.connectors.len()];
     let mut blocks: Vec<PlannedBlock> = Vec::with_capacity(g.blocks.len());
     // Every @id the document will carry, for duplicate detection only — membership checks,
@@ -339,7 +348,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             Some(iri) => iri.to_owned(),
             None => {
                 let synthetic = format!("block#{bi}");
-                diags.push(reject(MSG_NO_INSTANCE_IRI, &synthetic));
+                diags.raise(|| reject(MSG_NO_INSTANCE_IRI, &synthetic));
                 synthetic
             }
         };
@@ -353,19 +362,21 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         if b.class_iri.starts_with(bridge::OBC_PREFIX)
             || bridge::class_path_of(&type_iri) != b.class_iri.as_ref()
         {
-            diags.push(reject(MSG_CLASS_BRIDGE, &subject));
+            diags.raise(|| reject(MSG_CLASS_BRIDGE, &subject));
         }
 
         let mut params = Vec::with_capacity(b.params.values.len());
         for (name, value) in &b.params.values {
             if name.is_empty() || name.contains('.') {
-                diags.push(reject(
-                    format!(
-                        "export subset: parameter name `{name}` is not a bare member name \
+                diags.raise(|| {
+                    reject(
+                        format!(
+                            "export subset: parameter name `{name}` is not a bare member name \
                          (re-import recovers the name after the last `.`)"
-                    ),
-                    &subject,
-                ));
+                        ),
+                        &subject,
+                    )
+                });
                 continue;
             }
             if let Some(binding) = param_binding(name, value, &subject, &mut diags) {
@@ -442,10 +453,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // it still returns `Ok` with `ExportDeferred` warnings. Pushed rather than returned early so
     // the deferral warnings (already in `diags`) and every other offender still reach the caller.
     if blocks.is_empty() {
-        diags.push(Diagnostic::error(
-            DiagCode::ExportUnsupported,
-            MSG_TOTAL_DEFERRAL,
-        ));
+        diags.raise(|| Diagnostic::error(DiagCode::ExportUnsupported, MSG_TOTAL_DEFERRAL));
     }
 
     // Phase 3 — reserved lowering shape and orphan scan. Wiring defects keep the structural
@@ -464,7 +472,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             ReservedShapeFailure::BoundaryIri(subject) => (MSG_EXTERNAL_IRI, subject),
             ReservedShapeFailure::HiddenState(subject) => (MSG_RESERVED_SHAPE, subject),
         };
-        diags.push(reject(message, &subject));
+        diags.raise(|| reject(message, &subject));
     }
 
     // SKIP connectors whose owning block is deferred: a deferred block's
@@ -480,7 +488,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             continue;
         }
         if port_iri[i].is_none() {
-            diags.push(reject(MSG_STRUCTURE, &owner_subject(g, c, i)));
+            diags.raise(|| reject(MSG_STRUCTURE, &owner_subject(g, c, i)));
         }
     }
 
@@ -506,7 +514,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 // would sink a document whose only defect is in bytes nobody emits. No warning
                 // either — the block's own deferral warning was already pushed in Phase 1b.
                 if !is_deferred {
-                    diags.push(reject(MSG_STRING_CONNECTOR, &subject));
+                    diags.raise(|| reject(MSG_STRING_CONNECTOR, &subject));
                 }
                 "S231:Real" // placeholder; the error gate discards the plan
             }
@@ -514,7 +522,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 // Deferred (warned in Phase 1b), not rejected. The placeholder is never read —
                 // Phase 7 skips the connector — but the slot must exist to preserve the index.
                 if !is_deferred {
-                    diags.push(reject(MSG_ENUM_CONNECTOR, &subject));
+                    diags.raise(|| reject(MSG_ENUM_CONNECTOR, &subject));
                 }
                 "S231:Real"
             }
@@ -532,7 +540,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         } else if c.attrs.matches(c.value_type) {
             classify_attrs(&c.attrs, &subject, &mut diags)
         } else {
-            diags.push(reject(MSG_STRUCTURE, &subject));
+            diags.raise(|| reject(MSG_STRUCTURE, &subject));
             PortAttrs::None
         });
     }
@@ -577,7 +585,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 .get(f)
                 .map(|c| owner_subject(g, c, f))
                 .or_else(|| g.connectors.get(t).map(|c| owner_subject(g, c, t)));
-            diags.push(match &subject {
+            diags.raise(|| match &subject {
                 Some(s) => reject(MSG_STRUCTURE, s),
                 None => Diagnostic::error(DiagCode::ExportUnsupported, MSG_STRUCTURE),
             });
@@ -591,10 +599,12 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             continue;
         }
         if let Some((endpoint, position)) = reserved_connection_endpoint(g, f, t) {
-            diags.push(reject(
-                MSG_CONNECTION_ENDPOINT_NOT_EMITTED,
-                &owner_subject(g, endpoint, position),
-            ));
+            diags.raise(|| {
+                reject(
+                    MSG_CONNECTION_ENDPOINT_NOT_EMITTED,
+                    &owner_subject(g, endpoint, position),
+                )
+            });
             continue;
         }
         // Orphan guard: an unclaimed target already carries a structural diagnostic.
@@ -614,27 +624,21 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     for output in &g.boundary_outputs {
         let idx = output.source.0 as usize;
         let Some(source) = g.connectors.get(idx) else {
-            diags.push(Diagnostic::error(
-                DiagCode::ExportUnsupported,
-                MSG_STRUCTURE,
-            ));
+            diags.raise(|| Diagnostic::error(DiagCode::ExportUnsupported, MSG_STRUCTURE));
             continue;
         };
         if source.dir != Dir::Out || deferred.contains(&(source.block.0 as usize)) {
             if source.dir != Dir::Out {
-                diags.push(reject(MSG_STRUCTURE, &owner_subject(g, source, idx)));
+                diags.raise(|| reject(MSG_STRUCTURE, &owner_subject(g, source, idx)));
             }
             continue;
         }
         if output.iri.is_empty() {
-            diags.push(reject(
-                MSG_BOUNDARY_OUTPUT_IRI,
-                &owner_subject(g, source, idx),
-            ));
+            diags.raise(|| reject(MSG_BOUNDARY_OUTPUT_IRI, &owner_subject(g, source, idx)));
             continue;
         }
         let Some(_) = port_iri[idx] else {
-            diags.push(reject(MSG_BOUNDARY_SOURCE_NOT_EMITTED, &output.iri));
+            diags.raise(|| reject(MSG_BOUNDARY_SOURCE_NOT_EMITTED, &output.iri));
             continue;
         };
         let iri = output.iri.as_ref();
@@ -649,7 +653,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         let attrs = if output.attrs.matches(source.value_type) {
             classify_attrs(&output.attrs, iri, &mut diags)
         } else {
-            diags.push(reject(MSG_STRUCTURE, iri));
+            diags.raise(|| reject(MSG_STRUCTURE, iri));
             PortAttrs::None
         };
         boundary_outputs.push(PlannedBoundaryOutput {
@@ -671,7 +675,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     for input in &g.boundary_inputs {
         let iri = input.iri.as_ref();
         if !seen_boundary_inputs.insert(iri) {
-            diags.push(reject(MSG_DUPLICATE_BOUNDARY_INPUT, iri));
+            diags.raise(|| reject(MSG_DUPLICATE_BOUNDARY_INPUT, iri));
             continue;
         }
         boundary_input_attrs.insert(iri, &input.attrs);
@@ -682,7 +686,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 == Some(iri)
         });
         if !has_target {
-            diags.push(reject(MSG_ORPHAN_BOUNDARY_INPUT, iri));
+            diags.raise(|| reject(MSG_ORPHAN_BOUNDARY_INPUT, iri));
         }
     }
 
@@ -706,10 +710,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         let Some(c) = g.connectors.get(idx) else {
             // Out of range: there is no connector, so no owner to name — genuinely subjectless
             // (like the whole-graph dense-id rejection, and unlike every per-node rejection).
-            diags.push(Diagnostic::error(
-                DiagCode::ExportUnsupported,
-                MSG_STRUCTURE,
-            ));
+            diags.raise(|| Diagnostic::error(DiagCode::ExportUnsupported, MSG_STRUCTURE));
             continue;
         };
         if unplannable_reserved_blocks.contains(&(c.block.0 as usize)) {
@@ -724,7 +725,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         // by the `find(|pb| pb.iri == boundary_iri)` arm below, and only a second listing of one
         // connector is lost on re-import.
         if !seen_external.insert(idx) {
-            diags.push(reject(MSG_DUPLICATE_EXTERNAL_INPUT, &subject));
+            diags.raise(|| reject(MSG_DUPLICATE_EXTERNAL_INPUT, &subject));
             continue;
         }
         // A surviving wire into a frame-driven input is a second driver: the emitted document
@@ -733,11 +734,11 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             continue;
         }
         if c.dir != Dir::In {
-            diags.push(reject(MSG_STRUCTURE, &subject));
+            diags.raise(|| reject(MSG_STRUCTURE, &subject));
             continue;
         }
         let Some(boundary_iri) = c.iri.as_deref().filter(|iri| !iri.is_empty()) else {
-            diags.push(reject(MSG_EXTERNAL_IRI, &subject));
+            diags.raise(|| reject(MSG_EXTERNAL_IRI, &subject));
             continue;
         };
         let datatype = datatypes[idx];
@@ -752,18 +753,18 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         let target = if let Some(output_id) = pass_through_output {
             let output_idx = output_id.0 as usize;
             let Some(output) = g.connectors.get(output_idx) else {
-                diags.push(reject(MSG_STRUCTURE, &subject));
+                diags.raise(|| reject(MSG_STRUCTURE, &subject));
                 continue;
             };
             if output.dir != Dir::Out
                 || output.block != c.block
                 || datatypes.get(output_idx).copied() != Some(datatype)
             {
-                diags.push(reject(MSG_STRUCTURE, &subject));
+                diags.raise(|| reject(MSG_STRUCTURE, &subject));
                 continue;
             }
             let Some(output_iri) = output.iri.as_deref().filter(|iri| !iri.is_empty()) else {
-                diags.push(reject(MSG_EXTERNAL_IRI, &subject));
+                diags.raise(|| reject(MSG_EXTERNAL_IRI, &subject));
                 continue;
             };
             claim_emitted_id(&mut seen, output_iri, &subject, &mut diags);
@@ -785,7 +786,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         };
         match boundaries.iter_mut().find(|pb| pb.iri == boundary_iri) {
             Some(pb) if pb.datatype != datatype => {
-                diags.push(reject(MSG_BOUNDARY_TYPE_MISMATCH, &subject));
+                diags.raise(|| reject(MSG_BOUNDARY_TYPE_MISMATCH, &subject));
             }
             Some(pb) => pb.targets.push(target.clone()),
             None => {
@@ -797,7 +798,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                         classify_attrs(attrs, boundary_iri, &mut diags)
                     }
                     Some(_) => {
-                        diags.push(reject(MSG_STRUCTURE, boundary_iri));
+                        diags.raise(|| reject(MSG_STRUCTURE, boundary_iri));
                         PortAttrs::None
                     }
                     None => PortAttrs::None,
@@ -817,7 +818,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // Phase 3 orphan-scan skip is load-bearing to keep deferred connectors from injecting
     // `MSG_STRUCTURE` Errors.
     if has_errors(&diags) {
-        return Err(diags);
+        return Err(listed(diags));
     }
 
     // All error checks passed. `port_iri` may still hold `None` for deferred connectors (never
@@ -863,8 +864,15 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             boundaries,
             boundary_outputs,
         },
-        diags,
+        listed(diags),
     ))
+}
+
+/// The diagnostics `diags` raised as one vector: the listed ones in the order raised, then the
+/// closing `resource-limit-exceeded` error when the list ended.
+fn listed(diags: DiagnosticList) -> Vec<Diagnostic> {
+    let (listed, closing) = diags.into_parts();
+    listed.into_iter().chain(closing).collect()
 }
 
 /// Claim connector `raw_cid` for owner block `bi` under `dir`, recording `minted` as its port
@@ -880,7 +888,7 @@ fn claim_port(
     minted: &str,
     port_iri: &mut [Option<String>],
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> bool {
     let idx = raw_cid as usize;
     let claimable = g
@@ -891,7 +899,7 @@ fn claim_port(
     if claimable {
         port_iri[idx] = Some(minted.to_owned());
     } else {
-        diags.push(reject(MSG_STRUCTURE, subject));
+        diags.raise(|| reject(MSG_STRUCTURE, subject));
     }
     claimable
 }
@@ -902,31 +910,35 @@ fn param_binding(
     name: &str,
     value: &Value,
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> Option<CxfValue> {
     match value {
         Value::Real(r) if r.is_finite() => Some(CxfValue::Float(*r)),
         Value::Real(_) => {
-            diags.push(reject(
-                format!(
-                    "export subset: parameter `{name}` is a non-finite Real, which cannot \
+            diags.raise(|| {
+                reject(
+                    format!(
+                        "export subset: parameter `{name}` is a non-finite Real, which cannot \
                      round-trip through JSON"
-                ),
-                subject,
-            ));
+                    ),
+                    subject,
+                )
+            });
             None
         }
         Value::Integer(i) => Some(CxfValue::Int(*i)),
         Value::Boolean(b) => Some(CxfValue::Bool(*b)),
         Value::String(s) => Some(CxfValue::Expr(string_literal(s))),
         Value::Enum { .. } => {
-            diags.push(reject(
-                format!(
-                    "export subset: parameter `{name}` is enumeration-valued, which has no CXF \
+            diags.raise(|| {
+                reject(
+                    format!(
+                        "export subset: parameter `{name}` is enumeration-valued, which has no CXF \
                      literal form in the minimal export subset"
-                ),
-                subject,
-            ));
+                    ),
+                    subject,
+                )
+            });
             None
         }
     }

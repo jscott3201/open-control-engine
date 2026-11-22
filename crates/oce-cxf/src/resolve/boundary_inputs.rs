@@ -234,7 +234,9 @@ pub(super) fn materialize(
         .filter_map(|id| graph.connectors.get(id.0 as usize))
         .filter_map(|connector| connector.iri.as_deref())
         .collect::<HashSet<_>>();
-    let (deferred, _) = deferral_set(graph);
+    // Only the set is read here; its warnings belong to an export and are dropped, held to the
+    // list's budget while they are built.
+    let deferred = deferral_set(graph, &mut DiagnosticList::new());
     refuse_minted_aliases(doc, &represented, graph, role_aliases, &deferred, diags);
 
     doc.graph

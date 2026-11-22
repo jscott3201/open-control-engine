@@ -83,3 +83,56 @@ fn shared_and_separate_target_allocations_derive_identical_types() {
     // Without the pass-through edge the String output is not derived as a String.
     assert!(!derived(&doc, &output, &[]).contains("Some(String)"));
 }
+
+/// Two pairs onto one output: an Integer input and a Real input, the output of no declared type.
+/// Each pair reads the output under its own type, so each minted connector carries the attribute
+/// set of its own type, and the shared reading is never handed to a pair of the other type
+/// (issue #750).
+#[test]
+fn an_output_read_under_two_types_gives_each_pair_the_attributes_of_its_own_type() {
+    use std::collections::HashMap;
+
+    use oce_model::{Attrs, ValueType};
+
+    use super::materialize;
+    use crate::dto::Node;
+
+    let output: Node = serde_json::from_value(json!({
+        "@id": "urn:top:y", "@type": "S231:RealOutput", "S231:min": 0, "S231:max": 4
+    }))
+    .expect("node");
+    let by_id: HashMap<&str, &Node> = HashMap::from([("urn:top:y", &output)]);
+    let types = HashMap::from([
+        ("urn:top:i", Some(ValueType::Integer)),
+        ("urn:top:r", Some(ValueType::Real)),
+        ("urn:top:j", Some(ValueType::Integer)),
+    ]);
+    let pairs = ["urn:top:i", "urn:top:r", "urn:top:j"]
+        .map(|input| (input.to_owned(), "urn:top:y".to_owned()))
+        .to_vec();
+    let (mut blocks, mut connectors, mut external) = (Vec::new(), Vec::new(), Vec::new());
+    let mut diags = DiagnosticList::new();
+    materialize(
+        pairs,
+        &types,
+        &by_id,
+        &mut blocks,
+        &mut connectors,
+        &mut external,
+        &mut diags,
+    );
+    assert!(diags.is_empty(), "{diags:?}");
+    let outputs: Vec<&Attrs> = connectors
+        .iter()
+        .skip(1)
+        .step_by(2)
+        .map(|c| &c.attrs)
+        .collect();
+    assert_eq!(outputs.len(), 3);
+    assert!(matches!(outputs[0], Attrs::Integer(a) if a.min == Some(0) && a.max == Some(4)));
+    assert!(matches!(outputs[1], Attrs::Real(a) if a.min == Some(0.0) && a.max == Some(4.0)));
+    assert_eq!(outputs[0], outputs[2]);
+    for connector in &connectors {
+        assert!(connector.attrs.matches(connector.value_type));
+    }
+}
