@@ -4,16 +4,19 @@
 //! `oce_author::print_text`). `--check` prints a report instead and answers whether the input is
 //! already canonical **in its own form**: text against `fmt_text`, wire against
 //! `oce_author::to_wire_string` (exit `0` yes, `1` no). `--write` rewrites a text file atomically
-//! and only when it changes (`atomic_write`: a symbolic link is followed, the file is replaced,
-//! not rewritten in place), reporting `changed` and `output` only once the write succeeded; it
-//! refuses stdin and wire files. A read or parse failure is exit `2`.
+//! and only when it changes (`atomic_write`: the file is replaced, not rewritten in place),
+//! reporting `changed` and `output` only once the write succeeded; it refuses stdin and wire
+//! files. The file it rewrites is its input, so the output rule holds for the input: before
+//! anything is read, a `FILE` that is a symbolic link, dangling or not, a directory or another
+//! non-file is `output-not-a-file` (`atomic_write::target_accepted`), and the way out is the
+//! path of the file a link names. A read or parse failure is exit `2`.
 
 use std::path::Path;
 
 use oce_author::{fmt_text, from_wire_bytes, print_text, to_wire_string};
 use serde_json::Value;
 
-use super::{Outcome, report_for, write_atomically};
+use super::{Named, Outcome, report_for, target_accepted, write_atomically};
 use crate::input::{self, Loaded};
 use crate::report::Report;
 use crate::{Exit, Form, Source, Streams, codes};
@@ -28,6 +31,16 @@ pub(crate) fn run(source: &Source, check: bool, write: bool, streams: &mut Strea
             "--write rewrites a file in place and cannot rewrite stdin",
             None,
         );
+        return refused(report);
+    }
+    if write
+        && let Err((code, detail)) = target_accepted(
+            Path::new(&source.file),
+            &input::display_name(&source.file),
+            Named::Caller,
+        )
+    {
+        report.error(code, detail, None);
         return refused(report);
     }
     let Some(loaded) = input::load(source, streams.stdin, &mut report) else {

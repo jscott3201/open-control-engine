@@ -1287,6 +1287,80 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **No `oce` verb writes through a symbolic link at its target, and a file a document names is
+  opened component by component without following one** (GitHub #764, issue #758; ruled by the
+  owner on 2026-11-22). **Breaking, in place**, for a symlinked output: `oce verify VECTORS --out
+  DIR` followed a link at `DIR/receipt.json` and overwrote the file it named, wherever it was,
+  and `emit -o`, `import -o` and `fmt --write` followed a link at their target by contract.
+  - **One rule for the target of every verb that writes** (`emit -o`, `import -o`, `fmt
+    --write`, both forms of `verify --out`): it must be absent or a regular file. A symbolic
+    link, dangling or not, a directory, a named pipe, a socket or a device is the new
+    `output-not-a-file`, exit 2, decided before anything is read, nothing written. The detail
+    names the path as given and the way out: for a path the caller named, the path of the file a
+    link names (`-o "$(realpath out)"`; `-o -` is stdout); for `DIR/receipt.json`, a name `oce`
+    chooses, remove or replace that entry. `-o /dev/null` (a device) is refused, where until then
+    the temporary file could not be created beside it.
+  - **Codes that move** (each now `output-not-a-file` unless said): `emit -o` and `import -o`:
+    a link to a file, inside or out (exit 0, written through), a link to the input
+    (`output-is-input`), a dangling link and a directory (`write-failed`), a named pipe (exit 0,
+    replaced by a regular file). `fmt --write`: a link (exit 0, its file rewritten), a dangling
+    link (`not-found`), a directory or a named pipe (`not-a-file`). The vector `--out`'s
+    `receipt.json`: a link, to an input or not (exit 0, written through), a dangling link and a
+    directory (`write-failed`), a named pipe (exit 0, replaced); a hard link to an input or an
+    input at that path (exit 0, the input replaced) is now `output-is-input`. `--commission
+    --out`'s `receipt.json`: a link, dangling or not, a directory and a named pipe
+    (`write-failed`), a link to an input (`output-is-input`). Unchanged: a regular
+    `receipt.json` (replaced by the vector form, `write-failed` for `--commission`), an existing
+    `outputs/` (`write-failed`), a hard link to an input for emit, import and `--commission`
+    (`output-is-input`).
+  - **One writer.** The link-following atomic writer is gone; every write renames a fresh
+    temporary file over the target's own directory entry, so a link planted after the check is
+    replaced, its target untouched. Only an existing regular file lends its permissions. On a
+    failure the temporary file is removed by its path, so a parent directory swapped during the
+    write can leave one `.oce-tmp` behind.
+  - **The vector `--out` refuses to replace what it read** (`output-is-input`, owner ruling): a
+    `DIR/receipt.json` that is the vector file, the subject or a mutant, by path, through a link
+    the input is named by or (Unix) as a hard link, after the reads and before the run. Until now
+    `oce verify out/receipt.json ... --out out` replaced the vector set with its receipt, exit 0.
+    It still replaces a regular `receipt.json` (owner ruling). An empty `--out` is now refused as
+    `--commission` refuses it (`write-failed`, a missing directory), before anything is read;
+    the vector form wrote `./receipt.json`.
+  - **Reads held inside the document's directory** (mutants, a spec's CXF, mapping and trend
+    files): on Unix each component below the directory is opened with `openat` and
+    `O_DIRECTORY | O_NOFOLLOW`, the last entry checked from its directory's handle and opened with
+    `O_NOFOLLOW | O_NONBLOCK` (cleared on the handle returned), so an intermediate directory
+    swapped for a link or a named pipe after the canonicalization is refused (`read-failed`), not
+    followed or waited on. Issue #758's harness swapped one 1,000,000 times: GitHub #757's
+    path-based checks read outside 135 times on macOS and 168,695 times on Linux, these opens
+    never; 3,000 binary runs on macOS read outside 141 times before and never after. `oce-cli`
+    gains the workspace's `rustix` as a Unix dependency beside `clap` and `serde_json` (owner
+    ruling; already in the lock, so only `oce-cli`'s entry in `Cargo.lock` moves); the crate stays
+    `forbid(unsafe_code)`. Windows has less, untested there: the entry is checked and the file
+    opened by path, and nothing ties the handle to the entry checked (std has no stable file
+    index).
+  - **What stays open (issue #771):** the directories `verify --commission --out` creates under
+    `DIR` (`outputs/`, `outputs/<k>/`) are reached by path, so whoever can change `DIR` during
+    the run can redirect the curve files (the review reproduced it 50 times in 50); a document is
+    read by path before its directory is resolved; `fmt --write` reads its input by path after
+    the target check. Each predates this change.
+  - **Evidence.** `tests/output_targets.rs` holds all five writers to every kind of target with
+    every entry unchanged after a refusal, the way out each names, and an empty `--out`;
+    `src/commands/contained_tests.rs` tries every schedule of swaps between two of the reader's
+    calls (the directory itself, a directory one and two levels down, the last entry) and
+    requires the path-based control to be beaten and the walk never, swaps a named pipe in for a
+    directory and for the last entry under a hang guard, and checks the handle returned blocks;
+    `tests/read_containment_race.rs` races the swap through the binary (both skip with a note on
+    a file system with no atomic exchange); `commission_reads.rs` and `verify_mutant_paths.rs`
+    read through a document directory that is a link. Of 22 mutants of the change, 20 are killed;
+    the last open's `O_NOFOLLOW` and its identity check each survive alone because each covers
+    the other, and together they are killed. The path-limit sweep in
+    `tests/commission_out_guards.rs` now removes its long directories (they kept `git worktree
+    remove` from removing a worktree), and the test scratch clear fails loudly.
+  - **Transcripts and vocabulary.** `oce vocab` lists `output-not-a-file` and widens
+    `output-is-input` and `write-failed`; `help_emit`, `help_import`, `help_fmt`, `help_verify`,
+    `vocab_text` and `vocab_json` move with the text. The CLI README has the rule ("Writing a
+    file", "Reading a file a document names") and the measured table.
+
 - **The OBC §12.6 Building 33 worked example runs, on a `CoolingCoilValve` authored from the
   vendored model, not vendored, and its verdict is `fail`** (GitHub #765, issue #755; design
   note `docs/design/commissioning.md`, "As landed: the worked example"). Upstream's translation

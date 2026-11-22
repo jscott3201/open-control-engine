@@ -5,8 +5,11 @@
 //! exit 2 with the report, and nothing written, replaced or left beside the target.
 //!
 //! "The input file" is file identity (`file_identity::same_file`): the same path in another
-//! spelling, a symbolic link to it and, on Unix, a hard link to it. On Windows identity is the
-//! canonical path, so a hard link is not recognised there; the Unix-only tests say which.
+//! spelling, an input named through a symbolic link and, on Unix, a hard link to it. On Windows
+//! identity is the canonical path, so a hard link is not recognised there; the Unix-only tests
+//! say which. An `-o` that is itself a symbolic link, dangling or not, is refused before this
+//! guard as `output-not-a-file` (issue #758, ruled by the owner on 2026-11-22): `oce` never writes
+//! through a link, whatever it names.
 
 mod support;
 
@@ -159,7 +162,7 @@ mod unix {
     use super::*;
 
     #[test]
-    fn a_symbolic_link_to_the_input_is_the_input_for_both_verbs() {
+    fn an_input_named_through_a_link_is_the_input_and_an_output_link_is_not_a_file() {
         let dir = workspace("guard_symlink");
         symlink("econ.cxf.json", dir.join("link")).expect("link");
         symlink("econ.oce", dir.join("text-link")).expect("link");
@@ -168,14 +171,15 @@ mod unix {
         symlink("link", dir.join("link-to-link")).expect("link");
         let before = snapshot(&dir);
         for output in ["link", "sub/far", "link-to-link"] {
+            // A link at `-o` is refused for being a link, whatever it names (issue #758).
             let run = oce_in(&dir, &["import", "econ.cxf.json", "-o", output], b"");
-            assert_eq!(refusal(&run), "output-is-input", "{output}");
-            // And the other way round: the link as the input, the file as the output.
+            assert_eq!(refusal(&run), "output-not-a-file", "{output}");
+            // The link as the input, the file it names as the output: the input file.
             let run = oce_in(&dir, &["import", output, "-o", "econ.cxf.json"], b"");
             assert_eq!(refusal(&run), "output-is-input", "{output} as the input");
         }
         let run = oce_in(&dir, &["emit", "econ.oce", "-o", "text-link"], b"");
-        assert_eq!(refusal(&run), "output-is-input");
+        assert_eq!(refusal(&run), "output-not-a-file");
         let run = oce_in(
             &dir,
             &["emit", "text-link", "--from", "text", "-o", "econ.oce"],
@@ -214,11 +218,19 @@ mod unix {
         symlink("text-doc", dir.join("text-link")).expect("link");
         fs::hard_link(dir.join("text-doc"), dir.join("text-twin")).expect("hard link");
         let before = snapshot(&dir);
+        // A link at `-o` is a link before it is the input (issue #758).
+        let expected = |output: &str| {
+            if output.ends_with("link") {
+                "output-not-a-file"
+            } else {
+                "output-is-input"
+            }
+        };
         for output in ["doc", "./doc", "sub/../doc", "link", "twin"] {
             for flags in [&[][..], &["--wire"][..]] {
                 let args = [&["import", "-", "-o", output], flags].concat();
                 let run = oce_in_with_stdin_file(&dir, &args, &dir.join("doc"));
-                assert_eq!(refusal(&run), "output-is-input", "{output} {flags:?}");
+                assert_eq!(refusal(&run), expected(output), "{output} {flags:?}");
                 assert_eq!(snapshot(&dir), before, "{output}: something was written");
             }
         }
@@ -231,7 +243,7 @@ mod unix {
         ] {
             let args = ["emit", "-", "--from", "text", "-o", output];
             let run = oce_in_with_stdin_file(&dir, &args, &dir.join("text-doc"));
-            assert_eq!(refusal(&run), "output-is-input", "{output}");
+            assert_eq!(refusal(&run), expected(output), "{output}");
             // No stage ran: the guard is decided before the read.
             assert_eq!(run.report()["stages"], serde_json::json!([]));
             assert_eq!(snapshot(&dir), before, "{output}: something was written");
@@ -265,6 +277,8 @@ mod unix {
     fn a_stdin_that_is_a_device_is_never_the_input() {
         // `oce emit - -o /dev/null < /dev/null`: the same device node, but no file to replace.
         let dir = workspace("guard_stdin_device");
+        // The output is the device: refused for not being a regular file, before anything is
+        // read or written (issue #758), so no temporary file is ever tried beside it.
         let null = Path::new("/dev/null");
         for args in [
             &["emit", "-", "--from", "text", "-o", "/dev/null"][..],
@@ -272,17 +286,17 @@ mod unix {
         ] {
             let run = oce_in_with_stdin_file(&dir, args, null);
             let code = &run.report()["errors"][0]["code"];
-            assert_ne!(code, "output-is-input", "{args:?}: {}", run.transcript());
+            assert_eq!(code, "output-not-a-file", "{args:?}: {}", run.transcript());
         }
     }
 
     #[test]
-    fn a_dangling_link_is_not_the_input_and_fails_as_a_write() {
+    fn a_dangling_link_is_not_the_input_and_is_not_a_file() {
         let dir = workspace("guard_dangling");
         symlink("missing/out", dir.join("dangling")).expect("link");
         let run = oce_in(&dir, &["import", "econ.cxf.json", "-o", "dangling"], b"");
-        assert_eq!(run.code, 2, "{}", run.transcript());
-        assert_eq!(run.report()["errors"][0]["code"], "write-failed");
+        assert_eq!(refusal(&run), "output-not-a-file");
+        assert!(!dir.join("missing").exists());
     }
 }
 

@@ -248,7 +248,13 @@ pub fn scratch(name: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("oce-cli")
         .join(name);
-    let _ = std::fs::remove_dir_all(&dir);
+    // An earlier run's directory must go: a clear that fails would leave its files beside this
+    // run's, and the test would read them.
+    match std::fs::remove_dir_all(&dir) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => panic!("clear the scratch directory `{name}`: {error}"),
+    }
     std::fs::create_dir_all(&dir).expect("create the scratch directory");
     dir
 }

@@ -12,30 +12,33 @@
 //!
 //! Order, the first refusal winning:
 //!
-//! 1. the output must not be the input (`output-is-input`): the same file by
-//!    `file_identity::same_file`, so another spelling of its path, a symbolic link to it and, on
-//!    Unix, a hard link to it are all refused, and nothing is replaced. For stdin (`-`) on Unix
-//!    the input is file descriptor 0 when the shell made it a regular file
+//! 1. the output must be absent or a regular file (`output-not-a-file`,
+//!    `atomic_write::target_accepted`): a symbolic link, dangling or not, is never written
+//!    through, and a directory, a named pipe, a socket or a device is never replaced;
+//! 2. the output must not be the input (`output-is-input`): the same file by
+//!    `file_identity::same_file`, so another spelling of its path, an input named through a
+//!    symbolic link and, on Unix, a hard link to it are all refused, and nothing is replaced. For
+//!    stdin (`-`) on Unix the input is file descriptor 0 when the shell made it a regular file
 //!    (`file_identity::stdin_is_file`, `import - -o doc < doc`); on Windows stdin is not checked;
-//! 2. the output's name, which must not contradict the form written (`output-form-mismatch`).
+//! 3. the output's name, which must not contradict the form written (`output-form-mismatch`).
 //!    The form is `--wire` or text and is never chosen by the name; but a name that `oce` would
 //!    read as another form is refused, so a file this verb writes is never one the other verbs
 //!    misread. The name is read by `id`'s own rule (`id::form_by_name`): `.oce` is text, `.json`
 //!    is wire, and `.jsonld` and `.cxf.json` are CXF, which this verb never writes. A name that
 //!    rule reads no form from is accepted for either form;
-//! 3. a bounded read, stdin (`-`) or a file, at `oce_api::MAX_CXF_BYTES`, a file's size from its
+//! 4. a bounded read, stdin (`-`) or a file, at `oce_api::MAX_CXF_BYTES`, a file's size from its
 //!    metadata before a byte is read. The input has one form, so there is no `--from` and no
 //!    name rule;
-//! 4. `oce_author::import_cxf`. A refusal is reported under the importer's own stable code
+//! 5. `oce_author::import_cxf`. A refusal is reported under the importer's own stable code
 //!    (`ImportError::code`, one of `oce_author::IMPORT_ERROR_CODES`) with its subject as the
 //!    error's `at`. No kind is matched here, so a kind `oce-author` adds is reported under its
 //!    own code;
-//! 5. the spelling: the output form's writer, then that form's own reader over what was written.
+//! 6. the spelling: the output form's writer, then that form's own reader over what was written.
 //!    The document is produced only when it reads back equal to the imported sequence, so exit
 //!    `0` means `oce` reads what it wrote. Anything else is `unspellable`: a class path the text
 //!    form cannot spell, a string past a wire bound, a wire document past the wire form's size
 //!    limit;
-//! 6. the write: stdout, or the atomic write of `-o` (`write-failed`).
+//! 7. the write: stdout, or the atomic write of `-o` (`write-failed`).
 //!
 //! The report's `dropped` and `normalised` are the importer's lists (`oce_author::ImportReport`),
 //! in reading order, written once the importer accepted the document. Its third list,
@@ -50,7 +53,9 @@ use oce_author::{
 use serde_json::{Value, json};
 
 use super::id::{form_by_name, form_name};
-use super::{Outcome, report_for, same_file, stdin_is_file, write_atomically};
+use super::{
+    Named, Outcome, report_for, same_file, stdin_is_file, target_accepted, write_atomically,
+};
 use crate::report::{Facts, Report};
 use crate::{Exit, IdForm, ImportArgs, Streams, codes, input};
 
@@ -133,12 +138,18 @@ pub(crate) fn run(args: &ImportArgs, streams: &mut Streams<'_>) -> Outcome {
 }
 
 /// Whether `-o output` may be written for a document read from `input` in the form `asked`: it
-/// must not be the input file, and its name must not read as another form.
+/// must be absent or a regular file, it must not be the input file, and its name must not read
+/// as another form.
 fn output_accepted(
     input: &std::ffi::OsStr,
     output: &std::ffi::OsStr,
     asked: IdForm,
 ) -> Result<(), (&'static str, String)> {
+    target_accepted(
+        Path::new(output),
+        &input::display_name(output),
+        Named::Caller,
+    )?;
     let is_input = if input::is_stdin(input) {
         stdin_is_file(Path::new(output))
     } else {

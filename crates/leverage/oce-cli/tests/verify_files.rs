@@ -366,9 +366,9 @@ fn the_crate_directory_run_needs_no_scratch() {
 #[test]
 fn a_named_pipe_is_never_opened_as_the_vector_file_the_subject_or_the_receipt() {
     // A named pipe blocks an open for reading until a writer comes. Each file `verify` reads is
-    // judged a regular file from its metadata first, and `--out` writes a fresh temporary file
-    // and renames it over the target, so a pipe at `receipt.json` is replaced, never opened. The
-    // guard is a hang guard, not an assertion on speed.
+    // judged a regular file from its metadata first, and a pipe at `receipt.json` is
+    // `output-not-a-file` before anything is read (issue #758), never opened and never replaced.
+    // The guard is a hang guard, not an assertion on speed.
     let dir = scratch("verify_named_pipes");
     ahu_into(&dir);
     fs::create_dir(dir.join("out")).expect("out");
@@ -399,11 +399,15 @@ fn a_named_pipe_is_never_opened_as_the_vector_file_the_subject_or_the_receipt() 
         "--out",
         "out",
     ]);
-    assert_eq!(out.code, 0, "{}", out.transcript());
-    let written = fs::symlink_metadata(dir.join("out/receipt.json")).expect("the receipt");
-    assert!(written.is_file(), "the pipe was replaced by the receipt");
+    assert_eq!(out.code, 2, "{}", out.transcript());
+    let error = &out.report()["errors"][0];
     assert_eq!(
-        fs::read(dir.join("out/receipt.json")).expect("read"),
-        receipt_of(&dir)
+        (error["code"].as_str(), error["at"].as_str()),
+        (Some("output-not-a-file"), Some("receipt.json"))
+    );
+    let left = fs::symlink_metadata(dir.join("out/receipt.json")).expect("the pipe");
+    assert!(
+        std::os::unix::fs::FileTypeExt::is_fifo(&left.file_type()),
+        "the pipe is left as it was"
     );
 }

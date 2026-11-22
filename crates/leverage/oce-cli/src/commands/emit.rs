@@ -5,12 +5,14 @@
 //! report on stdout). On success the CXF is stdout, or with `-o FILE` it is written atomically
 //! (`atomic_write`) and the report is stdout, with `output` and `bytes` set only once the write
 //! succeeded. A malformed namespace, an unreadable or unparsable input and a failed write are
-//! errors (exit `2`), and so is an `-o` that is the input file (`output-is-input`, decided before
-//! anything is read: the same file by `file_identity::same_file`, so another spelling of the
-//! path, a symbolic link to it and, on Unix, a hard link to it), which would replace the authored
-//! sequence with its CXF. On Unix the same holds for stdin (`-`) when the shell made file
-//! descriptor 0 a regular file (`emit - --from text -o doc < doc`, `file_identity::stdin_is_file`);
-//! on Windows stdin is not checked.
+//! errors (exit `2`). So, decided before anything is read and in this order, are an `-o` that is
+//! not absent or a regular file (`output-not-a-file`: a symbolic link, dangling or not, is never
+//! written through; `atomic_write::target_accepted`) and an `-o` that is the input file
+//! (`output-is-input`: the same file by `file_identity::same_file`, so another spelling of the
+//! path, an input named through a symbolic link and, on Unix, a hard link to it), which would
+//! replace the authored sequence with its CXF. On Unix the same holds for stdin (`-`) when the
+//! shell made file descriptor 0 a regular file (`emit - --from text -o doc < doc`,
+//! `file_identity::stdin_is_file`); on Windows stdin is not checked.
 //!
 //! The output's name must not contradict the CXF written (`output-form-mismatch`, also decided
 //! before anything is read): a name `id::form_by_name` reads as text (`.oce`) or wire (`.json`)
@@ -25,7 +27,9 @@ use serde_json::Value;
 
 use super::id::{form_by_name, form_name};
 use super::validate::record;
-use super::{Outcome, report_for, same_file, stdin_is_file, write_atomically};
+use super::{
+    Named, Outcome, report_for, same_file, stdin_is_file, target_accepted, write_atomically,
+};
 use crate::input::{self, Parsed};
 use crate::report::Report;
 use crate::{Exit, IdForm, Source, Streams, codes};
@@ -97,9 +101,15 @@ pub(crate) fn run(
     }
 }
 
-/// Whether `-o output` may be written for the input `input`: it must not be the input file (for
-/// stdin, the file descriptor 0 points at), and its name must not read as text or wire.
+/// Whether `-o output` may be written for the input `input`: it must be absent or a regular file,
+/// it must not be the input file (for stdin, the file descriptor 0 points at), and its name must
+/// not read as text or wire.
 fn output_accepted(input: &OsStr, output: &OsStr) -> Result<(), (&'static str, String)> {
+    target_accepted(
+        Path::new(output),
+        &input::display_name(output),
+        Named::Caller,
+    )?;
     let is_input = if input::is_stdin(input) {
         stdin_is_file(Path::new(output))
     } else {

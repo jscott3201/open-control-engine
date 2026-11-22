@@ -739,7 +739,7 @@ exit: 0
     },
     {
       "code": "write-failed",
-      "meaning": "the output could not be written or renamed into place, or (verify --out) DIR is not an existing directory, or (verify --commission --out) DIR/outputs already exists"
+      "meaning": "the output could not be written or renamed into place, or (verify --out) DIR is not an existing directory, or (verify --commission --out) DIR/outputs or a regular DIR/receipt.json already exists"
     },
     {
       "code": "write-needs-file",
@@ -807,7 +807,11 @@ exit: 0
     },
     {
       "code": "output-is-input",
-      "meaning": "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; or verify --commission --out DIR would write DIR/receipt.json over a file the run reads; nothing is written"
+      "meaning": "emit -o or import -o is the input file itself (another spelling of its path, the file an input link names, or on Unix a hard link to it), or, on Unix, the regular file standard input reads; or verify --out DIR (vector or --commission) would write DIR/receipt.json over a file the run reads, by path, through a link or as a hard link; nothing is written"
+    },
+    {
+      "code": "output-not-a-file",
+      "meaning": "the path a verb would write (emit -o, import -o, fmt --write's file, verify --out's DIR/receipt.json) is a symbolic link, dangling or not, a directory, a named pipe, a socket or a device; oce never writes through a link (give the path of the file it names); nothing is read or written"
     },
     {
       "code": "mixed-forms",

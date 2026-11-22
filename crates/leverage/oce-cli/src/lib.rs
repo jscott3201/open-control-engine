@@ -191,6 +191,8 @@ pub(crate) struct VerifyArgs {
     pub(crate) reference: Option<usize>,
     /// Write the receipt to DIR/receipt.json (atomically) and print the report on stdout; with
     /// --commission also each output's exceedance curve, `DIR/outputs/<k>/errors.csv`.
+    /// DIR/receipt.json must be absent or a regular file (never a link) and no file the run
+    /// reads.
     #[arg(long, value_name = "DIR")]
     pub(crate) out: Option<OsString>,
     /// With --commission and --out: also each Real output's reference, test and bound curves
@@ -362,9 +364,10 @@ pub(crate) struct DiffArgs {
 pub(crate) struct ImportArgs {
     /// The flat CXF document, or `-` for stdin.
     pub(crate) file: OsString,
-    /// Write the sequence here (atomically) and print the report on stdout; `-` is stdout. The
-    /// name must not read as another form (.oce is text, .json is wire, .jsonld and .cxf.json
-    /// are CXF) and must not be the input file.
+    /// Write the sequence here (atomically) and print the report on stdout; `-` is stdout. It
+    /// must be absent or a regular file (never a link), its name must not read as another form
+    /// (.oce is text, .json is wire, .jsonld and .cxf.json are CXF) and it must not be the input
+    /// file.
     #[arg(short = 'o', long = "output")]
     pub(crate) output: Option<OsString>,
     /// Write the wire form (strict JSON) instead of the text form.
@@ -384,9 +387,10 @@ enum Command {
         /// The instance namespace every IRI starts with; must end in `#`, `/` or `:`.
         #[arg(long)]
         namespace: Option<String>,
-        /// Write the CXF here (atomically) and print the report on stdout; `-` is stdout. The
-        /// name must not read as text or wire (.oce, .json) and the file must not be the input
-        /// (on Unix, nor the file stdin was opened from).
+        /// Write the CXF here (atomically) and print the report on stdout; `-` is stdout. It must
+        /// be absent or a regular file (never a link), the name must not read as text or wire
+        /// (.oce, .json) and the file must not be the input (on Unix, nor the file stdin was
+        /// opened from).
         #[arg(short = 'o', long = "output")]
         output: Option<OsString>,
     },
@@ -411,7 +415,8 @@ enum Command {
         /// Print a report instead of the text; exit 1 when the input is not canonical.
         #[arg(long, conflicts_with = "write")]
         check: bool,
-        /// Rewrite the text file (a temporary file, then a rename; a hard link keeps the old bytes).
+        /// Rewrite the text file, which must be a regular file, never a link (a temporary file,
+        /// then a rename; a hard link keeps the old bytes).
         #[arg(long)]
         write: bool,
     },
