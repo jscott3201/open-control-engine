@@ -191,6 +191,17 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
+- **The constructed budget lives in `oce-blocks`, beside what it counts** (GitHub #788, issue
+  #722). `ConstructedBudget` and `MAX_CONSTRUCTED_WORDS` move from `oce-graph` to `oce-blocks`
+  (beside `Block::constructed_words` and `MAX_CONSTRUCTION_PEAK_BYTES`), so the CXF resolver and
+  the validator, which do not depend on `oce-graph`, charge with the one accumulator the blob
+  decoder and the facade use. `oce-graph` re-exports both under their old paths. The method
+  `ConstructedBudget::charge_instance`, which names a model's instance in a `BuildError`, is now
+  the free function `oce_graph::charge_instance(&mut budget, model, id, block)`: a type cannot
+  carry a method of a crate it does not depend on. The value (4,194,304 words) and every refusal
+  of the blob decoder and the model build are unchanged; the code moved, so no `no_std` build,
+  firmware image, blob byte or golden changes.
+
 - **An enumeration is named by its canonical class path, and by nothing else** (GitHub #779,
   issues #762 and #637; the owner's ruling of 2026-11-22). **Breaking, in place:** a CDL
   enumeration was matched by the last segment of its path, so `controllerType` written
@@ -592,6 +603,87 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
+- **A load's signature probes are charged to the constructed budget, so a refused document
+  costs work bounded by the budget, not by its block count** (GitHub #788, issue #722).
+  **Breaking, in place** for documents already refused: which refusal they get, and at which
+  stage. No document that loaded before is refused now, and none changes its content id or blob
+  (the corpus below).
+  - **What was wrong.** The CXF load constructs every block up to three times: the resolver
+    constructs each leaf to read its resolved signature and drops it (Step 8, port binding), the
+    validator does the same in its interface rule, and instantiation keeps what it builds. Only
+    instantiation was charged to the model-wide budget (GitHub #721, issue #700). Each probe was
+    dropped before the next, so the peak stayed one block, but the work did not: a
+    `CDL.Reals.Sources.TimeTable` sized by one `table_524288_2` cell (about 500 bytes of CXF)
+    zero-fills 8 MiB in each probe pass, and the document is refused only once both have run
+    (the load gate refuses the unfilled table). Measured on the base (84db2d76, debug, macOS
+    arm64): 16 such blocks requested 268,891,973 bytes, 64 requested 1,075,557,237, and 5,000
+    (2.6 MB of CXF) requested 84,021,160,586 bytes in 19 s.
+  - **The charge.** Each pass now charges its probes to an `oce_blocks::ConstructedBudget` of its
+    own, as it constructs them: exactly the budget is accepted, and the first block that takes a
+    pass past it is one `resource-limit-exceeded` error on that block, with the message the
+    facade records at instantiation, and no later block of that pass is constructed. The passes
+    construct the same blocks from the same parameters (the resolver's table is final once Step
+    7 grounds it; unification changes attributes, not parameters), so their totals are equal or
+    the resolver's is smaller, and a model that instantiates within the budget passes both
+    probes. No valid document comes near the budget (under half of it,
+    `cxf_constructed_budget.rs`).
+  - **Where it is reported.** A CXF document whose probes cross the budget is refused by the
+    resolver: `OcError::Cxf`, at the receipt's `Import` stage, subject the crossing block. It was
+    refused by the validator before (`parameter-out-of-range` for the unfilled tables of the
+    issue's shape) or at instantiation (`OcError::Build(BuildError::ConstructedTooLarge)`). A
+    graph built directly meets the validator's probe first (`OcError::Validate`); instantiation's
+    refusal is unchanged for paths that construct without probing (`Engine::resume`).
+  - **Measured** (head, debug, macOS arm64): 16, 32 and 64 blocks of the shape above request
+    33,967,593, 34,375,433 and 35,190,953 bytes (four probes and the document), and 5,000 blocks
+    154,087,177 bytes in 0.37 s, all refused at the fourth table; the peak is unchanged.
+  - **Evidence.** `oce-cxf` `resolve_probe_budget.rs` and `oce-validate`
+    `tests/probe_budget.rs`: the edge on both sides in either order, the request saturated, no
+    block after the crossing bound or compared, unregistered classes not charged, runs
+    identical. `oce-api` `cxf_constructed_budget.rs`: the refusal and its `Import` stage, the edge
+    through both passes, and `bytes_total` flat from 16 to 64 blocks; `validate_sparse_table_cost.rs`
+    now holds the validator's one-finding-per-table claims on tables that stay inside the budget
+    (the issue's own 4- and 50-block documents are refused by the resolver).
+  - **Documented** in the [ingest resource bounds](docs/host-responsibilities.md#ingest-resource-bounds),
+    which now also state what `Engine::resume` and `Engine::compile_blob` hold while they run (a
+    second set of blocks and its state beside the engine's own, up to twice each budget), and the
+    [trust model](docs/compiled-schedule-blob.md#trust-model). The authoring validator's per-block
+    `class_ports` constructions are the same shape above the facade (GitHub issue #785).
+
+- **A leaf's own conditional guard reads each member in the type its class gives it** (GitHub
+  #788, issue #759). **Breaking, in place.** Since GitHub #754 every binding is held in its
+  parameter's type before anything reads it, but the guard scope the specialization pass builds
+  from a leaf's own declarations still read a leaf member as written. So `2` and `2.0` on a Real
+  member could decide a guard two ways: a `CDL.Reals.PID` whose output is conditional on
+  `reverseActing = "yMax + 1 > yMax"` loaded with `yMax` written `9007199254740992` (the Integer
+  sum is greater) and was refused with it written `9007199254740992.0` (the Real sum rounds
+  back, the output is pruned); and `k = "yMax * 4611686018427387904"` overflowed as an Integer,
+  so the guard over `k` named an unknown parameter in the Integer spelling and loaded in the Real
+  one. Every outcome was a load or a typed refusal: no block ran on a value the document did not
+  write.
+  - **The rule.** The specialization pass passes a leaf chain's bridged class path into
+    `evaluate_declarations`, and each grounded member is held by the rule resolver Step 7 holds
+    the parameter table by (`real_parameters::in_catalog_type`, now shared by both): an Integer
+    on a member its class types Real is that Real; an Integer past 2^53 stays as grounded (Step 7
+    refuses it on the binding); an Integer member keeps its Integer, and `2.0` on it is refused
+    as before; Boolean, enumeration and string members, an unregistered class and an undeclared
+    name are untouched. Composite chains keep their declared types (issue #735).
+  - **What moves.** Both reproductions now decide alike in every spelling (bare, typed
+    `xsd:integer` and `xsd:double`, an Integer expression): the first is refused in all of them,
+    the second loads in all of them as one content id and blob. The same flag written on a
+    composite over declared parameters decides the same way, over `==`, `<>`, `<`, `<=`, `/`,
+    `div`, `*`, `+`, `-`, the 2^53 boundaries, signed zeros, `1e308`, `5e-324` and non-finite
+    values. No tracked, vendored or library document has a leaf guard that reads a member written
+    as an Integer: 540 loads, none moved.
+  - **Not changed.** A leaf guard reads the leaf's own declarations only: a member left to its
+    default is unknown to it, as on a composite, and a member bound to an enclosing parameter does
+    not ground there, so a guard reading it is refused where the composite form is decided
+    (GitHub issue #784, pinned as it is).
+  - **Evidence.** `oce-api` `leaf_guard_types.rs` (every case above, leaf against composite, with
+    what the base did), `oce-cxf` `declaration_scope_leaf_types_tests.rs` (the guard scope member
+    by member), and `oce-cli` `parameter_scope_agreement.rs` (the engine, `oce id` and `oce import`
+    each give one verdict for every spelling; the authoring layer has no conditional components
+    and refuses all alike). Documented in [the composite subset](docs/cxf-composite-subset.md).
+
 - **A value read more than once is grounded once, string parameter values are held to 8 MiB a
   document, the sibling names of a leaf are built once, and nine more refusal routes are raised**
   (GitHub #752, issues #736, #731 and #711).
@@ -686,8 +778,8 @@ so far, and no tag is cut by the bump.
     `open-control-library` rules, so no golden, pin, blob fixture or content id moved. The
     specialize pass holds a composite's or the root's declarations the same way, so a guard over
     a declared-Real sum (`p + 1 > p` at 2^53) prunes alike in both spellings; a leaf's own chain
-    there still reads its members as written (refusals only, never a wrong value: GitHub issue
-    #759). A value a document lists more than once and GitHub #752 grounds once is held per
+    there still read its members as written (refusals only, never a wrong value) until GitHub
+    #788 (issue #759). A value a document lists more than once and GitHub #752 grounds once is held per
     listing, in the type of each parameter that lists it. The claim is a test now:
     `oce-api`'s `integer_respelling_identity.rs` respells every integral Real `S231:value`
     literal of every tracked document as a bare Integer and as a typed `xsd:integer` and requires

@@ -16,7 +16,9 @@
 //!
 //! - A block member ([`hold_in_catalog_type`]): an Integer bound to a parameter the block catalog
 //!   types Real ([`oce_blocks::parameter_value_type`]: scalars and flattened array elements alike)
-//!   becomes the Real of the same value.
+//!   becomes the Real of the same value. The same rule ([`in_catalog_type`]) holds a leaf's own
+//!   members in the scope its conditional guards read at the specialization pass (issue #759),
+//!   so a guard sees what the parameter table holds.
 //! - A composite (sequence) parameter ([`hold_in_declared_type`]): an Integer bound to a
 //!   parameter whose `S231:isOfDataType` is `S231:Real` becomes the Real of the same value. A
 //!   value of another kind than the declared Real, Integer or Boolean (a Real on a declared
@@ -58,15 +60,9 @@ pub(crate) fn hold_in_catalog_type(
     value: Value,
     diags: &mut DiagnosticList,
 ) -> Value {
-    let Value::Integer(integer) = value else {
-        return value;
-    };
-    if oce_blocks::parameter_value_type(class_path, name) != Some(ValueType::Real) {
-        return value;
-    }
-    match oce_blocks::exact_real(integer) {
-        Some(real) => Value::Real(real),
-        None => {
+    match in_catalog_type(class_path, name, value) {
+        Ok(value) => value,
+        Err(integer) => {
             // Raised, not pushed: every element of one array can be refused, and each message
             // names the owner, so nothing is built once the list has ended.
             diags.raise(|| {
@@ -80,9 +76,28 @@ pub(crate) fn hold_in_catalog_type(
                 )
                 .with_subject(source.to_owned())
             });
-            value
+            Value::Integer(integer)
         }
     }
+}
+
+/// `value`, bound to the parameter `name` of a block of class `class_path`, in the type the block
+/// catalog gives that parameter: the Real of an Integer on a Real parameter (scalars and
+/// flattened array elements alike), `value` itself for every other kind and parameter. `Err`
+/// is the Integer, unconverted, when it is above 2^53 in magnitude, which no Real holds
+/// exactly. The one rule behind [`hold_in_catalog_type`] (resolver Step 7) and a leaf's own
+/// declarations at the conditional-guard pass (issue #759), which reports nothing. Pure and
+/// total.
+pub(super) fn in_catalog_type(class_path: &str, name: &str, value: Value) -> Result<Value, i64> {
+    let Value::Integer(integer) = value else {
+        return Ok(value);
+    };
+    if oce_blocks::parameter_value_type(class_path, name) != Some(ValueType::Real) {
+        return Ok(value);
+    }
+    oce_blocks::exact_real(integer)
+        .map(Value::Real)
+        .ok_or(integer)
 }
 
 /// Why a composite parameter's grounded value does not fit its declared type.

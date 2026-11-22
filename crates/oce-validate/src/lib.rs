@@ -24,7 +24,11 @@
 //! 5. **Block interface arity + connector type ↔ block-signature port-kind** agreement (AD-8, §7.8):
 //!    a block's port counts and each connector's declared value type must match the native block
 //!    class signature — the reason this crate depends on `oce-blocks`. Without it a malformed graph
-//!    could reach the hot-path readers/emitters and panic or silently coerce to a type-zero.
+//!    could reach the hot-path readers/emitters and panic or silently coerce to a type-zero. Each
+//!    block is constructed to read its signature and dropped, and those constructions are charged
+//!    to one [`oce_blocks::ConstructedBudget`]: the first block that takes them past
+//!    [`oce_blocks::MAX_CONSTRUCTED_WORDS`] is one [`oce_diag::DiagCode::ResourceLimitExceeded`]
+//!    error on it, and no later block is constructed or compared (issue #722).
 //! 6. **§7.10 attribute unification** (doc 02 §9 R13.1–R13.4): the unified attributes
 //!    (`quantity`, `unit`, `min`, `max`) must agree across a connected cluster, including declared
 //!    boundary outputs that alias a source connector (`shall`-error on conflict —

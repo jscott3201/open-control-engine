@@ -384,7 +384,7 @@ pub(crate) fn instantiate_blocks(model: &ModelGraph) -> Result<Vec<Box<dyn Block
             detail: format!("unknown block class: {}", blk.class_iri),
         })?;
         let block = (entry.make)(&blk.params);
-        constructed.charge_instance(model, blk.id, block.as_ref())?;
+        oce_graph::charge_instance(&mut constructed, model, blk.id, block.as_ref())?;
         blocks.push(block);
     }
     Ok(blocks)

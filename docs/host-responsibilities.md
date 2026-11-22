@@ -683,9 +683,19 @@ changes.
 | Absent elements of a parameter-declared shape (a `TimeTable`'s cells, an `ExtractSignal`'s defaulted selectors) | one finding a shape, naming the count and the first four | `crates/oce-validate/src/rules/params_absent.rs` | `parameter-out-of-range`, found from the elements bound, never by walking the shape |
 | Preserved array parameters of one document | 1,048,576 elements, and 64 MiB (67,108,864 bytes) of element paths together, each path the instance IRI, `.` and the element's name | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses either, before its value is read or any of its names is built; it draws on neither |
 | String parameter values of one document | 8 MiB (8,388,608 bytes) over every parameter table, each entry counted whether or not entries share one allocation | `crates/oce-cxf/src/parameter_reads.rs` | `resource-limit-exceeded` diagnostic on the parameter whose value does not fit, before the value enters the table; an array mints none of its later elements |
-| Constructed blocks, model-wide | 4,194,304 words (32 MiB) held by the blocks outside their state: tables, gain matrices, resolved port kinds | `crates/oce-graph/src/constructed.rs` | `OcError::Build(BuildError::ConstructedTooLarge { block, requested, limit })` at instantiation, recorded as `resource-limit-exceeded`; `BlobError::ConstructedTooLarge` from the blob decoder |
+| Constructed blocks, model-wide | 4,194,304 words (32 MiB) held by the blocks outside their state: tables, gain matrices, resolved port kinds; charged by every pass that constructs blocks, each to a budget of its own | `crates/oce-blocks/src/constructed.rs` | on a CXF load, the resolver's signature probes first: a `resource-limit-exceeded` diagnostic on the block that crosses, at the `Import` stage (`OcError::Cxf`), and no later block is constructed; on a graph that passes them, the validator's probes the same way at the `Validation` stage (`OcError::Validate`); then `OcError::Build(BuildError::ConstructedTooLarge { block, requested, limit })` at instantiation, recorded as `resource-limit-exceeded`; `BlobError::ConstructedTooLarge` from the blob decoder |
 | Run state, model-wide | 4,194,304 words (32 MiB) | `crates/oce-graph/src/lib.rs` | `OcError::Build(BuildError::StateTooLarge { block, requested, limit })`, recorded as `resource-limit-exceeded`; `BlobError::StateTooLarge` from the blob decoder |
 | What `@context` expansion adds to one document | 8 MiB (8,388,608 bytes) over every expanded token, an expansion counted as its length less the token's | `crates/oce-cxf/src/expansion_budget.rs` | `resource-limit-exceeded` on the node the first token that does not fit is written on; nothing after it is read |
+
+The constructed and run-state budgets each bound one set of blocks and its state. Two calls build
+a second set while the engine's own is alive, so for the length of the call they hold up to twice
+each budget (64 MiB of constructed words and 64 MiB of state words, plus one block under
+construction): `Engine::resume` with edits pending re-instantiates every block and allocates its
+state before it replaces the running ones, and `Engine::compile_blob` decodes the bytes it has just
+encoded (a second set and its state, under the decoder's own budgets) to check them, and drops it
+before it returns. A load holds one set: its resolver and validator probes each construct one block
+at a time and drop it, and only instantiation keeps what it builds. Budget memory for these calls on
+that basis (issue #722).
 
 Composite nesting and boundary traversal are different walks and have separate limits. Boundary
 traversal is iterative, so an accepted path does not consume one call-stack frame per hop. Its work
@@ -877,7 +887,9 @@ Below the cap the pipeline refuses the known amplification shapes with typed dia
 parameter values past 8 MiB, each table entry counted (issue #736), run state past 4,194,304
 words, since issue #700
 what the constructed blocks hold outside their state (tables, gain matrices, resolved port kinds)
-past 4,194,304 words, and since issue #709 `@context` expansion that adds more than 8 MiB to a
+past 4,194,304 words (since issue #722 the resolver's and the validator's signature probes are
+charged too, so a refused document costs work bounded by the budget, not by its block count), and
+since issue #709 `@context` expansion that adds more than 8 MiB to a
 document (all five `resource-limit-exceeded`), and binding evaluation past 2^24 deterministic
 work units per expression or 2^26 per document (`grounding-failed`). Those limits bound growth, not absolute footprint — a maximal admissible
 document can still need hundreds of MiB — so isolation stays your obligation.

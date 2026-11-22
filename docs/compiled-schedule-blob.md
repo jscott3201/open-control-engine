@@ -347,7 +347,9 @@ widest `MultiSum` blocks and a fourth of 582,542 inputs together, while the larg
 fixtures holds 42 words. A model past it is refused, not truncated: reduce the table, matrix or
 vector sizes, or split the model. The CXF load applies the same budget with the same counter
 (`BuildError::ConstructedTooLarge`, recorded as `resource-limit-exceeded`), so a model the host
-loaded is one the target constructs. No valid CXF document reaches it: since issue #773 a dense
+loaded is one the target constructs; its resolver and validator, which construct each block to
+read its signature and drop it, charge those probes to budgets of their own and refuse there
+first (issue #722). No valid CXF document reaches it: since issue #773 a dense
 matrix writes its cells, and a document holds at most 8 MiB (`MAX_CXF_BYTES`) and 2^20 array
 elements, so a document's cells hold at most 1,179,649 words (one `MatrixGain` row of 2^20
 written cells, with its port kinds), and its ports buy about one word per 100 bytes or more of

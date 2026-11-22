@@ -59,6 +59,8 @@ mod connection_orientation;
 mod connections;
 mod declaration_scope;
 #[cfg(test)]
+mod declaration_scope_leaf_types_tests;
+#[cfg(test)]
 mod declaration_scope_tests;
 #[cfg(test)]
 mod declaration_scope_withheld_tests;
@@ -139,6 +141,23 @@ fn port_views<'a>(
         None => (inst.input_iris.clone(), inst.output_iris.clone()),
     }
 }
+
+/// The refusal of the instance `iri` whose signature probe takes the probes' constructed total
+/// to `requested` words, past [`oce_blocks::MAX_CONSTRUCTED_WORDS`] (issue #722). The message
+/// is the one the facade records for the same budget at instantiation.
+fn constructed_too_large(iri: &str, requested: u64) -> Diagnostic {
+    Diagnostic::error(
+        DiagCode::ResourceLimitExceeded,
+        format!(
+            "constructed blocks too large: {requested} word(s) held by the blocks through this \
+             block exceed the supported maximum ({} words). Remedy: reduce table, matrix or \
+             vector sizes, or split the model.",
+            oce_blocks::MAX_CONSTRUCTED_WORDS
+        ),
+    )
+    .with_subject(iri.to_owned())
+}
+
 /// Resolve a CXF document into the flat [`ModelGraph`] (doc 04 §7.1). See the module docs for the
 /// determinism and boundary-elision contracts.
 pub(crate) fn resolve(
@@ -514,6 +533,11 @@ pub(crate) fn resolve(
     // names its ports after the class's declared ports is permuted into signature order rather than
     // read positionally, because the reference toolchain orders connectors alphabetically and a
     // same-kind transposition is invisible to every other guard. See `port_binding`.
+    //
+    // Each probe is charged to the constructed budget before the next is built (issue #722): a
+    // document whose probes cross it is refused here, and no later block is constructed, so the
+    // work a hostile document costs is bounded by the budget and not by its block count.
+    let mut probes = oce_blocks::ConstructedBudget::new();
     for inst in &insts {
         let idx = inst.id.0 as usize;
         // A derivation-refused instance never reaches the agreement check: its tagged refusal
@@ -529,11 +553,16 @@ pub(crate) fn resolve(
         let Some(entry) = oce_blocks::lookup(&class_path) else {
             continue;
         };
+        let probe = (entry.make)(&blocks[idx].params);
+        if let Err(requested) = probes.charge(probe.as_ref()) {
+            diags.raise(|| constructed_too_large(&inst.node.id, requested));
+            break;
+        }
         let want = {
-            let probe = (entry.make)(&blocks[idx].params);
             let sig = probe.resolved_signature();
             (sig.inputs.len(), sig.outputs.len())
         };
+        drop(probe);
         let (derived_in, derived_out) = port_views(&derivation, inst);
         port_binding::check_and_bind(
             &mut blocks[idx],
