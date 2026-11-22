@@ -222,6 +222,36 @@ fn a_link_inside_the_directory_resolves_and_is_one_file_with_its_target() {
 
 #[cfg(unix)]
 #[test]
+fn a_vector_set_whose_directory_is_a_link_reads_its_mutants_through_it() {
+    // `bundle -> set`: the mutants resolve against the directory the link names, whose identity
+    // is the one each read's directory handle must have (issue #758). Taken from the link
+    // itself, every read would be refused.
+    let (root, set) = prepared("paths_bundle_link");
+    fs::write(set.join("m.cxf.json"), mutant_bytes()).expect("m");
+    let (code, report) = verify(&root, &set, &["m.cxf.json"]);
+    verdict(code, &report);
+    std::os::unix::fs::symlink("set", root.join("bundle")).expect("bundle -> set");
+    let through = oce_in(
+        &root,
+        &[
+            "verify",
+            "bundle/vectors.json",
+            "--subject",
+            "bundle/rule.cxf.jsonld",
+        ],
+        b"",
+    );
+    assert_eq!(through.code, code, "{}", through.transcript());
+    assert_eq!(
+        through.report(),
+        report,
+        "the same receipt through the link"
+    );
+    assert_eq!(through.report()["body"]["mutants"]["total"], 1);
+}
+
+#[cfg(unix)]
+#[test]
 fn hard_links_are_one_file_on_unix() {
     let (root, set) = prepared("paths_hard_link");
     fs::write(set.join("m.cxf.json"), mutant_bytes()).expect("m");

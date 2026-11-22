@@ -27,7 +27,9 @@ use serde_json::Value;
 
 use super::id::{form_by_name, form_name};
 use super::validate::record;
-use super::{Outcome, report_for, same_file, stdin_is_file, target_accepted, write_atomically};
+use super::{
+    Named, Outcome, report_for, same_file, stdin_is_file, target_accepted, write_atomically,
+};
 use crate::input::{self, Parsed};
 use crate::report::Report;
 use crate::{Exit, IdForm, Source, Streams, codes};
@@ -103,7 +105,11 @@ pub(crate) fn run(
 /// it must not be the input file (for stdin, the file descriptor 0 points at), and its name must
 /// not read as text or wire.
 fn output_accepted(input: &OsStr, output: &OsStr) -> Result<(), (&'static str, String)> {
-    target_accepted(Path::new(output), &input::display_name(output))?;
+    target_accepted(
+        Path::new(output),
+        &input::display_name(output),
+        Named::Caller,
+    )?;
     let is_input = if input::is_stdin(input) {
         stdin_is_file(Path::new(output))
     } else {

@@ -16,7 +16,7 @@ use std::path::Path;
 use oce_author::{fmt_text, from_wire_bytes, print_text, to_wire_string};
 use serde_json::Value;
 
-use super::{Outcome, report_for, target_accepted, write_atomically};
+use super::{Named, Outcome, report_for, target_accepted, write_atomically};
 use crate::input::{self, Loaded};
 use crate::report::Report;
 use crate::{Exit, Form, Source, Streams, codes};
@@ -34,8 +34,11 @@ pub(crate) fn run(source: &Source, check: bool, write: bool, streams: &mut Strea
         return refused(report);
     }
     if write
-        && let Err((code, detail)) =
-            target_accepted(Path::new(&source.file), &input::display_name(&source.file))
+        && let Err((code, detail)) = target_accepted(
+            Path::new(&source.file),
+            &input::display_name(&source.file),
+            Named::Caller,
+        )
     {
         report.error(code, detail, None);
         return refused(report);

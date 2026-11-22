@@ -18,11 +18,13 @@
 //!    without following a link and must be a regular file (`not-a-file` otherwise: opening a
 //!    named pipe for reading blocks until a writer comes, and a socket or a device is no input),
 //!    and is then opened from that handle with `O_NOFOLLOW | O_NONBLOCK`, and the handle must be a
-//!    regular file with the identity that was checked. A canonical path holds no link, so a link
-//!    found at any step, or a directory that is no longer one, was swapped in after the
-//!    canonicalization, and is `read-failed`, never followed. A pipe swapped in after the check
-//!    is opened without blocking and refused by its identity. The caller reads the size and the
-//!    bytes from the one handle.
+//!    regular file with the identity that was checked; `O_NONBLOCK` is then cleared, so the
+//!    caller reads an ordinary blocking handle. A canonical path holds no link, so a link found
+//!    at any step, or a directory that is no longer one (a named pipe swapped in for a directory
+//!    is refused by `O_DIRECTORY` before it is opened), was swapped in after the
+//!    canonicalization, and is `read-failed`, never followed. A pipe swapped in for the last entry
+//!    after its check is opened without blocking and refused by its kind. The caller reads the
+//!    size and the bytes from the one handle.
 //!
 //! Each handle pins what it names, so no rename in the directory can redirect a later step: the
 //! review of GitHub #757 raced a link swapped in at the last component (8 reads outside the
@@ -32,12 +34,13 @@
 //! under any schedule of swaps between two of these calls (`contained_tests.rs`, whose control,
 //! the path-based checks, must be beaten by some schedule).
 //!
-//! **Windows** keeps the path-based checks of GitHub #757 (untested there): the canonical path's
-//! own entry, read without following a link, must be a regular file, it is opened by path, and
-//! the handle must be the file checked. An intermediate directory swapped for a link after the
-//! canonicalization is still followed there; std has no `openat`. A hard link inside the
-//! directory to a file outside it is read on every platform: a hard link has no other path to
-//! resolve.
+//! **Windows** has less (untested there): the canonical path's own entry, read without following
+//! a link, must be a regular file, it is opened by path, and the handle must be a regular file.
+//! Nothing ties the handle to the entry checked: std has no stable file index there, so a file's
+//! identity is its canonical path, which cannot tell two files at one path apart. An intermediate
+//! directory, or the last entry, swapped for a link after the check is followed there; std has no
+//! `openat`. A hard link inside the directory to a file outside it is read on every platform: a
+//! hard link has no other path to resolve.
 
 use std::fs::{File, Metadata};
 use std::path::{Component, Path, PathBuf};
@@ -218,11 +221,14 @@ impl Root {
         if (opened.st_dev, opened.st_ino) != (checked.st_dev, checked.st_ino) {
             return Err(changed());
         }
+        // A regular file: the caller reads an ordinary blocking handle.
+        let flags = rustix::fs::fcntl_getfl(&handle).map_err(errno)?;
+        rustix::fs::fcntl_setfl(&handle, flags - OFlags::NONBLOCK).map_err(errno)?;
         Ok(File::from(handle))
     }
 
-    /// Open the canonical path by path, checking its own entry first and the handle after
-    /// (module header, "Windows").
+    /// Open the canonical path by path, checking its own entry first and the handle's kind after
+    /// (module header, "Windows": no identity ties the two together there).
     #[cfg(not(unix))]
     fn open_below(
         &self,
@@ -240,12 +246,8 @@ impl Root {
         }
         step();
         let file = File::open(canonical).map_err(io_refusal)?;
-        let metadata = file.metadata().map_err(io_refusal)?;
-        if !metadata.is_file() {
+        if !file.metadata().map_err(io_refusal)?.is_file() {
             return Err(not_a_file());
-        }
-        if identity(canonical, &metadata) != identity(canonical, &checked) {
-            return Err(changed());
         }
         Ok(file)
     }

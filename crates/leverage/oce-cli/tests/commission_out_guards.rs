@@ -178,11 +178,13 @@ fn exists_in(dir: &Path, path: &str) -> bool {
 /// assertion failing included: a path past the platform's limit left under `target/` keeps
 /// `git worktree remove` from removing the worktree ("File name too long"). `remove_dir_all`
 /// walks below each top directory from handles, so the depth below it is no obstacle.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 struct Sweep<'d> {
     dir: &'d Path,
     made: Vec<String>,
 }
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 impl Sweep<'_> {
     /// Remove every top directory made, and name those that could not be removed.
     fn clear(&mut self) -> Vec<String> {
@@ -198,6 +200,7 @@ impl Sweep<'_> {
     }
 }
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 impl Drop for Sweep<'_> {
     fn drop(&mut self) {
         let _ = self.clear();

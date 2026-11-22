@@ -3,10 +3,13 @@
 //!
 //! **The target** ([`target_accepted`]) must be absent or a regular file. A symbolic link,
 //! dangling or not, a directory, a named pipe, a socket or a device is `output-not-a-file`, and
-//! every verb asks before it reads anything, so a refusal reads and writes nothing. A link is
-//! never written through: whoever controls the directory cannot redirect a write by planting
-//! one, and a caller whose output is a link gives the path of the file it names. Directories the
-//! caller's path passes through are followed: the caller named them.
+//! every verb asks before it reads anything, so a refusal reads and writes nothing. The target's
+//! own entry is never written through: a link planted there is refused, or, planted after the
+//! check, replaced. A caller whose output is a link gives the path of the file it names; a name
+//! that is `oce`'s own (`DIR/receipt.json`) is removed or replaced by its owner. Directories the
+//! path passes through are reached by path: the caller's are followed (the caller named them),
+//! and so are the directories `verify --commission --out` creates under `DIR`, so whoever can
+//! change `DIR` during a run can redirect the curve files below it (issue #771).
 //!
 //! **The write** ([`write_atomically`]): the bytes go to a uniquely named temporary file beside
 //! the target, opened with `create_new` (`O_EXCL`: it never follows a symbolic link and never
@@ -17,8 +20,9 @@
 //! and the umask can only narrow that, so the new bytes are never readable by anyone the target
 //! does not already admit; the target's exact permissions are then copied through the handle
 //! before the rename. The file is replaced, not rewritten in place, so a hard link to the old
-//! inode keeps the old bytes. On every failure the temporary file (and only a file this run
-//! created) is removed and the target is untouched.
+//! inode keeps the old bytes. On a failure the target is untouched and the temporary file is
+//! removed **by its path**: if the parent directory was swapped since it was created, that path
+//! names another place, and the temporary file is left behind (issue #771).
 
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
@@ -32,15 +36,30 @@ use crate::codes;
 const ONLY_FILES: &str =
     "oce writes only to a path that is absent or a regular file; nothing is read or written";
 
+/// Who named the target, which decides the way out of a refusal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Named {
+    /// The caller named the path (`-o`, `fmt --write`'s file): a link there is left for the path
+    /// of the file it names.
+    Caller,
+    /// The name is `oce`'s own inside the caller's directory (`DIR/receipt.json`): whatever is
+    /// there is removed or replaced by its owner.
+    Tool,
+}
+
 /// Whether `path` may be written: absent, or a regular file by its own entry, read without
-/// following a link (module header). `shown` is the path as the report names it. An entry that
-/// cannot be read (a parent that is a file or cannot be searched) is left to the write, which
-/// then fails as `write-failed`.
+/// following a link (module header). `shown` is the path as the report names it, and `named`
+/// who named it. An entry that cannot be read (a parent that is a file or cannot be searched) is
+/// left to the write, which then fails as `write-failed`.
 ///
 /// # Errors
-/// `output-not-a-file`, naming `shown` and what it is: a symbolic link (with the way out: the
-/// path of the file it names), a directory, or another non-file.
-pub(crate) fn target_accepted(path: &Path, shown: &str) -> Result<(), (&'static str, String)> {
+/// `output-not-a-file`, naming `shown`, what it is (a symbolic link, a directory, or another
+/// non-file) and the way out.
+pub(crate) fn target_accepted(
+    path: &Path,
+    shown: &str,
+    named: Named,
+) -> Result<(), (&'static str, String)> {
     let Ok(entry) = fs::symlink_metadata(path) else {
         return Ok(());
     };
@@ -48,15 +67,20 @@ pub(crate) fn target_accepted(path: &Path, shown: &str) -> Result<(), (&'static 
     let what = if kind.is_file() {
         return Ok(());
     } else if kind.is_symlink() {
-        "a symbolic link, and oce never writes through one: give the path of the file it names"
+        "a symbolic link, and oce never writes through one"
     } else if kind.is_dir() {
         "a directory"
     } else {
         "a named pipe, a socket or a device, not a regular file"
     };
+    let way_out = match named {
+        Named::Caller if kind.is_symlink() => ": give the path of the file it names",
+        Named::Caller => "",
+        Named::Tool => ": remove or replace that entry",
+    };
     Err((
         codes::OUTPUT_NOT_A_FILE,
-        format!("`{shown}` is {what}; {ONLY_FILES}"),
+        format!("`{shown}` is {what}{way_out}; {ONLY_FILES}"),
     ))
 }
 
@@ -220,11 +244,18 @@ mod tests {
     #[test]
     fn an_absent_path_and_a_regular_file_are_accepted_and_a_directory_is_not() {
         let dir = scratch("target_kinds");
-        assert_eq!(target_accepted(&dir.join("absent"), "absent"), Ok(()));
+        assert_eq!(
+            target_accepted(&dir.join("absent"), "absent", Named::Caller),
+            Ok(())
+        );
         fs::write(dir.join("file"), b"x").expect("file");
-        assert_eq!(target_accepted(&dir.join("file"), "file"), Ok(()));
+        assert_eq!(
+            target_accepted(&dir.join("file"), "file", Named::Caller),
+            Ok(())
+        );
         fs::create_dir(dir.join("dir")).expect("dir");
-        let (code, detail) = target_accepted(&dir.join("dir"), "out/dir").expect_err("a dir");
+        let (code, detail) =
+            target_accepted(&dir.join("dir"), "out/dir", Named::Caller).expect_err("a dir");
         assert_eq!(code, codes::OUTPUT_NOT_A_FILE);
         assert_eq!(
             detail,
@@ -232,7 +263,19 @@ mod tests {
             "names the path as shown"
         );
         // A parent that is a file cannot hold the entry: left to the write, which fails.
-        assert_eq!(target_accepted(&dir.join("file/below"), "below"), Ok(()));
+        assert_eq!(
+            target_accepted(&dir.join("file/below"), "below", Named::Caller),
+            Ok(())
+        );
+        // A name that is oce's own is removed or replaced by its owner, whatever it is.
+        let (_, detail) =
+            target_accepted(&dir.join("dir"), "out/receipt.json", Named::Tool).expect_err("dir");
+        assert_eq!(
+            detail,
+            format!(
+                "`out/receipt.json` is a directory: remove or replace that entry; {ONLY_FILES}"
+            )
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -245,7 +288,8 @@ mod tests {
         std::os::unix::fs::symlink("nowhere", dir.join("dangling")).expect("link");
         std::os::unix::fs::symlink("link", dir.join("chain")).expect("link");
         for name in ["link", "dangling", "chain"] {
-            let (code, detail) = target_accepted(&dir.join(name), name).expect_err(name);
+            let (code, detail) =
+                target_accepted(&dir.join(name), name, Named::Caller).expect_err(name);
             assert_eq!(code, codes::OUTPUT_NOT_A_FILE, "{name}");
             assert!(
                 detail.starts_with(&format!("`{name}` is a symbolic link")),
@@ -261,7 +305,8 @@ mod tests {
             .status()
             .expect("mkfifo runs");
         assert!(made.success());
-        let (code, detail) = target_accepted(&dir.join("fifo"), "fifo").expect_err("a fifo");
+        let (code, detail) =
+            target_accepted(&dir.join("fifo"), "fifo", Named::Caller).expect_err("a fifo");
         assert_eq!(code, codes::OUTPUT_NOT_A_FILE);
         assert!(
             detail.contains("a named pipe, a socket or a device"),

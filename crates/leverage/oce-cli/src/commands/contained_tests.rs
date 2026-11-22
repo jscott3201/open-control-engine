@@ -8,7 +8,10 @@
 //! A swap exchanges two entries atomically (`renameat_with` with `RenameFlags::EXCHANGE`:
 //! `renamex_np` with `RENAME_SWAP` on macOS, `renameat2` with `RENAME_EXCHANGE` on Linux), so the
 //! name always exists, as the real thing or as a link out. Other Unix systems have no such call
-//! here and run none of these tests.
+//! here and run none of these tests; on Linux or macOS a file system under the temporary
+//! directory that refuses the exchange (`EINVAL`, `ENOTSUP`, `ENOSYS`) skips each test that
+//! swaps, with a note, rather than failing: the rule is then untested there. CI's Linux runners
+//! and APFS support it.
 
 use std::cell::RefCell;
 
@@ -98,6 +101,32 @@ mod schedules {
 
         fn swap(name: &Path, link: &Path) {
             renameat_with(CWD, name, CWD, link, RenameFlags::EXCHANGE).expect("exchange");
+        }
+
+        /// Whether this file system exchanges two entries atomically; when it does not, the
+        /// test that asks is skipped with a note (module header).
+        fn swappable(&self) -> bool {
+            use rustix::io::Errno;
+            match renameat_with(CWD, &self.name, CWD, &self.link, RenameFlags::EXCHANGE) {
+                Ok(()) => {
+                    Self::swap(&self.name, &self.link);
+                    true
+                }
+                Err(error)
+                    if [Errno::INVAL, Errno::NOTSUP, Errno::OPNOTSUPP, Errno::NOSYS]
+                        .contains(&error) =>
+                {
+                    #[allow(
+                        clippy::print_stderr,
+                        reason = "an explicit skip note in the test output"
+                    )]
+                    {
+                        eprintln!("skipped: no atomic exchange on this file system ({error:?})");
+                    }
+                    false
+                }
+                Err(error) => panic!("the exchange failed: {error:?}"),
+            }
         }
 
         /// Put the real entry back under its name.
@@ -236,6 +265,9 @@ mod schedules {
     #[test]
     fn no_schedule_of_directory_swaps_reads_outside_and_the_merged_checks_are_beaten() {
         let layout = Layout::make("directory", "sub/file.csv", "sub");
+        if !layout.swappable() {
+            return;
+        }
         assert_never_outside(&every_schedule(&layout, &contained), "openat");
         let control = every_schedule(&layout, &path_based);
         assert!(
@@ -247,6 +279,9 @@ mod schedules {
     #[test]
     fn no_schedule_of_swaps_two_directories_down_reads_outside() {
         let layout = Layout::make("deep", "a/b/file.csv", "a/b");
+        if !layout.swappable() {
+            return;
+        }
         assert_never_outside(&every_schedule(&layout, &contained), "openat");
         assert!(every_schedule(&layout, &path_based).contains(&Gave::Outside));
     }
@@ -256,6 +291,9 @@ mod schedules {
         // The directory opened by its canonical path must still be the one resolved: a swap
         // between the canonicalization and that open is refused by its identity.
         let layout = Layout::make("itself", "sub/file.csv", "");
+        if !layout.swappable() {
+            return;
+        }
         assert_never_outside(&every_schedule(&layout, &contained), "openat");
         assert!(every_schedule(&layout, &path_based).contains(&Gave::Outside));
     }
@@ -263,6 +301,9 @@ mod schedules {
     #[test]
     fn no_schedule_of_last_component_swaps_reads_outside() {
         let layout = Layout::make("last", "sub/file.csv", "sub/file.csv");
+        if !layout.swappable() {
+            return;
+        }
         let results = every_schedule(&layout, &contained);
         assert_never_outside(&results, "openat");
         // A link found at the last entry was swapped in after the canonicalization: the path
@@ -273,19 +314,22 @@ mod schedules {
         );
     }
 
-    #[test]
-    fn a_named_pipe_swapped_in_before_the_last_open_is_refused_without_blocking() {
-        // `O_NONBLOCK` on the last open: a pipe that replaces the file after its entry was
-        // checked is opened at once and refused by its kind, where a blocking open would wait
-        // for a writer forever. The wait below is a hang guard, never an assertion on speed: on
-        // a timeout the test opens the pipe for writing to release the reader, then fails.
-        let layout = Layout::make("pipe", "sub/file.csv", "sub/file.csv");
+    /// What [`contained`] gives when the `swapped` entry is exchanged for a named pipe at the
+    /// `point`-th of its steps (counted from 0; `None` for the last), on a thread of its own.
+    /// The wait is a hang guard, never an assertion on speed: on a timeout the test opens the
+    /// pipe for writing to release the reader, then fails. `None` when the file system cannot
+    /// exchange (module header).
+    fn pipe_swapped_in(test: &str, swapped: &str, point: Option<u32>) -> Option<Gave> {
+        let layout = Layout::make(test, "sub/file.csv", swapped);
         fs::remove_file(&layout.link).expect("drop the link");
         let made = std::process::Command::new("mkfifo")
             .arg(&layout.link)
             .status()
             .expect("mkfifo runs");
         assert!(made.success());
+        if !layout.swappable() {
+            return None;
+        }
         let counted = std::rc::Rc::new(std::cell::Cell::new(0_u32));
         let counter = counted.clone();
         ADVERSARY
@@ -295,7 +339,7 @@ mod schedules {
             Gave::Inside
         );
         ADVERSARY.with(|a| *a.borrow_mut() = None);
-        let last = counted.get() - 1;
+        let at = point.unwrap_or(counted.get() - 1);
         let (name, link, base) = (
             layout.name.clone(),
             layout.link.clone(),
@@ -303,12 +347,11 @@ mod schedules {
         );
         let (sent, received) = std::sync::mpsc::channel();
         let opener = std::thread::spawn(move || {
-            let (swap_name, swap_link) = (name.clone(), link.clone());
             let mut index = 0;
             ADVERSARY.with(|a| {
                 *a.borrow_mut() = Some(Box::new(move || {
-                    if index == last {
-                        Layout::swap(&swap_name, &swap_link);
+                    if index == at {
+                        Layout::swap(&name, &link);
                     }
                     index += 1;
                 }));
@@ -320,7 +363,7 @@ mod schedules {
             Ok(gave) => {
                 opener.join().expect("the opener");
                 layout.reset();
-                assert_eq!(gave, Gave::Refused(codes::NOT_A_FILE));
+                Some(gave)
             }
             Err(_) => {
                 let _ = rustix::fs::open(
@@ -328,9 +371,43 @@ mod schedules {
                     rustix::fs::OFlags::WRONLY | rustix::fs::OFlags::NONBLOCK,
                     rustix::fs::Mode::empty(),
                 );
-                panic!("the last open blocked on a named pipe");
+                panic!("an open blocked on a named pipe swapped in for `{swapped}`");
             }
         }
+    }
+
+    #[test]
+    fn a_named_pipe_swapped_in_before_the_last_open_is_refused_without_blocking() {
+        // `O_NONBLOCK` on the last open: a pipe that replaces the file after its entry was
+        // checked is opened at once and refused by its kind, where a blocking open would wait
+        // for a writer forever.
+        if let Some(gave) = pipe_swapped_in("pipe_last", "sub/file.csv", None) {
+            assert_eq!(gave, Gave::Refused(codes::NOT_A_FILE));
+        }
+    }
+
+    #[test]
+    fn a_named_pipe_swapped_in_for_a_directory_is_refused_without_blocking() {
+        // `O_DIRECTORY` on every directory below the root: a pipe swapped in for `sub` just
+        // before it is opened is refused as no directory (the path changed) before it is
+        // opened, where an open without the flag would wait for a writer forever. The steps are
+        // the canonicalization, the root's open, then `sub`'s: the swap lands before the third.
+        if let Some(gave) = pipe_swapped_in("pipe_directory", "sub", Some(2)) {
+            assert_eq!(gave, Gave::Refused(codes::READ_FAILED));
+        }
+    }
+
+    #[test]
+    fn the_handle_returned_reads_as_an_ordinary_blocking_file() {
+        // `O_NONBLOCK` guards the open only; the caller's handle is cleared of it.
+        let layout = Layout::make("blocking", "sub/file.csv", "sub");
+        let opened = layout
+            .root()
+            .open("sub/file.csv", codes::FILE_OUTSIDE_DIRECTORY, "the spec's")
+            .map_err(|(code, _)| code)
+            .expect("the file opens");
+        let flags = rustix::fs::fcntl_getfl(&opened.file).expect("the handle's flags");
+        assert!(!flags.contains(rustix::fs::OFlags::NONBLOCK), "{flags:?}");
     }
 
     #[test]

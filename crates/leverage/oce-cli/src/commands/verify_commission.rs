@@ -59,7 +59,8 @@ pub(crate) fn run(args: &CommissionArgs) -> Outcome {
     let started = Instant::now();
     let mut report = Report::new("verify", Some(input::display_name(&args.spec)));
     if let Some(dir) = &args.out
-        && let Err(refusal) = commission_out::target(dir)
+        && let Err(refusal) =
+            commission_out::empty_dir(dir).map_or_else(|| commission_out::target(dir), Err)
     {
         report.error_at(
             refusal.code,

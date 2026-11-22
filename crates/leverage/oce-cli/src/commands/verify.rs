@@ -47,23 +47,33 @@ use oce_verify::{
 };
 use serde_json::Value;
 
-use super::{Outcome, input_at, target_accepted, verify_mutants, verify_subject, write_atomically};
+use super::commission_out::{self, RECEIPT};
+use super::{
+    Named, Outcome, input_at, target_accepted, verify_mutants, verify_subject, write_atomically,
+};
 use crate::report::{Facts, Report};
 use crate::{Exit, VectorArgs, codes, input};
-
-/// The file the receipt is written to, inside `DIR`.
-const RECEIPT: &str = "receipt.json";
 
 /// Run `verify` over a vector set.
 pub(crate) fn run(args: &VectorArgs) -> Outcome {
     let started = Instant::now();
     let mut report = Report::new("verify", Some(input::display_name(&args.vectors)));
     report.set("subject", Value::from(input::display_name(&args.subject)));
-    if let Some(dir) = &args.out
-        && let Err((code, detail)) = target_accepted(&receipt_path(dir), &shown(dir))
-    {
-        report.error_at(code, detail, None, &Facts::about(RECEIPT));
-        return refused(report, "the output was refused before anything was read");
+    if let Some(dir) = &args.out {
+        // An empty DIR is refused as `--commission` refuses it: a missing directory.
+        if let Some(refusal) = commission_out::empty_dir(dir) {
+            report.error_at(
+                refusal.code,
+                refusal.detail,
+                None,
+                &Facts::about(&refusal.at),
+            );
+            return refused(report, "the output was refused before anything was read");
+        }
+        if let Err((code, detail)) = target_accepted(&receipt_path(dir), &shown(dir), Named::Tool) {
+            report.error_at(code, detail, None, &Facts::about(RECEIPT));
+            return refused(report, "the output was refused before anything was read");
+        }
     }
     let limits = VerifyLimits::default();
     let vectors = Path::new(&args.vectors);
@@ -181,13 +191,10 @@ fn receipt_path(dir: &OsStr) -> PathBuf {
     Path::new(dir).join(RECEIPT)
 }
 
-/// `DIR/receipt.json` as the report names it: `DIR` as given, then `/receipt.json` on every
-/// platform, so a transcript is one text everywhere.
+/// `DIR/receipt.json` as the report names it (`commission_out::shown`: `DIR` as given, then
+/// `/receipt.json` on every platform).
 fn shown(dir: &OsStr) -> String {
-    format!(
-        "{}/{RECEIPT}",
-        input::display_name(dir).trim_end_matches('/')
-    )
+    commission_out::shown(dir, RECEIPT)
 }
 
 /// The set's status and the exit status, the exit-only flags applied.

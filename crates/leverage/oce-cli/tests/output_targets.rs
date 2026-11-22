@@ -99,6 +99,10 @@ struct Case {
     base: PathBuf,
     work: PathBuf,
     target: &'static str,
+    #[cfg_attr(
+        not(unix),
+        expect(dead_code, reason = "only the Unix cases link or hard-link the input")
+    )]
     input: &'static str,
     args: Vec<&'static str>,
 }
@@ -348,6 +352,26 @@ fn assert_case(verb: Verb, target: Target) {
                     "{name}: the detail names the target as given: {detail}"
                 );
                 assert!(detail.ends_with("nothing is read or written"), "{detail}");
+                // The way out: a name the caller gave is left for the file a link names; a name
+                // that is oce's own (`DIR/receipt.json`) is its owner's to remove or replace.
+                let own = matches!(verb, Verb::Vectors | Verb::Commission);
+                let link = matches!(
+                    target,
+                    Target::LinkInside
+                        | Target::LinkOutside
+                        | Target::Dangling
+                        | Target::LinkToInput
+                );
+                assert_eq!(
+                    detail.contains(": remove or replace that entry;"),
+                    own,
+                    "{name}: {detail}"
+                );
+                assert_eq!(
+                    detail.contains(": give the path of the file it names;"),
+                    !own && link,
+                    "{name}: {detail}"
+                );
                 // Nothing was read: no stage ran and no list was made.
                 let report = run.report();
                 for key in ["dropped", "curves", "passed", "output", "changed"] {
@@ -622,5 +646,34 @@ fn the_target_is_judged_before_any_input_is_read() {
         let run = oce_in(&case.work, &case.args, b"");
         let (code, _, _) = refusal(&run);
         assert_eq!(code, "output-not-a-file", "{name}: {}", run.transcript());
+    }
+}
+
+#[test]
+fn an_empty_out_is_refused_by_both_forms_as_a_missing_directory() {
+    // Until issue #758's review the vector form wrote `./receipt.json` for `--out ""`.
+    for verb in [Verb::Vectors, Verb::Commission] {
+        let name = format!("empty_out_{verb:?}").to_lowercase();
+        let case = Case::lay_out(verb, &name);
+        let mut args: Vec<&str> = case.args.clone();
+        let out = args
+            .iter()
+            .position(|arg| *arg == "out")
+            .expect("--out out");
+        args[out] = "";
+        let before = snapshot(&case.base);
+        let run = oce_in(&case.work, &args, b"");
+        let (code, at, detail) = refusal(&run);
+        assert_eq!(
+            (code.as_str(), at.as_str(), detail.as_str()),
+            (
+                "write-failed",
+                ".",
+                "``: the output directory does not exist; it is never created"
+            ),
+            "{name}: {}",
+            run.transcript()
+        );
+        assert_eq!(snapshot(&case.base), before, "{name}: nothing written");
     }
 }

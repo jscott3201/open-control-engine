@@ -46,7 +46,7 @@ use std::path::{Path, PathBuf};
 
 use oce_verify::{Curve, OutputCurves};
 
-use super::{input_at, target_accepted, write_atomically};
+use super::{Named, input_at, target_accepted, write_atomically};
 use crate::{codes, input};
 
 /// The file the receipt is written to, inside `DIR`.
@@ -72,9 +72,24 @@ pub(crate) struct Refused {
 }
 
 /// `name` under `dir` as the report shows it: `DIR` as given, then `/` and `name` on every
-/// platform, so a transcript is one text everywhere.
+/// platform, so a transcript is one text everywhere (`/name` for the root directory). An empty
+/// `DIR`, which [`empty_dir`] refuses, shows `name` alone, the path it would join to.
 pub(crate) fn shown(dir: &OsStr, name: &str) -> String {
-    format!("{}/{name}", input::display_name(dir).trim_end_matches('/'))
+    let dir = input::display_name(dir);
+    if dir.is_empty() {
+        return name.to_owned();
+    }
+    format!("{}/{name}", dir.trim_end_matches('/'))
+}
+
+/// Why `check()` refuses a `DIR` that does not exist.
+const MISSING_DIR: &str = "the output directory does not exist; it is never created";
+
+/// An empty `DIR` names no directory, and is refused as a missing one by both forms of
+/// `verify --out` before anything is read (the vector form would otherwise write
+/// `./receipt.json`).
+pub(crate) fn empty_dir(dir: &OsStr) -> Option<Refused> {
+    dir.is_empty().then(|| failed(dir, ".", MISSING_DIR))
 }
 
 /// A `write-failed` refusal about `at` within `DIR` (`.` for `DIR` itself, shown as given).
@@ -111,14 +126,17 @@ pub(crate) struct Written {
 /// # Errors
 /// `output-not-a-file` for a link, dangling or not, a directory or another non-file there.
 pub(crate) fn target(dir: &OsStr) -> Result<(), Refused> {
-    target_accepted(&Path::new(dir).join(RECEIPT), &shown(dir, RECEIPT)).map_err(
-        |(code, detail)| Refused {
-            at: RECEIPT.to_owned(),
-            code,
-            detail,
-            written: Vec::new(),
-        },
+    target_accepted(
+        &Path::new(dir).join(RECEIPT),
+        &shown(dir, RECEIPT),
+        Named::Tool,
     )
+    .map_err(|(code, detail)| Refused {
+        at: RECEIPT.to_owned(),
+        code,
+        detail,
+        written: Vec::new(),
+    })
 }
 
 /// The checks made before the run (module header). `inputs` pairs each file the run read with
@@ -135,11 +153,7 @@ pub(crate) fn check(dir: &OsStr, inputs: &[(String, PathBuf)]) -> Result<(), Ref
         Ok(metadata) if metadata.is_dir() => {}
         Ok(_) => return Err(failed(dir, ".", "the output directory is not a directory")),
         Err(error) if error.kind() == ErrorKind::NotFound => {
-            return Err(failed(
-                dir,
-                ".",
-                "the output directory does not exist; it is never created",
-            ));
+            return Err(failed(dir, ".", MISSING_DIR));
         }
         Err(error) => {
             return Err(failed(
@@ -465,6 +479,10 @@ mod tests {
     fn a_shown_name_keeps_dir_as_given_with_one_slash() {
         assert_eq!(shown(OsStr::new("out"), RECEIPT), "out/receipt.json");
         assert_eq!(shown(OsStr::new("out/"), RECEIPT), "out/receipt.json");
+        // The root directory keeps its slash; an empty DIR (refused before any report names
+        // it) is never shown as the root's file.
+        assert_eq!(shown(OsStr::new("/"), RECEIPT), "/receipt.json");
+        assert_eq!(shown(OsStr::new(""), RECEIPT), "receipt.json");
         assert_eq!(
             shown(OsStr::new("."), "outputs/0/errors.csv"),
             "./outputs/0/errors.csv"

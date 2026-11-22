@@ -53,7 +53,9 @@ use oce_author::{
 use serde_json::{Value, json};
 
 use super::id::{form_by_name, form_name};
-use super::{Outcome, report_for, same_file, stdin_is_file, target_accepted, write_atomically};
+use super::{
+    Named, Outcome, report_for, same_file, stdin_is_file, target_accepted, write_atomically,
+};
 use crate::report::{Facts, Report};
 use crate::{Exit, IdForm, ImportArgs, Streams, codes, input};
 
@@ -143,7 +145,11 @@ fn output_accepted(
     output: &std::ffi::OsStr,
     asked: IdForm,
 ) -> Result<(), (&'static str, String)> {
-    target_accepted(Path::new(output), &input::display_name(output))?;
+    target_accepted(
+        Path::new(output),
+        &input::display_name(output),
+        Named::Caller,
+    )?;
     let is_input = if input::is_stdin(input) {
         stdin_is_file(Path::new(output))
     } else {

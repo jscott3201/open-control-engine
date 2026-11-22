@@ -10,8 +10,10 @@
 //! The deterministic proof is the adversary of `src/commands/contained_tests.rs`, which beats the
 //! path-based checks of GitHub #757 and not the `openat` walk; this test holds the binary to the
 //! same rule under a real race. The swap is an atomic exchange (`renameat_with` with
-//! `RenameFlags::EXCHANGE`), so it runs on Linux and macOS; Windows keeps the path-based checks
-//! and is untested here.
+//! `RenameFlags::EXCHANGE`), so it runs on Linux and macOS; a file system under cargo's target
+//! directory that refuses the exchange (`EINVAL`, `ENOTSUP`, `ENOSYS`) skips the test with a note
+//! rather than failing, and the rule is then untested there (CI's Linux runners and APFS support
+//! it). Windows keeps the path-based checks and is untested here.
 
 #![cfg(any(target_os = "linux", target_os = "macos"))]
 
@@ -23,6 +25,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use rustix::fs::{CWD, RenameFlags, renameat_with};
+use rustix::io::Errno;
 use support::commission::{RUN_FILES, run_file, subject};
 use support::{Run, oce_in, scratch};
 
@@ -85,6 +88,23 @@ fn a_directory_swapped_for_a_link_never_carries_a_read_out_of_the_spec_directory
     let swap = move |sub: &Path, alt: &Path| {
         renameat_with(CWD, sub, CWD, alt, RenameFlags::EXCHANGE).expect("exchange");
     };
+    // A file system with no atomic exchange skips the test (module header).
+    match renameat_with(CWD, &sub, CWD, &alt, RenameFlags::EXCHANGE) {
+        Ok(()) => swap(&sub, &alt),
+        Err(error)
+            if [Errno::INVAL, Errno::NOTSUP, Errno::OPNOTSUPP, Errno::NOSYS].contains(&error) =>
+        {
+            #[allow(
+                clippy::print_stderr,
+                reason = "an explicit skip note in the test output"
+            )]
+            {
+                eprintln!("skipped: no atomic exchange on this file system ({error:?})");
+            }
+            return;
+        }
+        Err(error) => panic!("the exchange failed: {error:?}"),
+    }
 
     // The controls, with nothing racing: the CXF inside is read; the link at `sub` is refused
     // by the canonicalization; and the file outside, named directly, answers the escape's code.
