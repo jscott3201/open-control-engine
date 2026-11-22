@@ -381,3 +381,155 @@ fn a_refusal_for_the_evaluation_budget_is_never_handed_to_another_owner() {
         2
     );
 }
+
+/// A full term: a million-element array built and reduced, about two million units.
+const TERM: &str = "sum(fill(1.0, 1048576))";
+
+/// `terms` full [`TERM`]s joined by `+`.
+fn terms(terms: usize) -> String {
+    vec![TERM; terms].join(" + ")
+}
+
+/// `bytes` with leaf `i`'s own `k` bound to the expression `ks[i]`.
+fn with_ks(bytes: &[u8], ks: &[String]) -> Vec<u8> {
+    let mut text = String::from_utf8(bytes.to_vec()).expect("utf-8");
+    for (i, k) in ks.iter().enumerate() {
+        let from = format!("{{ \"@id\": \"urn:c{i}.k\", \"S231:value\": 1.0 }}");
+        let to = format!("{{ \"@id\": \"urn:c{i}.k\", \"S231:value\": \"{k}\" }}");
+        assert_eq!(text.matches(&from).count(), 1);
+        text = text.replacen(&from, &to, 1);
+    }
+    text.into_bytes()
+}
+
+/// A Real expression whose grounding spends exactly `units`: full terms, one term over `n`
+/// elements, and `abs(…)` to make up a last odd unit. The cost is computed from the measured cost
+/// of each part and checked by grounding it once.
+fn costing(units: u64) -> String {
+    let full = fuel_of(TERM);
+    let part = |n: u64| format!("sum(fill(1.0, {n}))");
+    let (one, two) = (fuel_of(&part(1)), fuel_of(&part(2)));
+    let slope = two - one;
+    let join = fuel_of(&format!("{} + {}", part(1), part(1))) - 2 * one;
+    let wrap = fuel_of(&format!("abs({})", part(1))) - one;
+    for whole in 0..8_u64 {
+        for wraps in 0..slope {
+            let fixed = whole * (full + join) + wraps * wrap;
+            let Some(rest) = units.checked_sub(fixed + one) else {
+                continue;
+            };
+            if rest % slope != 0 || rest / slope + 1 > 1_048_576 {
+                continue;
+            }
+            let n = rest / slope + 1;
+            let mut text = if whole == 0 {
+                part(n)
+            } else {
+                format!(
+                    "{} + {}",
+                    terms(usize::try_from(whole).expect("small")),
+                    part(n)
+                )
+            };
+            for _ in 0..wraps {
+                text = format!("abs({text})");
+            }
+            assert_eq!(fuel_of(&text), units, "{text}");
+            return text;
+        }
+    }
+    panic!("no expression of {units} units")
+}
+
+#[test]
+fn a_shared_array_evaluation_is_charged_to_every_leaf_that_takes_it() {
+    // An array node declared at one element whose expression costs about 14.7 million units,
+    // listed by leaves: each leaf that takes the kept evaluation is charged it, so the most
+    // leaves that fit load shared as separate, and one more is refused alike. (The evaluation
+    // builds its million-element arrays one at a time, about 24 MB at its peak.)
+    let value = format!("\"fill({}, 1)\"", terms(7));
+    let fit = usize::try_from(MAX_DOCUMENT_EVAL_FUEL / fuel_of(&format!("fill({}, 1)", terms(7))))
+        .expect("fits");
+    assert_eq!(fit, 4);
+    for count in [fit, fit + 1] {
+        let nodes = array("urn:shared.q", 1, &value);
+        let shared_bytes = leaves(count, |_| "urn:shared.q".to_owned(), &nodes);
+        let copies: String = (0..count)
+            .map(|i| array(&format!("urn:own{i:03}.q"), 1, &value))
+            .collect();
+        let separate_bytes = leaves(count, |i| format!("urn:own{i:03}.q"), &copies);
+        let shared_outcome = outcome(&shared_bytes, count);
+        assert_eq!(
+            shared_outcome,
+            outcome(&separate_bytes, count),
+            "{count} leaves"
+        );
+        assert_eq!(shared_outcome.0.is_some(), count == fit, "{count} leaves");
+    }
+}
+
+/// The boundary of the evaluation budget at a reused value: leaves 0 and 1 each own a `k`
+/// costing `own` and leaf 2 one costing what is left before its reading of the shared value,
+/// less that value's cost, plus `over`; every leaf then reads the shared value, whose grounding
+/// costs `shared_cost`. Returns the shared and the separate outcome.
+fn at_the_edge(
+    over: u64,
+    own: &str,
+    shared_cost: u64,
+    shared_doc: impl Fn(&[String]) -> Vec<u8>,
+    separate_doc: impl Fn(&[String]) -> Vec<u8>,
+) -> ((Option<String>, String), (Option<String>, String)) {
+    let left = MAX_DOCUMENT_EVAL_FUEL - 2 * fuel_of(own) - 3 * shared_cost + over;
+    let ks = [own.to_owned(), own.to_owned(), costing(left)];
+    (outcome(&shared_doc(&ks), 3), outcome(&separate_doc(&ks), 3))
+}
+
+#[test]
+fn the_last_unit_of_the_budget_is_charged_to_a_reused_value_exactly() {
+    // Leaf 2 reads the shared value with exactly its cost left (it loads, separate as shared)
+    // and with one unit fewer (it is refused, separate as shared): a reuse charged one unit more
+    // or less than the grounding spent would decide either differently.
+    let own = format!("{} + {}", terms(7), "sum(fill(1.0, 500000))");
+    let scalar = terms(4);
+    let scalar_cost = fuel_of(&scalar);
+    let array_value = format!("fill({}, 1)", terms(4));
+    let array_cost = fuel_of(&array_value);
+    for over in [0, 1] {
+        let quoted = format!("\"{scalar}\"");
+        let (shared_outcome, separate_outcome) = at_the_edge(
+            over,
+            &own,
+            scalar_cost,
+            |ks| with_ks(&shared(3, &quoted), ks),
+            |ks| with_ks(&separate(3, &quoted), ks),
+        );
+        assert_eq!(
+            separate_outcome.0.is_some(),
+            over == 0,
+            "the edge itself, {over} over"
+        );
+        assert_eq!(shared_outcome, separate_outcome, "a scalar, {over} over");
+        let quoted = format!("\"{array_value}\"");
+        let (shared_outcome, separate_outcome) = at_the_edge(
+            over,
+            &own,
+            array_cost,
+            |ks| {
+                let nodes = array("urn:shared.q", 1, &quoted);
+                with_ks(&leaves(3, |_| "urn:shared.q".to_owned(), &nodes), ks)
+            },
+            |ks| {
+                let copies: String = (0..3)
+                    .map(|i| array(&format!("urn:own{i:03}.q"), 1, &quoted))
+                    .collect();
+                with_ks(&leaves(3, |i| format!("urn:own{i:03}.q"), &copies), ks)
+            },
+        );
+        assert_eq!(
+            separate_outcome.0.is_some(),
+            over == 0,
+            "the array edge, {over} over"
+        );
+        assert_eq!(shared_outcome, separate_outcome, "an array, {over} over");
+    }
+}
