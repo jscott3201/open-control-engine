@@ -1992,6 +1992,10 @@ exit: 0
       "meaning": "a mapped point's unit does not fit its sequence port (cause: the unit code)"
     },
     {
+      "code": "sampling-required",
+      "meaning": "the commissioning reference uses the aligned-grid envelope and gives no sampling, which that envelope needs"
+    },
+    {
       "code": "too-many-indicators",
       "meaning": "the commissioning reference's indicator rules name more than 64 indicators"
     }

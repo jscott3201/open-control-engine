@@ -205,7 +205,8 @@ fn mask_and_uncovered_edges_are_instants_of_both_series_and_zeroed_there() {
             output.masked_intervals[0].from,
             output.masked_intervals[0].to
         ),
-        (5.0, 12.0)
+        (5.0, 15.0),
+        "the run ends where its last stretch ends, where the fan comes back on"
     );
 }
 
@@ -229,13 +230,5 @@ fn the_trend_as_reference_builds_the_band_around_the_trend() {
     assert_eq!(status, OutputStatus::Fail);
     assert_eq!(worst, Some((10.0, OUTSIDE_BY)));
     assert_eq!(first, Some(10.0));
-    assert_eq!(time, 2.0);
-}
-
-#[test]
-fn the_aligned_grid_envelope_takes_the_same_rule() {
-    let (status, _, worst, _, time) = figures("aligned_grid_late_step", "TSet");
-    assert_eq!(status, OutputStatus::Fail);
-    assert_eq!(worst, Some((11.0, OUTSIDE_BY)));
     assert_eq!(time, 2.0);
 }

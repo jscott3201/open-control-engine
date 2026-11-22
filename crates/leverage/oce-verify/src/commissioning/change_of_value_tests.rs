@@ -140,3 +140,63 @@ fn a_bound_that_jumps_and_then_falls_away_is_read_at_the_stretchs_start() {
     let errors = piece_exceedances(&[0.0, 11.0, 13.0, 20.0], &[0.5; 4], &lower, &upper);
     assert_eq!(errors, [0.0, 0.5, 0.0, 0.0]);
 }
+
+#[test]
+fn the_snap_radius_is_four_epsilon_of_the_magnitude_and_half_width() {
+    assert_eq!(snap_radius(30.0, 1.0), 4.0 * f64::EPSILON * 31.0);
+    // About 8.9e-16 s per second of magnitude and half-width.
+    assert!(snap_radius(3_600.0, 60.0) < 3.3e-12);
+    assert!(snap_radius(30.0, 4.0) < 3.1e-14);
+}
+
+#[test]
+fn a_corner_within_the_radius_lies_on_the_nearest_instant_and_one_beyond_does_not() {
+    let radius = snap_radius(30.0, 1.0);
+    let instant = 6.0_f64;
+    // The farthest doubles on each side still within the radius, and the next ones out.
+    let mut within = instant - radius;
+    while instant - within > radius {
+        within = within.next_up();
+    }
+    let mut above = instant + radius;
+    while above - instant > radius {
+        above = above.next_down();
+    }
+    let beyond = within.next_down();
+    let after = above.next_up();
+    assert!(instant - beyond > radius && after - instant > radius);
+    let bound = curve(&[(beyond, 0.0), (within, 1.0), (above, 2.0), (after, 3.0)]);
+    let moved = snapped(&bound, &[0.0, instant, 30.0], radius);
+    assert_eq!(moved.x(), [beyond, instant, instant, after]);
+    assert_eq!(moved.y(), bound.y(), "only x moves");
+}
+
+#[test]
+fn snapping_moves_corners_only_and_never_merges_two_series_instants() {
+    // Two series instants one unit in the last place apart: a corner between them goes to the
+    // nearer, the earlier on a tie, and both instants stay instants.
+    let a = 6.0_f64;
+    let b = a.next_up();
+    let radius = snap_radius(30.0, 1.0);
+    let bound = curve(&[(-1.0, 0.0), (a, 0.0), (b, 1.0), (31.0, 1.0)]);
+    let moved = snapped(&bound, &[0.0, a, b, 30.0], radius);
+    assert_eq!(moved.x(), [-1.0, a, b, 31.0]);
+    let (instants, _) = with_corners(&[0.0, a, b, 30.0], &moved, &moved, 0.0, 30.0);
+    assert_eq!(instants, [0.0, a, b, 30.0]);
+    // A corner exactly between two instants 2 ulps apart takes the earlier.
+    let c = b.next_up();
+    let between = curve(&[(b, 0.0), (b, 1.0)]);
+    let moved = snapped(&between, &[a, c], radius);
+    assert_eq!(moved.x(), [a, a]);
+}
+
+#[test]
+fn a_bound_that_closes_in_across_a_stretch_is_read_at_the_stretchs_end() {
+    // The lower bound rises from 0 to 1 over the stretch from 0 to 10, with no corner inside:
+    // a test at 0.5 is inside at the start and outside by 0.5 at the end. Only the reading at
+    // the stretch's end, from its left, sees it.
+    let lower = curve(&[(-1.0, 0.0), (0.0, 0.0), (10.0, 1.0), (11.0, 1.0)]);
+    let upper = curve(&[(-1.0, 2.0), (11.0, 2.0)]);
+    let errors = piece_exceedances(&[0.0, 10.0], &[0.5, 1.0], &lower, &upper);
+    assert_eq!(errors, [0.5, 0.0]);
+}

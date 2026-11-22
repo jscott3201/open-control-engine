@@ -2,7 +2,7 @@
 //! owner on 2026-11-22; commissioning note, "As landed: the change-of-value comparison"):
 //!
 //! - **Oracle**: `derive_run.py <run fixture> change-of-value`, which shares no code with the
-//!   crate, derives every figure, every instant and every exceedance of the sixteen cases under
+//!   crate, derives every figure, every instant and every exceedance of the cases under
 //!   `tests/fixtures/commissioning/run/change_of_value/` into `change_of_value/oracle.txt`; the
 //!   library's run of each case, printed in the same lines, equals it byte for byte, every
 //!   number as the hex of its bits.
@@ -18,16 +18,18 @@ use super::support;
 use super::{body_of, commission, loaded};
 
 /// The cases of the change-of-value fixture, in name order.
-pub(super) const CASES: [&str; 16] = [
-    "aligned_grid_late_step",
+pub(super) const CASES: [&str; 19] = [
     "boolean_switch_on_a_frame",
     "deadband_analogue",
     "exact_steps",
     "late_step",
+    "ltolx_late_step",
     "masked_and_uncovered",
     "never_changes",
     "no_sample_at_start",
     "one_sample_before_start",
+    "rtoly_late_step",
+    "sparse_mask",
     "step_beyond_tolerance",
     "step_one_tolerance_late",
     "step_within_tolerance",
@@ -35,6 +37,7 @@ pub(super) const CASES: [&str; 16] = [
     "trend_ends_before_stop",
     "unlogged_pulse",
     "unlogged_toggle",
+    "value_at_stop_only",
 ];
 
 /// The files of a case, in the order the spec names them, and the mapping beside them.
@@ -122,6 +125,9 @@ fn oracle_lines(case: &str, run: &CommissionRun) -> Vec<String> {
             lines.push(format!("first\t{}", bits(first)));
         }
         lines.push(format!("time\t{}", bits(output.exceedance_time_s)));
+        if let Some(last) = output.last_sample_t {
+            lines.push(format!("last_sample\t{}", bits(last)));
+        }
         for interval in &output.masked_intervals {
             lines.push(format!(
                 "masked_interval\t{}\t{}",

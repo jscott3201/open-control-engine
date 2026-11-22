@@ -2,6 +2,17 @@
 """Derive the verdicts of the run fixture's oracle case, independently of the crate.
 
     python3 -I derive_run.py <fixture-directory> > oracle.txt
+    python3 -I derive_run.py <fixture-directory> change-of-value > change_of_value/oracle.txt
+
+The second form derives the change-of-value cases (a reference with no sampling; the design
+note's "As landed: the change-of-value comparison", ruled by the owner on 2026-11-22): every
+case directory under change_of_value/ (spec.json, main.csv, limit.csv, outputs.csv, fan.csv),
+each output's instants (the window's ends, the series' and its indicator's sample times, the
+uncovered stretches' ends, a Real output's funnel corners snapped onto a series instant within
+4 eps (m + w)), the step series, the largest error over each stretch read from inside it at both
+ends, the masked runs as stretches, the trend's last sample at or before stop, and the ids of the
+golden receipts there. Only the funnel: aligned-grid with no sampling is refused. It is
+tests/commissioning/run_change_of_value.rs's independent side.
 
 This is the independent side of tests/commissioning/run_receipts.rs: a second implementation,
 sharing no code with the crate, of what docs/design/commissioning.md says a commissioning run
@@ -264,7 +275,7 @@ def aligned_grid_bounds(reference, tol):
         min(r[3] for r in rects), max(r[3] for r in rects))
 
 
-def report(name, kind, times, fates, exceedances, extra):
+def report(name, kind, times, fates, exceedances, extra, stretches=False, last=None):
     out = [f"output\t{name}", f"type\t{kind}"]
     compared = [k for k, f in enumerate(fates) if f == "compared"]
     out.append(f"counts\t{len(compared)}\t{fates.count('masked')}\t{fates.count('uncovered')}")
@@ -281,12 +292,15 @@ def report(name, kind, times, fates, exceedances, extra):
         if k + 1 < len(times):
             total += times[k + 1] - times[k]
     out.append(f"time\t{bits(total)}")
+    if last is not None:
+        out.append(f"last_sample\t{bits(last)}")
     run = None
     for t, f in zip(times, fates):
         if f == "masked":
             run = (run[0], t) if run else (t, t)
         elif run:
-            out.append(f"masked_interval\t{bits(run[0])}\t{bits(run[1])}")
+            # By change of value a run ends where its last stretch ends: this instant.
+            out.append(f"masked_interval\t{bits(run[0])}\t{bits(t if stretches else run[1])}")
             run = None
     if run:
         out.append(f"masked_interval\t{bits(run[0])}\t{bits(run[1])}")
@@ -470,7 +484,8 @@ def change_case(directory):
     ref = spec["references"][0]
     start = float(ref["window"]["start"])
     stop = float(ref["window"]["stop"])
-    envelope = ref.get("envelope", "funnel")
+    if ref.get("envelope", "funnel") != "funnel":
+        sys.exit("derive_run.py: aligned-grid with no sampling is refused (sampling-required)")
     role = ref.get("funnelReference", "engine")
     max_age = float(ref["inputs"][1]["hold"]["maxAge"])
     tolerance_base = {name: 0.0 for name in ["atolx", "atoly", "rtolx", "rtoly", "ltolx", "ltoly"]}
@@ -544,6 +559,8 @@ def change_case(directory):
                 fates.append("uncovered")
             else:
                 fates.append("compared")
+        # The trend's sample held at stop: its last at or before stop.
+        last = trend_times[trend_at[-1]]
         engine = [engine_series[name][i] for i in engine_at]
         test_values = [trend[name][i] for i in trend_at]
         if not real:
@@ -551,19 +568,30 @@ def change_case(directory):
                 (1.0 if a != b else 0.0) if f == "compared" else (0.0 if f == "masked" else float("nan"))
                 for a, b, f in zip(engine, test_values, fates)
             ]
-            lines += report(name, kind, instants, fates, exceedances, [])
+            lines += report(name, kind, instants, fates, exceedances, [], stretches=True, last=last)
             continue
         engine = [v if f == "compared" else 0.0 for v, f in zip(engine, fates)]
         test_values = [v if f == "compared" else 0.0 for v, f in zip(test_values, fates)]
         if "compared" not in fates:
-            lines += report(name, kind, instants, fates, [float("nan")] * len(instants), [])
+            lines += report(name, kind, instants, fates, [float("nan")] * len(instants), [], stretches=True,
+                            last=last)
             continue
         reference, test = (engine, test_values) if role == "engine" else (test_values, engine)
         tolerances = dict(tolerance_base)
         if name == "TSet":
             tolerances["atoly"] = 0.05
-        build = funnel_bounds if envelope == "funnel" else aligned_grid_bounds
-        lower, upper, hw, hh = build(steps(instants, reference), tolerances)
+        lower, upper, hw, hh = funnel_bounds(steps(instants, reference), tolerances)
+        # A corner within 4 eps (m + w) of a series instant lies on it (m the x magnitude, w the
+        # largest half-width), the nearest instant, the earlier of two equally near.
+        magnitude = stop if stop > abs(start) else abs(start)
+        radius = 4.0 * (2.0 ** -52) * (magnitude + hw[1])
+
+        def snap(x):
+            nearest = min(instants, key=lambda t: (abs(x - t), t))
+            return nearest if abs(x - nearest) <= radius else x
+
+        lower = [(snap(x), y) for x, y in lower]
+        upper = [(snap(x), y) for x, y in upper]
         corners = {x for x, _ in lower} | {x for x, _ in upper}
         pieces = sorted(set(instants) | {x for x in corners if start < x < stop})
         piece_fates, piece_test = [], []
@@ -585,7 +613,7 @@ def change_case(directory):
         extra = [f"half_width\t{bits(hw[0])}\t{bits(hw[1])}", f"half_height\t{bits(hh[0])}\t{bits(hh[1])}"]
         extra += [f"masked_exceedance\t{bits(t)}\t{bits(e)}"
                   for t, e, f in zip(pieces, errors, piece_fates) if f == "masked" and e > 0]
-        lines += report(name, kind, pieces, piece_fates, shown, extra)
+        lines += report(name, kind, pieces, piece_fates, shown, extra, stretches=True, last=last)
     return lines
 
 

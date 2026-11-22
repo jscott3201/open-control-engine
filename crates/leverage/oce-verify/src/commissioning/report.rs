@@ -172,12 +172,15 @@ pub struct Exceedance {
     pub exceedance: f64,
 }
 
-/// A run of masked test instants: the first and the last.
+/// A run of masked test instants. With a `sampling`, its first and last instant. Without one
+/// each instant stands for the stretch to the next, so the run is its first instant and the end
+/// of its last stretch: the instant where the mask ends, or `stop`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MaskedInterval {
     /// The first masked instant of the run, in model seconds.
     pub from: f64,
-    /// The last masked instant of the run, in model seconds.
+    /// With a `sampling`, the last masked instant of the run; without one, where the run's last
+    /// stretch ends: the next instant, or `stop`. In model seconds.
     pub to: f64,
 }
 
@@ -194,7 +197,8 @@ pub struct OutputReport {
     /// The test instants compared. With a `sampling`, the grid's; without one, the output's
     /// change-of-value instants (the window's ends, every sample time of its two series and its
     /// indicators, every uncovered-stretch end and, for a Real output, every corner of its
-    /// band inside the window), each standing for the stretch from it to the next.
+    /// band inside the window), each standing for the stretch from it to the next. The corners
+    /// depend on the tolerances, so without a `sampling` the count of a Real output does too.
     pub compared: u64,
     /// The test instants an indicator excluded.
     pub masked: u64,
@@ -210,18 +214,24 @@ pub struct OutputReport {
     /// The half-heights applied, when an envelope was built.
     pub half_height: Option<HalfSize>,
     /// The largest exceedance over the compared instants and the earliest instant that has it,
-    /// when the status is `fail`.
+    /// when the status is `fail`. Without a `sampling` the instant is the start of the stretch
+    /// whose largest error that is; the error itself may lie at the stretch's end.
     pub worst: Option<Exceedance>,
     /// The earliest compared instant with an exceedance above zero, when the status is `fail`.
+    /// Without a `sampling` it is the start of the first stretch with an error above zero: on a
+    /// band flat between its corners the test is outside from that instant on, and on a sloped
+    /// band the first time outside can be later inside the stretch.
     pub first_exceedance_t: Option<f64>,
     /// The time in exceedance, in seconds: the sum over the compared instants with an exceedance
     /// above zero of the step to the next test instant. Without a `sampling` an instant's
     /// exceedance is the largest error over its stretch, so this is exact for a Boolean or
     /// Integer output and for a Real output whose band is flat between its corners (a staircase,
     /// as a step series' band is without a local `x` tolerance), and an upper bound otherwise; a
-    /// step's vertical segment counts no time.
+    /// step's vertical segment counts no time. The last instant, `stop`, adds nothing but is
+    /// still judged, so an output whose only excess is at `stop` fails with `0.0` here.
     pub exceedance_time_s: f64,
-    /// The runs of masked instants, in time order; at most [`MAX_MASKED_INTERVALS`].
+    /// The runs of masked instants, in time order, each as [`MaskedInterval`] says; at most
+    /// [`MAX_MASKED_INTERVALS`].
     pub masked_intervals: Vec<MaskedInterval>,
     /// The number of runs before the cap.
     pub masked_intervals_total: u64,
@@ -230,6 +240,15 @@ pub struct OutputReport {
     pub masked_exceedance: Vec<Exceedance>,
     /// The number of such instants before the cap.
     pub masked_exceedance_total: u64,
+    /// The time of the trend's last sample at or before `stop` that the comparison held, in
+    /// model seconds; written only without a `sampling` (owner ruling of 2026-11-22). The trend
+    /// is held from it to `stop`, so a logger that fell silent reads as a value that did not
+    /// change: this is where its last logged value was. A single sample held from before `start`
+    /// gives its own time, earlier than `start`. `None` with a `sampling`, and for an output with
+    /// no instant at all (`no_data` because a series has no sample at or before `start`); an
+    /// output whose every instant is masked or uncovered is `no_data` and still has it. Issue
+    /// #793 asks for a limit on how long a gap may be held.
+    pub last_sample_t: Option<f64>,
 }
 
 /// The body of a commissioning receipt (the note's body table, in its order).

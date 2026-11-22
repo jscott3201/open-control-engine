@@ -69,6 +69,7 @@ const PINNED: &[&str] = &[
     "too-many-outputs",
     "source-refused",
     "unit-refused",
+    "sampling-required",
     "too-many-indicators",
 ];
 
@@ -120,6 +121,10 @@ const PINNED_BESIDE_THE_CODE: &[(&str, &str)] = &[
     (
         "unit-refused",
         "tests/commissioning/run_bind.rs: a mapped unit that does not fit its sequence port",
+    ),
+    (
+        "sampling-required",
+        "tests/commissioning/run_change_edges.rs: an aligned-grid commissioning reference with no sampling",
     ),
     (
         "too-many-indicators",

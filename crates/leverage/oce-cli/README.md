@@ -164,11 +164,13 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
 - **The reference.** `--reference N` is the zero-based index into `references[]`. A spec with one
   reference needs no flag; one with several and no flag is `reference-required`, whose detail
   lists each index with its `sequence` and `model`. An index past the end is the library's
-  `reference-out-of-range`. A reference with no `cxf` or no `window` is refused by the library
-  (`reference-incomplete`) **before any other file is read**. A reference with no `sampling`
-  (its own or the spec's) runs: its outputs are compared by change of value, each series held
-  from sample to sample and judged over the stretches between them (issue #746), and its
-  receipt has no `time.sampling`.
+  `reference-out-of-range`. A reference with no `cxf` or no `window` (`reference-incomplete`), or
+  under the `aligned-grid` envelope with no `sampling`, its own or the spec's
+  (`sampling-required`; issue #792), is refused by the library **before any other file is
+  read**. A `funnel` reference with no `sampling` runs: its outputs are compared by change of
+  value, each series held from sample to sample and judged over the stretches between them
+  (issue #746), and its receipt has no `time.sampling` and gives each output's
+  `last_sample_t`.
 - **Reads.** The spec at 4 MiB (`SpecLimits::MAX.max_bytes`), then the files the reference names:
   its `cxf`, its `pointNameMapping` when that is a path, and its trend sources in the receipt's
   order (`inputs`, `expected` or, with no `expected` key, the `controllerOutput`,
@@ -259,7 +261,9 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   receipt's `data` label, `trended` when absent (decision 41), inside `receipt_id`. No receipt byte
   outside `timings` depends on `--deny-warnings`, `--timings` or `--render`.
 - **What it does not resolve.** Masked ticks keep OBC §12.7.2's zero fill (issue #745), and the
-  library's other open items are issue #747. The Building 33 worked example is issue #755.
+  library's other open items are issue #747. The Building 33 worked example is issue #755. A
+  step-shaped `aligned-grid` band (#792), a limit on how long a silent trend is held (#793) and a
+  time tolerance for Boolean and Integer outputs (#794) are follow-ups of #746.
 
 ## `oce id`
 
@@ -477,7 +481,7 @@ oce import rule.cxf.jsonld | oce diff draft.oce - --from text
 | --- | --- | --- |
 | `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, under `--require-mutants-caught` the set lists a mutant and none survived, under `--deny-warnings` no warning; `verify --commission`: every compared output passed, under `--deny-warnings` no load or run-time warning; `id`: the input has an id; `import`: the document is imported and written; `diff`: the diff is `equal`; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
 | `1` | no | an error finding (`validate`, `emit`, which then writes nothing); `fmt --check`: not canonical; `catalog`: an unknown class, or the class rules refuse the parameter table (including a required parameter with no default); `verify`: a scenario failed or the set is `no_data`, or, under their flags, a surviving mutant, a set that lists no mutant, or a warning; `verify --commission`: an output failed or the run is `no_data`, or, under `--deny-warnings`, a warning; `diff`: any difference, a reordering or a comment included |
-| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal; for `verify --commission`, also a refused spec, mapping, unit or key, a spec with several references and no `--reference`, a reference with no `cxf` or `window`, an unreadable, over-size or refused trend source, a path out of the spec's directory, a CXF that does not load, an engine refusal of a frame, a comparison the limits refuse, an `--out` whose `outputs/` or a regular `receipt.json` exists; for both forms of `verify`, an `--out` whose `receipt.json` is an input; for `id`, also a document the engine does not load, an authored file with an error finding, or `--namespace` beside a CXF document; for `import`, also a document the importer refuses, a sequence the output form cannot spell, or an `-o` name that reads as another form (`import` never exits `1`); for `emit` and `import`, an `-o` that is the input file; for `emit`, `import`, `fmt --write` and both forms of `verify --out`, an output that is a symbolic link, a directory or another non-file; for `diff`, also a mixed pair, stdin on both sides, a CXF side the engine does not load, or a document whose blocks are not named under its root |
+| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal; for `verify --commission`, also a refused spec, mapping, unit or key, a spec with several references and no `--reference`, a reference with no `cxf` or `window`, or under `aligned-grid` with no `sampling`, an unreadable, over-size or refused trend source, a path out of the spec's directory, a CXF that does not load, an engine refusal of a frame, a comparison the limits refuse, an `--out` whose `outputs/` or a regular `receipt.json` exists; for both forms of `verify`, an `--out` whose `receipt.json` is an input; for `id`, also a document the engine does not load, an authored file with an error finding, or `--namespace` beside a CXF document; for `import`, also a document the importer refuses, a sequence the output form cannot spell, or an `-o` name that reads as another form (`import` never exits `1`); for `emit` and `import`, an `-o` that is the input file; for `emit`, `import`, `fmt --write` and both forms of `verify --out`, an output that is a symbolic link, a directory or another non-file; for `diff`, also a mixed pair, stdin on both sides, a CXF side the engine does not load, or a document whose blocks are not named under its root |
 
 ## Output
 

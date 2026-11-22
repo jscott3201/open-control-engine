@@ -17,9 +17,11 @@
 //! 2. **A Boolean or Integer output** is compared exactly at each series instant, a mismatch an
 //!    exceedance of `1`; nothing changes between two instants, so the verdict is exact and
 //!    `exceedance_time_s` is the time in mismatch.
-//! 3. **A Real output**: the envelope is built around the reference's step series, and the
-//!    test's step series is handed to it beside it ([`crate::Envelope::compare`]; both start at
-//!    `start` and end at `stop`). The instants then take every corner of the two bounds inside the
+//! 3. **A Real output**: the funnel is built around the reference's step series, and the
+//!    test's step series is handed to it beside it ([`crate::funnel()`]; both start at `start`
+//!    and end at `stop`). The `aligned-grid` envelope is refused without a `sampling`
+//!    (`sampling-required`, owner ruling of 2026-11-22): its band is a straight line between its
+//!    grid points and would cover a step's old level across a gap (issue #792). The instants then take every corner of the two bounds inside the
 //!    window, each inheriting the fate and the test value of the series instant before it. Each
 //!    instant's exceedance is the largest error over the stretch to the next instant
 //!    ([`super::change_of_value::piece_exceedances`]); the envelope's own errors, at the test's
@@ -31,7 +33,9 @@
 
 use oce_api::ValueType;
 
-use super::change_of_value::{piece_exceedances, series_instants, step_series, with_corners};
+use super::change_of_value::{
+    piece_exceedances, series_instants, snap_radius, snapped, step_series, with_corners,
+};
 use super::choices::FunnelReference;
 use super::compare_output::{
     Comparing, Fate, Sampled, Values, compare_refused, count, empty_output_report, exact, fates_of,
@@ -40,10 +44,12 @@ use super::compare_output::{
 use super::drive::{Stretch, uncovered_at};
 use super::indicator_mask::{IndicatorSeries, active_at};
 use super::prepare::{held, held_indexes};
-use super::report::{Exceedance, MAX_MASKED_EXCEEDANCE, OutputReport, capped};
+use super::report::{
+    Exceedance, MAX_MASKED_EXCEEDANCE, MAX_MASKED_INTERVALS, MaskedInterval, OutputReport, capped,
+};
 use super::run_options::{OutputBounds, OutputCurves};
 use super::tolerances::PartialTolerances;
-use crate::envelope::{Curve, Series};
+use crate::envelope::{Curve, Envelope, Series};
 use crate::verify_error::VerifyError;
 
 /// What one output is compared under when its reference gives no `sampling`.
@@ -85,7 +91,8 @@ pub(crate) fn compare_change(
     comparing: &Comparing,
 ) -> Result<(OutputReport, OutputCurves), VerifyError> {
     let (start, stop) = plan.window;
-    let report = empty_output_report(plan.path, plan.value_type, plan.tolerances, comparing.role);
+    let mut report =
+        empty_output_report(plan.path, plan.value_type, plan.tolerances, comparing.role);
     let empty = |report: OutputReport| {
         (
             report,
@@ -106,6 +113,8 @@ pub(crate) fn compare_change(
     ) else {
         return Ok(empty(report));
     };
+    // The trend's sample held at the last instant, `stop`: its last at or before `stop`.
+    report.last_sample_t = trend.last().map(|index| plan.trend.times[*index]);
     let fates = fates_of(
         &active_at(plan.indicators, &instants),
         &uncovered_at(plan.stretches, &instants).0,
@@ -150,6 +159,28 @@ struct Held {
     trend: Vec<f64>,
 }
 
+/// The masked stretches of `instants`: each run of masked instants from its first instant to
+/// the end of the stretch its last one stands for, the next instant, or the last instant
+/// (`stop`) when the run reaches it. So a mask from 5 s to 15 s is `{5, 15}` however few
+/// instants lie inside it.
+fn masked_stretches(instants: &[f64], fates: &[Fate]) -> Vec<MaskedInterval> {
+    let mut intervals = Vec::new();
+    let mut open: Option<f64> = None;
+    for (k, (t, fate)) in instants.iter().zip(fates).enumerate() {
+        if *fate == Fate::Masked {
+            open.get_or_insert(*t);
+        } else if let Some(from) = open.take() {
+            intervals.push(MaskedInterval { from, to: *t });
+        }
+        if k + 1 == instants.len()
+            && let Some(from) = open.take()
+        {
+            intervals.push(MaskedInterval { from, to: *t });
+        }
+    }
+    intervals
+}
+
 /// The report's counts and verdict over `instants` and their `exceedances`, and the curves.
 fn finish(
     path: &str,
@@ -169,7 +200,8 @@ fn finish(
     }
     report.first_exceedance_t = verdict.first;
     report.exceedance_time_s = verdict.exceedance_time_s;
-    (report.masked_intervals, report.masked_intervals_total) = verdict.masked_intervals;
+    (report.masked_intervals, report.masked_intervals_total) =
+        capped(masked_stretches(instants, fates), MAX_MASKED_INTERVALS);
     let curves = OutputCurves {
         output: path.to_owned(),
         errors: Curve::from_columns(instants.to_vec(), exceedances),
@@ -208,33 +240,33 @@ fn compare_real(
     };
     let (reference_x, reference_y) = step_series(&instants, reference);
     let (test_x, test_y) = step_series(&instants, test);
-    let result = comparing
-        .envelope
-        .compare(
-            Series::new(&reference_x, &reference_y),
-            Series::new(&test_x, &test_y),
-            &plan.tolerances.resolved(),
-            &comparing.limits,
-        )
-        .map_err(|error| compare_refused(plan.path, comparing.envelope, &error))?;
+    // Always the funnel: run_commissioning refuses `aligned-grid` without a `sampling`
+    // (`sampling-required`; issue #792).
+    let result = crate::funnel::funnel(
+        Series::new(&reference_x, &reference_y),
+        Series::new(&test_x, &test_y),
+        &plan.tolerances.resolved(),
+        &comparing.limits,
+    )
+    .map_err(|error| compare_refused(plan.path, Envelope::Funnel, &error))?;
     report.half_width = Some(result.half_width());
     report.half_height = Some(result.half_height());
     let (start, stop) = plan.window;
-    let (pieces, origin) = with_corners(
-        &instants,
-        &result.lower_bound,
-        &result.upper_bound,
-        start,
-        stop,
-    );
+    // A corner a few units in the last place off a series instant is read on it, so the
+    // funnel's normalisation never leaves a sliver at exactly one `x` tolerance. The bounds
+    // the caller keeps are the envelope's own.
+    let magnitude = if stop > start.abs() {
+        stop
+    } else {
+        start.abs()
+    };
+    let radius = snap_radius(magnitude, result.half_width().max);
+    let lower = snapped(&result.lower_bound, &instants, radius);
+    let upper = snapped(&result.upper_bound, &instants, radius);
+    let (pieces, origin) = with_corners(&instants, &lower, &upper, start, stop);
     let piece_fates: Vec<Fate> = origin.iter().map(|index| fates[*index]).collect();
     let piece_test: Vec<f64> = origin.iter().map(|index| test[*index]).collect();
-    let errors = piece_exceedances(
-        &pieces,
-        &piece_test,
-        &result.lower_bound,
-        &result.upper_bound,
-    );
+    let errors = piece_exceedances(&pieces, &piece_test, &lower, &upper);
     let mut masked_exceedance = Vec::new();
     let exceedances: Vec<f64> = piece_fates
         .iter()

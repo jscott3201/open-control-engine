@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "references[0].sampling",
+      "code": "sampling-required",
+      "detail": "the reference compares under `aligned-grid` and neither it nor the spec gives a `sampling`, which that envelope needs: its band is a straight line between grid points, which would cover a step's old level across a gap (a `funnel` reference needs none; issue #792)",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

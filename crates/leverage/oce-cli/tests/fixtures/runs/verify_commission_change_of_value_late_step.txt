@@ -31,6 +31,7 @@ exit: 1
           "max": 1.0,
           "min": 1.0
         },
+        "last_sample_t": 13.0,
         "masked": 0,
         "masked_exceedance": [],
         "masked_exceedance_total": 0,
@@ -56,6 +57,7 @@ exit: 1
       {
         "compared": 5,
         "exceedance_time_s": 0.0,
+        "last_sample_t": 13.0,
         "masked": 0,
         "masked_exceedance": [],
         "masked_exceedance_total": 0,
@@ -78,6 +80,7 @@ exit: 1
           "max": 1.0,
           "min": 1.0
         },
+        "last_sample_t": 13.0,
         "masked": 0,
         "masked_exceedance": [],
         "masked_exceedance_total": 0,
@@ -99,6 +102,7 @@ exit: 1
       {
         "compared": 5,
         "exceedance_time_s": 0.0,
+        "last_sample_t": 13.0,
         "masked": 0,
         "masked_exceedance": [],
         "masked_exceedance_total": 0,
@@ -198,7 +202,7 @@ exit: 1
   "engine_version": "0.6.0",
   "kind": "commissioning",
   "passed": false,
-  "receipt_id": "receipt:fnv1a128:330e2b79ff27b78b5b1dbdc83b6db8a3",
+  "receipt_id": "receipt:fnv1a128:e7ceb9a2105651e8130443cc9322f5a1",
   "schema": "oce/receipt/v1",
   "spec_id": "spec:fnv1a128:e650a74896d6be8b55a68c0ef0da1f44",
   "timings": {

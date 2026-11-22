@@ -174,6 +174,7 @@ pub(super) fn empty_output_report(
         masked_intervals_total: 0,
         masked_exceedance: Vec::new(),
         masked_exceedance_total: 0,
+        last_sample_t: None,
     }
 }
 

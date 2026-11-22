@@ -28,6 +28,7 @@
           "max": 1.0,
           "min": 1.0
         },
+        "last_sample_t": 20.0,
         "masked": 0,
         "masked_exceedance": [],
         "masked_exceedance_total": 0,
@@ -49,6 +50,7 @@
       {
         "compared": 4,
         "exceedance_time_s": 0.0,
+        "last_sample_t": 20.0,
         "masked": 0,
         "masked_exceedance": [],
         "masked_exceedance_total": 0,
@@ -71,6 +73,7 @@
           "max": 1.0,
           "min": 1.0
         },
+        "last_sample_t": 20.0,
         "masked": 0,
         "masked_exceedance": [],
         "masked_exceedance_total": 0,
@@ -92,6 +95,7 @@
       {
         "compared": 4,
         "exceedance_time_s": 0.0,
+        "last_sample_t": 20.0,
         "masked": 0,
         "masked_exceedance": [],
         "masked_exceedance_total": 0,
@@ -191,7 +195,7 @@
   "engine_version": "0.6.0",
   "kind": "commissioning",
   "passed": true,
-  "receipt_id": "receipt:fnv1a128:7bee95d9bfc5b24eea5ad5be2952e393",
+  "receipt_id": "receipt:fnv1a128:a708593554761500f5f6c93c45666277",
   "schema": "oce/receipt/v1",
   "spec_id": "spec:fnv1a128:e650a74896d6be8b55a68c0ef0da1f44",
   "timings": {

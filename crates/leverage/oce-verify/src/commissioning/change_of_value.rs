@@ -21,6 +21,13 @@
 //!   of a constant against two straight lines is largest at an end. The last instant, `stop`,
 //!   stands for itself.
 //!
+//! - **A corner on an instant.** The funnel computes a corner from `x` normalised by its
+//!   magnitude, so a corner that is exactly one `x` tolerance from a step lands a few units in
+//!   the last place off the instant where the other series steps, and the sliver between them
+//!   would be judged with the whole step as its error. A corner within [`snap_radius`] of a
+//!   series instant is read as lying on it ([`snapped`]): the boundary is decided by the
+//!   inputs, never by the rounding. Only corners move; a series instant never does.
+//!
 //! Every list here is walked once, or merged once with another, so the work is linear in the
 //! samples; each function that walks lists returns the steps it took, which the cost tests pin.
 
@@ -122,6 +129,56 @@ pub(crate) fn with_corners(
         origin.push(index);
     }
     (merged, origin)
+}
+
+/// How far a band corner may lie from a series instant and still be read as lying on it:
+/// `4 ε (m + w)`, `ε` the machine epsilon (`2^-52`), `m` the funnel's `x` magnitude (the larger
+/// of `stop` and `|start|`, which the reference's step series spans) and `w` the largest
+/// half-width applied.
+///
+/// Why this value. A funnel corner is `x / m ± w / m`, then times `m`: at most three roundings,
+/// each at most half an epsilon of a quantity no larger than `m + w`, so the corner as computed
+/// is within `1.5 ε (m + w)` of the exact `x ± w`. The instant it should meet carries at most
+/// one rounding of its own and the tolerance's decimal one, each at most `0.5 ε (m + w)`. The
+/// sum, `2.5 ε (m + w)`, is under the radius, so a corner the inputs put on an instant is always
+/// read there. The radius is about `8.9e-16 s` per second of `m + w` (`1.4e-14 s` for a
+/// 30 s window, `3.2e-12 s` for an hour), so what it forgives is an excursion shorter than
+/// the funnel's own arithmetic can place.
+pub(crate) fn snap_radius(magnitude: f64, half_width: f64) -> f64 {
+    4.0 * f64::EPSILON * (magnitude + half_width)
+}
+
+/// `bound` with every corner within `radius` of one of `instants` (ascending) moved onto the
+/// nearest such instant, the earlier on a tie. The order of the corners is kept: the map from a
+/// corner to its nearest instant never decreases.
+pub(crate) fn snapped(bound: &Curve, instants: &[f64], radius: f64) -> Curve {
+    let x = bound
+        .x()
+        .iter()
+        .map(|corner| {
+            let after = instants.partition_point(|t| t < corner);
+            let below = after.checked_sub(1).map(|k| instants[k]);
+            let above = instants.get(after).copied();
+            let nearest = match (below, above) {
+                (Some(b), Some(a)) => {
+                    if corner - b <= a - corner {
+                        b
+                    } else {
+                        a
+                    }
+                }
+                (Some(b), None) => b,
+                (None, Some(a)) => a,
+                (None, None) => return *corner,
+            };
+            if (corner - nearest).abs() <= radius {
+                nearest
+            } else {
+                *corner
+            }
+        })
+        .collect();
+    Curve::from_columns(x, bound.y().to_vec())
 }
 
 /// A bound's value at `t` read from the right of `t` (`from_right`) or from its left: the last

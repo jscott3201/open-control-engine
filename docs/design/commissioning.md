@@ -785,19 +785,20 @@ There is no mutant score and no gate (decision 7).
 | `output` | string | always | the canonical path |
 | `type` | string | always | `real`, `integer` or `boolean`: a Real goes through the envelope, the other two are compared exactly (decision 8) |
 | `status` | string | always | `no_data` when `compared == 0`; else `fail` when any compared instant has an exceedance above zero; else `pass` |
-| `compared` | integer | always | the test instants compared. With `sampling` they are the instants `start + k * s` in the window. Without it *(restated by #746)* they are the output's change-of-value instants in the window: `start`, `stop`, every sample time of the engine series, the trend series and the output's indicators, and every end of an uncovered stretch; for a Real output also every corner of either bound of its envelope. Each stands for the stretch from it to the next instant |
+| `compared` | integer | always | the test instants compared. With `sampling` they are the instants `start + k * s` in the window. Without it *(restated by #746)* they are the output's change-of-value instants in the window: `start`, `stop`, every sample time of the engine series, the trend series and the output's indicators, and every end of an uncovered stretch; for a Real output also every corner of either bound of its funnel, so the count depends on the tolerances. Each stands for the stretch from it to the next instant |
 | `masked` | integer | always | the test instants an indicator excluded |
 | `uncovered` | integer | always | the test instants in a refused stretch that no indicator masked (decision 28): from a frame refused for a missing sample up to the next executed frame, or to `stop` when none follows |
 | `funnel_reference` | string | when `type` is `real` | `engine` or `trend`: which series the envelope is built around (decision 11). It is per output here because only a Real output has an envelope; a vector receipt carries one `funnel_reference` for its body, always `expectation` |
 | `tolerances` | object | when `type` is `real` | the six names, every one present, after the overrides: `atolx`, `atoly`, `ltolx`, `ltoly`, `rtolx`, `rtoly` |
 | `half_width`, `half_height` | object | when an envelope was built | `{ "min", "max" }` over the reference points, in model seconds and in the output's CDL unit, before `x` is normalised. Under `funnel`: the half-sizes of "Envelope" step 1 with its fallbacks, so never zero. Under `aligned-grid`: the sum of the three tolerance terms at each reference point, with no fallback, so zero when every tolerance of the axis is zero |
-| `worst` | object | when `status` is `fail` | `{ "t", "exceedance" }`: the largest exceedance over the compared instants and the earliest instant that has it |
-| `first_exceedance_t` | real | when `status` is `fail` | the earliest compared instant with an exceedance above zero |
-| `exceedance_time_s` | real | always | the sum, in ascending time order, of `t[k + 1] - t[k]` over the compared instants `k` with an exceedance above zero, `t[k + 1]` the next test instant; the last instant adds nothing; `0.0` when there is none. Without `sampling` *(#746)* an instant's exceedance is the largest error over its stretch, so this is the time outside exactly for a Boolean or Integer output and for a Real output whose band is flat between its corners (a step series' band without a local `x` tolerance), and an upper bound otherwise; a step's vertical segment counts no time |
-| `masked_intervals` | array | always | `{ "from", "to" }` in model seconds, the first and last instant of each run of masked instants, in time order, at most 64 |
+| `worst` | object | when `status` is `fail` | `{ "t", "exceedance" }`: the largest exceedance over the compared instants and the earliest instant that has it. Without `sampling` *(#746)* the instant is where the stretch with that largest error starts |
+| `first_exceedance_t` | real | when `status` is `fail` | the earliest compared instant with an exceedance above zero. Without `sampling` *(#746)* it is where the first stretch with an error above zero starts; on a sloped band the first time outside can be later inside it |
+| `exceedance_time_s` | real | always | the sum, in ascending time order, of `t[k + 1] - t[k]` over the compared instants `k` with an exceedance above zero, `t[k + 1]` the next test instant; the last instant adds nothing; `0.0` when there is none. Without `sampling` *(#746)* an instant's exceedance is the largest error over its stretch, so this is the time outside exactly for a Boolean or Integer output and for a Real output whose band is flat between its corners (a step series' band without a local `x` tolerance), and an upper bound otherwise; a step's vertical segment counts no time. The value at `stop` is still judged, so an output whose only excess is at `stop` fails with `0.0` here |
+| `masked_intervals` | array | always | `{ "from", "to" }` in model seconds, the first and last instant of each run of masked instants, in time order, at most 64. Without `sampling` *(#790)* `to` is where the run's last stretch ends: the instant where the mask ends, or `stop` |
 | `masked_intervals_total` | integer | always | the count before the cap |
 | `masked_exceedance` | array | always | `{ "t", "exceedance" }` for each masked instant whose error is above zero, in time order, at most 16; reported, never counted (decision 23). The error is the envelope's at that instant on the series as zeroed: the test's value there is zero, and the bounds are built from the zeroed reference |
 | `masked_exceedance_total` | integer | always | the count before the cap |
+| `last_sample_t` | real | without `sampling`, when the output has an instant *(#790)* | the time of the trend's last sample at or before `stop` that the comparison held; earlier than `start` for a trend held from a sample before it. The trend is held from it to `stop`: a held value is not a logged one, and a logger that fell silent reads as a value that did not change. Absent with `sampling`, so every receipt with one is unchanged. A limit on the gap is #793 |
 
 `compared + masked + uncovered` is the number of test instants in the window. A tolerance name
 that no tolerance object of the spec gives is written `0`. An envelope is built for a Real
@@ -942,10 +943,10 @@ and the review of GitHub #744:
    Integer `2`) is `indicator-not-boolean`, exit 2, with no receipt. The refusal names the
    indicator, the time and the value. Every sample is checked, whether or not the window
    reaches it.
-6. **`sampling` is required for now.** *(Lifted by GitHub #790, issue #746: see "As landed:
-   the change-of-value comparison". The code `sampling-required` is gone.)* A reference whose own
-   `sampling` and the spec's are both
-   absent is refused as `sampling-required`, exit 2, with no receipt. Without a grid, the test
+6. **`sampling` is required for now.** *(Lifted for the `funnel` envelope by GitHub #790, issue
+   #746, and narrowed to `aligned-grid` by the owner on 2026-11-22: see "As landed: the
+   change-of-value comparison", rule 7; issue #792.)* A reference whose own `sampling` and the
+   spec's are both absent is refused as `sampling-required`, exit 2, with no receipt. Without a grid, the test
    instants were only the test series' own times, and the envelope interpolated the reference
    linearly between its samples. A value the engine held between two frames was therefore
    judged as a ramp. The review reproduced two false passes: a trend step 3 s late passed under
@@ -1079,8 +1080,8 @@ measured about 250 at 2^20 frames). The receipt's complete lists are bounded at 
 `too-many-points` and `compare-refused` are shared with it): `reference-out-of-range`, `reference-incomplete`, `spec-refused`, `unknown-indicator`,
 `indicator-not-boolean`, `duplicate-output`, `frame-refused`, `too-many-sources`,
 `too-many-outputs`, `source-refused`, `unit-refused`, `sampling-required` and
-`too-many-indicators` (`sampling-required` removed again by #746, so `too-many-indicators`
-follows `unit-refused`). To `UNIT_ERROR_CODES` it adds `difference-for-absolute` and
+`too-many-indicators` (`sampling-required` kept by #746, its meaning narrowed to an
+`aligned-grid` reference). To `UNIT_ERROR_CODES` it adds `difference-for-absolute` and
 `port-unit-mismatch`. A `frame-refused` carries its class as the cause, and
 `VerifyError::frame_index`, `frame_time` and `engine_message` (cut to 256 bytes at a character
 boundary).
@@ -1104,12 +1105,13 @@ boundary).
 
 ### As landed: the change-of-value comparison
 
-*(GitHub #790, issue #746.)* A reference with no `sampling`, its own or the spec's, runs again:
-its outputs are compared **by change of value**. The refusal `sampling-required` (ruling 6
-above) is lifted and its code removed. A reference with a `sampling` runs exactly as before, and
-every receipt and transcript of one is byte-identical, the Building 33 day's included. The code
-is `src/commissioning/change_of_value.rs` (the instants, the step series, the pieces) and
-`compare_change.rs` (one output), beside `compare_output.rs`, which keeps the grid path.
+*(GitHub #790, issue #746.)* A reference with no `sampling`, its own or the spec's, runs again
+under the `funnel` envelope: its outputs are compared **by change of value**. The refusal
+`sampling-required` (ruling 6 above) is narrowed to the `aligned-grid` envelope (rule 7 below).
+A reference with a `sampling` runs exactly as before, and every receipt and transcript of one is
+byte-identical, the Building 33 day's included. The code is `src/commissioning/change_of_value.rs`
+(the instants, the step series, the corner snap, the stretches) and `compare_change.rs` (one
+output), beside `compare_output.rs`, which keeps the grid path.
 
 **Why.** The review of GitHub #744 reproduced two false passes without a grid (ruling 6): a
 trend step 3 s late passed under a 1 s `x` tolerance, and a Boolean toggling between two logged
@@ -1143,26 +1145,33 @@ by funnel's step 5; a piecewise comparison over held values), the last, as recom
    constant from one instant to the next, so the comparison is exact in time, and
    `exceedance_time_s` is the time in mismatch. This is the issue's "union of both series'
    times", with the indicators' times and the stretches' ends added: without them a mismatch
-   that starts inside a masked stretch and runs past its end would be missed.
-4. **A Real output.** The envelope is built around the reference's **step series**: the series
+   that starts inside a masked stretch and runs past its end would be missed. **A discrete
+   output has no time tolerance, on either path** (ruled by the owner on 2026-11-22, kept
+   exact): a trend whose Boolean or Integer change is stamped off the engine's frame fails for
+   the offset, however small. Issue #794 asks for a time tolerance for discrete outputs on both
+   paths.
+4. **A Real output.** The funnel is built around the reference's **step series**: the series
    held at the series instants, with, where the value changes, the held value carried to that
    instant first and the new value starting there, so funnel's linear interpolation draws a
-   step and not a ramp. The test's step series is handed to the envelope beside it. The
-   instants then also take every corner of the two bounds strictly inside the window, each
-   with the fate and the test value of the series instant before it. Between two instants the
-   test is constant and each bound a straight line, so the error, funnel's `max(0, y - y_up) -
-   min(0, y - y_low)`, is largest at one end: **an instant's exceedance is the larger of the
-   error at the instant, both bounds read from the stretch after it, and the error at the next
-   instant, both bounds read from the stretch before it.** At a vertical in a bound (two corners
-   at one `x`) the reading from after takes the later corner and from before the earlier one.
-   The last instant, `stop`, is the error there, the bounds read from before. The envelope's
-   own errors at the test's points are not read.
+   step and not a ramp. The test's step series is handed to the funnel beside it. The instants
+   then also take every corner of the two bounds strictly inside the window, each with the fate
+   and the test value of the series instant before it. Between two instants the test is
+   constant and each bound a straight line, so the error, funnel's `max(0, y - y_up) - min(0, y
+   - y_low)`, is largest at one end: **an instant's exceedance is the larger of the error at the
+   instant, both bounds read from the stretch after it, and the error at the next instant, both
+   bounds read from the stretch before it.** At a vertical in a bound (two corners at one `x`)
+   the reading from after takes the later corner and from before the earlier one. The last
+   instant, `stop`, is the error there, the bounds read from before. The funnel's own errors at
+   the test's points are not read.
 5. **The figures** keep their rules over these instants: `compared`, `masked` and `uncovered`
-   count them; `worst` and `first_exceedance_t` are the instants of the stretches; and
-   `exceedance_time_s`, the sum of the stretches with an exceedance above zero, is **exact for a
-   staircase band** (flat between corners, as a step series' band is without a local `x`
-   tolerance) **and an upper bound otherwise**, where the error is above zero over part of a
-   stretch only. `masked_exceedance` lists masked instants whose stretch's error is above zero.
+   count them (so a Real output's `compared` depends on its tolerances, through the corners);
+   `worst` and `first_exceedance_t` are the instants where their stretches start (on a band
+   flat between its corners the test is outside from that instant on; on a sloped band the first
+   time outside can be later inside the stretch); and `exceedance_time_s`, the sum of the
+   stretches with an exceedance above zero, is **exact for a staircase band** (flat between
+   corners, as a step series' band is without a local `x` tolerance) **and an upper bound
+   otherwise**, where the error is above zero over part of a stretch only. `masked_exceedance`
+   lists masked instants whose stretch's error is above zero.
 6. **What is pyfunnel's.** The band is: the bounds are the funnel port's construction around the
    reference's step series, which the pinned pyfunnel 2.1.1 accepts with repeated `x` values,
    and `--bounds` writes the step series and the bounds as the library keeps them, so pyfunnel
@@ -1171,65 +1180,124 @@ by funnel's step 5; a piecewise comparison over held values), the last, as recom
    (`tests/fixtures/funnel/hostile/equal_times/`: a step reference and a step test, `x` repeated
    twice and three times, all five files byte for byte), so no new capture was made. **The
    per-instant errors on this path are not pyfunnel's**: pyfunnel reads its error only at the
-   test's points, and this path reads the largest error over each stretch. No receipt figure of
-   a run without `sampling` is claimed to match pyfunnel.
+   test's points, and this path reads the largest error over each stretch, with the corners
+   snapped (rule 8). No receipt figure of a run without `sampling` is claimed to match pyfunnel.
+7. **`aligned-grid` needs a `sampling`** (ruled by the owner on 2026-11-22, in the review of
+   GitHub #790). That envelope's band is the extremes at its grid points joined by straight
+   lines, so around a sparse step series the line from a step to the next grid point covers the
+   old level across the whole gap: it passed the unlogged pulse above at `atolx` 0, 1 and 4. A
+   reference under `aligned-grid` whose own `sampling` and the spec's are both absent is refused
+   as `sampling-required` (the code and `VerifyErrorKind::SamplingRequired` kept, their meaning
+   narrowed to this case), exit 2, with no receipt, in the reference's own checks after
+   `reference-incomplete` and before any file is read. With a `sampling` it runs as before.
+   Issue #792 asks for a step-shaped grid band, which lifts the refusal.
 
-**The orchestrator's calls on 2026-11-22** (not owner rulings), each pinned by a test in
+**Found in the review of GitHub #790, and decided by the orchestrator** (not owner rulings):
+
+8. **The corner snap.** The funnel computes a corner from `x` normalised by its magnitude, so a
+   corner exactly one `x` tolerance from a step lands a few units in the last place off the
+   instant where the other series steps, and that sliver of about `1e-15 s` was judged with the
+   whole step as its error: a step at 5 s logged at exactly 6 s under `atolx` 1 failed with
+   `worst.t` 5.999999999999999. The review's sweep found 132 such failures in 1,950 cases. A
+   corner within `4 ε (m + w)` of a series instant (`ε` the machine epsilon, `m` the funnel's `x`
+   magnitude, the larger of `stop` and `|start|`, `w` the largest half-width) is now read as
+   lying on the nearest such instant; only corners move, never an instant. Why the bound
+   suffices and cannot be exceeded by the funnel's own error: a corner is `x / m ± w / m` then
+   times `m`, three roundings each at most half an epsilon of a quantity no larger than
+   `m + w`, so within `1.5 ε (m + w)` of the exact `x ± w`; the instant it meets carries at most
+   its own rounding and the tolerance's decimal one, `0.5 ε (m + w)` each; `2.5 ε (m + w)` is
+   under the radius. The radius is about `8.9e-16 s` per second of `m + w` (`1.4e-14 s` for a
+   30 s window), so what it forgives is an excursion the funnel's arithmetic cannot place. A
+   step one tolerance plus the next representable time past the radius fails, as before. The
+   bounds `--bounds` writes are the funnel's own, unsnapped.
+9. **Masked runs are stretches.** Each instant stands for the stretch to the next, so a run of
+   masked instants is reported from its first instant to where its last stretch ends: the
+   instant where the mask ends, or `stop`. A fan off from 5 s to 15 s is `{5, 15}` however few
+   instants lie inside, and a mask past the window `{5, 30}`. With a `sampling` the run's `to`
+   stays its last masked instant.
+10. **A value at exactly `stop` is judged**, as the grid path judges the sample at `stop`: it is
+    the last instant and adds no time, so an output whose only excess is at `stop` fails with
+    `exceedance_time_s` `0.0`.
+
+**Also the orchestrator's calls of 2026-11-22**, each pinned by a test in
 `tests/commissioning/run_change_readings.rs`:
 
 1. **Equal times collapse to the last row**, as on the grid path: a §12.2 switch written as two
    rows at `t` is one step at `t`, and a value that lasts no time is not compared.
 2. **One sample at or before `start`** is held over the window: a series needs no other.
 3. **A series that ends before `stop` is held to `stop`**, as on the grid path. A trend that
-   stopped logging is therefore **held, not reported**: its last value is compared to the end
-   of the window, and the receipt does not say that the trend fell silent.
+   stopped logging is therefore **held, not reported** as missing: its last value is compared
+   to the end of the window. The receipt says when that value was logged (`last_sample_t`,
+   below); a held value is not a logged one. Issue #793 asks for a limit on how long a gap may
+   be held.
 4. **Masking**: the zero fill stays, and mask and uncovered edges are instants of both series
    (rule 2 above).
 5. **A vertical segment counts no time**: a carry point and the new value share one instant,
    instants are distinct, and the excess at a vertical is folded into the stretch on each side.
+   The value at `stop` is the one exception that is still judged (rule 10).
 
 **The receipt.** With no `sampling` the body's `time` object has none, and `TimeRecord::sampling`
-is an `Option`; nothing else changes shape. `compared` and `exceedance_time_s` are restated in
-the output table above.
+is an `Option`. Each output gains **`last_sample_t`** (ruled by the owner on 2026-11-22), written
+only without a `sampling`, so every receipt with one stays byte-identical: the time of the trend's
+last sample at or before `stop` that the comparison held, in model seconds and the canonical real
+spelling. A trend held from a sample before `start` gives that sample's time, earlier than
+`start`. An output with no instant at all (a series with no sample at or before `start`) has
+none; one whose every instant is masked or uncovered is `no_data` and still has it. `compared`,
+`exceedance_time_s` and `masked_intervals` are restated in the output table above.
 
 **The bounds before the replay.** No limit is added. An output's series instants are at most
 its window's frames, trend samples and indicator-file samples plus two (a trace indicator's
 samples and every stretch end are frame times), all known before the replay; a Real output's
-step series are then at most twice that less one. The per-output cap (`max_funnel_points`, or
-`max_aligned_grid_points` under `aligned-grid`) holds that count of points, the run's work
-holds the instants times one plus the indicators, and the grid envelope's quadratic work the
-points squared, each refused before the replay as the run's own `too-many-points`, so the
-envelope's own `too-many-points` is never reached (pinned at the cap and one past it). The
-corners the envelope adds as instants are at most its own output, bounded by its limits. The
-union of the instants is one two-way merge per list, linear in the lengths: two interleaved
-series of 25,000, 50,000 and 100,000 samples take exactly 75,003, 150,003 and 300,003 steps.
-A whole run of four outputs with 25,000, 50,000 and 100,000 frames and trend samples took
-13.8, 28.8 and 54.2 ms in a release build (133, 260 and 518 ms in a debug build), measured once
-on the development machine and not pinned.
+step series are then at most twice that less one. The per-output cap (`max_funnel_points`) holds
+that count of points and the run's work the instants times one plus the indicators, each
+refused before the replay as the run's own `too-many-points`, so the funnel's own
+`too-many-points` is never reached (pinned at the cap and one past it). The corners the funnel
+adds as instants are at most its own output, bounded by its limits. The union of the instants
+is one two-way merge per list, linear in the lengths: two interleaved series of 25,000, 50,000
+and 100,000 samples take exactly 75,003, 150,003 and 300,003 steps. A whole run of four outputs
+with 25,000, 50,000 and 100,000 frames and trend samples took 13.8, 28.8 and 54.2 ms in a
+release build (133, 260 and 518 ms in a debug build), measured once on the development machine
+and not pinned.
 
 **Evidence:**
 
-- sixteen synthetic runs of the `plant` subject (`tests/fixtures/commissioning/run/
-  change_of_value/`), every figure, instant and exceedance of every output equal bit for bit to
-  `derive_run.py <run fixture> change-of-value` (`change_of_value/oracle.txt`), which shares no
-  code with the crate and also recomputes the ids of three golden receipts there;
+- nineteen synthetic runs of the `plant` subject (`tests/fixtures/commissioning/run/
+  change_of_value/`, among them `rtoly` and `ltolx` tolerances, a sparse mask and a value at
+  `stop`), every figure, instant, exceedance and last sample time of every output equal bit for
+  bit to `derive_run.py <run fixture> change-of-value` (`change_of_value/oracle.txt`), which
+  shares no code with the crate and also recomputes the ids of three golden receipts there;
+- a seeded differential of 400 cases (`tests/commissioning/run_change_differential.rs`), each
+  run by change of value and again on a 1/64 s grid on which every event lies: random engine
+  steps, trends delayed -2 to +3 s, spurious pulses, silent loggers, masks, uncovered stretches,
+  `atolx` 0 to 4, `atoly` 0 to 0.5, `rtoly`, `ltolx`, both roles. Every discrete output agrees in
+  status and time outside to the bit; every Real output agrees in status but where the grid
+  draws a reference step at exactly `stop` as a ramp (a named exception), and its time outside
+  is never below the grid's by more than two grid steps per run outside;
 - the two reproductions, failing: the late step at 11 s, 0.95 K outside for 2.0 s, and the
   unlogged toggle at 10 s for 10.0 s; and the funnel at the series' own times passing the late
   step, as GitHub #744 first built it;
 - trends that are right, passing: steps at the engine's frames, a step half and a whole `x`
   tolerance late, a slow ramp logged past a 0.04 K deadband under a 0.05 K band, a Boolean
-  switching on an engine frame written as two rows, and outputs that never change;
+  switching on an engine frame written as two rows, outputs that never change, and the review's
+  sweep of steps exactly one tolerance late or early (1,002 funnel cases, all passing);
+- an engine sample of 1e302 failing its output with no envelope; a logger silent after 100 s of
+  an hour, passing with `last_sample_t` 100; `aligned-grid` without a `sampling` refused at
+  `atolx` 0, 1 and 4, and with one running as before;
 - one receipt for two runs, chunk sizes 1, 7 and the whole run, and every order of the files;
 - `oce verify --commission` on three such specs, its stdout each golden receipt byte for byte,
-  and `--out --bounds` writing the step series with their repeated `x`;
-- fifteen mutants of the new path, each caught: a ramp for the step (no carry point); the carry
-  taking the new value; the trend's or the engine's times dropped from the union; the band's
-  corners, the indicators' times or the stretch ends dropped from the instants; a stretch's
-  error at its start only or at its end only; a bound read from the wrong side at either end;
-  no zero fill; a corner taking the next instant's test value; and the bound before the replay
-  without its doubling or without the frames. The error at a stretch's end only survived the
-  sixteen runs, whose bands never fall away from the test right after a vertical, and is caught
-  by a unit test of that band shape.
+  `--out --bounds` writing the step series with their repeated `x`, and the `aligned-grid`
+  refusal's transcript;
+- twenty-five mutants of the new path, each caught: a ramp for the step (no carry point); the
+  carry taking the new value; the trend's or the engine's times dropped from the union; the
+  band's corners, the indicators' times or the stretch ends dropped from the instants; a
+  stretch's error at its start only or at its end only; a bound read from the wrong side at
+  either end; no zero fill; a corner taking the next instant's test value; the bound before the
+  replay without its doubling or without the frames; the snap radius zero, one epsilon or a
+  million times too large; the snapped corners unused; a snap tie to the later instant; a masked
+  run ending at its last masked instant; `last_sample_t` the first held sample or unwritten;
+  `aligned-grid` without a `sampling` not refused; and an out-of-range engine sample unchecked.
+  The two one-ended stretch readings each survived the integration cases, whose funnel bands
+  do not slope inside a stretch, and are each caught by a unit test of that band shape.
 
 ## Rust API sketch
 
@@ -1446,7 +1514,7 @@ open:
 - **Order of the refusals**: usage; the spec (4 MiB from metadata, then the spec reader); the
   reference (`reference-required`, decision 35); the reference's own completeness, decided by
   the library before any other file is read (`reference-out-of-range`, `reference-incomplete`,
-  and, until #746, `sampling-required`); the files, in the receipt's order of sources after the CXF and the
+  `sampling-required`, since #746 for an `aligned-grid` reference only); the files, in the receipt's order of sources after the CXF and the
   mapping; with `--out`, the output checks; the run; the writes. The output checks come after
   the reads and before the run: `DIR` must be an existing directory and `DIR/outputs` must not
   exist (`write-failed`), and a `DIR/receipt.json` that is the spec or a file the run read, by
@@ -1477,8 +1545,11 @@ open:
   rule's `not-boolean`, the mapping's spec code, the unit code) is not carried to the report,
   because `VerifyError` holds one cause, and the detail names the place and the reason instead.
 
-**Open, and not resolved here:** the library's follow-ups from the review of GitHub #744, among them the 1-ulp last
-instant (#747), and the zero fill of masked ticks (#745).
+**Open, and not resolved here:** the library's follow-ups from the review of GitHub #744, among
+them the 1-ulp last instant (#747), and the zero fill of masked ticks (#745). From the review of
+GitHub #790: a step-shaped `aligned-grid` band, which lifts that envelope's `sampling-required`
+(#792); a limit on how long a trend's last sample may be held (#793); and a time tolerance for
+Boolean and Integer outputs on both paths (#794).
 
 ## Building 33 data
 

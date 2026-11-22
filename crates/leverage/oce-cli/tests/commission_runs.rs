@@ -223,9 +223,9 @@ fn a_spec_with_several_references_needs_reference_and_lists_them() {
 
 #[test]
 fn a_reference_the_library_cannot_run_is_refused_before_any_other_file_is_read() {
-    // No window: the refusal is the library's, and no source is opened (the trend files are
-    // gone). A reference with no sampling runs by change of value
-    // (`tests/commission_change_of_value.rs`).
+    // No window, and an aligned-grid reference with no sampling: each refusal is the library's,
+    // and no source is opened (the trend files are gone). A funnel reference with no sampling
+    // runs by change of value (`tests/commission_change_of_value.rs`).
     let dir = run_layout("commission_incomplete", "pass");
     for file in support::commission::RUN_FILES {
         fs::remove_file(dir.join(file)).expect("remove");
@@ -235,6 +235,23 @@ fn a_reference_the_library_cannot_run_is_refused_before_any_other_file_is_read()
     case_in(
         &dir,
         "verify_commission_reference_incomplete",
+        2,
+        &["verify", "--commission", SPEC],
+    );
+    let dir = run_layout("commission_sampling", "pass");
+    for file in support::commission::RUN_FILES {
+        fs::remove_file(dir.join(file)).expect("remove");
+    }
+    edit(&dir, SPEC, r#""sampling": 5,"#, "");
+    edit(
+        &dir,
+        SPEC,
+        r#""model": "Plant","#,
+        r#""model": "Plant", "envelope": "aligned-grid","#,
+    );
+    case_in(
+        &dir,
+        "verify_commission_sampling_required",
         2,
         &["verify", "--commission", SPEC],
     );

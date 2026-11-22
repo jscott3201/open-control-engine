@@ -5,7 +5,7 @@
   },
   "tolerances": {
     "atolx": 1,
-    "atoly": 0.01
+    "rtoly": 0.02
   },
   "references": [
     {
@@ -17,7 +17,6 @@
         "start": 0,
         "stop": 30
       },
-      "envelope": "aligned-grid",
       "inputs": [
         {
           "path": "main.csv",

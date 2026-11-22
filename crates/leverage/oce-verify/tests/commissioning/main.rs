@@ -23,6 +23,8 @@ mod load_cost;
 mod point_mapping;
 mod run_bind;
 mod run_bounds;
+mod run_change_differential;
+mod run_change_edges;
 mod run_change_of_value;
 mod run_change_readings;
 mod run_comparison;

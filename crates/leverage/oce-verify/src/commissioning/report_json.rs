@@ -247,6 +247,9 @@ fn output(report: &OutputReport) -> Json {
     if let Some(first) = report.first_exceedance_t {
         entries.push(entry("first_exceedance_t", time(first)));
     }
+    if let Some(last) = report.last_sample_t {
+        entries.push(entry("last_sample_t", time(last)));
+    }
     Json::object(entries)
 }
 

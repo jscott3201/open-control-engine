@@ -296,6 +296,10 @@ pub(crate) const VERIFY_MEANINGS: &[(&str, &str)] = &[
         "a mapped point's unit does not fit its sequence port (cause: the unit code)",
     ),
     (
+        "sampling-required",
+        "the commissioning reference uses the aligned-grid envelope and gives no sampling, which that envelope needs",
+    ),
+    (
         "too-many-indicators",
         "the commissioning reference's indicator rules name more than 64 indicators",
     ),

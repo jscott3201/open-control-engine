@@ -7,7 +7,9 @@
 //!    (`reference-incomplete`, naming the field missing first, `cxf` before `window`). Its
 //!    `sampling`, its own or the spec's, chooses the comparison: on that grid
 //!    ([`super::compare_output`]), or by change of value without one
-//!    ([`super::compare_change`]; issue #746, ruled by the owner on 2026-11-22).
+//!    ([`super::compare_change`]; issue #746, ruled by the owner on 2026-11-22). Without one
+//!    the envelope must be `funnel`: `aligned-grid` is `sampling-required` (owner ruling of
+//!    2026-11-22; issue #792).
 //! 2. **The sequence**: the CXF loaded through the facade (`subject-load-failed`).
 //! 3. **The trends** ([`super::TrendSources::read`]): `too-many-sources`, or `source-refused` with
 //!    the source reader's code as the cause.
@@ -151,6 +153,17 @@ pub fn run_commissioning(
         return Err(incomplete(&place, "window"));
     };
     let sampling = written.sampling.or(spec.sampling);
+    let envelope = written.envelope().unwrap_or(Envelope::Funnel);
+    if sampling.is_none() && envelope == Envelope::AlignedGrid {
+        return Err(VerifyError::new(
+            Kind::SamplingRequired,
+            format!("{place}.sampling"),
+            "the reference compares under `aligned-grid` and neither it nor the spec gives a \
+             `sampling`, which that envelope needs: its band is a straight line between grid \
+             points, which would cover a step's old level across a gap (a `funnel` reference \
+             needs none; issue #792)",
+        ));
+    }
     let (mut engine, load) = crate::bind::load_at(&inputs.cxf, &format!("{place}.cxf"))?;
     let setup = |call: &str, error: &oce_api::OcError| {
         crate::bind::setup_failed(place.as_str(), call, error)
@@ -186,7 +199,6 @@ pub fn run_commissioning(
         trends: &trends,
     })?;
 
-    let envelope = written.envelope().unwrap_or(Envelope::Funnel);
     let role = written
         .funnel_reference()
         .unwrap_or(FunnelReference::Engine);
