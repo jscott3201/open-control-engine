@@ -191,7 +191,7 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
-- **A parameter of the wrong kind is refused, never run on the block's default** (GitHub #PRNUM,
+- **A parameter of the wrong kind is refused, never run on the block's default** (GitHub #754,
   issues #734, #735). **Breaking, in place:** a document or a blob that binds a block parameter a
   value of another kind than its class's catalog type loaded and ran before, with the block's
   default in place of that value, and is refused now. No format byte changes, no version bump
@@ -459,7 +459,7 @@ so far, and no tag is cut by the bump.
     #713 and #724), so no format, content id, blob or golden moves and the workspace version is
     not bumped.
 
-- **The parameter scope sees the Real a Real parameter holds** (GitHub #PRNUM, issues #735,
+- **The parameter scope sees the Real a Real parameter holds** (GitHub #754, issues #735,
   #734; owner ruling of 2026-11-21). **Breaking, in place**, inside 0.6.0 with no further bump.
   GitHub #720 held an Integer bound to a Real parameter as a Real in the block's own table only:
   the sibling scope a later member reads and the composite scope its children inherit kept the
