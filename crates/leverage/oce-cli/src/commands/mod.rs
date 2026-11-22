@@ -16,11 +16,13 @@ mod commission_files;
 mod commission_out;
 mod contained;
 pub(crate) mod diff;
+mod directory;
 pub(crate) mod emit;
 mod file_identity;
 pub(crate) mod fmt;
 pub(crate) mod id;
 pub(crate) mod import;
+mod steps;
 pub(crate) mod validate;
 pub(crate) mod verify;
 pub(crate) mod verify_commission;
@@ -34,6 +36,7 @@ use crate::report::Report;
 use crate::{Exit, Streams, input};
 
 pub(crate) use atomic_write::{Named, target_accepted, write_atomically};
+pub(crate) use directory::cause as directory_cause;
 pub(crate) use file_identity::{input_at, same_file, stdin_is_file};
 
 /// What one command produced.

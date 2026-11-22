@@ -69,7 +69,7 @@ pub(crate) fn load(source: &Source, stdin: &mut dyn Read, report: &mut Report) -
 }
 
 /// The form from `--from`, else the extension.
-fn form_of(source: &Source) -> Result<Form, (&'static str, String)> {
+pub(crate) fn form_of(source: &Source) -> Result<Form, (&'static str, String)> {
     if let Some(form) = source.from {
         return Ok(form);
     }
@@ -156,7 +156,13 @@ pub(crate) fn io_refusal(error: std::io::Error) -> (&'static str, String) {
             codes::NOT_A_FILE,
             "the path is not a regular file".to_owned(),
         ),
-        kind => (codes::READ_FAILED, format!("the read failed: {kind}")),
+        _ => (
+            codes::READ_FAILED,
+            format!(
+                "the read failed: {}",
+                crate::commands::directory_cause(&error)
+            ),
+        ),
     }
 }
 

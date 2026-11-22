@@ -11,9 +11,9 @@
 //! path-based checks of GitHub #757 and not the `openat` walk; this test holds the binary to the
 //! same rule under a real race. The swap is an atomic exchange (`renameat_with` with
 //! `RenameFlags::EXCHANGE`), so it runs on Linux and macOS; a file system under cargo's target
-//! directory that refuses the exchange (`EINVAL`, `ENOTSUP`, `ENOSYS`) skips the test with a note
-//! rather than failing, and the rule is then untested there (CI's Linux runners and APFS support
-//! it). Windows keeps the path-based checks and is untested here.
+//! directory that refuses the exchange (`EINVAL`, `ENOTSUP`, `ENOSYS`) fails the test, unless
+//! `OCE_TESTS_ALLOW_NO_EXCHANGE=1` is set, when it skips with a note and the rule is untested there
+//! (`support::skip_without_exchange`; CI's Linux runners and APFS support it). Windows keeps the path-based checks and is untested here.
 
 #![cfg(any(target_os = "linux", target_os = "macos"))]
 
@@ -94,13 +94,7 @@ fn a_directory_swapped_for_a_link_never_carries_a_read_out_of_the_spec_directory
         Err(error)
             if [Errno::INVAL, Errno::NOTSUP, Errno::OPNOTSUPP, Errno::NOSYS].contains(&error) =>
         {
-            #[allow(
-                clippy::print_stderr,
-                reason = "an explicit skip note in the test output"
-            )]
-            {
-                eprintln!("skipped: no atomic exchange on this file system ({error:?})");
-            }
+            support::skip_without_exchange(error);
             return;
         }
         Err(error) => panic!("the exchange failed: {error:?}"),

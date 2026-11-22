@@ -26,17 +26,17 @@
 //! grew after its metadata was read is read up to that room and one byte more, and then refused.
 //! Paths resolve against the directory of the spec's path as given (`dir/spec.json` gives `dir`),
 //! so a spec reached through a symbolic link reads the files beside the link, not beside its
-//! target. Every refusal is at the spec
+//! target; that directory is the handle the spec itself was read through (issue #771), so a
+//! folder exchanged during the run cannot pair the spec with another folder's files. Every refusal is at the spec
 //! field that names the file (`references[0].inputs[1].path`) and names the path as the spec
 //! writes it, never a host path.
-
-use std::path::{Path, PathBuf};
 
 use oce_verify::{
     PointNameMapping, SpecInputs, SpecLimits, SpecReference, TrendLimits, TrendSource,
 };
 
 use super::contained::Root;
+use super::file_identity::Identity;
 use crate::codes;
 use crate::input::{read_bounded, too_large};
 
@@ -106,8 +106,8 @@ pub(crate) struct Refused {
 pub(crate) struct Files {
     /// The bytes the library is handed.
     pub(crate) inputs: SpecInputs,
-    /// The canonical path of every file read, for the `--out` guard.
-    pub(crate) read: Vec<PathBuf>,
+    /// The identity of every file read, for the `--out` guard.
+    pub(crate) read: Vec<Identity>,
 }
 
 /// The files `reference`, at `index` in its spec, names, in the order they are read (module
@@ -170,25 +170,14 @@ pub(crate) fn named(index: usize, reference: &SpecReference) -> Vec<Named<'_>> {
     all
 }
 
-/// Read every file of `named`, resolved inside the directory of `spec_path`, in order; the first
-/// refusal stops the reading (module header).
-pub(crate) fn read(spec_path: &Path, place: &str, named: &[Named<'_>]) -> Result<Files, Refused> {
-    read_within(spec_path, place, named, TrendLimits::MAX.max_total_bytes)
+/// Read every file of `named`, resolved inside `root`, the spec's directory as it was opened to
+/// read the spec, in order; the first refusal stops the reading (module header).
+pub(crate) fn read(root: &Root, named: &[Named<'_>]) -> Result<Files, Refused> {
+    read_within(root, named, TrendLimits::MAX.max_total_bytes)
 }
 
 /// [`read`] with `total_bound` as the bound on the files together (a unit test lowers it).
-fn read_within(
-    spec_path: &Path,
-    place: &str,
-    named: &[Named<'_>],
-    total_bound: u64,
-) -> Result<Files, Refused> {
-    let root = Root::of(spec_path).map_err(|(code, why)| Refused {
-        at: place.to_owned(),
-        code,
-        detail: format!("the spec's directory: {why}"),
-        cause: None,
-    })?;
+fn read_within(root: &Root, named: &[Named<'_>], total_bound: u64) -> Result<Files, Refused> {
     let mut total: u64 = 0;
     let mut files = Files {
         inputs: SpecInputs::default(),
@@ -241,7 +230,7 @@ fn read_within(
         } else {
             files.inputs.cxf = bytes;
         }
-        files.read.push(opened.canonical);
+        files.read.push(opened.identity);
     }
     Ok(files)
 }
@@ -378,14 +367,18 @@ mod tests {
         let (spec, _) = files_of(&reference);
         let named = named(0, &spec.references()[0]);
         let dir = directory("total", &[("s.cxf.json", 100), ("m.json", 3), ("a.csv", 4)]);
-        let spec_path = dir.join("spec.json");
+        std::fs::write(dir.join("spec.json"), b"{}").expect("spec");
+        let root = Root::read_document(&dir.join("spec.json"), 64)
+            .map_err(|(code, _)| code)
+            .expect("the spec's directory")
+            .root;
         // 3 + 4 = 7 counted bytes: read at a bound of 7, though the CXF alone is 100.
-        let files = read_within(&spec_path, "references[0]", &named, 7).expect("read");
+        let files = read_within(&root, &named, 7).expect("read");
         assert_eq!(files.inputs.cxf.len(), 100);
         assert_eq!(files.inputs.files.len(), 2, "a.csv once");
         assert_eq!(files.read.len(), 3);
         // One byte less, and the source that passes it is refused before its read.
-        let refused = read_within(&spec_path, "references[0]", &named, 6).expect_err("past");
+        let refused = read_within(&root, &named, 6).expect_err("past");
         assert_eq!(
             (refused.code, refused.cause, refused.at.as_str()),
             (

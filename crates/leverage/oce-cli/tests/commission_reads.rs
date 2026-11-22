@@ -254,3 +254,91 @@ fn a_named_pipe_is_never_opened_as_the_spec_or_a_file_it_names() {
         assert_eq!(refusal(&run).0, "not-a-file", "{pipe}");
     }
 }
+
+#[cfg(unix)]
+#[test]
+fn a_spec_that_is_a_link_reads_the_files_beside_the_link_not_beside_its_target() {
+    // The documented rule, pinned (orchestrator's call on issue #771): the caller named the
+    // spec, so a link at its own entry is followed, from its directory's handle, and the files
+    // it names resolve against the directory of the link. Its target's directory holds a CXF
+    // past the bound under the same name: a run that read beside the target would answer
+    // `input-too-large`.
+    let dir = run_layout("commission_spec_link", "pass");
+    let elsewhere = dir.join("elsewhere");
+    fs::create_dir(&elsewhere).expect("elsewhere");
+    fs::rename(dir.join(SPEC), elsewhere.join(SPEC)).expect("move the spec");
+    sparse(
+        &elsewhere.join("plant.cxf.json"),
+        u64::try_from(oce_api::MAX_CXF_BYTES).expect("fits") + 1,
+    );
+    std::os::unix::fs::symlink("elsewhere/spec.json", dir.join(SPEC)).expect("spec -> elsewhere");
+    let run = commission(&dir);
+    assert_eq!(run.code, 0, "{}", run.transcript());
+    assert_eq!(run.stdout, support::commission::golden_receipt("pass"));
+}
+
+#[test]
+fn a_spec_deep_in_unicode_directories_reads_as_before() {
+    // Honest use through the handles: a spec twenty-four directories down, under names that are
+    // not ASCII, reads its files and gives the golden receipt. The tree is removed at the end,
+    // so no long path is left under `target/`.
+    let dir = run_layout("commission_deep_unicode", "pass");
+    let mut deep = String::new();
+    for level in 0..24 {
+        deep.push_str(&format!("r\u{e9}pertoire-{level}-\u{6e29}\u{5ea6}/"));
+    }
+    let target = dir.join(&deep);
+    fs::create_dir_all(&target).expect("deep");
+    for file in [
+        "spec.json",
+        "points.json",
+        "inputs.csv",
+        "outputs.csv",
+        "fan.csv",
+        "plant.cxf.json",
+    ] {
+        fs::rename(dir.join(file), target.join(file)).expect("move");
+    }
+    let spec = format!("{deep}spec.json");
+    let run = oce_in(&dir, &["verify", "--commission", &spec], b"");
+    let _ = fs::remove_dir_all(dir.join("r\u{e9}pertoire-0-\u{6e29}\u{5ea6}"));
+    assert_eq!(run.code, 0, "{}", run.transcript());
+    assert_eq!(run.stdout, support::commission::golden_receipt("pass"));
+}
+
+#[cfg(unix)]
+#[test]
+fn a_spec_directory_that_can_be_searched_but_not_listed_is_read_failed() {
+    // Breaking in place (issue #771): the spec's directory is opened once, read-only (rustix
+    // offers no `O_SEARCH` on macOS), so a directory with mode `--x` is refused where the spec
+    // used to be read by path through it. A user the permission bits do not bind can list it
+    // anyway: nothing to test then.
+    use std::os::unix::fs::PermissionsExt;
+    let dir = run_layout("commission_search_only", "pass");
+    let locked = dir.join("locked");
+    fs::create_dir(&locked).expect("locked");
+    for file in [
+        "spec.json",
+        "points.json",
+        "inputs.csv",
+        "outputs.csv",
+        "fan.csv",
+        "plant.cxf.json",
+    ] {
+        fs::rename(dir.join(file), locked.join(file)).expect("move");
+    }
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o100)).expect("chmod");
+    let listable = fs::read_dir(&locked).is_ok();
+    let run = oce_in(&dir, &["verify", "--commission", "locked/spec.json"], b"");
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).expect("chmod back");
+    if listable {
+        return;
+    }
+    let (code, at, _) = refusal(&run);
+    assert_eq!((code.as_str(), at.as_str()), ("read-failed", ""));
+    assert_eq!(
+        detail(&run),
+        "the directory `locked` cannot be listed (permission denied); oce reads a document only \
+         through its directory"
+    );
+}

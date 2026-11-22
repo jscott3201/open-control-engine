@@ -7,21 +7,25 @@
 //! 0. with `--out DIR`, before anything is read, a `DIR/receipt.json` that is a symbolic link,
 //!    dangling or not, a directory or another non-file is `output-not-a-file`
 //!    ([`super::commission_out::target`]; issue #758, ruled by the owner on 2026-11-22);
-//! 1. the spec, bounded at `SpecLimits::MAX.max_bytes` (4 MiB) from its metadata, then read by
-//!    `oce_verify::CommissioningSpec::from_json_bytes` (a refusal under the spec reader's own
-//!    code, at its line and column);
+//! 1. the spec, read through its directory's handle (`contained::Root::read_document`: the
+//!    directory is opened once and every file the reference names is resolved against that
+//!    handle; issue #771), bounded at `SpecLimits::MAX.max_bytes` (4 MiB) from that handle's
+//!    metadata, then read by `oce_verify::CommissioningSpec::from_json_bytes` (a refusal under
+//!    the spec reader's own code, at its line and column);
 //! 2. the reference: `--reference N`, or the only one; a spec with several and no flag is
 //!    `reference-required`, its detail listing each index with its `sequence` and `model`
 //!    (decision 35);
 //! 3. the reference's own completeness, decided by the library before any other file is read:
 //!    an index past the end (`reference-out-of-range`), no `cxf` or no `window`
 //!    (`reference-incomplete`), no `sampling` (`sampling-required`);
-//! 4. its files, each resolved inside the directory of the spec's path as given and bounded from
-//!    its metadata ([`super::commission_files`]);
-//! 5. with `--out DIR`, the output checks ([`super::commission_out::check`]);
+//! 4. its files, each resolved inside the spec's directory handle and bounded from its metadata
+//!    ([`super::commission_files`]);
+//! 5. with `--out DIR`, the output checks, which open `DIR` once
+//!    ([`super::commission_out::check`]);
 //! 6. `oce_verify::run_commissioning`, which binds, replays, masks and compares, every refusal
 //!    its own code;
-//! 7. with `--out DIR`, the curves and then the receipt written ([`super::commission_out::write`]).
+//! 7. with `--out DIR`, the curves and then the receipt written through that handle
+//!    ([`super::commission_out::write`]).
 //!
 //! A run that reaches a verdict prints the receipt on stdout (`Receipt::to_canonical_json`), the
 //! bytes the library issued: exit `0` when every compared output passed, `1` when one failed or
@@ -38,7 +42,7 @@
 //! is the receipt's `data` label (decision 41), inside `receipt_id`. `--render` changes stderr
 //! only (decision 36).
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Instant;
 
 use oce_verify::{
@@ -49,7 +53,9 @@ use serde_json::{Value, json};
 
 use super::Outcome;
 use super::commission_files::{self, Files};
-use super::commission_out::{self, RECEIPT};
+use super::commission_out::{self, Out, RECEIPT};
+use super::contained::{Document, Root};
+use super::file_identity::Identity;
 use super::verify::whole_ms;
 use crate::report::{Facts, Report};
 use crate::{CommissionArgs, DataLabel, Exit, codes, input};
@@ -72,8 +78,12 @@ pub(crate) fn run(args: &CommissionArgs) -> Outcome {
     }
     let spec_path = Path::new(&args.spec);
     let bound = usize::try_from(SpecLimits::MAX.max_bytes).unwrap_or(usize::MAX);
-    let bytes = match input::read_file(spec_path, bound) {
-        Ok(bytes) => bytes,
+    let Document {
+        root,
+        bytes,
+        identity,
+    } = match Root::read_document(spec_path, bound) {
+        Ok(document) => document,
         Err((code, detail)) => {
             report.error(code, detail, None);
             return refused(report, "the commissioning spec could not be read");
@@ -108,11 +118,11 @@ pub(crate) fn run(args: &CommissionArgs) -> Outcome {
             report,
             run_commissioning(&spec, index, &SpecInputs::default(), &options),
             (started.elapsed(), started.elapsed()),
+            None,
         );
     };
-    let place = format!("references[{index}]");
     let named = commission_files::named(index, reference);
-    let Files { inputs, read } = match commission_files::read(spec_path, &place, &named) {
+    let Files { inputs, read } = match commission_files::read(&root, &named) {
         Ok(files) => files,
         Err(refusal) => {
             report.error_at(
@@ -127,31 +137,35 @@ pub(crate) fn run(args: &CommissionArgs) -> Outcome {
             return refused(report, "a file the reference names could not be read");
         }
     };
+    let mut out = None;
     if let Some(dir) = &args.out {
-        let mut checked: Vec<(String, PathBuf)> = Vec::with_capacity(read.len() + 1);
-        if let Ok(spec_file) = std::fs::canonicalize(spec_path) {
-            checked.push((input::display_name(&args.spec), spec_file));
+        let mut checked: Vec<(String, Identity)> = Vec::with_capacity(read.len() + 1);
+        if let Some(identity) = identity {
+            checked.push((input::display_name(&args.spec), identity));
         }
         checked.extend(
             named
                 .iter()
                 .zip(read)
-                .map(|(file, canonical)| (file.path.to_owned(), canonical)),
+                .map(|(file, identity)| (file.path.to_owned(), identity)),
         );
-        if let Err(refusal) = commission_out::check(dir, &checked) {
-            report.error_at(
-                refusal.code,
-                refusal.detail,
-                None,
-                &Facts::about(&refusal.at),
-            );
-            return refused(report, "the output directory was refused");
+        match commission_out::check(dir, &checked) {
+            Ok(opened) => out = Some(opened),
+            Err(refusal) => {
+                report.error_at(
+                    refusal.code,
+                    refusal.detail,
+                    None,
+                    &Facts::about(&refusal.at),
+                );
+                return refused(report, "the output directory was refused");
+            }
         }
     }
     let loaded = started.elapsed();
     let running = Instant::now();
     let run = run_commissioning(&spec, index, &inputs, &options);
-    finish_run(args, report, run, (loaded, running.elapsed()))
+    finish_run(args, report, run, (loaded, running.elapsed()), out.as_ref())
 }
 
 /// Whether the library would run `reference` as far as its first file: a `cxf`, a `window` and a
@@ -202,12 +216,14 @@ fn reference_index(
 }
 
 /// The outcome of a `run_commissioning` call: the verdict, or its refusal. `took` is the time
-/// reading the files and the time of the call, for `--timings`.
+/// reading the files and the time of the call, for `--timings`; `out` is `DIR` as the output
+/// checks opened it (`None` without `--out`, or for a reference refused before its files).
 fn finish_run(
     args: &CommissionArgs,
     mut report: Report,
     run: Result<CommissionRun, oce_verify::VerifyError>,
     took: (std::time::Duration, std::time::Duration),
+    out: Option<&Out<'_>>,
 ) -> Outcome {
     let mut run = match run {
         Ok(run) => run,
@@ -223,19 +239,34 @@ fn finish_run(
             compare_ms: 0,
         };
     }
-    answer(args, &run, report)
+    answer(args, &run, report, out)
 }
 
 /// The exit status and stdout of a run that reached a verdict.
-fn answer(args: &CommissionArgs, run: &CommissionRun, mut report: Report) -> Outcome {
+fn answer(
+    args: &CommissionArgs,
+    run: &CommissionRun,
+    mut report: Report,
+    out: Option<&Out<'_>>,
+) -> Outcome {
     let (status, exit) = verdict(args, &run.receipt);
     let document = run.receipt.to_canonical_json().into_bytes();
     let Some(dir) = &args.out else {
         report.verdict(format!("{status}; the receipt is on stdout"));
         return Outcome::verdict(exit, report, document);
     };
+    // Only a reference refused before its files reaches here unchecked, and the library refuses
+    // every such reference before a verdict; this keeps the rule should that ever change.
+    let Some(out) = out else {
+        report.error(
+            codes::WRITE_FAILED,
+            "the output directory was not checked before the run; nothing is written",
+            None,
+        );
+        return refused(report, "the output could not be written");
+    };
     let shown = commission_out::shown(dir, RECEIPT);
-    match commission_out::write(dir, &run.curves, &document) {
+    match commission_out::write(out, &run.curves, &document) {
         Ok(written) => {
             report.set("curves", curves_json(written));
             report.set("passed", Value::Bool(run.receipt.header.passed));

@@ -172,7 +172,8 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   order (`inputs`, `expected` or, with no `expected` key, the `controllerOutput`,
   `indicatorSources`), a path named twice read once. Each path resolves against the directory of
   `SPEC` as given (a spec reached through a symbolic link reads the files beside the link, not
-  beside its target) and may not leave it: its segments are joined onto that directory and
+  beside its target), which is opened once and is the handle the spec itself is read through
+  ([below](#reading-a-file-a-document-names)), and may not leave it: its segments are joined onto that directory and
   canonicalized, following links, and a path that resolves outside is `file-outside-directory`
   (the rule `mutant-outside-directory` holds a mutant to; the spec reader has already refused an
   absolute path, an empty, `.` or `..` segment and a backslash as `path-invalid`). The canonical
@@ -233,15 +234,23 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   link the input is named by or (on Unix) as a hard link, is `output-is-input`; and a regular file
   at `DIR/receipt.json` is `write-failed`, so a receipt this run did not write never stands beside
   its curves (the orchestrator's call in the review of GitHub #757). A refusal leaves nothing
-  written. Each file goes through the atomic writer, which never follows a link at its name (a
-  link planted after the check is replaced, its target untouched); the directories `outputs/`
-  and `outputs/<k>/` are reached by path, so whoever can change `DIR` during the run can redirect
-  the curve files below them (issue #771). Each file is created owner-only
-  (`0600` on Unix; the directories `outputs/` and `outputs/<k>/` take the process's default
-  mode). A write that fails
-  part-way is `write-failed` naming the file; the files already written stay (without
-  `receipt.json` they are not a run's output), and the report's `curves` lists them. No trace file
-  is written.
+  written. The checks open `DIR` once, and everything below it goes through directory handles
+  (issue #771; [below](#writing-a-file)): `outputs/` and each `outputs/<k>/` are made with
+  `mkdirat` and opened with `O_DIRECTORY | O_NOFOLLOW` from their parent's handle, and each file,
+  `receipt.json` included, goes through the atomic writer relative to the handle of the directory
+  it goes into, which never follows a link at its name (a link planted after the check is
+  replaced, its target untouched). So no directory swapped for a link, and no `DIR` exchanged,
+  during the run can carry a curve outside the directory the checks opened. A `DIR` that cannot
+  be listed (mode `--x` or `-wx`) is now `write-failed` ("the output directory cannot be read:
+  permission denied"), and a `DIR` removed during the run is `write-failed` at `outputs`. Each
+  file is created owner-only (`0600` on Unix; the directories `outputs/` and `outputs/<k>/` take
+  the process's default mode). A directory made and then not opened (a umask that leaves it
+  unreadable, no descriptor left) is removed again and named as such ("it was made but could not
+  be opened (...), and is removed"). A write that fails part-way is `write-failed` naming the
+  file; what was made before it stays: `outputs/`, an `outputs/<k>/` that may be empty, and the
+  curves already written, with no receipt (without `receipt.json` they are not a run's output),
+  and the report's `curves` lists the files (an output none of whose files was written is not
+  listed). No trace file is written.
 - **Exit-only and label flags.** `--deny-warnings` makes exit `1` when `load_warnings_total` or
   `warnings_total` is not zero. `--timings` fills the header's `timings` (`load_ms`: reading every
   file; `run_ms`: the whole `run_commissioning` call; `compare_ms`: `0`). `--data` is the
@@ -687,23 +696,55 @@ target became a regular file.
   not be created beside it and the write failed. An empty `--out` is refused by both forms of
   `verify` as a missing directory (`write-failed`, before anything is read; the vector form
   wrote `./receipt.json` until issue #758's review).
-- **Directories on the way are reached by path.** One the caller's path passes through (`-o
-  lnk/x`, `--out lnk`) is followed: the caller named it. So are `DIR/outputs` and
-  `DIR/outputs/<k>`, which `verify --commission --out` creates and then reaches again by path:
-  whoever can change `DIR` while the run writes can swap one for a link and carry the curve files
-  outside `DIR` (the report still lists them under `DIR`). Writing them through directory
-  handles is issue #771.
-- **The write** goes to a uniquely named temporary file beside the target
-  (`.NAME.<pid>.<counter>.oce-tmp`), opened with `create_new` so it never follows a link or
-  truncates a file already there, synced, given an existing regular target's permissions (Unix
-  mode bits) and renamed over the target's own directory entry; on a failure the target is
-  untouched and the temporary file is removed by its path, so if the parent directory was
-  swapped since it was created one `.oce-tmp` can be left behind (issue #771). A link planted
-  between the check and the write is replaced, its target untouched. On Unix the temporary file is created no more permissive than
-  the target, and a new file (no target yet) is created with mode `0600` whatever the umask
-  allows. The replace is atomic, but the directory itself is not fsynced. **The file is replaced,
-  not rewritten in place: a hard link to the old inode keeps the old bytes.** `fmt --write`
-  rewrites only when the text changes.
+- **Each write goes through its directory's handle** (issue #771; Unix). The directory a file
+  goes into is opened once, and every step below it is relative to that handle. For a path the
+  caller named (`-o lnk/x`, `--out lnk`, `fmt --write dir/x.oce`) that is its parent, and the
+  links on the way are followed: the caller named them. For `verify --commission --out` it is
+  `DIR`, opened by the checks before the run, then `DIR/outputs` and each `DIR/outputs/<k>`, made
+  with `mkdirat` and opened with `openat(O_DIRECTORY | O_NOFOLLOW)` from their parent's handle; a
+  directory just made must be empty when opened, and must be owned by the user who owns the
+  temporary file created inside it, so a link, a file or a non-empty directory swapped in under
+  the name is refused (`write-failed`) and so is a directory another user swapped in. A process
+  running as the same user is not stopped by that check, and needs no swap: it can rewrite the
+  outputs anyway. `mkdirat` returns no handle, so what is opened cannot be proved to be what was
+  made; the two checks are what is held. A directory swapped for a link, or exchanged, after it
+  was opened cannot redirect anything; a `DIR` renamed during the run takes its files with it,
+  as a rename after the run would.
+- **The write** goes to a uniquely named temporary file in that directory
+  (`.NAME.<pid>.<counter>.oce-tmp`), created with `openat(O_CREAT | O_EXCL | O_NOFOLLOW)` so it
+  never follows a link or truncates a file already there, synced, given the permissions of the
+  file it replaces (Unix mode bits) and renamed with `renameat` over the target's own directory
+  entry; on a failure the target is untouched and the temporary file is removed with `unlinkat`
+  from the same handle, so none is left behind even when the directory's path was swapped
+  meanwhile. A link planted between the check and the write is replaced, its target untouched.
+  On Unix the temporary file is created no more permissive than the target, and a new file (no
+  target yet) is created with mode `0600` whatever the umask allows. The replace is atomic, but
+  the directory itself is not fsynced. **The file is replaced, not rewritten in place: a hard
+  link to the old inode keeps the old bytes.** `fmt --write` rewrites only when the text changes.
+- **`fmt --write` reads the file it rewrites through the same handle**: its entry is checked
+  without following a link (a link, a directory or another non-file swapped in after the first
+  check is the same `output-not-a-file`), opened with `O_NOFOLLOW | O_NONBLOCK`, and must be the
+  entry checked; the new file takes the mode of the file read, from its handle, and is renamed
+  over the entry only if the entry still has the device and inode that were read (`write-failed`
+  "the file changed after it was read; nothing is written" otherwise). That check comes just
+  before the rename, and a file swapped in between the two is replaced, never written through.
+  Under contention that window is hit often: the review of GitHub #777 exchanged the file flat
+  out with another regular file in the same directory and destroyed that file's content in 402
+  of 3,000 runs, each exiting 0 "rewritten" (756 before issue #771); with a link swapped in, the
+  link's entry was replaced in 195 runs and the file outside never written. Issue #780 closes it
+  with an exchange-based compare-and-swap.
+- **Breaking in place** (issue #771): a directory a write goes into, or a document's directory,
+  that can be searched but not listed (mode `--x` or `-wx`) is refused (`write-failed` for a
+  write, `read-failed` for a read) with "the directory `D` cannot be listed (permission denied)",
+  `D` as the caller's path gives it, where a path-based call used to pass through it: the handles
+  are opened read-only, since rustix offers no `O_SEARCH` on macOS (nor `O_PATH` outside Linux),
+  on every platform alike (the orchestrator's call in the review of GitHub #777). For the same
+  reason a `--commission --out` run under a umask that leaves the directories it makes unreadable
+  (`umask 0477`) is refused: "`DIR/outputs`: it was made but could not be opened (permission
+  denied), and is removed". A descriptor limit met there reads "too many open files", never
+  "uncategorized error". And a `--commission --out DIR` just under the platform's path limit
+  now has its curves written (each name is relative to its directory's handle), where until then
+  the longer names under it were refused (`write-failed`, ENAMETOOLONG).
 - **The output is never an input.** `emit -o` and `import -o` refuse an output that is their own
   input file before anything is read, and both forms of `verify --out` a `DIR/receipt.json` that
   is a file the run reads, after the reads and before the run (`output-is-input`; [above](#oce-import)
@@ -714,29 +755,47 @@ target became a regular file.
   `.json`, which `oce validate`, `fmt` and `id` would read as another form.
 
 On Windows a symbolic link or a junction at the target is refused by the same check (std reports
-both as links), and a hard link is not recognised as an input; neither is tested there.
+both as links), and a hard link is not recognised as an input; neither is tested there. Windows
+has no directory handles here (std has no `openat`): every step of a write, the temporary file,
+the rename and the clean-up, reaches the directory by path, so a directory swapped during a write
+is followed there, a failed write's temporary file can be left in a directory swapped meanwhile,
+and `fmt --write` neither ties its read to the entry nor checks the entry before the rename.
 
 ### Reading a file a document names
 
 A vector set's mutants and a commissioning spec's CXF, mapping and trend files are named by
-relative paths and must stay inside the document's directory. Each path is joined onto that
-directory and canonicalized, following links, so a link that stays inside is honoured and one
-that leaves is refused (`mutant-outside-directory`, `file-outside-directory`). On Unix the
-canonical path is then opened **component by component without following a link** (issue #758,
-ruled by the owner on 2026-11-22): the directory by its canonical path, which must still have the
-device and inode it had when resolved; each directory below it with `openat` from its parent's
+relative paths and must stay inside the document's directory.
+
+**The document itself** (issue #771; Unix): its directory, as the document's path gives it
+(`dir/spec.json` gives `dir`), is opened **once**, following the links on that path (the caller
+named it: `bundle -> real`, `oce verify --commission bundle/spec.json`, reads `real`), then
+canonicalized, and the handle must have the device and inode of the canonical directory. The
+document is read through that handle: its entry, following a link there (the caller named it: a
+spec that is a link reads the files beside the link, not beside its target; the orchestrator's
+call on issue #771), must be a regular file (`not-a-file`; a named pipe is never opened), is
+opened with `O_NONBLOCK`, must be the entry checked, and its size is judged from that handle.
+Every file it names is resolved against that same handle, never against the directory's path
+again, so a folder exchanged during the run cannot pair the document with another folder's files.
+
+**A file it names**: its path is joined onto the document's directory and canonicalized,
+following links, so a link that stays inside is honoured and one that leaves is refused
+(`mutant-outside-directory`, `file-outside-directory`). On Unix the canonical path is then opened
+**component by component from the document's directory handle without following a link** (issue
+#758, ruled by the owner on 2026-11-22): each directory below it with `openat` from its parent's
 handle and `O_DIRECTORY | O_NOFOLLOW`; the last entry's own metadata, read from its directory's
 handle without following a link, must be a regular file (`not-a-file`), and it is opened with
 `O_NOFOLLOW | O_NONBLOCK` and must be the entry checked, and the handle the caller reads is then
 cleared of `O_NONBLOCK`. A link met on the way, or a directory that is no longer one (a named
 pipe swapped in for a directory is refused by `O_DIRECTORY` before it is opened), was swapped in
-after the canonicalization and is `read-failed`. A document reached through a directory that is
-a link (`bundle -> real`, `oce verify --commission bundle/spec.json`) reads the files of the
-directory the link names. The opens use the workspace's `rustix`, a third-party dependency beside
-`clap` and `serde_json` (ruled by the owner on 2026-11-22); the crate stays
-`forbid(unsafe_code)`. What this does not cover: the document itself is read by path before its
-directory is resolved, so a folder exchanged in between can pair a document with another
-folder's files (issue #771).
+after the canonicalization and is `read-failed`. The opens use the workspace's `rustix`, a
+third-party dependency beside `clap` and `serde_json` (ruled by the owner on 2026-11-22); the
+crate stays `forbid(unsafe_code)`.
+
+**The one call left that reads the directory by path** is the canonicalization: it only decides
+which segments the walk opens, and the walk opens them from the pinned handle with no link
+followed. So a folder swapped in at the directory's path after the pin can change **which file
+inside the pinned directory** is read (its links steer the canonicalization), and can never reach
+a file outside it (`src/commands/contained_tests.rs` tries every schedule of that swap).
 
 Each handle pins what it names, so a rename in the directory cannot redirect a later step. Issue
 #758's harness swapped an intermediate directory for a link to a directory outside, atomically
@@ -751,15 +810,43 @@ the reader's calls (an adversary that acts between any two of them):
 
 Through the built binary on macOS, 3,000 `oce verify --commission` runs against the same swap
 read outside 141 times with GitHub #757's checks and never with these opens.
-`src/commands/contained_tests.rs` is the adversary (the path-based checks are its control and
-must be beaten) and `tests/read_containment_race.rs` the race through the binary. Both need an
-atomic exchange (Linux, macOS); on a file system that refuses it they skip with a note, and the
-rule is then untested there (CI's Linux runners and APFS support it). **Windows** has less, and
-none of it is tested there: the canonical path's own entry must be a regular file, it is opened
-by path, and the handle must be a regular file. Nothing ties the handle to the entry checked,
-since std has no stable file index there (a file's identity is its canonical path), so a link
-swapped in for an intermediate directory or the last entry after the check is followed (std has
-no `openat`). A hard link inside the directory to a file outside it is read on every platform:
+
+### Directory handles: the races they close
+
+Issue #771's review found three places that reached a directory or a file by path after their
+checks; each was reproduced as a harness against the built binary (a debug build, run from a
+scratch directory) before and after the change, on macOS (APFS) and on Linux (the
+`rust:1.97.1-alpine` image on aarch64, tmpfs, no network):
+
+| Race (the reviewer's reproduction as a harness) | Runs | macOS arm64, before | after | Linux aarch64, before | after |
+| --- | --- | --- | --- | --- | --- |
+| (i) `verify --commission spec.json --out out --bounds`: `out/outputs` exchanged for a link to a victim directory once the first curve's temporary file exists | 200 | 200 sent the curves outside `DIR`, exit 0 | 0 (all 200 swapped) | 198 (2 runs finished before the swap) | 0 (196 swapped) |
+| (ii) `verify --commission cur/spec.json`: `cur` exchanged flat out with another folder | 2,000 | 676 paired the spec with the other folder's CXF | 0 | 455 | 0 |
+| (ii) `verify cur/vectors.json --subject rule.cxf.jsonld`: the same, for a vector set and its mutant | 2,000 | 97 | 0 | 427 | 0 |
+| (iii) `fmt --write t.oce`: `t.oce` exchanged flat out with a link to a file outside its directory | 3,000 | 117 wrote the outside file's canonical text into the directory | 0 | 362 | 0 |
+
+A pairing is counted only when it is proved: each folder holds the other folder's file names as
+over-size decoys, so a document read with the other folder's file answers `input-too-large`. The
+runs that are not counted answer a verdict or a refusal for the swap they met (`read-failed`,
+`not-found`, the outside code), never a pairing.
+
+The deterministic proofs are the adversaries in `src/commands/contained_tests.rs`,
+`atomic_write_tests.rs`, `commission_out_tests.rs` and `fmt_tests.rs`: each tries every schedule
+of the swap between the code's own file-system calls, and a copy of the path-based code that came
+before runs under the same adversary as the control, which some schedule must beat.
+`tests/directory_handle_races.rs` and `tests/read_containment_race.rs` race the binary. All of
+them need an atomic exchange (Linux, macOS). On a file system that refuses it they **fail**,
+unless `OCE_TESTS_ALLOW_NO_EXCHANGE=1` is set, when they skip with a note and the rules are untested
+there: a missing exchange never passes for a race that ran. CI's Linux runners (ext4 under the
+workspace) and macOS (APFS) support it.
+
+**Windows** has less, and none of it is tested there: a document is read by path and its
+directory canonicalized by path; each named file's canonical path's own entry must be a regular
+file, it is opened by path, and the handle must be a regular file. Nothing ties the handle to the
+entry checked, since std has no stable file index there (a file's identity is its canonical path),
+so a link swapped in for an intermediate directory or the last entry after the check is followed
+(std has no `openat`), and a folder exchanged during a run can pair a document with another
+folder's files. A hard link inside the directory to a file outside it is read on every platform:
 it has no other path.
 
 ## Tests and goldens
@@ -781,6 +868,10 @@ a regular file, a link inside, outside, dangling and to an input, a hard link to
 empty and a full directory, a named pipe, a linked parent directory) with every entry unchanged
 after a refusal, and the vector `--out`'s `output-is-input` against the set, the subject and a
 mutant; `tests/read_containment_race.rs` the containment rule raced through the binary;
+`tests/directory_handle_races.rs` issue #771's three races (the curve files, a document's folder,
+`fmt --write`'s file) and a named pipe swapped in, each through the binary;
+`tests/trailing_slashes.rs` a document, `fmt --write`'s file and an output named with a trailing
+`/`; `tests/commission_out_limits.rs` `--commission --out` under a umask and a descriptor limit;
 `tests/hostile_inputs.rs` the bounds. For `verify`:
 - `tests/verify_runs.rs` pins one transcript per verdict and refusal class, with each exit-only
   flag flipping the status over the same receipt bytes;

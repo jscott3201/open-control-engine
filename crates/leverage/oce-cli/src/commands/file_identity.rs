@@ -8,6 +8,12 @@
 //! path, the final path Windows gives, which folds case and trailing dots and spaces and
 //! resolves links; std has no stable file index there, so **a hard link is not recognised on
 //! Windows**.
+//!
+//! Both forms of `verify --out` compare an output with the identity of each file the run read:
+//! the document and each file it names **as they were read** (from the handle each was read
+//! through, on Unix; issue #771), a vector subject by its path. `--commission` takes its output's
+//! identity, `DIR/receipt.json`, from `DIR`'s handle; the vector form resolves `DIR/receipt.json`
+//! by path, as it writes a single file whose parent is opened only at the write.
 
 use std::fs::Metadata;
 use std::path::Path;
@@ -33,27 +39,32 @@ pub(crate) fn identity(canonical: &Path, _metadata: &Metadata) -> Identity {
     canonical.to_path_buf()
 }
 
+/// The identity of the existing file at `path` (module header), following every symbolic link;
+/// `None` for a path that does not resolve (missing, or a dangling link).
+pub(crate) fn identity_of(path: &Path) -> Option<Identity> {
+    let canonical = std::fs::canonicalize(path).ok()?;
+    let metadata = std::fs::metadata(&canonical).ok()?;
+    Some(identity(&canonical, &metadata))
+}
+
 /// Whether `first` and `second` name one existing file (module header), following every
 /// symbolic link. A path that does not resolve (missing, or a dangling link) is no file, so the
 /// answer is no: a write to it creates a new file and replaces nothing.
 pub(crate) fn same_file(first: &Path, second: &Path) -> bool {
-    let of = |path: &Path| {
-        let canonical = std::fs::canonicalize(path).ok()?;
-        let metadata = std::fs::metadata(&canonical).ok()?;
-        Some(identity(&canonical, &metadata))
-    };
-    matches!((of(first), of(second)), (Some(first), Some(second)) if first == second)
+    matches!((identity_of(first), identity_of(second)), (Some(first), Some(second)) if first == second)
 }
 
-/// How the report names the first of `inputs` (each its name as reported and its path) that is
-/// one file with `output` ([`same_file`]); `None` when none is.
+/// How the report names the first of `inputs` (each its name as reported and the identity of
+/// the file read) that is the file `output` identifies; `None` when none is, or when `output`
+/// names no existing file.
 pub(crate) fn input_at<'i>(
-    output: &Path,
-    inputs: &'i [(String, std::path::PathBuf)],
+    output: Option<&Identity>,
+    inputs: &'i [(String, Identity)],
 ) -> Option<&'i str> {
+    let output = output?;
     inputs
         .iter()
-        .find(|(_, read)| same_file(output, read))
+        .find(|(_, read)| read == output)
         .map(|(name, _)| name.as_str())
 }
 

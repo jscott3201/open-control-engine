@@ -1,7 +1,8 @@
 //! Reading a vector set's mutants (vectors note, "CLI" "Reads"; the owner's ruling of 2026-11-11
 //! on mutant paths, "Part 3's readings" and "Part 4's readings").
 //!
-//! Each mutant, in file order, is resolved inside the vector file's directory and opened once
+//! Each mutant, in file order, is resolved inside the vector file's directory, through the handle
+//! the set itself was read through (issue #771), and opened once
 //! ([`super::contained`]: a path that resolves outside it is `mutant-outside-directory`, a path
 //! that is no regular file `not-a-file`, a file that changed between its check and its open
 //! `read-failed`). Then, from that one handle:
@@ -17,8 +18,6 @@
 //!
 //! Every refusal names the mutant (`mutants[i]` and its listed path), never a host path.
 
-use std::path::{Path, PathBuf};
-
 use oce_verify::{VectorSet, VerifyLimits};
 
 use super::contained::Root;
@@ -32,8 +31,8 @@ pub(crate) struct Read {
     pub(crate) path: String,
     /// The bytes.
     pub(crate) bytes: Vec<u8>,
-    /// The canonical path it was opened at, for the `--out` guard (`output-is-input`).
-    pub(crate) canonical: PathBuf,
+    /// The identity of the file read, for the `--out` guard (`output-is-input`).
+    pub(crate) identity: Identity,
 }
 
 /// A refusal of one mutant: the place, the code and a detail naming the listing.
@@ -53,9 +52,10 @@ const DUPLICATE_MUTANT: &str = "duplicate-mutant";
 /// `oce-verify`'s word for the mutants' bytes past their bound, which the read reuses.
 const TOO_MANY_MUTANT_BYTES: &str = "too-many-mutant-bytes";
 
-/// Read every listed mutant of `set`, resolving each against the directory of `vectors` (module
-/// header), in file order; the first refusal stops the reading.
-pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused> {
+/// Read every listed mutant of `set`, resolving each against `root`, the vector file's directory
+/// as it was opened to read the set (module header), in file order; the first refusal stops the
+/// reading.
+pub(crate) fn read(set: &VectorSet, root: &Root) -> Result<Vec<Read>, Refused> {
     let Some(listed) = set.mutants().filter(|listed| !listed.is_empty()) else {
         return Ok(Vec::new());
     };
@@ -64,11 +64,6 @@ pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused
         code,
         detail: format!("mutant `{path}`: {why}"),
     };
-    let root = Root::of(vectors).map_err(|(code, why)| Refused {
-        at: "mutants".to_owned(),
-        code,
-        detail: format!("the vector file's directory: {why}"),
-    })?;
     let total_bound = VerifyLimits::MAX.max_mutant_bytes;
     let mut total: u64 = 0;
     let mut seen: Vec<(Identity, usize)> = Vec::with_capacity(listed.len());
@@ -78,12 +73,7 @@ pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused
         let opened = root
             .open(path, codes::MUTANT_OUTSIDE_DIRECTORY, "the vector file's")
             .map_err(|refusal| refuse(index, path, refusal))?;
-        let (file, metadata, this, canonical) = (
-            opened.file,
-            opened.metadata,
-            opened.identity,
-            opened.canonical,
-        );
+        let (file, metadata, this) = (opened.file, opened.metadata, opened.identity);
         if let Some((_, first)) = seen.iter().find(|(other, _)| *other == this) {
             return Err(refuse(
                 index,
@@ -97,7 +87,7 @@ pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused
                 ),
             ));
         }
-        seen.push((this, index));
+        seen.push((this.to_owned(), index));
         let size = metadata.len();
         let per_file = u64::try_from(oce_api::MAX_CXF_BYTES).unwrap_or(u64::MAX);
         if size > per_file {
@@ -125,7 +115,7 @@ pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused
         read.push(Read {
             path: path.to_owned(),
             bytes,
-            canonical,
+            identity: this,
         });
     }
     Ok(read)
