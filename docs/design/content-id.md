@@ -194,7 +194,11 @@ document holding a `MatrixGain` moves id (the hash enters the canonical bytes), 
 `open-control-library` documents: 280 load before and after with byte-identical ids and blobs; the
 five that hold a `MatrixGain` move (three G36 test fixtures and one authoring fixture rewritten
 without `nin`/`nout`, one authoring fixture unchanged in source); none goes from loading to
-refused. No version bump is owed (standing rule 10).
+refused. No loadable document in those corpora writes another spelling; a translation can, since
+modelica-json copies a source's relative path as written (`CDL.Types.Smoothness.LinearSegments`,
+as `cxf-core/CXF-Core.jsonld` holds for `TimeTable`'s defaults), and such a document is refused
+naming the full canonical member (the owner's ruling of 2026-11-22). No version bump is owed
+(standing rule 10).
 
 Sorting is sound only if no class reads two entries as the same parameter, and today one can.
 Duplicate detection is by exact name, but `TimeTable` walks `params.values` in table order and
