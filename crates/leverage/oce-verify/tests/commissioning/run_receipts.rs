@@ -490,7 +490,10 @@ fn the_body_records_the_files_units_time_and_findings_the_note_lists() {
         Some("2026-11-21T00:00:00Z")
     );
     assert_eq!(body.time.window_stop.canonical(), "30");
-    assert_eq!(body.time.sampling.canonical(), "5");
+    assert_eq!(
+        body.time.sampling.as_ref().map(|s| s.canonical()),
+        Some("5".to_owned())
+    );
     assert!(body.load_warnings.is_empty());
     assert_eq!(body.frames.executed, 4);
 }

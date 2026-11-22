@@ -4,15 +4,19 @@
 //! [`run_commissioning`] does, in this order, every refusal an error with no receipt:
 //!
 //! 1. **The reference**: in range (`reference-out-of-range`), with a `cxf` and a `window`
-//!    (`reference-incomplete`, naming the field missing first, `cxf` before `window`), and a
-//!    `sampling`, its own or the spec's (`sampling-required`; owner ruling of 2026-11-21).
+//!    (`reference-incomplete`, naming the field missing first, `cxf` before `window`). Its
+//!    `sampling`, its own or the spec's, chooses the comparison: on that grid
+//!    ([`super::compare_output`]), or by change of value without one
+//!    ([`super::compare_change`]; issue #746, ruled by the owner on 2026-11-22). Without one
+//!    the envelope must be `funnel`: `aligned-grid` is `sampling-required` (owner ruling of
+//!    2026-11-22; issue #792).
 //! 2. **The sequence**: the CXF loaded through the facade (`subject-load-failed`).
 //! 3. **The trends** ([`super::TrendSources::read`]): `too-many-sources`, or `source-refused` with
 //!    the source reader's code as the cause.
 //! 4. **Bind** ([`super::bind_reference`]): the boundary, the mapped points, the compared
 //!    outputs, the keys, the indicators and the parameters.
-//! 5. **The bounds** ([`super::run_bounds`]), before the replay: the instants per output, the
-//!    run's work, the grid envelope's work (`too-many-points`); the instants strictly
+//! 5. **The bounds** ([`super::run_bounds`]), before the replay: the points per output, the
+//!    run's work, the grid envelope's work (`too-many-points`); on a grid, its instants strictly
 //!    increasing (`replay-failed`, cause `grid-not-increasing`, as a vector grid refuses two
 //!    ticks that round to one time); and the trace's bytes (`replay-failed`, cause
 //!    `trace-too-large`).
@@ -35,8 +39,10 @@ use oce_api::{ENGINE_VERSION, Topology, ValueType};
 use oce_replay::{FrameStatus, TraceColumn};
 
 use super::bind_ports::Boundary;
-use super::bind_reference::{BindInputs, bind_reference};
+use super::bind_reference::{BindInputs, BoundReference, IndicatorSignal, bind_reference};
+use super::change_of_value::within;
 use super::choices::FunnelReference;
+use super::compare_change::{ChangePlan, compare_change};
 use super::compare_output::{Comparing, OutputPlan, Sampled, Values, compare_output};
 use super::drive::{drive, executed_rows, uncovered_at, uncovered_stretches};
 use super::indicator_mask::{IndicatorSeries, active_at, indicator_series};
@@ -46,7 +52,9 @@ use super::report::{
     MAX_RUN_WARNINGS, MAX_UNIT_COLUMNS, MAX_UNVERIFIED_OUTPUTS, OutputStatus, SpecNumber,
     TimeRecord, capped,
 };
-use super::run_bounds::{Caps, bytes_per_frame, check_points, check_trace_bytes};
+use super::run_bounds::{
+    Caps, OutputCount, bytes_per_frame, change_of_value_count, check_points, check_trace_bytes,
+};
 use super::run_options::{CommissionOptions, CommissionRun, MAX_TOTAL_ALIGNED_GRID_WORK};
 use super::source_error::{SourceError, SourceErrorKind};
 use super::spec::CommissioningSpec;
@@ -144,14 +152,18 @@ pub fn run_commissioning(
     let Some(window) = written.window() else {
         return Err(incomplete(&place, "window"));
     };
-    let Some(sampling) = written.sampling.or(spec.sampling) else {
+    let sampling = written.sampling.or(spec.sampling);
+    let envelope = written.envelope().unwrap_or(Envelope::Funnel);
+    if sampling.is_none() && envelope == Envelope::AlignedGrid {
         return Err(VerifyError::new(
             Kind::SamplingRequired,
             format!("{place}.sampling"),
-            "neither the reference nor the spec gives a `sampling`, which a run needs: without a \
-             grid the envelope would judge a held value between two samples as a ramp",
+            "the reference compares under `aligned-grid` and neither it nor the spec gives a \
+             `sampling`, which that envelope needs: its band is a straight line between grid \
+             points, which would cover a step's old level across a gap (a `funnel` reference \
+             needs none; issue #792)",
         ));
-    };
+    }
     let (mut engine, load) = crate::bind::load_at(&inputs.cxf, &format!("{place}.cxf"))?;
     let setup = |call: &str, error: &oce_api::OcError| {
         crate::bind::setup_failed(place.as_str(), call, error)
@@ -187,21 +199,31 @@ pub fn run_commissioning(
         trends: &trends,
     })?;
 
-    let envelope = written.envelope().unwrap_or(Envelope::Funnel);
     let role = written
         .funnel_reference()
         .unwrap_or(FunnelReference::Engine);
-    let window_instants = Instants {
-        start: window.start_s(),
-        stop: window.stop_s(),
-        step: sampling.seconds(),
-    };
-    let count = window_instants.count(MAX_RUN_POINTS);
+    let (start, stop) = (window.start_s(), window.stop_s());
     let compare = options.compare.effective();
+    let (counts, instants) = match sampling {
+        Some(sampling) => {
+            let window_instants = Instants {
+                start,
+                stop,
+                step: sampling.seconds(),
+            };
+            let count = window_instants.count(MAX_RUN_POINTS);
+            (
+                vec![OutputCount::grid(count); bound.compared.len()],
+                Some((window_instants, count)),
+            )
+        }
+        None => (change_of_value_counts(&bound, &trends, start, stop), None),
+    };
     check_points(
         &bound,
         &Caps {
-            count,
+            outputs: &counts,
+            change_of_value: sampling.is_none(),
             envelope,
             limits: &compare,
             aligned_grid_work: options
@@ -211,8 +233,9 @@ pub fn run_commissioning(
         &place,
     )?;
     // Built once the count is known to be within the caps: 8 bytes an instant.
-    let instants = window_instants.instants(count);
-    if let Some(at) = first_repeat(&instants) {
+    let instants = instants.map(|(window_instants, count)| window_instants.instants(count));
+    if let Some(at) = instants.as_deref().and_then(first_repeat) {
+        let instants = instants.as_deref().unwrap_or_default();
         return Err(VerifyError::new(
             Kind::ReplayFailed,
             format!("{place}.sampling"),
@@ -271,7 +294,7 @@ pub fn run_commissioning(
         &place,
     )?;
     let rows = executed_rows(&trace);
-    let (uncovered, _) = uncovered_at(&uncovered_stretches(&trace), &instants);
+    let stretches = uncovered_stretches(&trace);
     let indicator_series: Vec<IndicatorSeries> = bound
         .indicators
         .iter()
@@ -310,24 +333,44 @@ pub fn run_commissioning(
             .iter()
             .map(|index| &indicator_series[*index])
             .collect();
-        let active = active_at(&gates, &instants);
-        let plan = OutputPlan {
-            path: &output.path,
-            value_type: output.value_type,
-            engine: Sampled {
-                times: &engine_times,
-                values: engine_values.as_values(),
-            },
-            trend: Sampled {
-                times: &series.times,
-                values: trend_values.as_values(),
-            },
-            instants: &instants,
-            tolerances: output.tolerances,
-            active: &active,
-            uncovered: &uncovered,
+        let engine = Sampled {
+            times: &engine_times,
+            values: engine_values.as_values(),
         };
-        let (report, curve) = compare_output(&plan, &comparing)?;
+        let trend = Sampled {
+            times: &series.times,
+            values: trend_values.as_values(),
+        };
+        let (report, curve) = match &instants {
+            Some(instants) => {
+                let active = active_at(&gates, instants);
+                let (uncovered, _) = uncovered_at(&stretches, instants);
+                let plan = OutputPlan {
+                    path: &output.path,
+                    value_type: output.value_type,
+                    engine,
+                    trend,
+                    instants,
+                    tolerances: output.tolerances,
+                    active: &active,
+                    uncovered: &uncovered,
+                };
+                compare_output(&plan, &comparing)?
+            }
+            None => compare_change(
+                &ChangePlan {
+                    path: &output.path,
+                    value_type: output.value_type,
+                    engine,
+                    trend,
+                    window: (start, stop),
+                    tolerances: output.tolerances,
+                    indicators: &gates,
+                    stretches: &stretches,
+                },
+                &comparing,
+            )?,
+        };
         reports.push(report);
         curves.push(curve);
     }
@@ -390,7 +433,7 @@ pub fn run_commissioning(
             origin: spec.time_origin().cloned(),
             window_start: SpecNumber(window.start),
             window_stop: SpecNumber(window.stop),
-            sampling: SpecNumber(sampling),
+            sampling: sampling.map(SpecNumber),
         },
         mapping,
         unit_columns,
@@ -432,6 +475,38 @@ pub fn run_commissioning(
         trace,
         curves,
     })
+}
+
+/// Each compared output's counts for a change-of-value comparison over `[start, stop]`, from
+/// what is known before the replay: the frames, its trend samples and its indicator files'
+/// samples within the window ([`change_of_value_count`]).
+fn change_of_value_counts(
+    bound: &BoundReference,
+    trends: &TrendSources,
+    start: f64,
+    stop: f64,
+) -> Vec<OutputCount> {
+    let frames = within(trends.inputs.times(), start, stop);
+    bound
+        .compared
+        .iter()
+        .map(|output| {
+            let files: u64 = output
+                .indicators
+                .iter()
+                .filter_map(|index| match bound.indicators[*index].signal {
+                    IndicatorSignal::File(file) => {
+                        Some(within(&trends.indicators[file].times, start, stop))
+                    }
+                    _ => None,
+                })
+                .fold(0, u64::saturating_add);
+            let samples = frames
+                .saturating_add(within(&trends.expected[output.expected].times, start, stop))
+                .saturating_add(files);
+            change_of_value_count(samples, output.value_type)
+        })
+        .collect()
 }
 
 fn incomplete(place: &str, field: &str) -> VerifyError {

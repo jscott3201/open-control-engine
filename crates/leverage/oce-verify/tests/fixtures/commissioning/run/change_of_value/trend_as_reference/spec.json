@@ -1,0 +1,80 @@
+{
+  "schema": "oce/commissioning-spec/v1",
+  "time": {
+    "origin": "2026-11-21T00:00:00Z"
+  },
+  "tolerances": {
+    "atolx": 1,
+    "atoly": 0.01
+  },
+  "references": [
+    {
+      "model": "Plant",
+      "sequence": "plant",
+      "cxf": "plant.cxf.json",
+      "pointNameMapping": "points.json",
+      "window": {
+        "start": 0,
+        "stop": 30
+      },
+      "funnelReference": "trend",
+      "inputs": [
+        {
+          "path": "main.csv",
+          "format": "csv",
+          "timeColumn": "time",
+          "columns": {
+            "Supply Temp": "Supply Temp",
+            "Offset": "Offset",
+            "Enable": "Enable",
+            "Stage": "Stage"
+          }
+        },
+        {
+          "path": "limit.csv",
+          "format": "csv",
+          "timeColumn": "time",
+          "columns": {
+            "Limit": "Limit"
+          },
+          "hold": {
+            "maxAge": 5
+          }
+        }
+      ],
+      "expected": [
+        {
+          "path": "outputs.csv",
+          "format": "csv",
+          "timeColumn": "time",
+          "columns": {
+            "Setpoint": "Setpoint",
+            "Enabled": "Enabled",
+            "Staged": "Staged",
+            "Limited": "Limited"
+          }
+        }
+      ],
+      "indicatorSources": [
+        {
+          "path": "fan.csv",
+          "format": "csv",
+          "timeColumn": "time",
+          "columns": {
+            "Fan Status": "Fan Status"
+          }
+        }
+      ],
+      "outputs": {
+        "plant.TSet": {
+          "atoly": 0.05
+        }
+      },
+      "indicators": {
+        "plant.lim*": [
+          "fanSta.y"
+        ]
+      }
+    }
+  ]
+}

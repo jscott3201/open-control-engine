@@ -17,7 +17,9 @@
 //!    (decision 35);
 //! 3. the reference's own completeness, decided by the library before any other file is read:
 //!    an index past the end (`reference-out-of-range`), no `cxf` or no `window`
-//!    (`reference-incomplete`), no `sampling` (`sampling-required`);
+//!    (`reference-incomplete`), an `aligned-grid` reference with no `sampling`
+//!    (`sampling-required`). A `funnel` reference with no `sampling` runs, compared by change of
+//!    value (issue #746);
 //! 4. its files, each resolved inside the spec's directory handle and bounded from its metadata
 //!    ([`super::commission_files`]);
 //! 5. with `--out DIR`, the output checks, which open `DIR` once
@@ -46,8 +48,8 @@ use std::path::Path;
 use std::time::Instant;
 
 use oce_verify::{
-    CommissionOptions, CommissionRun, CommissioningSpec, Receipt, ReceiptBody, SpecInputs,
-    SpecLimits, SpecReference, Timings, TrendData, run_commissioning,
+    CommissionOptions, CommissionRun, CommissioningSpec, Envelope, Receipt, ReceiptBody,
+    SpecInputs, SpecLimits, SpecReference, Timings, TrendData, run_commissioning,
 };
 use serde_json::{Value, json};
 
@@ -168,12 +170,15 @@ pub(crate) fn run(args: &CommissionArgs) -> Outcome {
     finish_run(args, report, run, (loaded, running.elapsed()), out.as_ref())
 }
 
-/// Whether the library would run `reference` as far as its first file: a `cxf`, a `window` and a
-/// `sampling`, its own or the spec's. Anything else the library refuses before it reads a byte.
+/// Whether the library would run `reference` as far as its first file: a `cxf`, a `window`, and
+/// a `sampling` (its own or the spec's) when its envelope is `aligned-grid`. Anything else the
+/// library refuses before it reads a byte. A `funnel` reference needs no `sampling`: without one
+/// its outputs are compared by change of value (issue #746).
 fn runnable(spec: &CommissioningSpec, reference: &SpecReference) -> bool {
     reference.cxf().is_some()
         && reference.window().is_some()
-        && spec.sampling_for(reference).is_some()
+        && (spec.sampling_for(reference).is_some()
+            || reference.envelope() != Some(Envelope::AlignedGrid))
 }
 
 /// The reference to run: `--reference N`, else the only one (index `0` also for a spec with

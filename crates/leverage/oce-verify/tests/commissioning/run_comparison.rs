@@ -208,14 +208,26 @@ fn stop_off_the_grid_is_the_last_compared_instant() {
 }
 
 #[test]
-fn a_reference_with_no_sampling_is_refused_before_anything_is_loaded() {
+fn a_reference_with_no_sampling_runs_by_change_of_value_and_records_no_sampling() {
     let spec = run_spec_edited(&[(r#""sampling": 5,"#, "")]);
-    let mut inputs = run_inputs(&[]);
-    inputs.cxf = Vec::new();
-    let error = super::refused_run(&spec, &inputs);
+    let run = commissioned(&spec, &run_inputs(&[]));
+    let body = body_of(&run.receipt);
+    assert!(body.time.sampling.is_none());
+    assert!(
+        !run.receipt.to_canonical_json().contains("\"sampling\""),
+        "a receipt with no sampling writes none"
+    );
+    // The instants are the series' own times, not a grid: the fixture's inputs and expected
+    // outputs are logged every 10 s, and the fan indicator, at 0, 15 and 25, gates `limOut`
+    // only.
     assert_eq!(
-        (error.code(), error.subject()),
-        ("sampling-required", "references[0].sampling")
+        curves_named(&run, "nOut").errors.x(),
+        [0.0, 10.0, 20.0, 30.0]
+    );
+    let limited = curves_named(&run, "limOut").errors.x().to_vec();
+    assert!(
+        [15.0, 25.0].iter().all(|t| limited.contains(t)),
+        "{limited:?}"
     );
     // The reference's own sampling serves as well as the spec's.
     let spec = run_spec_edited(&[
@@ -226,7 +238,14 @@ fn a_reference_with_no_sampling_is_refused_before_anything_is_loaded() {
         ),
     ]);
     let run = commissioned(&spec, &run_inputs(&[]));
-    assert_eq!(body_of(&run.receipt).time.sampling.canonical(), "10");
+    assert_eq!(
+        body_of(&run.receipt)
+            .time
+            .sampling
+            .as_ref()
+            .map(|s| s.canonical()),
+        Some("10".to_owned())
+    );
 }
 
 #[test]
@@ -317,7 +336,10 @@ fn a_sampling_that_does_not_divide_the_window_stops_short_and_an_equal_time_pair
         [0.0, 10.0, 20.0, 25.0]
     );
     let time = &body_of(&run.receipt).time;
-    assert_eq!(time.sampling.canonical(), "10");
+    assert_eq!(
+        time.sampling.as_ref().map(|s| s.canonical()),
+        Some("10".to_owned())
+    );
 }
 
 /// A reference of the `signals` subject comparing its `ratio` output (`zone.T / ahu.T`) only:

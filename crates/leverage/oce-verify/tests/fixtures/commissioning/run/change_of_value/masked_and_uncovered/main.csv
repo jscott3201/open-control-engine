@@ -1,0 +1,5 @@
+time,Supply Temp,Offset,Enable,Stage
+0,20,1,true,1
+10,21,1,true,2
+20,21,1,true,2
+30,21,1,true,2

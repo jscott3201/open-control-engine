@@ -6,7 +6,7 @@ exit: 2
     {
       "at": "references[0].sampling",
       "code": "sampling-required",
-      "detail": "neither the reference nor the spec gives a `sampling`, which a run needs: without a grid the envelope would judge a held value between two samples as a ramp",
+      "detail": "the reference compares under `aligned-grid` and neither it nor the spec gives a `sampling`, which that envelope needs: its band is a straight line between grid points, which would cover a step's old level across a gap (a `funnel` reference needs none; issue #792)",
       "span": null
     }
   ],

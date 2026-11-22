@@ -1,0 +1,9 @@
+time,Setpoint,Enabled,Staged,Limited
+0,21.0,true,1,50
+4,21.04,true,1,50
+8,21.08,true,1,50
+12,21.12,true,1,50
+16,21.16,true,1,50
+20,21.2,true,1,50
+24,21.24,true,1,50
+28,21.28,true,1,50
