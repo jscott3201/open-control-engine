@@ -604,7 +604,11 @@ The load-bearing limitation, stated plainly: **no complete G36 sequence here has
 an external Modelica / Buildings toolchain.** Scoped OpenModelica evidence covers one exhaustive
 `CDL.Logical.Nand` Boolean case, one stateful `CDL.Logical.Toggle` event schedule, one finite
 `CDL.Reals.Line` matrix with exact binary64 operations, and one seven-state exact-bit case for the
-composed G36 `Reliefs` leaf. The Line and Reliefs results do not cover arbitrary Real inputs,
+composed G36 `Reliefs` leaf. Beside them, one OpenModelica run per class checks the event timing
+of `OnCounter`, `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset` and `PIDWithReset` (PI)
+exactly over two ten-frame scenarios each (issue #670), and one run of upstream's
+`CoolingCoilValve` checks its resets on the 78 synthetic Building 33 frames, within a bound
+(issue #787). The Line and Reliefs results do not cover arbitrary Real inputs,
 general tolerances, solver behavior, or broader G36 behavior. `CDL.Logical.Pre` is explicitly
 excluded from an expected-green OpenModelica differential under HostTick v1. The global Tier-3
 report remains skipped, and no number on this page stands in for that deferred coverage.

@@ -114,6 +114,17 @@ and PD modes has no integrator, ignores `trigger` and does not feed it through. 
 `pre_u_start`; a downstream `when` ignores that pulse either way. Every other class with a `when`
 in its source already matched this rule.
 
+**Checked against OpenModelica** (issues #670 and #787). OpenModelica 1.25.1 ran each of the five
+classes from a pilot model at 1 s frames with held inputs, once with the trigger true from the
+initial instant and once with it rising at frame 1: at every frame of the ten scenarios its output
+equals the engine's, exactly (`crates/oce-conformance/tests/open_modelica_event_triggers.rs`). It
+fires no `when` at the initial instant and shows each event at its own frame, and an event at
+frame 0 or an event shown one frame late differs from it in every class. Upstream's
+`CoolingCoilValve` on the 78 synthetic Building 33 frames reinitialises its integrator at every
+change of the enable, and the engine equals it there to 1e-12; away from the resets the two differ
+by the integration, which falls in proportion to the frame step
+(`crates/leverage/oce-verify/tests/commissioning/building_33_openmodelica_frames.rs`).
+
 Modelica settles feedback into an event input by event iteration, which HostTick v1 does not run.
 The engine refuses such a model with `algebraic-loop`, and the record of the event input names the
 remedy: a `Logical.Pre` on the path into a Boolean event input, or a `Discrete.UnitDelay` on the

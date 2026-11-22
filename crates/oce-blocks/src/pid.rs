@@ -429,6 +429,11 @@ impl Block for Pid {
 /// without integral action, reset is dormant, no trigger state is allocated, and `trigger` does not
 /// feed through (P mode still reads it when it fires, so feedback into it from `y` is a
 /// block-granularity loop).
+/// OpenModelica 1.25.1 agrees exactly at every frame of a PI with `Ti = 1e20` s (integral held),
+/// with the trigger true from frame 0 and with it rising at frame 1 (`oce-conformance`'s
+/// `open_modelica_event_triggers.rs`, issue #670), and to 1e-12 at every reset of the Building 33
+/// valve sequence; away from them the two differ by the integration alone, which falls with the
+/// frame step (`oce-verify`, issue #787).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PidWithReset {
     pub(crate) config: ControllerConfig,

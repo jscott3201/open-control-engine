@@ -1,0 +1,22 @@
+{
+  "class": "CDL.Reals.IntegratorWithReset",
+  "pilot": "tools/openmodelica-event-reference/events/IntegratorWithResetPilot.mo",
+  "pilot_sha256": "add822b467eb45017abe4d7adaac157fef9e1d1a889ab467129a27d5a7f2be6f",
+  "simulate_template_sha256": "9547cdfb45e8e1418c79e327ab0f9fa0d6b0782b9fd77f40abf68c9c90f8bdd0",
+  "image": "openmodelica/openmodelica@sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
+  "omc": "OpenModelica 1.25.1",
+  "architecture": "arm64",
+  "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "buildings_tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
+  "msl_commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
+  "msl_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
+  "class_source": "Buildings/Controls/OBC/CDL/Reals/IntegratorWithReset.mo",
+  "class_source_sha256": "b85d876e671412462b3d7db6d02fd504fa5bc838dcbb7f0e706c92c937b38e61",
+  "settings": "cvode, tolerance 1e-6, 0 to 10 s, output every 1 s",
+  "projection": "at each frame instant 0 to 9 s, the last row within 1e-6 s of it",
+  "command": "docker run --rm --pull=never --network none --memory 4g --cpus 4 --user <host-uid>:<host-gid> -e HOME=/work -v <buildings>:/libs/buildings:ro -v <msl>:/libs/msl:ro -v tools/openmodelica-event-reference/events:/scripts:ro -v <run directory>:/work -w /work <image> omc /work/run.mos",
+  "raw": "integrator_with_reset.raw.csv",
+  "raw_sha256": "829e8659ba7c8b52a04b5ead527e6bdb5fb151e5a5ea950c7c3c3695c188271f",
+  "initially_true_sha256": "4e0a4838cc98b9daf82cea6896a3f932758839b2f63c59a7143ded5dba640ea3",
+  "rising_after_start_sha256": "1d3c4be27eb39c54e6afdf339cbfb53f5e2120b5c3a99f76978fd9794dc34e28"
+}

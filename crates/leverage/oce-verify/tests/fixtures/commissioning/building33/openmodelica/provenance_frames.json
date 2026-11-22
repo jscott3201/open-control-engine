@@ -1,0 +1,18 @@
+{
+  "image": "openmodelica/openmodelica@sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
+  "omc": "OpenModelica 1.25.1",
+  "architecture": "arm64",
+  "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "buildings_tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
+  "msl_commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
+  "msl_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
+  "model": "Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve",
+  "model_source_sha256": "cc2ca542cb7269d172e725abc7ed8efd36f0e4f1d1a05d535edd198f475f0bea",
+  "wrapper": "CoolingCoilValveFrames.mo",
+  "wrapper_sha256": "5076ed55b50fa68b153f608fa22dbb99edec3c63408c3fa2e3451ec45c0befc4",
+  "oracle_sha256": "abdda0f0a62ba3ff673b076636a144b2f06387b825855aa4df78828eec5ddae2",
+  "settings": "cvode, tolerance 1e-6, 0 to 393 s, output every 1 s, inputs held (constant segments)",
+  "projection": "at each frame instant, the last row within 1e-6 s of it",
+  "command": "docker run --rm --pull=never --network none --memory 4g --cpus 4 --user <host-uid>:<host-gid> -e HOME=/work -v <buildings>:/libs/buildings:ro -v <msl>:/libs/msl:ro -v <this directory>:/scripts:ro -v <run directory>:/work -w /work <image> omc /scripts/simulate_frames.mos",
+  "rows": 78
+}

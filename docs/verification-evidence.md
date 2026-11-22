@@ -19,7 +19,10 @@ Reliefs covers one seven-state exact-bit case for a composed G36 leaf. The globa
 remains skipped; no full-sequence, arbitrary Real, general tolerance, solver, or cross-architecture
 raw-byte claim follows from these cases. A fifth OpenModelica run, of upstream's Building 33
 verification model over one day, is a within-a-bound comparison for one commissioning example and
-none of these ([below](#commissioning-on-recorded-data-the-building-33-day)).
+none of these ([below](#commissioning-on-recorded-data-the-building-33-day)). Single runs, not
+repeated, check the event timing of five event-triggered classes exactly
+([below](#event-timing-against-openmodelica)) and upstream's Building 33 valve sequence on its 78
+synthetic frames, exact at every reset and within a bound elsewhere.
 
 `CDL.Logical.Pre` is outside those executed-reference claims. The engine's fixed
 [HostTick v1 profile](execution-profile.md) delays `Pre` by one HostTick transition rather than one
@@ -41,6 +44,7 @@ visible of them proves nothing about correctness at all.
 | Structural oracle | `third_party/modelica-buildings-cdl/cxf/` | 45 vendored translations (44 G36 and the Building 33 sequence); 31 comparable fixtures | Yes — an independent translation of the same upstream source |
 | Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 16 suites; 285 CDL signal goldens: 264 existing exact plus 21 exact on qualified Linux, unchanged 1e-12 aligned band on unqualified targets; [bounded receipt](strict-bit-evidence.md) | Yes — Tier-A generator is outside the engine workspace |
 | Scoped Tier-3 cross-implementation differentials | `crates/oce-conformance/tests/fixtures/open_modelica/` | 4 named cases: 2 Boolean, 1 finite Real matrix, and 1 composed G36 leaf; global report skipped | Yes — pinned OpenModelica and Buildings execution |
+| Event timing against OpenModelica | `crates/oce-conformance/tests/fixtures/open_modelica/{integers_on_counter,discrete_triggered_*,reals_*_with_reset}/` | 5 classes, 2 ten-frame scenarios each, one run per class; exact | Yes — pinned OpenModelica and Buildings execution, one run |
 
 ### Tier-2 determinism goldens — they catch drift, not wrongness
 
@@ -362,6 +366,40 @@ executable search path. Rust and Python artifact tools are pinned and recorded; 
 the rest of the host into sandbox inputs. The recorded sandbox limits the OpenModelica container;
 it does not defend against another process running as the invoking user.
 
+### Event timing against OpenModelica
+
+Five classes apply an event on a Boolean input: `Integers.OnCounter`, `Discrete.TriggeredSampler`,
+`Discrete.TriggeredMax`, `Reals.IntegratorWithReset` and `Reals.PIDWithReset`. The
+[execution profile](execution-profile.md#events-on-a-boolean-input) says none fires at frame 0
+for a trigger already true and each shows its event at the frame where its condition rises (issue
+#768). Every other reference for that rule (hand derivations, golden-gen, the Building 33
+derivation) implements the engine's discretisation; OpenModelica does not.
+
+**What ran.** A pilot model per class (`tools/openmodelica-event-reference/events/`) drives two
+instances at 1 s frames from tables with constant segments, so each input is held as the engine
+holds it: the trigger true from the initial instant, falling and rising again, and the control,
+the trigger false at the initial instant and rising at frame 1. Inputs change at the trigger's
+rising frames too (the sampled value, the reset value, the PI's error), so the comparison sees
+which frame's inputs an event takes. OpenModelica 1.25.1 ran each pilot once, in the
+digest-pinned container the other cases use, against the same Buildings and MSL commits, under
+cvode at tolerance 1e-6; `canonicalize.py` keeps, at each frame instant, the last row written
+within 1e-6 s of it, the values after any event there. `regenerate.sh` repeats the run; a
+provenance record per class binds the pilot, the raw result and both tables by SHA-256.
+
+**What it shows.** At all ten frames of all ten scenarios the engine, driven through the facade
+with the tables' inputs, equals OpenModelica exactly
+(`crates/oce-conformance/tests/open_modelica_event_triggers.rs`): every output is exact in both
+tools, because the integrator's input is 0 and the PI's integral time is 1e20 s, so its output
+is the proportional part plus the held or reset integral. OpenModelica fires no `when` at the
+initial instant: the one row it writes at t = 0 holds the initial-equation values. A
+recurrence of each class under the rule equals OpenModelica's output at every frame; the two
+readings the rule replaced, an event at frame 0 and an event shown one frame late, each differ
+from it in every class, and a reference rewritten under either fails the facade comparison at the
+first frame it changes. **What it does not show:** the integration itself (the Building 33 frames
+below compare it, within a bound), `PIDWithReset` with a derivative, other parameters, another
+tool or tool version, and repeat-identical or cross-architecture runs: each class ran once, on
+`linux/arm64`, and none of the four cases' OCI, projection-mutation or two-run checks apply.
+
 ### Commissioning on recorded data: the Building 33 day
 
 The commissioning verifier (OBC §12; [design note](design/commissioning.md)) has one worked
@@ -417,6 +455,14 @@ the spec writes it; only its `content_id` identifies the transcription that ran.
   well inside the band. This is one run on one architecture (`linux/arm64`), compared within a
   bound, and none of the exact-bit, repeat-identical or two-architecture properties of the four
   cases above is claimed for it.
+- *The continuous model at the resets* (issue #787): the same container ran upstream's
+  `CoolingCoilValve` on the 78 synthetic frames, each frame's inputs held. It reinitialises the
+  integrator at all nine changes of the enable, and there the engine equals it to 1e-12, as it
+  does wherever the enable is off or the line cuts the PI (32 frames). The engine before issue
+  #768 was 0.09, 0.045, 0.018 and 0.018 away at the four re-enables. At the other 46 frames the
+  forward Euler of the engine's frames differs from cvode by up to 0.0277 (187 s); on the same
+  inputs at 1/16, 1/32 and 1/64 s frames that difference halves with each halving of the step,
+  to 7.2e-5, while the resets stay exact.
 - *The envelope*: the day's five funnel curves, `errors.csv` included, print byte for byte as
   the pinned `pyfunnel==2.1.1` printed them for the same two series on x86_64 Linux, the
   Building 33 day of the funnel differential (decision 13).
@@ -443,10 +489,9 @@ funnel's reference instead, the day fails too (worst 0.0210 at 65,965 s).
 
 - the transcribed `CoolingCoilValve`, run by this engine, reproduces upstream's model as
   OpenModelica runs it within 0.0034 over this day, and takes every branch its valve signal can
-  show as the `.mo` and the CDL sources say, under the engine's discrete-time convention: a reset
-  shows at the next frame (in the derivation's frames at 25 s and 237 s the valve is 0.09 and
-  0.045 for one frame, where the continuous model gives 0 at the event); the OpenModelica run is
-  the comparison with the continuous model;
+  show as the `.mo` and the CDL sources say, under the engine's discrete-time convention: each
+  reset shows at the frame of its event, where OpenModelica's run of upstream's model on the same
+  frames agrees to 1e-12;
 - under OBC §12.6's own tolerances, LBNL Building 33's recorded valve signal on 2018-06-07 leaves
   the funnel for about 68 minutes of the late afternoon, by at most 0.021, and is inside it the
   rest of the day, which is what OBC's Fig. 12.12 shows as we read the published SVG.

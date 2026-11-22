@@ -188,6 +188,8 @@ impl Block for UnitDelay {
 /// same-tick rising trigger emits the current `u`. Real outputs and stored samples are NaN-canonicalized for deterministic
 /// traces. The block does not panic for finite or non-finite `Real` values; validated callers must
 /// provide a `Real` then a `Boolean` input.
+/// OpenModelica 1.25.1 agrees exactly at every frame, with the trigger true from frame 0 and with
+/// it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`, issue #670).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TriggeredSampler {
     pub(crate) y_start: f64,
@@ -263,6 +265,8 @@ impl Block for TriggeredSampler {
 /// rising-trigger event depend on same-tick inputs. Real outputs and stored samples are NaN-canonicalized; `max` uses the same
 /// deterministic NaN and signed-zero policy as `CDL.Reals.Max`. The block never panics for finite
 /// or non-finite `Real` values; validated callers must provide a `Real` then a `Boolean` input.
+/// OpenModelica 1.25.1 agrees exactly at every frame, with the trigger true from frame 0 and with
+/// it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`, issue #670).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TriggeredMax;
 

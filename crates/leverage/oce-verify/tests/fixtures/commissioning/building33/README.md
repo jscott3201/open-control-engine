@@ -29,6 +29,8 @@ under the spec's `data/` paths, and the CLI test copies them into a scratch dire
 | `derive_valve.py` | The sequence written out from the `.mo` and the vendored CDL block sources, under the engine's documented discrete time. | nobody: it is the reference |
 | `openmodelica/run_openmodelica.sh`, `simulate.mos`, `extract_day.py` | Simulate upstream's own `ControlsVerification_CoolingCoilValve`, unmodified, in the pinned OpenModelica 1.25.1 container, offline, and take its `yCooVal` at the day's 5 s instants. | by hand |
 | `openmodelica/yCooVal_day.csv`, `provenance.json` | That signal (17,281 rows, as OpenModelica printed it) and the record of the run (image digest, `omc` version, architecture, the two library commits and trees). | `sh openmodelica/run_openmodelica.sh <buildings checkout> <msl checkout>`, by hand |
+| `openmodelica/frames_wrapper.py`, `CoolingCoilValveFrames.mo`, `simulate_frames.mos`, `extract_frames.py`, `run_openmodelica_frames.sh` | Run upstream's `CoolingCoilValve`, unmodified, on the 78 synthetic frames of `valve_oracle.txt` (its input columns only, each frame's inputs held until the next frame) in the same container, and take its `yCooVal` at the frame instants, with where it reinitialised the PI's integrator (issue #787). | by hand; `CoolingCoilValveFrames.mo` by `python3 -I frames_wrapper.py ../valve_oracle.txt`, which the run script repeats and compares |
+| `openmodelica/yCooVal_frames.csv`, `provenance_frames.json` | That signal at the 78 frames, `x,y,reset`, and the record of the run (as for the day, plus the wrapper's and the oracle's digests and the command line). | `sh openmodelica/run_openmodelica_frames.sh <buildings checkout> <msl checkout>`, by hand |
 
 The Building 33 day of the funnel differential is in `../../funnel/recorded/building_33_day/`
 (its inputs are this run's two series) and `../../funnel/expected/building_33_day/` (what the
@@ -75,6 +77,24 @@ Four checks, each from outside the authored file:
    and upstream's own `CoolingCoilValve`, under cvode at tolerance 1e-6; the engine runs the
    transcription at the trends' frames with each sample held. The two differ by those choices,
    well inside the funnel's 0.01.
+
+   **On the 78 synthetic frames** (`building_33_openmodelica_frames.rs`, issue #787), with the
+   inputs held at the frames as the engine holds them, the comparison sees the resets the day
+   cannot (the day's enable is on throughout). OpenModelica reinitialises the integrator at all
+   nine changes of the enable (25, 207, 237, 257, 272, 292, 307, 377 and 382 s), and at each the
+   engine equals it to 1e-12 (both 0): the four re-enables of issue #768 and both ends of the
+   one-frame disable included. So do the frames where the enable is off or the line cuts the PI,
+   where no integral reaches the valve (32 of the 78 in all; the line's two evaluations differ by
+   1.6e-15). The engine before issue #768 is 0.09, 0.045, 0.018 and 0.018 away at the four
+   re-enables, more than 1e10 times that bound. At the other 46 frames the valve carries the
+   integral, and the engine's forward Euler at these 2 to 13 s steps differs from cvode by up to
+   0.0277 (at 187 s, after the PI's saturation under the high limit; the anti-windup's time
+   constant is 27 s). That difference is integration, not timing: the engine run on the same
+   inputs at 1/16, 1/32 and 1/64 s frames halves it with each halving of the step (2.8e-4, 1.4e-4
+   and 7.2e-5, always at 187 s), within a bound of three steps of the integral's largest rate,
+   while every reset frame stays exact. What it does not show: another scenario, another tool
+   or tool version, interpolated inputs, or the frame-0 case (the enable is false at frame 0;
+   `oce-conformance`'s event-trigger evidence, issue #670, covers frame 0 per class).
 4. **Mutants** (`oce-cli`'s `building_33_mutants.rs`): eleven plausible mistakes in the
    authored text, each emitted and held to check 2 and the day's receipt. Check 2 catches all
    eleven. The day catches five (the setpoint and measurement swapped, the gain without its 9/5,

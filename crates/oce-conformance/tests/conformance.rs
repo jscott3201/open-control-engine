@@ -112,6 +112,7 @@ mod g36_ventilation_zones_ashrae62_1_setpoints_funnel;
 mod integer_reference_domain;
 mod known_divergence;
 mod mask;
+mod open_modelica_event_triggers;
 mod open_modelica_line;
 mod open_modelica_reliefs;
 mod open_modelica_toggle;

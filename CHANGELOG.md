@@ -2587,6 +2587,34 @@ so far, and no tag is cut by the bump.
 
 ### Verification
 
+- **OpenModelica agrees with the engine's trigger timing in all five event-triggered classes**
+  (GitHub #796, issue #670). A pilot per class under `tools/openmodelica-event-reference/events/`
+  drives `CDL.Integers.OnCounter`, `CDL.Discrete.TriggeredSampler`, `CDL.Discrete.TriggeredMax`,
+  `CDL.Reals.IntegratorWithReset` (with `u = 0`) and `CDL.Reals.PIDWithReset` (PI, with
+  `Ti = 1e20` s so the integral is held) at 1 s frames with held inputs, once with the trigger
+  true from the initial instant and once with it rising at frame 1, in the pinned OpenModelica
+  1.25.1 image against the repository's Buildings and MSL commits; `regenerate.sh` repeats the
+  runs. At every frame of the ten scenarios the engine equals OpenModelica exactly
+  (`crates/oce-conformance/tests/open_modelica_event_triggers.rs`): no event at frame 0 for a
+  trigger already true, each event at its own frame, taking that frame's inputs. Both readings the
+  rule of GitHub #789 replaced, an event at frame 0 and an event shown one frame late, differ from
+  OpenModelica in every class. Each class ran once, on `linux/arm64`; these are not repeat-run or
+  cross-architecture cases like the four scoped Tier-3 ones. No block behaviour changed; the five
+  classes' rustdoc now says what OpenModelica gives.
+
+- **The Building 33 resets agree with OpenModelica's run of upstream's `CoolingCoilValve`**
+  (GitHub #796, issue #787). The pinned image ran upstream's sequence, unmodified, on the 78
+  synthetic frames of `valve_oracle.txt` with each frame's inputs held
+  (`openmodelica/CoolingCoilValveFrames.mo`, `run_openmodelica_frames.sh`). It reinitialises the
+  integrator at all nine changes of the enable, the re-enables at 25, 237, 272 and 307 s and both
+  ends of the one-frame disable included, and there the engine equals it to 1e-12, as it does at
+  every frame no integral reaches (32 of 78). The engine before GitHub #789 is 0.09, 0.045, 0.018
+  and 0.018 away at the four re-enables. At the other 46 frames the engine's forward Euler differs
+  from cvode by up to 0.0277 (187 s); on finer frames of 1/16, 1/32 and 1/64 s that difference
+  halves with the step, to 7.2e-5, within a stated bound of three steps of the integral's largest
+  rate, and the resets stay exact (`building_33_openmodelica_frames.rs`). One scenario, one tool
+  version, held inputs; the frame-0 case is the event-trigger evidence above.
+
 - **The OBC §12.6 Building 33 commissioning material is vendored, verbatim and whole; its
   sequence's translation does not load** (GitHub #761, issue #661).
   `third_party/modelica-buildings-cdl/` gains the eight files of upstream's

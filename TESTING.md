@@ -217,6 +217,16 @@ candidate. Final retained validation is still required before fixture admission.
 validator is POSIX-only. The Rust validator supplies the Windows path boundary and rejects reparse
 points, hardlinks, identity changes, and oversized files.
 
+Separately, one OpenModelica run per class checks the event timing of five event-triggered classes
+(`OnCounter`, `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset`, `PIDWithReset` in PI
+mode): a trigger true from the initial instant, and a control rising at frame 1, each compared
+exactly at ten frames (`open_modelica_event_triggers.rs`, issue #670; pilots and `regenerate.sh`
+under `tools/openmodelica-event-reference/`, provenance per class). These runs are not repeated
+and carry no OCI manifest or projection mutation, unlike the four cases above; a provenance record
+binds each one's pilot, raw result and canonical tables by digest. `oce-verify`'s
+`building_33_openmodelica_frames.rs` compares upstream's `CoolingCoilValve` on 78 synthetic frames
+(issue #787): exact at every reset, within a stated integration bound elsewhere.
+
 `CDL.Logical.Pre` is not an expected-green OpenModelica case. Its upstream same-time event iteration
 differs from the fixed HostTick v1 projection, which advances once per HostTick transition.
 `crates/oce-api/src/tests/pre_execution_profile_tests.rs` pins that engine contract, including equal

@@ -52,6 +52,10 @@ fn reset_event(inputs: &[Value], region: &[u64]) -> bool {
 /// - Frame 0 is initialisation: the `when` is inactive there (Modelica 3.6 §8.6), so a `trigger`
 ///   already true at frame 0 does not reset; it becomes `pre(trigger)` for frame 1, and the first
 ///   reset is its next false-to-true transition.
+/// - OpenModelica 1.25.1 agrees exactly at every frame with `u = 0`, with the trigger true from
+///   frame 0 and with it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`,
+///   issue #670); the integration itself is compared in `oce-verify`'s Building 33 frames
+///   (issue #787).
 #[derive(Clone, Copy, Debug)]
 pub struct IntegratorWithReset {
     pub(crate) k: f64,
