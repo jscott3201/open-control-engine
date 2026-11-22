@@ -1218,7 +1218,7 @@ so far, and no tag is cut by the bump.
 ### Leverage
 
 - **No `oce` verb writes through a symbolic link, and a file a document names is opened
-  component by component without following one** (GitHub #PRNUMBER, issue #758; ruled by the
+  component by component without following one** (GitHub #764, issue #758; ruled by the
   owner on 2026-11-22). **Breaking, in place**, for a symlinked output: `oce verify VECTORS
   --out DIR` followed a link at `DIR/receipt.json` and overwrote the file it named, wherever it
   was, and `emit -o`, `import -o` and `fmt --write` followed a link at their target by contract.
