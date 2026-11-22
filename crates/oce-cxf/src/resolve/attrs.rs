@@ -22,6 +22,10 @@ use oce_diag::DiagnosticList;
 /// `nominal` grounds like a bound (issue #379): it reaches the deep gate, which refuses a
 /// non-finite one (`non-finite-bound`), and export round-trips it. It is still excluded from
 /// §7.10 unification (R13.4) and never read on the tick. `unbounded` is not parsed.
+///
+/// Every finding is raised: a boundary output wired from many boundary inputs is read once per
+/// pass-through pair, and each finding names its `@id`, so once the diagnostic list has ended a
+/// finding costs a count and copies nothing (issue #711).
 pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut DiagnosticList) -> Attrs {
     let subject = node.id.as_str();
     match vt {
@@ -39,14 +43,14 @@ pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Diagnostic
             // model, refused whatever its shape, as on a Boolean connector (owner ruling of
             // 2026-11-12, GitHub #602); before, a well-shaped one was dropped without a word.
             if node.unit.is_some() || node.quantity.is_some() || node.display_unit.is_some() {
-                diags.push(
+                diags.raise(|| {
                     Diagnostic::error(
                         DiagCode::MalformedDocument,
                         "§7.4.1 term (unit/quantity/displayUnit) declared on an Integer connector, \
                          which permits only min and max",
                     )
-                    .with_subject(subject.to_owned()),
-                );
+                    .with_subject(subject.to_owned())
+                });
             }
             refuse_nominal(node, "an Integer", subject, diags);
             Attrs::Integer(IntAttrs {
@@ -63,7 +67,7 @@ pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Diagnostic
                 || node.min.is_some()
                 || node.max.is_some()
             {
-                diags.push(
+                diags.raise(|| {
                     Diagnostic::error(
                         DiagCode::MalformedDocument,
                         format!(
@@ -71,8 +75,8 @@ pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Diagnostic
                              {other:?} connector, which permits none"
                         ),
                     )
-                    .with_subject(subject.to_owned()),
-                );
+                    .with_subject(subject.to_owned())
+                });
             }
             refuse_nominal(node, &format!("a {other:?}"), subject, diags);
             Attrs::default_for(other)
@@ -84,13 +88,13 @@ pub(super) fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Diagnostic
 /// (§7.4.1), so it is a `malformed-document` error rather than an attribute silently dropped.
 fn refuse_nominal(node: &Node, kind: &str, subject: &str, diags: &mut DiagnosticList) {
     if node.nominal.is_some() {
-        diags.push(
+        diags.raise(|| {
             Diagnostic::error(
                 DiagCode::MalformedDocument,
                 format!("§7.4.1 attribute nominal declared on {kind} connector; only Real has one"),
             )
-            .with_subject(subject.to_owned()),
-        );
+            .with_subject(subject.to_owned())
+        });
     }
 }
 
@@ -123,13 +127,13 @@ fn unit_attr(
         return None;
     }
     if let Some(found) = super::term_shape::unmapped_unit(term) {
-        diags.push(
+        diags.raise(|| {
             Diagnostic::error(
                 DiagCode::NonSubsetConstruct,
                 format!("S231:{which} is {found}"),
             )
-            .with_subject(subject.to_owned()),
-        );
+            .with_subject(subject.to_owned())
+        });
         return None;
     }
     term.as_term().map(Arc::from)
@@ -145,13 +149,13 @@ fn refuse_term(
     let Some(found) = super::term_shape::problem(term) else {
         return false;
     };
-    diags.push(
+    diags.raise(|| {
         Diagnostic::error(
             DiagCode::MalformedDocument,
             format!("S231:{which} is {found} — malformed term"),
         )
-        .with_subject(subject.to_owned()),
-    );
+        .with_subject(subject.to_owned())
+    });
     true
 }
 
@@ -174,23 +178,23 @@ fn real_connector_number(
         Ok(Value::Real(r)) => Some(r),
         Ok(Value::Integer(i)) => Some(i as f64),
         Ok(_) => {
-            diags.push(
+            diags.raise(|| {
                 Diagnostic::error(
                     DiagCode::MalformedDocument,
                     format!("S231:{which} on a Real connector did not ground to a number"),
                 )
-                .with_subject(subject.to_owned()),
-            );
+                .with_subject(subject.to_owned())
+            });
             None
         }
         Err(e) => {
-            diags.push(
+            diags.raise(|| {
                 Diagnostic::error(
                     DiagCode::GroundingFailed,
                     format!("S231:{which} connector {role} failed to ground: {e}"),
                 )
-                .with_subject(subject.to_owned()),
-            );
+                .with_subject(subject.to_owned())
+            });
             None
         }
     }
@@ -206,23 +210,23 @@ fn int_connector_bound(
     match ground_value(v, &ParamScope::empty()) {
         Ok(Value::Integer(i)) => Some(i),
         Ok(_) => {
-            diags.push(
+            diags.raise(|| {
                 Diagnostic::error(
                     DiagCode::MalformedDocument,
                     format!("S231:{which} on an Integer connector did not ground to an integer"),
                 )
-                .with_subject(subject.to_owned()),
-            );
+                .with_subject(subject.to_owned())
+            });
             None
         }
         Err(e) => {
-            diags.push(
+            diags.raise(|| {
                 Diagnostic::error(
                     DiagCode::GroundingFailed,
                     format!("S231:{which} connector bound failed to ground: {e}"),
                 )
-                .with_subject(subject.to_owned()),
-            );
+                .with_subject(subject.to_owned())
+            });
             None
         }
     }

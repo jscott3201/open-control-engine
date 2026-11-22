@@ -507,13 +507,13 @@ fn validate_enum_comparison(
         );
     };
     let Some((class_path, literal)) = reference.rsplit_once('.') else {
-        diags.push(
+        diags.raise(|| {
             Diagnostic::error(
                 DiagCode::UnknownEnumLiteral,
                 format!("G36 enum literal `{reference}` is not fully qualified"),
             )
-            .with_subject(node.id.clone()),
-        );
+            .with_subject(node.id.clone())
+        });
         return false;
     };
     let Some(reference_class) = enum_class_id(class_path) else {
@@ -522,20 +522,20 @@ fn validate_enum_comparison(
         } else {
             DiagCode::ConditionalGuardUnsupported
         };
-        diags.push(
+        diags.raise(|| {
             Diagnostic::error(code, format!("unsupported guard enum type `{class_path}`"))
-                .with_subject(node.id.clone()),
-        );
+                .with_subject(node.id.clone())
+        });
         return false;
     };
     if enum_member_ordinal(reference_class, literal).is_none() {
-        diags.push(
+        diags.raise(|| {
             Diagnostic::error(
                 DiagCode::UnknownEnumLiteral,
                 format!("unknown guard enum literal `{reference}`"),
             )
-            .with_subject(node.id.clone()),
-        );
+            .with_subject(node.id.clone())
+        });
         return false;
     }
     if *param_class != reference_class {
@@ -544,22 +544,27 @@ fn validate_enum_comparison(
     true
 }
 
+/// Raise the refusal of a guard operand naming no parameter of the parent, on the conditional
+/// node. Raised, so once the list has ended an operand costs a count (issue #711): one guard can
+/// hold thousands of operands, each a few bytes, and each refusal names the node's `@id`.
 fn unknown_param(node: &Node, name: &str, diags: &mut DiagnosticList) -> bool {
-    diags.push(
+    diags.raise(|| {
         Diagnostic::error(
             DiagCode::ConditionalGuardUnknownParameter,
             format!("conditional guard references unknown parameter `{name}`"),
         )
-        .with_subject(node.id.clone()),
-    );
+        .with_subject(node.id.clone())
+    });
     false
 }
 
+/// Raise the refusal of a guard operand outside the G36 guard profile, on the conditional node;
+/// raised for the reason [`unknown_param`] is.
 fn unsupported(node: &Node, message: &str, diags: &mut DiagnosticList) -> bool {
-    diags.push(
+    diags.raise(|| {
         Diagnostic::error(DiagCode::ConditionalGuardUnsupported, message)
-            .with_subject(node.id.clone()),
-    );
+            .with_subject(node.id.clone())
+    });
     false
 }
 

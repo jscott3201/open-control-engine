@@ -115,6 +115,54 @@ fn redeclarations(model: &str, id: &str, items: usize) -> Vec<u8> {
         .into_bytes()
 }
 
+/// The node of [`MODEL`]'s constant parameter `k`, and the constant's reference to it.
+const K_NODE: &str = "{ \"@id\": \"http://example.org#MinLoop.con.k\",\n      \"S231:value\": { \"@value\": \"2.0\", \"@type\": \"http://www.w3.org/2001/XMLSchema#double\" } }";
+const K_REFERENCE: &str =
+    "\"S231:hasParameter\": { \"@id\": \"http://example.org#MinLoop.con.k\" }";
+
+/// `model`, an edit of [`MODEL`], with its constant listing `k` and then each of `references`
+/// (parameter `@id`s), and `nodes` (JSON objects) declared after `k`'s node.
+fn with_parameters(model: &str, references: &[String], nodes: &[String]) -> Vec<u8> {
+    assert_eq!(model.matches(K_NODE).count(), 1);
+    assert_eq!(model.matches(K_REFERENCE).count(), 1);
+    let listed: String = references
+        .iter()
+        .map(|id| format!(", {{ \"@id\": \"{id}\" }}"))
+        .collect();
+    let declared: String = nodes.iter().map(|node| format!(",\n    {node}")).collect();
+    model
+        .replacen(
+            K_REFERENCE,
+            &format!(
+                "\"S231:hasParameter\": [ {{ \"@id\": \"http://example.org#MinLoop.con.k\" }}{listed} ]"
+            ),
+            1,
+        )
+        .replacen(K_NODE, &format!("{K_NODE}{declared}"), 1)
+        .into_bytes()
+}
+
+/// A preserved one-dimensional array parameter node `id` of `size` elements with `value`.
+fn array_parameter(id: &str, size: usize, value: &str) -> String {
+    format!(
+        "{{ \"@id\": \"{id}\", \"S231:isArray\": true, \"S231:numberDimensions\": 1, \
+         \"S231:sizeOfDimensions\": \"({size})\", \"S231:value\": {value} }}"
+    )
+}
+
+/// A typed `double` literal whose lexical form is `lexical`.
+fn double(lexical: &str) -> String {
+    format!(
+        "{{ \"@value\": \"{lexical}\", \"@type\": \"http://www.w3.org/2001/XMLSchema#double\" }}"
+    )
+}
+
+/// [`MODEL`] with the constant's parameter `id` listed `items` times, its value `value`.
+fn listed_again(model: &str, id: &str, value: &str, items: usize) -> Vec<u8> {
+    let node = format!("{{ \"@id\": \"{id}\", \"S231:value\": {value} }}");
+    with_parameters(model, &vec![id.to_owned(); items], &[node])
+}
+
 /// One place the reader raises a diagnostic per item, about one long string.
 struct Route {
     /// What repeats.
@@ -338,7 +386,105 @@ const ROUTES: &[Route] = &[
         },
         raised: every_item,
     },
+    Route {
+        // The one value of a broadcast is grounded once (issue #736); its failure, which quotes
+        // the long lexical form, is raised once an element.
+        name: "an element of a broadcast array whose one value does not ground",
+        code: DiagCode::GroundingFailed,
+        document: |id, items| {
+            let array = array_parameter("urn:p.q", items, &format!("[ {} ]", double(id)));
+            with_parameters(MODEL, &["urn:p.q".to_owned()], &[array])
+        },
+        raised: every_item,
+    },
+    Route {
+        name: "a parameter listed again whose value does not ground",
+        code: DiagCode::GroundingFailed,
+        document: |id, items| listed_again(MODEL, "urn:p.q", &double(id), items),
+        raised: every_item,
+    },
+    Route {
+        name: "a non-finite parameter listed again on an instance with a long @id",
+        code: DiagCode::NonFiniteParameter,
+        document: |id, items| {
+            let model = MODEL.replace("http://example.org#MinLoop.con", id);
+            let (reference, node) = (
+                K_REFERENCE.replace("http://example.org#MinLoop.con", id),
+                K_NODE.replace("http://example.org#MinLoop.con", id),
+            );
+            let model = model
+                .replacen(&reference, K_REFERENCE, 1)
+                .replacen(&node, K_NODE, 1);
+            listed_again(&model, "urn:p.q", &double("NaN"), items)
+        },
+        raised: every_item,
+    },
+    Route {
+        name: "an operand of a conditional guard naming no parameter",
+        code: DiagCode::ConditionalGuardUnknownParameter,
+        document: |id, items| {
+            let child = "\"S231:label\": \"con\",";
+            assert_eq!(MODEL.matches(child).count(), 1);
+            let operands = vec!["unknownFlag"; items].join(" and ");
+            MODEL
+                .replacen(
+                    child,
+                    &format!(
+                        "{child} \"S231:isConditionalComponent\": true, \
+                         \"S231:conditionalExpression\": \"{operands}\","
+                    ),
+                    1,
+                )
+                .replace("http://example.org#MinLoop.con", id)
+                .into_bytes()
+        },
+        raised: every_item,
+    },
+    Route {
+        // Each back-reference to `A` closes the cycle `A -> <id> -> C -> A`, whose message names
+        // every `@id` on the spine.
+        name: "a back-reference that closes a containsBlock cycle",
+        code: DiagCode::MalformedDocument,
+        document: |id, items| {
+            let back = list(items, |_| {
+                "{ \"@id\": \"http://example.org#A\" }".to_owned()
+            });
+            format!(
+                "{{ \"@context\": {{ \"S231\": \"http://data.ashrae.org/S231#\" }}, \"@graph\": [
+  {{ \"@id\": \"http://example.org#R\", \"@type\": \"S231:Block\",
+    \"S231:containsBlock\": {{ \"@id\": \"http://example.org#A\" }} }},
+  {{ \"@id\": \"http://example.org#A\", \"@type\": \"S231:Block\",
+    \"S231:containsBlock\": {{ \"@id\": \"{id}\" }} }},
+  {{ \"@id\": \"{id}\", \"@type\": \"S231:Block\",
+    \"S231:containsBlock\": {{ \"@id\": \"http://example.org#C\" }} }},
+  {{ \"@id\": \"http://example.org#C\", \"@type\": \"S231:Block\",
+    \"S231:containsBlock\": [ {back} ] }} ] }}"
+            )
+            .into_bytes()
+        },
+        raised: every_item,
+    },
 ];
+
+/// Routes whose every item is a node of its own, which reading costs more than a reference: each
+/// element of one array collides with a sibling parameter declared for it. They are held to the
+/// same list, and a further item to what reading its node costs, still never the `@id` again.
+const NODE_ROUTES: &[Route] = &[Route {
+    name: "a minted element name that a sibling parameter has",
+    code: DiagCode::ArrayFlattenCollision,
+    document: |id, items| {
+        // The array's `@id` is long and written twice; the element paths are the constant's.
+        let array = format!("{id}.q");
+        let mut references = vec![array.clone()];
+        references.extend((1..=items).map(|i| format!("urn:s.q_{i}")));
+        let mut nodes = vec![array_parameter(&array, items, "[ 1.0 ]")];
+        nodes.extend(
+            (1..=items).map(|i| format!("{{ \"@id\": \"urn:s.q_{i}\", \"S231:value\": 1.0 }}")),
+        );
+        with_parameters(MODEL, &references, &nodes)
+    },
+    raised: every_item,
+}];
 
 /// One load of `bytes`, which must be refused: its allocations and its diagnostics. The unedited
 /// model is loaded once first, so what a process sets up on its first load is not counted.
@@ -389,8 +535,25 @@ fn bytes(count: usize) -> u64 {
 
 #[test]
 fn every_route_holds_a_bounded_list_and_builds_nothing_once_it_has_ended() {
+    // [measured: 0 to 1,966 bytes and 0 to 15.2 allocations a further item; a diagnostic
+    // built and dropped requests 262,144 bytes or more, and the routes of issue #711 requested
+    // 524,904 to 1,311,378 a further item before they were raised]
+    assert_routes_hold(ROUTES, 4_096, 24);
+}
+
+#[test]
+fn every_route_whose_items_are_nodes_holds_a_bounded_list_and_builds_nothing_once_it_has_ended() {
+    // [measured: 7,544 bytes and 25.1 allocations a further item, a sibling node read and its
+    // collision counted; 531,985 bytes when each collision was built and dropped]
+    assert_routes_hold(NODE_ROUTES, 12_288, 64);
+}
+
+/// Load every case of `routes` at each of [`ITEMS`] on a long `@id`, and hold it to the bounds
+/// the module documentation states, a further item costing at most `further_bytes` requested
+/// bytes and `further_allocations` allocations.
+fn assert_routes_hold(routes: &[Route], further_bytes: u64, further_allocations: u64) {
     let id = long_id(ID_BYTES);
-    for route in ROUTES {
+    for route in routes {
         let mut costs = Vec::new();
         for items in ITEMS {
             let document = (route.document)(&id, items);
@@ -457,18 +620,16 @@ fn every_route_holds_a_bounded_list_and_builds_nothing_once_it_has_ended() {
         }
         // Between the two sizes every further item is one the list has no room for. It costs
         // what reading it costs: a fixed number of bytes and allocations, never the `@id` again.
-        // [measured: 142 to 1,966 bytes and 2.0 to 15.2 allocations a further item; a diagnostic
-        // built and dropped requests 262,144 bytes or more]
         let (small, large) = (&costs[0], &costs[1]);
         let further = bytes(ITEMS[1] - ITEMS[0]);
         assert!(
-            large.0.bytes_total - small.0.bytes_total <= 4_096 * further,
+            large.0.bytes_total - small.0.bytes_total <= further_bytes * further,
             "{}: {} more bytes requested for {further} more items",
             route.name,
             large.0.bytes_total - small.0.bytes_total
         );
         assert!(
-            large.0.count_total - small.0.count_total <= 24 * further,
+            large.0.count_total - small.0.count_total <= further_allocations * further,
             "{}: {} more allocations for {further} more items",
             route.name,
             large.0.count_total - small.0.count_total
@@ -610,4 +771,69 @@ fn a_refusal_list_holds_its_text_and_a_fixed_amount_for_each_diagnostic() {
             diagnostics.len()
         );
     }
+}
+
+/// A root whose `pairs` boundary inputs are each wired to its one boundary output, `@id` `id`.
+/// The output declares six malformed attributes, so the pass-through block minted for each pair
+/// raises six findings about it. With `malformed` false it declares none.
+fn fan_in(id: &str, pairs: usize, malformed: bool) -> Vec<u8> {
+    let attributes = if malformed {
+        ", \"S231:quantity\": 5, \"S231:unit\": 5, \"S231:displayUnit\": 5, \"S231:min\": \"no\", \
+         \"S231:max\": \"no\", \"S231:nominal\": \"no\""
+    } else {
+        ""
+    };
+    let inputs = list(pairs, |i| format!("{{ \"@id\": \"urn:i{i}\" }}"));
+    let input_nodes: String = (0..pairs)
+        .map(|i| {
+            format!(
+                ",\n  {{ \"@id\": \"urn:i{i}\", \"@type\": \"S231:RealInput\", \"S231:isOfDataType\": \
+                 {{ \"@id\": \"S231:Real\" }}, \"S231:isConnectedTo\": {{ \"@id\": \"{id}\" }} }}"
+            )
+        })
+        .collect();
+    format!(
+        "{{ \"@context\": {{ \"S231\": \"http://data.ashrae.org/S231#\" }}, \"@graph\": [
+  {{ \"@id\": \"urn:r\", \"@type\": \"S231:Block\", \"S231:hasInput\": [ {inputs} ],
+    \"S231:hasOutput\": {{ \"@id\": \"{id}\" }},
+    \"S231:containsBlock\": {{ \"@id\": \"urn:r.keep\" }} }},
+  {{ \"@id\": \"urn:r.keep\",
+    \"@type\": \"http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant\",
+    \"S231:hasParameter\": {{ \"@id\": \"urn:r.keep.k\" }},
+    \"S231:hasOutput\": {{ \"@id\": \"urn:r.keep.y\" }} }},
+  {{ \"@id\": \"urn:r.keep.k\", \"S231:value\": 1.0 }},
+  {{ \"@id\": \"urn:r.keep.y\", \"@type\": \"S231:RealOutput\",
+    \"S231:isOfDataType\": {{ \"@id\": \"S231:Real\" }} }},
+  {{ \"@id\": \"{id}\", \"@type\": \"S231:RealOutput\", \"S231:isOfDataType\": {{ \"@id\": \
+         \"S231:Real\" }}{attributes} }}{input_nodes} ] }}"
+    )
+    .into_bytes()
+}
+
+#[test]
+fn the_attributes_of_an_output_read_once_a_pass_through_pair_are_built_only_while_listed() {
+    // 512 pairs onto a 12 KiB output `@id`, six findings a pair: past the budget a finding is
+    // counted, not built, so what the findings add to the load is about the budget whatever the
+    // number of pairs. [measured: 17,037,412 bytes more than the same document with well-formed
+    // attributes; 75 MB or more when each of the 3,072 findings was built and dropped]
+    let id = long_id(12 * 1024);
+    let malformed = fan_in(&id, 512, true);
+    let (info, diagnostics) = refused(&malformed);
+    assert_eq!(
+        diagnostics.last().map(|d| d.code),
+        Some(DiagCode::ResourceLimitExceeded)
+    );
+    let well_formed = fan_in(&id, 512, false);
+    Engine::new()
+        .load_cxf(MODEL.as_bytes())
+        .expect("the model loads");
+    let mut engine = Engine::new();
+    let baseline = measure(|| {
+        let _ = engine.load_cxf(&well_formed);
+    });
+    let added = info.bytes_total.saturating_sub(baseline.bytes_total);
+    assert!(
+        added <= 3 * bytes(BUDGET),
+        "{added} more bytes requested for the findings of 512 pairs"
+    );
 }
