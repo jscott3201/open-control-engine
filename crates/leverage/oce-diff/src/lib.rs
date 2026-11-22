@@ -2,9 +2,9 @@
 //! Structural diff for Open Control Engine sequences (design note `docs/design/diff.md`,
 //! issue #665).
 //!
-//! Status: the first three of the four parts of the diff (M3): the authoring-level diff, the
-//! bounded rename pass and the two renderers (issue #665), the CXF adapter (issue #666) and the
-//! blob comparison (issue #667). The `oce diff` verb builds on them.
+//! Status: the four parts of the diff (M3) are in: the authoring-level diff, the bounded rename
+//! pass and the two renderers (issue #665), the CXF adapter (issue #666) and the blob comparison
+//! (issue #667) here, and the `oce diff` verb over them in `oce-cli` (issue #668).
 //!
 //! [`diff`] compares two authoring models (`oce_author::Sequence`, from the text or the wire
 //! form) and returns a [`Diff`]: plain serde data, tagged [`DIFF_SCHEMA`], with a [`Summary`],

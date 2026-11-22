@@ -68,9 +68,12 @@ pub enum DiffError {
         refusal: BlobError,
     },
     /// The facade refused a blob with an error that is not a blob refusal, which
-    /// `oce_api::inspect_blob` documents it never returns. Kept so that such an error is reported
-    /// as itself, never read as a blob refusal it is not and never a panic; `message` is the
-    /// error's text.
+    /// `oce_api::inspect_blob` documents it never returns. The variant exists only because
+    /// `oce_api::OcError` is `#[non_exhaustive]`, so a match on it needs an arm for every other
+    /// error, and that arm must not panic or pass such an error off as a blob refusal it is not.
+    /// No integration path reaches it: no bytes make the facade return one, and only this
+    /// crate's unit tests, which hand the conversion a made-up error, produce it. `message` is
+    /// the error's text.
     UnexpectedRefusal {
         /// The side the bytes are on.
         side: Side,

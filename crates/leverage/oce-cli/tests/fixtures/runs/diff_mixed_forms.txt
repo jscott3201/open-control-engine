@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "diff",
+  "errors": [
+    {
+      "code": "mixed-forms",
+      "detail": "the base reads as text and the head as wire; both sides must be one form (pass --from to read both in one)",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": null,
+  "head": "../oce-author/tests/fixtures/wire/econ_enable.json",
+  "input": "../oce-author/tests/fixtures/text/econ_enable.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

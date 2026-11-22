@@ -13,7 +13,8 @@
 //!   name→slot mapping ([`InputMap::resolve`], by the one name rule [`resolve_path`], which
 //!   [`PathIndex`] answers for many names at once); three adapters — [`ColumnarSource`] (owned typed
 //!   columns, the numpy and pandas shape), [`CsvSource`] (a bounded byte reader with a column map
-//!   and a time origin) and [`StepSource`] (per-input change lists).
+//!   and a time origin, which trims the spaces and tabs around an unquoted cell and can hand a
+//!   column over as text) and [`StepSource`] (per-input change lists).
 //! - **Missing-sample policy** ([`MissingPolicy`], [`OnRefusal`], [`DuplicateTime`], [`TimeBase`]):
 //!   refuse and stop by default; every substitution, skip and refusal is written into the trace.
 //!   NaN, NaT, a blank cell and a cleared validity flag are always missing, never a value, whatever

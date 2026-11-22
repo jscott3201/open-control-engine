@@ -1,0 +1,42 @@
+exit: 0
+--- stdout
+Compare two sequences, or two CXF documents, and print the structural diff.
+
+Stdout is the JSON report with the diff (the diff as a Markdown table with --format markdown): exit 0 when nothing differs, 1 for any difference, a reordering or a comment included (summary.graph_equal answers "same structure"). Both sides are one form and are never validated. A side that cannot be read, parsed or loaded is exit 2 with the report.
+
+Usage: oce diff [OPTIONS] <BASE> <HEAD>
+
+Arguments:
+  <BASE>
+          The base (earlier) side: text (`.oce`), wire (`.json`) or CXF (`.jsonld`, `.cxf.json`), or `-` for stdin
+
+  <HEAD>
+          The head (later) side, in the base's form, or `-` for stdin (on one side only)
+
+Options:
+      --from <FROM>
+          The form of both sides; overrides the names, and is required for stdin
+          
+          [possible values: cxf, text, wire]
+
+      --render <RENDER>
+          When to write a human-readable rendering of the report to stderr
+          
+          [default: auto]
+          [possible values: auto, always, never]
+
+      --no-renames
+          Turn the rename pass off: every unmatched block is removed or added, and the diff carries the note rename-pass-off. graph_equal does not change
+
+      --format <FORMAT>
+          The document on stdout: the JSON report with the diff, or the diff as a Markdown table. The text rendering goes to stderr under --render
+          
+          [default: json]
+          [possible values: json, markdown]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+--- stderr

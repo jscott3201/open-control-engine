@@ -13,8 +13,20 @@
 //! quote is refused after at most one cap's worth of bytes is held. Each refusal is a typed
 //! [`SourceError`], never truncation. `csv-core` handles quoting, doubled quotes, CRLF, empty
 //! lines and a leading UTF-8 byte-order mark. Reading a file by path is the caller's job.
+//!
+//! **Padding (issue #733).** A cell `csv-core` reads unquoted, header names included, loses the
+//! ASCII spaces (`0x20`) and tabs (`0x09`) at either end before anything reads it: the
+//! missing-token comparison, the parse, the header match. Those two bytes only, never inside a
+//! cell: a no-break space, a zero-width space, a byte-order mark, a vertical tab or a form feed
+//! stays part of the cell. A quoted cell is kept as `csv-core` unquotes it, so `" a "` is ` a `.
+//! A cell is quoted when a `"` is its first byte, as RFC 4180 and `csv-core` both read it; a byte
+//! outside the quotes is outside RFC 4180, and `csv-core`'s reading of one is kept untrimmed:
+//! `"1" ` reads as `1 ` and ` "1"` as `"1"`, each refused by its parse rather than read by a
+//! guess. `max_cell_bytes` counts a cell's bytes as `csv-core` reads them, before trimming: the
+//! cap is enforced as the bytes arrive, before trailing padding can be told from the cell.
 
 use std::io::Read;
+use std::ops::Range;
 
 use csv_core::{ReadFieldResult, Reader as CoreReader, ReaderBuilder};
 use oce_api::{Value, ValueType};
@@ -24,6 +36,9 @@ use crate::{FrameSource, InputMap, MapId, ReplayLimits, SourceError, TimeOrigin}
 
 /// Bytes requested from the reader per refill.
 const CHUNK: usize = 8 * 1024;
+
+/// The UTF-8 byte-order mark.
+const BOM: &[u8] = b"\xef\xbb\xbf";
 
 /// How the time column is written.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -49,12 +64,21 @@ pub struct CsvFormat {
     /// How the time column is written.
     pub time: CsvTime,
     /// Cell texts that mean "missing" besides the empty cell. Default `NA` and `NaN`. A Real cell
-    /// that parses to NaN is missing whatever this list says.
+    /// that parses to NaN is missing whatever this list says. A token is compared with the cell
+    /// after its padding is trimmed, so a token whose first or last byte is a space or a tab
+    /// could never match, and [`CsvSource::new`] refuses it
+    /// ([`SourceError::PaddedMissingToken`]) rather than read the sentinel as a value.
     pub missing_tokens: Vec<String>,
+    /// Header names of columns whose cells are handed over as text, unparsed, by
+    /// [`CsvSource::text_cells`] (issue #728). Default empty. A text column is no input slot: a
+    /// frame never carries it, so it stays among [`FrameSource::ignored_columns`]. It may name
+    /// the time column or a mapped column too, whose cells are then also read as their kind.
+    pub text_columns: Vec<String>,
 }
 
 impl CsvFormat {
-    /// A comma-separated format with `time_column` in model seconds and the default tokens.
+    /// A comma-separated format with `time_column` in model seconds, the default tokens and no
+    /// text column.
     #[must_use]
     pub fn seconds(time_column: impl Into<String>) -> Self {
         Self {
@@ -62,8 +86,39 @@ impl CsvFormat {
             time_column: time_column.into(),
             time: CsvTime::Seconds,
             missing_tokens: vec!["NA".to_owned(), "NaN".to_owned()],
+            text_columns: Vec::new(),
         }
     }
+}
+
+/// `cell` without the spaces and tabs at either end.
+fn trim_padding(cell: &[u8]) -> &[u8] {
+    let padding = |byte: &u8| matches!(byte, b' ' | b'\t');
+    let start = cell.iter().position(|b| !padding(b)).unwrap_or(cell.len());
+    let end = cell
+        .iter()
+        .rposition(|b| !padding(b))
+        .map_or(start, |last| last + 1);
+    &cell[start..end]
+}
+
+/// Whether a field opened with a quote, from the bytes `csv-core` consumed for it: `None` until
+/// one of them is the field's own. Before a record's first field `csv-core` skips line ends (a
+/// blank line, the `\n` of a `\r\n`), so they are skipped here too; after a delimiter the next
+/// byte is the field's first.
+fn opens_quoted(consumed: &[u8], first_in_record: bool) -> Option<bool> {
+    let mut rest = consumed;
+    if first_in_record {
+        while let [b'\r' | b'\n', tail @ ..] = rest {
+            rest = tail;
+        }
+    }
+    rest.first().map(|&byte| byte == b'"')
+}
+
+/// Whether `cell` is missing: empty, or one of the format's tokens.
+fn is_missing(cell: &[u8], tokens: &[Vec<u8>]) -> bool {
+    cell.is_empty() || tokens.iter().any(|token| token.as_slice() == cell)
 }
 
 /// The byte side: a reader, a fixed chunk buffer, the byte count against the cap, and the
@@ -82,13 +137,18 @@ struct Tokenizer<R> {
     /// The current record's cell bytes, concatenated; `ends[i]` is the end of cell `i`.
     record: Vec<u8>,
     ends: Vec<usize>,
+    /// Whether `core` has been handed any input yet.
+    core_read: bool,
 }
 
 impl<R: Read> Tokenizer<R> {
     /// Refill the chunk if it is empty; reading one byte past the cap is `TooManyBytes`. The very
-    /// first fill keeps reading until at least four bytes are buffered (or the input ends), so a
+    /// first fill keeps reading until at least seven bytes are buffered (or the input ends), so a
     /// UTF-8 byte-order mark is recognised, and skipped, even from a reader that returns one byte
-    /// at a time.
+    /// at a time. `csv-core` strips a second mark from its own first input when that input holds
+    /// three bytes or more, and takes an input that is only the mark for the end; after a skipped
+    /// mark it is handed four bytes, or all there are, so it reads a second mark the same way
+    /// whatever the reader returns per call.
     fn refill(&mut self) -> Result<(), SourceError> {
         if self.start < self.end || self.eof {
             return Ok(());
@@ -119,20 +179,21 @@ impl<R: Read> Tokenizer<R> {
             if n == 0 {
                 self.eof = true;
             }
-            if self.eof || !(first && self.end < 4) {
+            if self.eof || !(first && self.end < 7) {
                 break;
             }
         }
         // A leading UTF-8 byte-order mark is skipped here rather than by `csv-core`, whose own
         // strip needs the mark and a following byte in its first input slice.
-        if first && self.chunk[..self.end].starts_with(b"\xef\xbb\xbf") {
+        if first && self.chunk[..self.end].starts_with(BOM) {
             self.start = 3;
         }
         Ok(())
     }
 
     /// Read one record's cells into `record`/`ends`, refusing a cell longer than the cap and a
-    /// record wider than `max_fields` as the bytes arrive. `Ok(false)` at the end of the input.
+    /// record wider than `max_fields` as the bytes arrive; an unquoted cell is kept without its
+    /// padding. `Ok(false)` at the end of the input.
     fn next_record(
         &mut self,
         row: u64,
@@ -142,10 +203,24 @@ impl<R: Read> Tokenizer<R> {
         self.record.clear();
         self.ends.clear();
         let mut filled = 0;
+        // Whether the field being read opened with a quote, once its first byte is consumed.
+        let mut quoted = None;
         loop {
             self.refill()?;
             let input = &self.chunk[self.start..self.end];
             let (result, nin, nout) = self.core.read_field(input, &mut self.cell[filled..]);
+            let mut consumed = &input[..nin];
+            if !self.core_read {
+                // `csv-core` strips a byte-order mark from its first input of three bytes or
+                // more, so a mark after the one `refill` skipped is no field's byte either.
+                if input.len() >= 3 {
+                    consumed = consumed.strip_prefix(BOM).unwrap_or(consumed);
+                }
+                self.core_read = true;
+            }
+            if quoted.is_none() {
+                quoted = opens_quoted(consumed, self.ends.is_empty());
+            }
             self.start += nin;
             filled += nout;
             match result {
@@ -168,9 +243,16 @@ impl<R: Read> Tokenizer<R> {
                     if self.ends.len() >= max_fields {
                         return Err(too_wide());
                     }
-                    self.record.extend_from_slice(&self.cell[..filled]);
+                    let cell = &self.cell[..filled];
+                    let kept = if quoted == Some(true) {
+                        cell
+                    } else {
+                        trim_padding(cell)
+                    };
+                    self.record.extend_from_slice(kept);
                     self.ends.push(self.record.len());
                     filled = 0;
+                    quoted = None;
                     if record_end {
                         return Ok(true);
                     }
@@ -188,10 +270,13 @@ impl<R: Read> Tokenizer<R> {
 
 /// A CSV byte reader bound to an [`InputMap`].
 ///
-/// Every mapped column and the time column must appear in the header; other header columns are
-/// ignored and reported by [`FrameSource::ignored_columns`]. Cell parsing: Real by Rust's `f64`
-/// grammar (`inf`, `-inf` are values, NaN is missing); Integer as `i64`; Boolean as `true`,
-/// `false`, `1` or `0`; Enum as a `u32` ordinal. No cell is trimmed. Once the record buffer has
+/// Every mapped column, the time column and each text column must appear in the header; other
+/// header columns are ignored and reported by [`FrameSource::ignored_columns`]. Every cell and
+/// header name read unquoted loses the spaces and tabs at either end first (the module's
+/// "Padding"); a cell is then missing when it is empty or a missing token. Cell parsing: Real by
+/// Rust's `f64` grammar (`inf`, `-inf` are values, NaN is missing); Integer as `i64`; Boolean as
+/// `true`, `false`, `1` or `0`; Enum as a `u32` ordinal. A text column's cells are not parsed:
+/// [`CsvSource::text_cells`] hands them over. Once the record buffer and the text buffer have
 /// grown to the longest row, reading a row allocates nothing.
 pub struct CsvSource<R: Read> {
     map: MapId,
@@ -206,6 +291,11 @@ pub struct CsvSource<R: Read> {
     missing: Vec<Vec<u8>>,
     ignored: Vec<String>,
     cells: Vec<Option<Value>>,
+    /// The field of each text column, in [`CsvFormat::text_columns`] order.
+    text_fields: Vec<usize>,
+    /// The last row's text cells, concatenated; `text_cells[i]` is text column `i`'s span.
+    text: String,
+    text_cells: Vec<Option<Range<usize>>>,
     row: u64,
     max_rows: u64,
     /// The first error, returned again by every later `next_row`: after a refusal the byte
@@ -223,12 +313,15 @@ impl<R: Read> std::fmt::Debug for CsvSource<R> {
 }
 
 impl<R: Read> CsvSource<R> {
-    /// Read the header from `reader` and bind its columns to `map`.
+    /// Read the header from `reader` and bind its columns to `map`. Header names are trimmed of
+    /// their padding before they are compared, with each other and with the names asked for.
     ///
     /// # Errors
-    /// [`SourceError::Limit`]; `BadDelimiter`; `TooManyBytes`; `TooManyColumns`; `CellTooLong`
-    /// (row 0); `NotUtf8` (row 0); `DuplicateColumn`; `MissingColumn` for the time column or a
-    /// mapped column (time first, then slot order); `Read` for a reader failure.
+    /// [`SourceError::Limit`]; `BadDelimiter`; `PaddedMissingToken` for the first missing token
+    /// whose first or last byte is a space or a tab; `TooManyBytes`; `TooManyColumns`;
+    /// `CellTooLong` (row 0); `NotUtf8` (row 0); `DuplicateColumn`, two names equal once trimmed
+    /// included; `MissingColumn` for the time column, a mapped column or a text column (time
+    /// first, then slot order, then text-column order); `Read` for a reader failure.
     pub fn new(
         map: &InputMap,
         reader: R,
@@ -239,6 +332,18 @@ impl<R: Read> CsvSource<R> {
         let d = format.delimiter;
         if !d.is_ascii() || matches!(d, b'"' | b'\r' | b'\n') {
             return Err(SourceError::BadDelimiter { delimiter: d });
+        }
+        let padded = |token: &&String| {
+            let bytes = token.as_bytes();
+            [bytes.first(), bytes.last()]
+                .into_iter()
+                .flatten()
+                .any(|byte| matches!(byte, b' ' | b'\t'))
+        };
+        if let Some(token) = format.missing_tokens.iter().find(padded) {
+            return Err(SourceError::PaddedMissingToken {
+                token: token.clone(),
+            });
         }
         let max_cell = limits.max_cell_bytes as usize;
         let max_columns = limits.max_columns as usize;
@@ -255,6 +360,7 @@ impl<R: Read> CsvSource<R> {
             cell: vec![0; max_cell + 1],
             record: Vec::new(),
             ends: Vec::new(),
+            core_read: false,
         };
         let too_many = || SourceError::TooManyColumns {
             limit: limits.max_columns,
@@ -288,6 +394,12 @@ impl<R: Read> CsvSource<R> {
                 column: column.to_owned(),
             })?);
         }
+        let mut text_fields = Vec::with_capacity(format.text_columns.len());
+        for column in &format.text_columns {
+            text_fields.push(position(column).ok_or_else(|| SourceError::MissingColumn {
+                column: column.clone(),
+            })?);
+        }
         let ignored = names
             .iter()
             .enumerate()
@@ -311,14 +423,33 @@ impl<R: Read> CsvSource<R> {
                 .collect(),
             ignored,
             cells: vec![None; map.len()],
+            text_cells: vec![None; text_fields.len()],
+            text_fields,
+            text: String::new(),
             row: 0,
             max_rows: limits.max_rows,
             failed: None,
         })
     }
 
+    /// The text cells of the row the last [`FrameSource::next_row`] call returned, one per
+    /// [`CsvFormat::text_columns`] entry, in that order: the cell's text, trimmed of its padding
+    /// as every cell is, or `None` for a missing cell (empty once trimmed, or a missing token).
+    /// Every item is `None` before the first row and after a call that returned no row.
+    ///
+    /// The text is the cell as the file spells it, checked as UTF-8 and held to
+    /// `max_cell_bytes`; no rule of any kind's parse is applied, so a caller applies its own.
+    /// Reading the row that holds it refuses a text cell that is not UTF-8 (`NotUtf8`), after
+    /// the time and the mapped cells.
+    pub fn text_cells(&self) -> impl ExactSizeIterator<Item = Option<&str>> + '_ {
+        // Each span is the bounds of one `push_str` into `text`, so it falls on char boundaries.
+        self.text_cells
+            .iter()
+            .map(|span| span.clone().map(|span| &self.text[span]))
+    }
+
     fn parse_time(&self, cell: &[u8], row: u64) -> Result<f64, SourceError> {
-        if cell.is_empty() || self.missing.iter().any(|m| m.as_slice() == cell) {
+        if is_missing(cell, &self.missing) {
             return Err(SourceError::MissingTime { row });
         }
         let text = std::str::from_utf8(cell).map_err(|_| SourceError::NotUtf8 {
@@ -387,6 +518,7 @@ impl<R: Read> FrameSource for CsvSource<R> {
             Ok(Some(t)) => Ok(Some((t, &self.cells))),
             Ok(None) => Ok(None),
             Err(error) => {
+                self.text_cells.fill(None);
                 self.failed = Some(error.clone());
                 Err(error)
             }
@@ -395,8 +527,11 @@ impl<R: Read> FrameSource for CsvSource<R> {
 }
 
 impl<R: Read> CsvSource<R> {
-    /// Tokenize and parse the next record into `cells`; its time, or `None` at the end.
+    /// Tokenize and parse the next record into `cells` and `text_cells`; its time, or `None` at
+    /// the end.
     fn read_row(&mut self) -> Result<Option<f64>, SourceError> {
+        self.text.clear();
+        self.text_cells.fill(None);
         let row = self.row + 1;
         if !self
             .bytes
@@ -417,17 +552,27 @@ impl<R: Read> CsvSource<R> {
         for slot in 0..self.cells.len() {
             let field = self.fields[slot];
             let cell = self.bytes.field(field);
-            self.cells[slot] =
-                if cell.is_empty() || self.missing.iter().any(|m| m.as_slice() == cell) {
-                    None
-                } else {
-                    let text = std::str::from_utf8(cell)
-                        .map_err(|_| SourceError::NotUtf8 { row, field })?;
-                    parse_cell(text, self.types[slot]).ok_or_else(|| SourceError::BadCell {
-                        row,
-                        column: self.names[slot].clone(),
-                    })?
-                };
+            self.cells[slot] = if is_missing(cell, &self.missing) {
+                None
+            } else {
+                let text =
+                    std::str::from_utf8(cell).map_err(|_| SourceError::NotUtf8 { row, field })?;
+                parse_cell(text, self.types[slot]).ok_or_else(|| SourceError::BadCell {
+                    row,
+                    column: self.names[slot].clone(),
+                })?
+            };
+        }
+        for (index, &field) in self.text_fields.iter().enumerate() {
+            let cell = self.bytes.field(field);
+            if is_missing(cell, &self.missing) {
+                continue;
+            }
+            let text =
+                std::str::from_utf8(cell).map_err(|_| SourceError::NotUtf8 { row, field })?;
+            let start = self.text.len();
+            self.text.push_str(text);
+            self.text_cells[index] = Some(start..self.text.len());
         }
         Ok(Some(t))
     }

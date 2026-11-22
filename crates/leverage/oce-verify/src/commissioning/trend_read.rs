@@ -1,12 +1,14 @@
 //! Reading one trend source's file into converted columns (issue #660).
 //!
 //! A `csv` file is read by replay's own [`CsvSource`], under replay's caps, never by a second CSV
-//! reader: a synthetic input map with one Real input per `float` or `int` device column and one
-//! Boolean input per `bool` device column hands each mapped column to it by header name. So a
-//! number is read by Rust's `f64` grammar (correctly rounded; `inf` and `infinity` are values,
-//! `nan` is missing), a Boolean as `true`, `false`, `1` or `0` (no `active` or `inactive`: the
-//! owner's ruling of 2026-11-21, until replay can hand a text cell over), and an empty cell,
-//! `NA` or `NaN` is missing. A `combiTimeTable` is read by [`read_matrix`].
+//! reader: a synthetic input map with one Real input per `float` or `int` device column hands
+//! each of those to it by header name, and each `bool` device column is one of its text columns
+//! (issue #728), handed over unparsed. Replay trims the spaces and tabs around every unquoted
+//! cell and header name first (issue #733), so OBC §12.7.3's padded files read. So a number is
+//! read by Rust's `f64` grammar (correctly rounded; `inf` and `infinity` are values, `nan` is
+//! missing), a Boolean by [`boolean_from_text`] (`true`, `false`, `active`, `inactive`, `1` or
+//! `0`), and an empty cell, `NA` or `NaN` is missing. A `combiTimeTable` is read by
+//! [`read_matrix`].
 //!
 //! Then every cell is converted exactly once: an infinity is refused (`non-finite-number`; the
 //! owner's ruling of 2026-11-21), the point's [`CellRule`] gives a value of its CDL type, and
@@ -32,7 +34,7 @@ use super::combi_time_table::read_matrix;
 use super::source_error::{SourceError, SourceErrorKind as Kind};
 use super::trend_plan::{Address, PlannedColumn, PlannedSource, TimeAddress};
 use super::type_rules::{
-    CellRule, boolean_from_number, integer_from_boolean, integer_from_number,
+    CellRule, boolean_from_number, boolean_from_text, integer_from_boolean, integer_from_number,
     real_from_whole_number,
 };
 
@@ -85,10 +87,11 @@ pub(crate) struct ReadSource {
 }
 
 /// A cell as the file gives it.
-enum Raw {
+enum Raw<'a> {
     Missing,
     Number(f64),
-    Boolean(bool),
+    /// A `csv` cell of a `bool` device column, trimmed of its padding.
+    Text(&'a str),
 }
 
 /// The bytes one row of a source keeps: its time and each column.
@@ -110,7 +113,7 @@ fn too_many_bytes(rows: u64, limits: &ReplayLimits) -> SourceError {
 }
 
 /// Convert one cell of `column` and append it.
-fn push(column: &PlannedColumn, raw: Raw, into: &mut Values) -> Result<(), SourceError> {
+fn push(column: &PlannedColumn, raw: Raw<'_>, into: &mut Values) -> Result<(), SourceError> {
     let refused = |kind: Kind, detail: String, cause: Option<&'static str>| {
         let error = SourceError::new(kind, detail);
         match cause {
@@ -150,14 +153,20 @@ fn push(column: &PlannedColumn, raw: Raw, into: &mut Values) -> Result<(), Sourc
             }
             _ => integer_from_number(x).map_err(cell)?,
         })),
-        (Values::Integer(values), Raw::Boolean(b)) => values.push(Some(integer_from_boolean(b))),
+        (Values::Integer(values), Raw::Text(text)) => {
+            values.push(Some(integer_from_boolean(
+                boolean_from_text(text).map_err(cell)?,
+            )));
+        }
         (Values::Boolean(values), Raw::Number(x)) => {
             values.push(Some(boolean_from_number(x).map_err(cell)?));
         }
-        (Values::Boolean(values), Raw::Boolean(b)) => values.push(Some(b)),
-        // A Boolean cell comes only from a `bool` device column, whose CDL side is never a
-        // Real (`type-pair-refused` at planning).
-        (Values::Real(_), Raw::Boolean(_)) => {
+        (Values::Boolean(values), Raw::Text(text)) => {
+            values.push(Some(boolean_from_text(text).map_err(cell)?));
+        }
+        // A text cell comes only from a `bool` device column, whose CDL side is never a Real
+        // (`type-pair-refused` at planning).
+        (Values::Real(_), Raw::Text(_)) => {
             return Err(refused(
                 Kind::BadCell,
                 "a Boolean cell in a Real column".to_owned(),
@@ -262,11 +271,31 @@ fn next_time(times: &[f64], t: f64, row: u64, column: &str) -> Result<f64, Sourc
     Ok(t)
 }
 
-/// The synthetic input map that hands each planned column of a `csv` file to [`CsvSource`].
-fn csv_map(columns: &[PlannedColumn]) -> Result<InputMap, SourceError> {
+/// Where [`CsvSource`] hands one planned column of a `csv` file over.
+#[derive(Clone, Copy)]
+enum CsvCell {
+    /// A Real input of the synthetic map, at this slot.
+    Slot(usize),
+    /// The next of its text cells, in plan order.
+    Text,
+}
+
+/// How a `csv` file is handed to [`CsvSource`]: the synthetic input map with one Real input per
+/// planned `float` or `int` device column, the header names of the `bool` device columns, read
+/// as text, and where each planned column is read, in plan order.
+struct CsvPlan {
+    map: InputMap,
+    texts: Vec<String>,
+    cells: Vec<CsvCell>,
+}
+
+/// The [`CsvPlan`] of `columns`.
+fn csv_plan(columns: &[PlannedColumn]) -> Result<CsvPlan, SourceError> {
     let mut inputs = Vec::with_capacity(columns.len());
     let mut specs = Vec::with_capacity(columns.len());
     let mut map = ColumnMap::default();
+    let mut texts = Vec::new();
+    let mut cells = Vec::with_capacity(columns.len());
     for (index, column) in columns.iter().enumerate() {
         let Address::Name(name) = &column.address else {
             return Err(SourceError::new(
@@ -274,23 +303,27 @@ fn csv_map(columns: &[PlannedColumn]) -> Result<InputMap, SourceError> {
                 "a csv column is a header name",
             ));
         };
-        // Zero-padded, so the paths are in canonical order; a file has at most 4,096 columns.
+        if column.device_type == PointType::Bool {
+            texts.push(name.clone());
+            cells.push(CsvCell::Text);
+            continue;
+        }
+        // Zero-padded, so the paths are in canonical order, and slot order is plan order; a
+        // file has at most 4,096 columns.
         let path = format!("c{index:05}");
-        let (value_type, kind) = match column.device_type {
-            PointType::Bool => (ValueType::Boolean, ColumnKind::Boolean),
-            PointType::Float | PointType::Int => (ValueType::Real, ColumnKind::Real),
-        };
+        cells.push(CsvCell::Slot(inputs.len()));
         inputs.push(InputDefinition {
             path: path.clone(),
-            value_type,
+            value_type: ValueType::Real,
             min: None,
             max: None,
         });
-        specs.push(ColumnSpec::new(name.clone(), kind));
+        specs.push(ColumnSpec::new(name.clone(), ColumnKind::Real));
         map.entries.push((name.clone(), path));
     }
-    InputMap::resolve(&inputs, &specs, &map, &MissingPolicy::Refuse, &[])
-        .map_err(|error| SourceError::new(Kind::Unreadable, error.to_string()))
+    let map = InputMap::resolve(&inputs, &specs, &map, &MissingPolicy::Refuse, &[])
+        .map_err(|error| SourceError::new(Kind::Unreadable, error.to_string()))?;
+    Ok(CsvPlan { map, texts, cells })
 }
 
 /// A replay refusal of a `csv` file, in this crate's words.
@@ -346,6 +379,7 @@ const PROBE_ORIGIN: &str = "1970-01-01T00:00:00Z";
 
 fn csv_source<'b>(
     map: &InputMap,
+    texts: &[String],
     bytes: &'b [u8],
     time: &str,
     kind: CsvTime,
@@ -353,6 +387,7 @@ fn csv_source<'b>(
 ) -> Result<CsvSource<&'b [u8]>, SourceError> {
     let format = CsvFormat {
         time: kind,
+        text_columns: texts.to_vec(),
         ..CsvFormat::seconds(time)
     };
     CsvSource::new(map, bytes, format, limits).map_err(|error| from_replay(&error, time))
@@ -365,13 +400,14 @@ fn csv_source<'b>(
 /// refusals.
 fn time_kind(
     source: &PlannedSource,
-    map: &InputMap,
+    plan: &CsvPlan,
     bytes: &[u8],
     time: &str,
     origin: Option<&TimeOrigin>,
     limits: &ReplayLimits,
 ) -> Result<CsvTime, SourceError> {
-    let mut seconds = csv_source(map, bytes, time, CsvTime::Seconds, limits)?;
+    let source_of = |kind| csv_source(&plan.map, &plan.texts, bytes, time, kind, limits);
+    let mut seconds = source_of(CsvTime::Seconds)?;
     let not_seconds = match seconds.next_row() {
         Err(ReplaySourceError::BadCell { row: 1, column }) => column == time,
         _ => false,
@@ -386,7 +422,7 @@ fn time_kind(
     }
     let probe = TimeOrigin::parse(PROBE_ORIGIN)
         .map_err(|error| SourceError::new(Kind::Unreadable, error.to_string()))?;
-    let mut instants = csv_source(map, bytes, time, CsvTime::Instant { origin: probe }, limits)?;
+    let mut instants = source_of(CsvTime::Instant { origin: probe })?;
     // Replay reads a row's time before its cells, so a cell it refuses after the time means
     // the time was read as an instant.
     let instant = match instants.next_row() {
@@ -413,9 +449,9 @@ fn read_csv(
     origin: Option<&TimeOrigin>,
     limits: &ReplayLimits,
 ) -> Result<ReadSource, SourceError> {
-    let map = csv_map(&source.columns)?;
-    let kind = time_kind(source, &map, bytes, time, origin, limits)?;
-    let mut reader = csv_source(&map, bytes, time, kind, limits)?;
+    let plan = csv_plan(&source.columns)?;
+    let kind = time_kind(source, &plan, bytes, time, origin, limits)?;
+    let mut reader = csv_source(&plan.map, &plan.texts, bytes, time, kind, limits)?;
     let per_row = row_bytes(&source.columns);
     let mut times: Vec<f64> = Vec::new();
     let mut columns: Vec<Values> = source
@@ -424,9 +460,22 @@ fn read_csv(
         .map(|column| Values::for_type(column.cdl_type, 0))
         .collect();
     let mut rows: u64 = 0;
+    // The row's slot cells, copied out so its text cells can be read beside them.
+    let mut numbers: Vec<Option<f64>> = Vec::with_capacity(plan.map.len());
+    let unexpected = || SourceError::new(Kind::Unreadable, "an unexpected cell type");
     loop {
-        let (t, cells) = match reader.next_row() {
-            Ok(Some(row)) => row,
+        let t = match reader.next_row() {
+            Ok(Some((t, cells))) => {
+                numbers.clear();
+                for cell in cells {
+                    numbers.push(match cell {
+                        None => None,
+                        Some(Value::Real(x)) => Some(*x),
+                        Some(_) => return Err(unexpected()),
+                    });
+                }
+                t
+            }
             Ok(None) => break,
             Err(error) => return Err(from_replay(&error, time)),
         };
@@ -435,17 +484,19 @@ fn read_csv(
             return Err(too_many_bytes(rows, limits));
         }
         times.push(next_time(&times, t, rows, time)?);
-        for ((column, cell), values) in source.columns.iter().zip(cells).zip(&mut columns) {
-            let raw = match cell {
-                None => Raw::Missing,
-                Some(Value::Real(x)) => Raw::Number(*x),
-                Some(Value::Boolean(b)) => Raw::Boolean(*b),
-                Some(_) => {
-                    return Err(SourceError::new(
-                        Kind::Unreadable,
-                        "an unexpected cell type",
-                    ));
-                }
+        let mut texts = reader.text_cells();
+        for ((column, via), values) in source.columns.iter().zip(&plan.cells).zip(&mut columns) {
+            let raw = match via {
+                CsvCell::Slot(slot) => match numbers.get(*slot) {
+                    Some(None) => Raw::Missing,
+                    Some(Some(x)) => Raw::Number(*x),
+                    None => return Err(unexpected()),
+                },
+                CsvCell::Text => match texts.next() {
+                    Some(None) => Raw::Missing,
+                    Some(Some(text)) => Raw::Text(text),
+                    None => return Err(unexpected()),
+                },
             };
             push(column, raw, values)
                 .map_err(|error| error.at_row(rows).at_column(&column.address.label()))?;
@@ -467,7 +518,8 @@ fn read_csv(
 ///
 /// The first name is taken from the file's first record as `csv-core` writes it, which replay's
 /// reader then confirms, so the header is still read by [`CsvSource`]: blank lines before it
-/// are skipped, a leading byte-order mark too, and a quoted name is unquoted with `""` as `"`.
+/// are skipped, a leading byte-order mark too, a quoted name is unquoted with `""` as `"`, and
+/// an unquoted one loses the spaces and tabs at either end, as replay trims every header name.
 ///
 /// # Errors
 /// `no-header` for a file with no record; `cell-too-long` for a first name past the cap;
@@ -526,13 +578,24 @@ pub(crate) fn controller_output_header(
                 return Err(too_long());
             }
         }
+        // Replay trims the spaces and tabs around an unquoted header name, after its cap.
+        let end = first
+            .iter()
+            .rposition(|byte| !matches!(byte, b' ' | b'\t'))
+            .map_or(0, |last| last + 1);
+        first.truncate(end);
+        let start = first
+            .iter()
+            .position(|byte| !matches!(byte, b' ' | b'\t'))
+            .unwrap_or(first.len());
+        first.drain(..start);
     }
     let time = String::from_utf8(first).map_err(|_| {
         SourceError::new(Kind::NotUtf8, "the first header is not UTF-8").at_column(&field_label(0))
     })?;
     let empty = InputMap::resolve(&[], &[], &ColumnMap::default(), &MissingPolicy::Refuse, &[])
         .map_err(|error| SourceError::new(Kind::Unreadable, error.to_string()))?;
-    let reader = csv_source(&empty, bytes, &time, CsvTime::Seconds, limits)?;
+    let reader = csv_source(&empty, &[], bytes, &time, CsvTime::Seconds, limits)?;
     let points = reader.ignored_columns().to_vec();
     if points.is_empty() {
         return Err(SourceError::new(

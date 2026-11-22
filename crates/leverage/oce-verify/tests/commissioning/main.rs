@@ -27,6 +27,7 @@ mod trend_fixture;
 mod trend_formats;
 mod trend_holds;
 mod trend_hostile;
+mod trend_padded_files;
 
 use oce_verify::{
     CommissioningSpec, Location, PointMapping, SourceError, SpecError, SpecInputs, SpecLimits,

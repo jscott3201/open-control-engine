@@ -1,0 +1,21 @@
+exit: 2
+--- stdout
+{
+  "command": "diff",
+  "errors": [
+    {
+      "at": "base",
+      "code": "missing-from",
+      "detail": "reading stdin needs --from cxf, --from text or --from wire",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": null,
+  "head": "tests/fixtures/inputs/diff/reference.oce",
+  "input": "-",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

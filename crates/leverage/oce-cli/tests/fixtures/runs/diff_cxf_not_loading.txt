@@ -1,0 +1,24 @@
+exit: 2
+--- stdout
+{
+  "command": "diff",
+  "errors": [
+    {
+      "at": "head",
+      "code": "not-loadable",
+      "detail": "the engine refused to load the head: CXF ingest error: CXF validation failed with 1 diagnostic(s)",
+      "diagnostic_codes": [
+        "class-not-found"
+      ],
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": "cxf",
+  "head": "tests/fixtures/inputs/verify/unknown_class.cxf.json",
+  "input": "../oce-author/tests/fixtures/emit/econ_enable.cxf.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

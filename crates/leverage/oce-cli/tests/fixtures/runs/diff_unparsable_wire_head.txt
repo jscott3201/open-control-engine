@@ -1,0 +1,24 @@
+exit: 2
+--- stdout
+{
+  "command": "diff",
+  "errors": [
+    {
+      "at": "head",
+      "code": "duplicate-key",
+      "detail": "duplicate key `sequence` at line 3 column 3",
+      "span": {
+        "column": 3,
+        "line": 3
+      }
+    }
+  ],
+  "findings": [],
+  "form": "wire",
+  "head": "tests/fixtures/inputs/malformed.json",
+  "input": "../oce-author/tests/fixtures/wire/econ_enable.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

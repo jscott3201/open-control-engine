@@ -13,8 +13,9 @@
 //! There is no threshold: a `0.5` in a Boolean column is refused, where the upstream model's
 //! `GreaterThreshold(t = 0.5)` would read it as a state and a sensor fault with it (decision 19).
 //! Text is compared byte for byte, with no trimming and no case folding. A text cell is read by
-//! [`boolean_from_text`] only in a column whose device type is `bool`; a number in any column is
-//! read by the number rules.
+//! [`boolean_from_text`] only in a column whose device type is `bool`, which is how a `csv` file's
+//! `bool` device column is read (replay's reader hands the cell over as text, its padding
+//! trimmed, issues #728 and #733); a number in any column is read by the number rules.
 //!
 //! Each function decides one cell and returns the typed cause of a refusal, [`CellError`]; the
 //! trend source that reads the cell (#660) adds its file, row and column. Nothing here allocates
@@ -95,14 +96,6 @@ pub(crate) fn boolean_from_number(value: f64) -> Result<bool, CellError> {
 /// # Errors
 ///
 /// [`CellError::NotBooleanText`] for every other text, the empty one included.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "replay's CsvSource hands a csv cell over typed, never as text (owner ruling, \
-                  2026-11-21); the text rule waits for a replay reader that does"
-    )
-)]
 pub(crate) fn boolean_from_text(text: &str) -> Result<bool, CellError> {
     match text {
         "true" | "active" | "1" => Ok(true),
@@ -157,14 +150,6 @@ pub(crate) enum CellError {
         value: f64,
     },
     /// A text cell in a Boolean column that is none of the six spellings.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "replay's CsvSource hands a csv cell over typed, never as text (owner ruling, \
-                      2026-11-21); the text rule waits for a replay reader that does"
-        )
-    )]
     NotBooleanText {
         /// The text, as an excerpt (printable ASCII, cut at 64 bytes).
         text: String,

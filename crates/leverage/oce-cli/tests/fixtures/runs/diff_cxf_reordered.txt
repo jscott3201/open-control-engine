@@ -1,0 +1,45 @@
+exit: 0
+--- stdout
+{
+  "command": "diff",
+  "diff": {
+    "base": {
+      "derived_from": null,
+      "sequence": "plant_enable"
+    },
+    "catalog": "catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892",
+    "graph": [],
+    "head": {
+      "derived_from": null,
+      "sequence": "plant_enable"
+    },
+    "interface": [],
+    "metadata": [],
+    "notes": [],
+    "parameters": [],
+    "schema": "oce-diff/1",
+    "source": "cxf",
+    "summary": {
+      "blocks": {
+        "base_only": 0,
+        "by_name": 2,
+        "head_only": 0,
+        "renamed": 0
+      },
+      "equal": true,
+      "graph_equal": true,
+      "interface_equal": true,
+      "metadata_equal": null,
+      "parameters_equal": null
+    }
+  },
+  "errors": [],
+  "findings": [],
+  "form": "cxf",
+  "head": "reordered.jsonld",
+  "input": "reference.jsonld",
+  "ok": true,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

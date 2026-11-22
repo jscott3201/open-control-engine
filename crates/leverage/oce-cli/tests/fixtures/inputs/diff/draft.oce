@@ -1,0 +1,16 @@
+# Plant enable, an agent's draft: it parses, and the validator refuses it.
+sequence plant_enable
+derived_from none
+
+in uReq : Boolean
+in uPlaEna : Boolean
+out yEna : Boolean
+
+block ena = CDL.Logical.Andd
+block hold = CDL.Logical.TrueDelay(delayOnInit = true)
+block hold = CDL.Logical.Not
+
+uPlaEna -> ena.u1
+uReq -> ena.u2
+ena.y -> hold.u
+hold.y -> yEna
