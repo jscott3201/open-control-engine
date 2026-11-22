@@ -11,6 +11,7 @@
 //! | [`VerifyLimits::max_total_frames`] | `(N + 1) * s * (1 + m)` | `too-many-frames` |
 //! | [`VerifyLimits::max_total_instants`] | `(1 + m) * sum(I_j)` | `too-many-instants` |
 //! | [`VerifyLimits::compare`] | each tolerance window's ticks | `too-many-points` |
+//! | [`VerifyLimits::max_total_aligned_grid_work`] | `(1 + m) * sum(T_w^2)` over `aligned-grid` windows | `too-many-points` |
 //! | [`VerifyLimits::max_total_load_bytes`] | `D * (1 + e + s)` | `too-many-load-bytes` |
 //! | [`VerifyLimits::max_total_frame_bytes`] | `(N + 1) * s * D` | `too-many-frame-bytes` |
 //!
@@ -138,12 +139,16 @@ fn exceeds(total: Option<u128>, limit: u64) -> bool {
 }
 
 /// Hold each tolerance window of `scenarios`, in file order, to the point cap `limits.compare`
-/// gives `envelope`.
+/// gives `envelope`; then, under `aligned-grid`, the sum of every tolerance window's ticks
+/// squared, times `1 + mutants`, to [`VerifyLimits::max_total_aligned_grid_work`] (owner ruling
+/// of 2026-11-21: that envelope's work is quadratic in a window's ticks).
 ///
 /// # Errors
-/// `too-many-points` at the first window with more ticks than the cap.
+/// `too-many-points` at the first window with more ticks than the cap, else at `scenarios` for
+/// the quadratic work.
 fn check_points(
     scenarios: &[BoundScenario],
+    mutants: u128,
     envelope: Envelope,
     limits: &VerifyLimits,
 ) -> Result<(), VerifyError> {
@@ -152,6 +157,7 @@ fn check_points(
         Envelope::AlignedGrid => limits.compare.max_aligned_grid_points,
     };
     let cap = u64::try_from(cap).unwrap_or(u64::MAX);
+    let mut squares = 0_u128;
     for (index, scenario) in scenarios.iter().enumerate() {
         for (position, expectation) in scenario.expectations.iter().enumerate() {
             let BoundExpectation::Window(window) = expectation else {
@@ -170,6 +176,23 @@ fn check_points(
                     ),
                 ));
             }
+            squares = squares.saturating_add(u128::from(ticks) * u128::from(ticks));
+        }
+    }
+    if envelope == Envelope::AlignedGrid {
+        let work = mutants
+            .checked_add(1)
+            .and_then(|runs| runs.checked_mul(squares));
+        if exceeds(work, limits.max_total_aligned_grid_work) {
+            return Err(VerifyError::new(
+                Kind::TooManyPoints,
+                "scenarios",
+                format!(
+                    "the aligned-grid windows' ticks squared, on the subject and on each of {mutants} mutants, are {} units of work; at most {} are allowed",
+                    shown(work),
+                    limits.max_total_aligned_grid_work
+                ),
+            ));
         }
     }
     Ok(())
@@ -230,7 +253,7 @@ pub(crate) fn check(
             ),
         ));
     }
-    check_points(bound, envelope, limits)?;
+    check_points(bound, mutants, envelope, limits)?;
     let loaded = work.load_bytes();
     if exceeds(loaded, limits.max_total_load_bytes) {
         return Err(VerifyError::new(

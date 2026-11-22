@@ -11,7 +11,7 @@ use oce_verify::{
     VerifyLimits, VerifyOptions,
 };
 
-use support::{SIGNALS, body, only_scenario, receipt, refused, run, run_with, set_on, subject};
+use support::{SIGNALS, only_scenario, receipt, refused, run, run_with, set_on, subject};
 
 /// The `signals` subject's inputs with `ahu.T` (passed through to `ahu.y`) held as `ahu_t`, a
 /// JSON constant or step list.
@@ -660,9 +660,9 @@ fn a_set_with_an_envelope_and_no_tolerance_window_says_exact() {
     )
     .replacen('{', &format!("{{{ALIGNED}, "), 1);
     let receipt = receipt(&text, &subject("signals"));
-    assert_eq!(receipt.header.comparison.mode.as_str(), "exact");
-    assert_eq!(receipt.header.comparison.envelope, None);
-    assert_eq!(body(&receipt).funnel_reference, None);
+    assert_eq!(receipt.header.comparison.mode().as_str(), "exact");
+    assert_eq!(receipt.header.comparison.envelope(), None);
+    assert_eq!(receipt.funnel_reference(), None);
     let json = receipt.to_canonical_json();
     assert!(json.contains("\"comparison\": {\n    \"mode\": \"exact\"\n  },"));
     assert!(!json.contains("funnel_reference"));
@@ -680,7 +680,7 @@ fn an_exact_window_beside_a_tolerance_window_is_still_compared_by_bits() {
         ),
     );
     let receipt = receipt(&text, &subject("signals"));
-    assert_eq!(receipt.header.comparison.mode.as_str(), "tolerance");
+    assert_eq!(receipt.header.comparison.mode().as_str(), "tolerance");
     let scenario = only_scenario(&receipt);
     assert_eq!(scenario.instants.failed, 2);
     assert!(

@@ -78,8 +78,9 @@ pub enum VerifyErrorKind {
     /// type-blind, so a value between two levels could pass.
     ToleranceOnDiscreteOutput,
     /// A tolerance window holds more ticks than [`crate::CompareLimits`] allows for the set's
-    /// envelope (`max_funnel_points` or `max_aligned_grid_points`). Checked at bind's budget
-    /// step, straight after the instant budget.
+    /// envelope (`max_funnel_points` or `max_aligned_grid_points`), or, under `aligned-grid`, the
+    /// windows' ticks squared pass [`crate::VerifyLimits::max_total_aligned_grid_work`]. Checked
+    /// at bind's budget step, straight after the instant budget.
     TooManyPoints,
     /// The instants the set may compare, `(1 + mutants)` times its scenarios' window ticks and
     /// diagnostic expectations, are more than [`crate::VerifyLimits::max_total_instants`].

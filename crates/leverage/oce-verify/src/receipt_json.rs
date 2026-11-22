@@ -52,7 +52,10 @@ fn time(t: f64) -> Json {
 /// the document `receipt_id` hashes.
 pub(crate) fn receipt(receipt: &Receipt, identified: bool) -> Json {
     let mut entries = header(&receipt.header, identified);
-    entries.push(entry("body", body(&receipt.body)));
+    entries.push(entry(
+        "body",
+        body(&receipt.body, receipt.funnel_reference()),
+    ));
     Json::object(entries)
 }
 
@@ -82,21 +85,23 @@ fn header(header: &ReceiptHeader, identified: bool) -> Vec<(String, Json)> {
 
 /// `{ "mode" }`, with `envelope` and `envelope_version` when there is an envelope.
 fn comparison(comparison: &Comparison) -> Json {
-    let mut entries = vec![entry("mode", Json::str(comparison.mode.as_str()))];
-    if let (Some(envelope), Some(version)) = (comparison.envelope, comparison.envelope_version()) {
+    let mut entries = vec![entry("mode", Json::str(comparison.mode().as_str()))];
+    if let (Some(envelope), Some(version)) = (comparison.envelope(), comparison.envelope_version())
+    {
         entries.push(entry("envelope", Json::str(envelope.as_str())));
         entries.push(entry("envelope_version", Json::str(version)));
     }
     Json::object(entries)
 }
 
-fn body(body: &ReceiptBody) -> Json {
+/// The body, with the `funnel_reference` [`Receipt::funnel_reference`] reads off the header.
+fn body(body: &ReceiptBody, funnel_reference: Option<&'static str>) -> Json {
     match body {
-        ReceiptBody::Vectors(vectors) => vector_body(vectors),
+        ReceiptBody::Vectors(vectors) => vector_body(vectors, funnel_reference),
     }
 }
 
-fn vector_body(body: &VectorBody) -> Json {
+fn vector_body(body: &VectorBody, funnel_reference: Option<&'static str>) -> Json {
     let mut entries = vec![
         entry("status", Json::str(body.status.as_str())),
         entry(
@@ -125,7 +130,7 @@ fn vector_body(body: &VectorBody) -> Json {
             Json::List(body.scenarios.iter().map(scenario).collect()),
         ),
     ];
-    if let Some(reference) = body.funnel_reference {
+    if let Some(reference) = funnel_reference {
         entries.push(entry("funnel_reference", Json::str(reference)));
     }
     if let Some(mutants) = &body.mutants {

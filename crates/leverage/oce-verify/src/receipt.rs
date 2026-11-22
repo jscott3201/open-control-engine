@@ -73,13 +73,13 @@ impl ComparisonMode {
 /// mode has no envelope, so the object is `{ "mode": "exact" }` (decision 32); the tolerance
 /// mode's is `{ "mode": "tolerance", "envelope", "envelope_version" }` (decision 42), the
 /// version naming the arithmetic ([`Envelope::version`]).
-#[non_exhaustive]
+///
+/// Built only by [`Comparison::exact`] and [`Comparison::tolerance`], so the tolerance mode always
+/// has an envelope and the exact mode never does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Comparison {
-    /// The comparison mode.
-    pub mode: ComparisonMode,
-    /// The envelope of the tolerance mode; `None` under [`ComparisonMode::Exact`].
-    pub envelope: Option<Envelope>,
+    mode: ComparisonMode,
+    envelope: Option<Envelope>,
 }
 
 impl Comparison {
@@ -99,6 +99,18 @@ impl Comparison {
             mode: ComparisonMode::Tolerance,
             envelope: Some(envelope),
         }
+    }
+
+    /// The comparison mode.
+    #[must_use]
+    pub const fn mode(&self) -> ComparisonMode {
+        self.mode
+    }
+
+    /// The envelope of the tolerance mode; `None` under the exact mode.
+    #[must_use]
+    pub const fn envelope(&self) -> Option<Envelope> {
+        self.envelope
     }
 
     /// The version of the envelope's arithmetic, `funnel@a12fa96` or `aligned-grid@1`; `None`
@@ -516,10 +528,6 @@ pub struct VectorBody {
     pub load_warnings: Vec<String>,
     /// The number of load warnings before the cap.
     pub load_warnings_total: u64,
-    /// The series a tolerance window's envelope is built around: always
-    /// [`VECTOR_FUNNEL_REFERENCE`], the expectation (decision 38), present exactly when the
-    /// header's mode is `tolerance`.
-    pub funnel_reference: Option<&'static str>,
     /// Sums over every scenario.
     pub totals: Totals,
     /// One entry per scenario, in file order.
@@ -554,6 +562,17 @@ impl Receipt {
     #[must_use]
     pub fn to_canonical_json(&self) -> String {
         crate::receipt_json::receipt(self, true).to_document()
+    }
+
+    /// The body's `funnel_reference`: [`VECTOR_FUNNEL_REFERENCE`] for a vector receipt whose
+    /// header's mode is `tolerance`, `None` otherwise (decision 38). It is read off the header,
+    /// never stored, so the two cannot disagree.
+    #[must_use]
+    pub fn funnel_reference(&self) -> Option<&'static str> {
+        match (&self.body, self.header.comparison.mode()) {
+            (ReceiptBody::Vectors(_), ComparisonMode::Tolerance) => Some(VECTOR_FUNNEL_REFERENCE),
+            _ => None,
+        }
     }
 
     /// The identity of this receipt's content: `receipt:fnv1a128:` and the 32 lowercase hex

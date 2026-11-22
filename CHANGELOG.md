@@ -1049,7 +1049,9 @@ so far, and no tag is cut by the bump.
     first (its expectation against itself: `compare-refused` with the cause
     `reference-outside-envelope`, `non-finite-envelope` or the port's code), then the judgement.
     A `when` masks either window form; masked ticks count as `masked`, never `checked`. A
-    scenario whose `when` names an input keeps the inputs in its trace.
+    scenario whose `when` names an input keeps the inputs in its trace. The zero fill of a masked
+    tick stays, by owner ruling (2026-11-21): it shapes the band beside it under an `x`
+    tolerance or `rtoly`, as two pinned cases show; issue #745 revisits it.
   - **`oce/receipt/v1`.** `ComparisonMode::Tolerance`; `Comparison { mode, envelope }` writes
     `{ "mode": "tolerance", "envelope", "envelope_version" }` when a window of the set uses
     `within` (`funnel@a12fa96` or `aligned-grid@1`), and `{ "mode": "exact" }` otherwise; the body's
@@ -1058,12 +1060,16 @@ so far, and no tag is cut by the bump.
   - **Codes.** Load: `unknown-envelope`, `invalid-tolerance`, `of-not-from-window-start`,
     `of-step-after-window`, `when-empty`, `too-many-when-signals`. Bind: `when-unknown`,
     `when-ambiguous`, `when-not-boolean`, `tolerance-on-discrete-output`, `too-many-points`
-    (each window against the point cap of the set's envelope, after the instant budget). Run:
+    (each window against the point cap of the set's envelope, after the instant budget, and, by
+    owner ruling, an `aligned-grid` set's windows' ticks squared times one plus the mutants
+    against the new `VerifyLimits::max_total_aligned_grid_work`, 2^32). Run:
     `compare-refused`, its cause from `COMPARE_REFUSAL_CAUSES`. `VerifyLimits` gains
     `max_when_signals` (16) and `compare` (`CompareLimits`), both lower-only. `oce vocab` lists the
     twelve; its `unknown-key` meaning no longer names `within` and `when`.
   - **API.** `Window::equals` is an `Option`; `Window::within` (`Within`, `OfStep`) and
-    `Window::when`; `VectorSet::envelope`, `written_envelope`, `uses_tolerance`.
+    `Window::when`; `VectorSet::envelope`, `written_envelope`, `uses_tolerance`; `Comparison`
+    with private fields, built by `exact` and `tolerance`, read by `mode`, `envelope` and
+    `envelope_version`; `Receipt::funnel_reference`, read off the header.
   - **What moved.** No receipt of a set without a tolerance window, and no `spec_id` of a set
     without the keys, changes a byte; nothing is re-blessed but the schema and `oce vocab`'s two
     transcripts. New goldens: four tolerance receipts (pass, failure, masked under

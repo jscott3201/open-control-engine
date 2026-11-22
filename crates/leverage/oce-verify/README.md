@@ -172,6 +172,7 @@ measured against.
 | `VerifyLimits::max_total_load_bytes` | 2^30 = 1,073,741,824 | `too-many-load-bytes` | the subject's and the supplied mutants' bytes times `1 + e + s` (`e` distinct edit lists, `s` scenarios), at the budget step; the library's largest is 847,757 |
 | `VerifyLimits::max_total_frame_bytes` | 2^40 = 1,099,511,627,776 | `too-many-frame-bytes` | `(N + 1) * s` times the same bytes, a frame weighted by the document that runs it, at the budget step; the library's largest is 426,133,620 |
 | `VerifyLimits::max_when_signals` | 16 names per `when` | `too-many-when-signals`, at load | a mask costs its names times its window's ticks; the note's work bound |
+| `VerifyLimits::max_total_aligned_grid_work` | 2^32 = 4,294,967,296 | `too-many-points`, at the budget step | `(1 + mutants)` times every `aligned-grid` tolerance window's ticks squared: that envelope is quadratic in a window's ticks. Four windows at the 32,768-point cap fit; measured on arm64, the largest admitted run takes 2.4 s (release) or 45 s (debug), where funnel at its 1,048,576-point cap takes 0.16 s (release) or 1.7 s (debug), linearly (owner ruling of 2026-11-21) |
 | `VerifyLimits::compare` | `CompareLimits::MAX` | `too-many-points` (a tolerance window past the cap of the set's envelope, at the budget step), else `compare-refused` with `work-limit-exceeded` | the limits each envelope comparison runs under: 1,048,576 points for `funnel`, 32,768 for `aligned-grid`, 2^28 units of loop-removal work |
 | `VerifyLimits::replay` | `ReplayLimits::MAX` | `too-many-frames` (its `max_frames` against one scenario's `N + 1`, at bind), else `replay-failed` | the limits each scenario's replay runs under |
 | `VerifyLimits::max_recorded_failures` | 16 per scenario | none: the list stops, `failures_total` keeps the count | the note's failure-record cap |
@@ -362,7 +363,7 @@ A replay that ends in an error is `replay-failed` with a cause from a closed tab
 | `too-many-frames` | the frame budget, or one scenario's `N + 1` past the replay limits |
 | `when-unknown`, `when-ambiguous`, `when-not-boolean` | a `when` name that matches no input or output, matches several, or names a port that is not a Boolean |
 | `tolerance-on-discrete-output` | a tolerance window on a Boolean or Integer output |
-| `too-many-points` | a tolerance window with more ticks than `CompareLimits` allows the set's envelope (1,048,576 for `funnel`, 32,768 for `aligned-grid`), checked straight after the instant budget |
+| `too-many-points` | a tolerance window with more ticks than `CompareLimits` allows the set's envelope (1,048,576 for `funnel`, 32,768 for `aligned-grid`), or an `aligned-grid` set whose windows' ticks squared pass `max_total_aligned_grid_work`, checked straight after the instant budget |
 | `too-many-instants`, `too-many-load-bytes`, `too-many-frame-bytes` | the compared-instant, load-byte and byte-frame budgets |
 | `mutant-missing`, `mutant-unlisted`, `duplicate-mutant` | mutant bytes not given, given for a path the set does not list, or given twice |
 | `too-many-mutant-bytes` | the mutants' bytes together |
@@ -433,7 +434,8 @@ state snapshot of the same build records, without the Cargo version's pre-releas
 "tolerance", "envelope", "envelope_version" }` with `funnel` and `funnel@a12fa96` or
 `aligned-grid` and `aligned-grid@1`. The body holds the set's `status` (`pass`, `fail` or
 `no_data`), its `clock` as written, the load-warning codes (at most 64, `load_warnings_total`
-beside them), `funnel_reference` (always `expectation`) under the tolerance mode, the totals, and
+beside them), `funnel_reference` (always `expectation`, read off the header's mode by
+`Receipt::funnel_reference`) under the tolerance mode, the totals, and
 one object per scenario: its verdict, its effective parameter edits by canonical path with the
 `content_id` of what ran when it has any, frame and instant counts (`masked` counts the ticks a
 `when` excluded), failure records (`value-mismatch`, `tolerance-exceeded` with its `expected`,
@@ -500,6 +502,21 @@ with an expected signal under the set's envelope, on the window's ticks only:
 - **the judgement** is a second call, with the output: an instant's exceedance is the error at
   its tick, `max(0, y - y_up) - min(0, y - y_low)`; exactly zero passes, anything above is a
   `tolerance-exceeded` record. `aligned-grid`'s errors between ticks are not read.
+
+**What a masked tick does to its neighbours** (owner ruling of 2026-11-21). A masked tick is
+never judged, but its zero is part of the reference the band is built from, as OBC §12.7.2
+step 8 has it, so it shapes the band beside it. Two measured cases, pinned in
+`tests/tolerance_masks.rs`:
+
+- `of` 100 with `within {"atolx": 60, "atoly": 1}` and the mask false only at 300 s: an output
+  of 0 at 360 s passes with the mask and fails by 99 without it, because the rectangle around
+  the zero at 300 s reaches 360 s;
+- `of` 100, then 110 from 300 s, with `within {"rtoly": 0.1}` and only tick 0 masked: an output
+  of 95 at 120 s passes with the mask and fails by 4 without it, because the range goes from 10
+  to 110.
+
+A window whose every tick is masked adds nothing. Issue #745 revisits the rule with real library
+vectors, for vector sets and the commissioning run together.
 
 No output can turn a run into an error: with every bound and test value inside 2^1000, every
 error is finite. A refused frame cuts a tolerance window as it cuts an exact one. A scenario whose

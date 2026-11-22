@@ -45,7 +45,7 @@ use crate::parameters;
 use crate::receipt::{
     Comparison, FrameCounts, ParamEdit, RECEIPT_SCHEMA, Receipt, ReceiptBody, ReceiptHeader,
     ReceiptKind, ReceiptValue, ScenarioCounts, ScenarioReceipt, ScenarioStatus, Timings, Totals,
-    VECTOR_FUNNEL_REFERENCE, VectorBody,
+    VectorBody,
 };
 use crate::refusal_classes::replay_failure_cause;
 use crate::vector_set::VectorSet;
@@ -188,7 +188,6 @@ pub fn run_vectors(
     }
     // Decision 42: `tolerance` when any window of the set uses `within`, whatever ran.
     let comparison = if set.uses_tolerance() {
-        body.funnel_reference = Some(VECTOR_FUNNEL_REFERENCE);
         Comparison::tolerance(set.envelope())
     } else {
         Comparison::exact()
@@ -558,7 +557,6 @@ fn vector_body(
         clock: *set.clock(),
         load_warnings: bound.load_warnings.clone(),
         load_warnings_total: bound.load_warnings_total,
-        funnel_reference: None,
         totals,
         scenarios,
         mutants: None,

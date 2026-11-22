@@ -262,21 +262,26 @@ fn the_header_names_the_subject_as_loaded_the_set_and_the_engine() {
         let set = set_of(&golden);
         if set.uses_tolerance() {
             assert_eq!(
-                header.comparison.mode.as_str(),
+                header.comparison.mode().as_str(),
                 "tolerance",
                 "{}",
                 golden.name
             );
-            assert_eq!(header.comparison.envelope, Some(set.envelope()));
+            assert_eq!(header.comparison.envelope(), Some(set.envelope()));
             assert_eq!(
                 header.comparison.envelope_version(),
                 Some(set.envelope().version())
             );
-            assert_eq!(body(&receipt).funnel_reference, Some("expectation"));
+            assert_eq!(receipt.funnel_reference(), Some("expectation"));
         } else {
-            assert_eq!(header.comparison.mode.as_str(), "exact", "{}", golden.name);
-            assert_eq!(header.comparison.envelope, None);
-            assert_eq!(body(&receipt).funnel_reference, None);
+            assert_eq!(
+                header.comparison.mode().as_str(),
+                "exact",
+                "{}",
+                golden.name
+            );
+            assert_eq!(header.comparison.envelope(), None);
+            assert_eq!(receipt.funnel_reference(), None);
         }
         assert_eq!(
             header.content_id,

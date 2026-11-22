@@ -95,6 +95,16 @@ pub struct VerifyLimits {
     /// with the cause `work-limit-exceeded`. Each field is lowered to its documented maximum,
     /// never raised.
     pub compare: CompareLimits,
+    /// Work the `aligned-grid` comparisons of one run may ask for: `(1 + mutants)` times the sum,
+    /// over the tolerance windows of a set whose envelope is `aligned-grid`, of each window's
+    /// ticks squared, since that envelope tests every grid point against every rectangle.
+    /// Maximum 2^32 = 4,294,967,296 (four windows at the aligned-grid point cap of 32,768
+    /// ticks, or fourteen days at 5 s); past it the refusal is `too-many-points`, at bind's
+    /// budget step, before any comparison work (owner ruling of 2026-11-21). Measured on arm64:
+    /// a window's two comparisons cost about one nanosecond per unit in a release build, and the
+    /// largest admitted run, four windows of 32,768 ticks, takes 2.4 s end to end in a release
+    /// build and 45 s in a debug one.
+    pub max_total_aligned_grid_work: u64,
     /// The limits each scenario's replay runs under ([`oce_replay::ReplayLimits`]); each field is
     /// lowered to that crate's documented maximum, never raised. A scenario whose `N + 1` ticks
     /// pass its `max_frames` is `too-many-frames` at bind; a replay stopped by another of them is
@@ -120,6 +130,7 @@ impl VerifyLimits {
         max_total_frame_bytes: 1 << 40,
         max_when_signals: 16,
         compare: CompareLimits::MAX,
+        max_total_aligned_grid_work: 1 << 32,
         replay: ReplayLimits::MAX,
     };
 
@@ -144,6 +155,9 @@ impl VerifyLimits {
             max_total_frame_bytes: self.max_total_frame_bytes.min(max.max_total_frame_bytes),
             max_when_signals: self.max_when_signals.min(max.max_when_signals),
             compare: self.compare.effective(),
+            max_total_aligned_grid_work: self
+                .max_total_aligned_grid_work
+                .min(max.max_total_aligned_grid_work),
             replay: lowered(&self.replay),
         }
     }
@@ -193,6 +207,7 @@ mod tests {
         assert_eq!(limits.max_total_frame_bytes, 1_099_511_627_776);
         assert_eq!(limits.max_when_signals, 16);
         assert_eq!(limits.compare, CompareLimits::MAX);
+        assert_eq!(limits.max_total_aligned_grid_work, 4_294_967_296);
         assert_eq!(limits.replay, ReplayLimits::MAX);
         assert_eq!(MAX_LOAD_WARNINGS, 64);
         assert_eq!(MAX_DEPTH, 8);
@@ -223,6 +238,7 @@ mod tests {
                 max_aligned_grid_points: 0,
                 max_loop_removal_work: 4,
             },
+            max_total_aligned_grid_work: 11,
             replay: ReplayLimits {
                 max_rows: 7,
                 max_columns: 0,
@@ -254,6 +270,7 @@ mod tests {
                 max_aligned_grid_points: usize::MAX,
                 max_loop_removal_work: u64::MAX,
             },
+            max_total_aligned_grid_work: u64::MAX,
             replay: ReplayLimits {
                 max_rows: u64::MAX,
                 max_columns: u32::MAX,
@@ -288,6 +305,7 @@ mod tests {
                 max_aligned_grid_points: max.compare.max_aligned_grid_points + 1,
                 max_loop_removal_work: max.compare.max_loop_removal_work + 1,
             },
+            max_total_aligned_grid_work: max.max_total_aligned_grid_work + 1,
             replay: ReplayLimits {
                 max_rows: max.replay.max_rows + 1,
                 max_columns: max.replay.max_columns + 1,

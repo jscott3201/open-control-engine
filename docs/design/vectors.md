@@ -283,7 +283,9 @@ none of the three. A scenario that uses them:
 file, 16,777,216 ticks, 4,096 scenarios, 4,096 expectations per scenario, 256 parameters per map,
 256 mutants. Each is a typed error at its boundary, at load. *(Added 2026-11-20:)* 16 names per
 `when` (`max_when_signals`), and `compare`, the funnel port's `CompareLimits`: 1,048,576 points
-for `funnel`, 32,768 for `aligned-grid`, and 2^28 units of loop-removal work.
+for `funnel`, 32,768 for `aligned-grid`, and 2^28 units of loop-removal work. *(As ruled by the owner
+on 2026-11-21 and landed in GitHub #741:)* and `max_total_aligned_grid_work`, 2^32 units of
+`aligned-grid` work, each unit one tick squared of one window on one document (decision 48).
 
 **Canonical form.** `to_canonical_json` sorts keys by their UTF-8 bytes at every depth and writes
 two-space indentation, LF, one final line feed, and ASCII only: any other character is `\u` and
@@ -1161,6 +1163,27 @@ Rejected: dropping the masked instants and building an envelope over each unmask
 (`oce-conformance`'s segmenting, which the commissioning note keeps as a named deviation
 there).
 
+*(Ruled by the owner on 2026-11-21, on the review of GitHub #741.)* The zero fill of a masked
+instant stays, as OBC §12.7.2 step 8 has it, and its effect is stated plainly: a masked instant
+is never judged, but its zero is part of the reference the envelope is built from, so it shapes
+the band at the instants beside it. Two cases are measured and pinned
+(`tests/tolerance_masks.rs`), both under `funnel`:
+
+- **An `x` tolerance stretches the band.** `of` 100 with `within {"atolx": 60, "atoly": 1}`,
+  the mask false only at t = 300 s. An output of 0 at t = 360 s passes with the mask and fails by
+  99 without it: the rectangle around the zeroed reference at 300 s reaches 360 s, so the band
+  there runs down to -1.
+- **A range-relative tolerance widens the band.** `of` 100, then 110 from t = 300 s, with
+  `within {"rtoly": 0.1}`, only tick 0 masked. An output of 95 at t = 120 s passes with the mask
+  and fails by 4 without it: the reference's range goes from 10 to 110, so the band goes from 1
+  to 11 either side.
+
+A window whose every instant is masked adds nothing: no instant is checked, passed or failed,
+whatever the output does. The rule is revisited with real library vectors in #745, which lists
+the alternatives (refusing a `when` with `rtoly` or an `x` tolerance; building the band from the
+unmasked instants only); the same rule applies to the commissioning run, whose indicators zero
+the same way, and any change moves both together.
+
 **47. A refused frame under tolerance: unchanged for vector sets.** A frame-class refusal fails
 its scenario (exit 1) with one `frame-refused` record, and a run-class refusal is `run-refused`
 (exit 2), whatever the windows' forms (decision 26). A `within` window cut by the refusal is
@@ -1186,6 +1209,19 @@ tolerances and a test decision 45 has kept in range, so it cannot refuse; if it 
 the vector set. With a `when` it also depends on the mask's signals, and a mutant whose mask
 differs can be refused where the subject is not: that is an error on the mutant's run, as a
 run-class refusal is.
+
+*(As ruled by the owner on 2026-11-21 and landed in GitHub #741.)* `aligned-grid` tests every
+grid point against every rectangle, so a window's comparison costs its ticks squared, and the
+instant budget alone admitted hours of it (two scenarios of 4,096 windows of 32,768 ticks are
+2^28 instants and 2^43 units). A run is therefore also held to
+`VerifyLimits::max_total_aligned_grid_work`: `(1 + mutants)` times the sum, over the tolerance
+windows of an `aligned-grid` set, of each window's ticks squared, at most 2^32, lowerable only,
+refused as `too-many-points` (place `scenarios`) at the same step, after every window's point
+cap. 2^32 admits four windows at the 32,768-point cap, or fourteen days at 5 s; measured on
+arm64, the largest admitted run takes 2.4 s end to end in a release build and 45 s in a debug
+one, about one nanosecond per unit. `funnel` needs no such bound: its cost at its cap is linear,
+a 1,048,576-tick window running end to end in 0.16 s in a release build and 1.7 s in a debug
+one.
 
 **49. File-backed series have their own issue.** An input and `of` take a constant or a step
 list. A file-backed series is #685, after the commissioning sources (#660) and outside the M3
@@ -1814,10 +1850,13 @@ behaviour.
 10. **The API beyond the sketch:** `Window::equals` is an `Option` (`None` for a tolerance
     window), with `Window::within` (`Within`: `tolerances`, `names`, `of`, `of_is_constant`) and
     `Window::when`; `OfStep`; `VectorSet::envelope`, `written_envelope` and `uses_tolerance`;
-    `Comparison { mode, envelope }` with `Comparison::exact`, `Comparison::tolerance` and
-    `envelope_version` from `Envelope::version`; `VectorBody::funnel_reference` and
-    `VECTOR_FUNNEL_REFERENCE`; `Failure::ToleranceExceeded`; `COMPARE_REFUSAL_CAUSES`; and
-    `VerifyLimits::max_when_signals` and `VerifyLimits::compare`.
+    `Comparison`, whose fields are private, built only by `Comparison::exact` and
+    `Comparison::tolerance` and read by `mode`, `envelope` and `envelope_version` (from
+    `Envelope::version`), so the tolerance mode always has an envelope and the exact mode never
+    does; `Receipt::funnel_reference` and `VECTOR_FUNNEL_REFERENCE`, the body's field read off
+    the header's mode rather than stored, so the two cannot disagree; `Failure::ToleranceExceeded`;
+    `COMPARE_REFUSAL_CAUSES`; and `VerifyLimits::max_when_signals`, `VerifyLimits::compare` and
+    `VerifyLimits::max_total_aligned_grid_work`.
 
 **What moved.** No receipt of a set without a tolerance window changes a byte: its header is
 still `{ "mode": "exact" }`, `funnel_reference` is absent, and `masked` was already written (as

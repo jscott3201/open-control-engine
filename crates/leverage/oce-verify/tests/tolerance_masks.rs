@@ -259,3 +259,133 @@ fn a_mutant_is_caught_by_tolerance_exceeded() {
     );
     assert_eq!(caught.failure.code(), "tolerance-exceeded");
 }
+
+#[test]
+fn a_mask_is_read_at_the_windows_own_ticks_when_it_starts_after_tick_zero() {
+    // `b` is false only at tick 0, and the window starts at tick 5 (300 s), where ahu.T is 5
+    // against an expectation of 1: the mask must be read at ticks 5 to 10, so tick 5 counts and
+    // fails. Read from tick 0 instead, tick 0's false would mask it and the window would pass.
+    let b = r#"[{"t": 0, "value": false}, {"t": 60, "value": true}]"#;
+    let ahu_t = r#"[{"t": 0, "value": 1.0}, {"t": 300, "value": 5.0}, {"t": 360, "value": 1.0}]"#;
+    for signal in ["b", "bOut"] {
+        for (form, code) in [
+            (r#""within": {"atoly": 0.5}, "of": 1"#, "tolerance-exceeded"),
+            (r#""equals": 1.0"#, "value-mismatch"),
+        ] {
+            let text = set_on(
+                "60",
+                "600",
+                &support::scenario(
+                    &inputs(ahu_t, b),
+                    &format!(
+                        r#"{{"output": "ahu.y", "from_s": 300, "to_s": 600, {form}, "when": ["{signal}"]}}"#
+                    ),
+                ),
+            );
+            let scenario = scenario_of(&text);
+            assert_eq!(scenario.instants.masked, 0, "{signal} {form}");
+            assert_eq!(
+                (scenario.instants.checked, scenario.instants.failed),
+                (6, 1),
+                "{signal} {form}"
+            );
+            let failure = &scenario.failures[0];
+            assert_eq!((failure.code(), failure.t()), (code, 300.0), "{signal}");
+            if let Failure::ToleranceExceeded { exceedance, .. } = failure {
+                assert_eq!(*exceedance, 3.5, "5 - (1 + 0.5)");
+            }
+        }
+    }
+}
+
+/// One tolerance window on `ahu.y` over the 60 s clock to 600 s under `funnel`, with and
+/// without `when: [b]`:
+/// the scenario's verdict and its `tolerance-exceeded` exceedances, each way.
+fn with_and_without_the_mask(
+    ahu_t: &str,
+    b: &str,
+    within: &str,
+    of: &str,
+) -> [(ScenarioStatus, Vec<f64>); 2] {
+    [r#", "when": ["b"]"#, ""].map(|when| {
+        let text = set_on(
+            "60",
+            "600",
+            &support::scenario(
+                &inputs(ahu_t, b),
+                &format!(
+                    r#"{{"output": "ahu.y", "from_s": 0, "to_s": 600, "within": {within}, "of": {of}{when}}}"#
+                ),
+            ),
+        );
+        let scenario = scenario_of(&text);
+        let exceedances = scenario
+            .failures
+            .iter()
+            .filter_map(|failure| match failure {
+                Failure::ToleranceExceeded { exceedance, .. } => Some(*exceedance),
+                _ => None,
+            })
+            .collect();
+        (scenario.status, exceedances)
+    })
+}
+
+#[test]
+fn a_zeroed_tick_stretches_the_band_at_its_neighbours_under_an_x_tolerance() {
+    // Owner ruling of 2026-11-21: masked ticks keep OBC's zero fill, and this is its documented
+    // effect. `of` 100 with atolx 60 and atoly 1; `b` false only at 300 s; the output drops to 0
+    // at 360 s. With the mask, the reference is 0 at 300 s, and the rectangle around that zero
+    // reaches 360 s, so the band there runs down to -1 and 0 passes. Without it, 0 is 99 below
+    // the band's floor of 99.
+    let [masked, unmasked] = with_and_without_the_mask(
+        r#"[{"t": 0, "value": 100.0}, {"t": 360, "value": 0.0}, {"t": 420, "value": 100.0}]"#,
+        r#"[{"t": 0, "value": true}, {"t": 300, "value": false}, {"t": 360, "value": true}]"#,
+        r#"{"atolx": 60, "atoly": 1}"#,
+        "100",
+    );
+    assert_eq!(masked, (ScenarioStatus::Pass, vec![]));
+    assert_eq!(unmasked, (ScenarioStatus::Fail, vec![99.0]));
+}
+
+#[test]
+fn a_zeroed_tick_widens_a_range_relative_band() {
+    // The same ruling: `of` 100, then 110 from 300 s, with rtoly 0.1; only tick 0 is masked.
+    // With the mask the reference's range is 0 to 110, so the band is 11 wide either side and an
+    // output of 95 at 120 s passes. Without it the range is 10, the band 1, and 95 is 4 below 99.
+    let [masked, unmasked] = with_and_without_the_mask(
+        r#"[{"t": 0, "value": 100.0}, {"t": 120, "value": 95.0}, {"t": 180, "value": 100.0}, {"t": 300, "value": 110.0}]"#,
+        r#"[{"t": 0, "value": false}, {"t": 60, "value": true}]"#,
+        r#"{"rtoly": 0.1}"#,
+        r#"[{"t": 0, "value": 100}, {"t": 300, "value": 110}]"#,
+    );
+    assert_eq!(masked, (ScenarioStatus::Pass, vec![]));
+    assert_eq!(unmasked.0, ScenarioStatus::Fail);
+    assert_eq!(unmasked.1.len(), 1);
+    assert!((unmasked.1[0] - 4.0).abs() < 1e-12, "{}", unmasked.1[0]);
+}
+
+#[test]
+fn a_window_whose_every_tick_is_masked_adds_nothing() {
+    // Whatever the output does, an all-masked window checks, passes and fails nothing; beside a
+    // passing window the scenario still passes.
+    let text = set_on(
+        "60",
+        "600",
+        &support::scenario(
+            &inputs("1e300", "false"),
+            r#"{"output": "ahu.y", "from_s": 0, "to_s": 600, "within": {"rtoly": 0.1, "atolx": 60}, "of": 5, "when": ["b"]},
+               {"output": "bOut", "from_s": 0, "to_s": 600, "equals": false}"#,
+        ),
+    );
+    let scenario = scenario_of(&text);
+    assert_eq!(scenario.status, ScenarioStatus::Pass);
+    assert_eq!(
+        (
+            scenario.instants.masked,
+            scenario.instants.checked,
+            scenario.instants.failed
+        ),
+        (11, 11, 0)
+    );
+}
