@@ -304,9 +304,11 @@ fn logical_timing_latch_and_proof_state_contracts_continue_bit_exactly() {
         "CDL.Logical.Proof",
     ] {
         let parameters = match class_path {
-            "CDL.Logical.TrueFalseHold" | "CDL.Logical.TrueHoldWithReset" => {
-                params(&[("trueHoldDuration", Value::Real(1.0))])
-            }
+            "CDL.Logical.TrueFalseHold" => params(&[("trueHoldDuration", Value::Real(1.0))]),
+            // `TrueHoldWithReset` declares `duration`. This table once gave it `trueHoldDuration`,
+            // which it does not declare, and the block ran on its default; the load gate now
+            // refuses the name (issue #748).
+            "CDL.Logical.TrueHoldWithReset" => params(&[("duration", Value::Real(1.0))]),
             "CDL.Logical.VariablePulse" => params(&[("period", Value::Real(1.0))]),
             "CDL.Logical.Proof" => params(&[
                 ("debounce", Value::Real(1.0)),

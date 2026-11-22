@@ -20,12 +20,11 @@
     },
     {
       "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con",
-      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.TimeTable",
       "S231:label": "con",
       "S231:hasParameter": [
-        { "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.k" },
-        { "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.holdSet" },
-        { "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.have_hol" }
+        { "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.table" },
+        { "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.extrapolation" }
       ],
       "S231:hasInput": [
         { "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.uHol" }
@@ -33,35 +32,30 @@
       "S231:hasOutput": { "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.y" }
     },
     {
-      "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.k",
+      "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.table",
       "@type": "S231:Parameter",
-      "S231:isOfDataType": { "@id": "S231:Real" },
-      "S231:value": { "@value": "1.5", "@type": "http://www.w3.org/2001/XMLSchema#double" }
-    },
-    {
-      "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.holdSet",
-      "@type": "S231:Parameter",
-      "S231:label": "holdSet[2]",
+      "S231:label": "table[2, 2]",
       "S231:isArray": true,
-      "S231:numberDimensions": 1,
-      "S231:sizeOfDimensions": "(2)",
+      "S231:numberDimensions": 2,
+      "S231:sizeOfDimensions": "(2, 2)",
       "S231:value": [
+        { "@value": "0.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
         { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+        { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
         { "@value": "3.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
       ]
     },
     {
-      "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.have_hol",
+      "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.extrapolation",
       "@type": "S231:Parameter",
-      "S231:isOfDataType": { "@id": "S231:Boolean" },
-      "S231:value": false
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.Extrapolation.HoldLastPoint"
     },
     {
       "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.uHol",
       "@type": "S231:RealInput",
       "S231:isOfDataType": { "@id": "S231:Real" },
       "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_hol"
+      "S231:conditionalExpression": "extrapolation == Buildings.Controls.OBC.CDL.Types.Extrapolation.Periodic"
     },
     {
       "@id": "http://example.org#cc.leaf_array_parameter_conditional_member.con.y",

@@ -102,6 +102,16 @@ pub enum BlobError {
         /// Index of the second occurrence in the block's parameter list.
         parameter: u32,
     },
+    /// A parameter's name is one its block's class does not declare: neither a scalar parameter of
+    /// the class nor an element of one of its arrays in the canonical spelling (issue #748). No
+    /// block reads such a name, so the value would be dropped and the block built on its default.
+    /// Load refuses those; a blob never carries one.
+    UndeclaredParameter {
+        /// The block id.
+        block: u32,
+        /// Index in the block's parameter list.
+        parameter: u32,
+    },
     /// A Real parameter is NaN or infinite (load refuses those; a blob never carries one).
     NonFiniteParameter {
         /// The block id.
@@ -415,6 +425,10 @@ impl core::fmt::Display for BlobError {
             Self::DuplicateParameter { block, parameter } => {
                 write!(f, "block {block} parameter {parameter} repeats a name")
             }
+            Self::UndeclaredParameter { block, parameter } => write!(
+                f,
+                "block {block} parameter {parameter} has a name its class does not declare"
+            ),
             Self::NonFiniteParameter { block, parameter } => {
                 write!(f, "block {block} parameter {parameter} is not finite")
             }

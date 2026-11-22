@@ -479,6 +479,8 @@ The decoder refuses in this order:
 7. Classes and per-instance checks, each with a named variant:
    - unknown class (`UnknownClass`) or hash mismatch (`ClassSignatureMismatch`);
    - duplicate parameter names within one instance (`DuplicateParameter`);
+   - *(amended 2026-11-22, issue #748)* a parameter name the instance's class does not declare
+     (`UndeclaredParameter`), before the parameter's value is read;
    - an Enum value whose class path is unknown (`UnknownEnumClass`), or whose ordinal is outside
      `1..=members` (`EnumOrdinalOutOfRange`);
    - the model-wide constructed budget, charged the moment the block is constructed

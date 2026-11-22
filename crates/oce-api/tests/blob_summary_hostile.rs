@@ -116,6 +116,7 @@ fn assert_further_on(summary: Reached, decoder: BlobError, what: &str) {
             assert!(summary > Reached::Class(class), "{what}: {decoder:?}");
         }
         BlobError::DuplicateParameter { block, .. }
+        | BlobError::UndeclaredParameter { block, .. }
         | BlobError::NonFiniteParameter { block, .. }
         | BlobError::ParameterKindMismatch { block, .. }
         | BlobError::InstanceMismatch { block, .. } => {

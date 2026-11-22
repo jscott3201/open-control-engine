@@ -443,20 +443,22 @@ fn a_parameter_typed_by_its_default_alone_is_judged_by_the_kind_rule() {
 
 #[test]
 fn a_parameter_the_catalog_does_not_type_is_not_judged() {
-    // An unregistered class and an undeclared name are outside the rule (and outside this issue).
+    // An unregistered class and an undeclared name are outside the rule. The undeclared name is
+    // refused by the declared-name rule instead (issue #748), never for its kind.
     assert_eq!(
         refusal("CDL.Reals.NoSuchClass", &[("k", Value::Boolean(true))]),
         Vec::new()
     );
+    let refused = refusal(
+        PULSE,
+        &[
+            ("period", Value::Real(4.0)),
+            ("unknown", Value::Boolean(true)),
+        ],
+    );
     assert_eq!(
-        refusal(
-            PULSE,
-            &[
-                ("period", Value::Real(4.0)),
-                ("unknown", Value::Boolean(true))
-            ]
-        ),
-        Vec::new()
+        refused.iter().map(|d| d.code).collect::<Vec<_>>(),
+        vec![DiagCode::UnknownParameter]
     );
 }
 

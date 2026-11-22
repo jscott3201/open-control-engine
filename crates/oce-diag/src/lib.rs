@@ -235,6 +235,17 @@ pub enum DiagCode {
     ParameterKindMismatch,
     /// One block instance carries the same raw parameter name more than once.
     DuplicateParameter,
+    /// A block instance binds a parameter name its registered class does not declare (issue
+    /// #748): neither one of the class's scalar parameters nor an element of one of its arrays.
+    /// No block reads such a name, so the value would be dropped and the block would run on its
+    /// default; the misspelt `amplitud` of a `Pulse` is the worked example. Raised by the load
+    /// gate (subject = the block instance); the message names the parameter and, when one is
+    /// within a few edits, the declared parameter it probably meant. An element of a declared
+    /// array spelled with a sign or a leading zero is [`DiagCode::NonCanonicalElementName`]
+    /// instead, and one at index 0 or past the array's extent is
+    /// [`DiagCode::ParameterOutOfRange`]. The authoring layer's stage-1 finding has the same
+    /// code.
+    UnknownParameter,
     /// A bound parameter spells an element of one of its class's array or matrix parameters
     /// (`k_<i>`, `table_<row>_<col>`) with an index in any form other than the canonical one-based
     /// decimal the CXF import writes: a sign (`table_+1_2`) or a leading zero (`k_01`). Two
@@ -371,6 +382,7 @@ impl DiagCode {
             DiagCode::MissingRequiredParameter => "missing-required-parameter",
             DiagCode::ParameterKindMismatch => "parameter-kind-mismatch",
             DiagCode::DuplicateParameter => "duplicate-parameter",
+            DiagCode::UnknownParameter => "unknown-parameter",
             DiagCode::NonCanonicalElementName => "non-canonical-element-name",
             DiagCode::ParameterOutOfRange => "parameter-out-of-range",
             DiagCode::NonFiniteParameter => "non-finite-parameter",
@@ -538,6 +550,7 @@ mod tests {
         MissingRequiredParameter => "missing-required-parameter",
         ParameterKindMismatch => "parameter-kind-mismatch",
         DuplicateParameter => "duplicate-parameter",
+        UnknownParameter => "unknown-parameter",
         NonCanonicalElementName => "non-canonical-element-name",
         ParameterOutOfRange => "parameter-out-of-range",
         NonFiniteParameter => "non-finite-parameter",

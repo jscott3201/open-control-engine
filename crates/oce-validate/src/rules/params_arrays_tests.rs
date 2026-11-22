@@ -270,10 +270,17 @@ fn every_spelling_a_hostile_document_may_use_meets_exactly_one_rule_or_none() {
         );
     }
     // Not an element of this vector at all (no index, not decimal, a matrix spelling on a
-    // vector, a non-ASCII digit, another base): no rule of the load gate reads the name, so
-    // nothing is reported. Unknown names are GitHub #467's remaining half.
+    // vector, a non-ASCII digit, another base): no array rule reads the name, and the class does
+    // not declare it, so it is the declared-name rule's refusal (issue #748), and only that.
     for name in ["k_", "k_x", "k_1x", "k_1_2", "k_\u{0661}", "kk_3", "k3"] {
-        assert_eq!(one(name), vec![], "{name}");
+        assert_eq!(
+            one(name),
+            vec![(
+                "unknown-parameter".to_owned(),
+                format!("parameter `{name}` on block `{class}` is not a parameter of its class")
+            )],
+            "{name}"
+        );
     }
 }
 

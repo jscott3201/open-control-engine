@@ -13,13 +13,21 @@
 //! counted before any name is built, and each name is built where its element is minted, once
 //! the value's shape is known to fit.
 //!
+//! The budget is the reader's, and the arrays these documents add (`q`, a long name) are names
+//! the constant's class does not declare, which the facade's load gate refuses (issue #748). So
+//! a document at the budget's edge is read by the reader (`oce_cxf::import_cxf`, the facade's
+//! first step) and measured there, and the facade is held to refusing it for the undeclared
+//! names, never for the budget.
+//!
 //! Measured with `allocation-counter`, whose counters are local to the measuring thread. The
 //! ceilings have headroom over what was measured (in brackets, with what the same document cost
 //! before the change).
 
 use allocation_counter::{AllocationInfo, measure};
 use oce_api::{Engine, LoadedModel, OcError};
+use oce_cxf::{CxfError, ResolveOptions, import_cxf};
 use oce_diag::{DiagCode, Diagnostic};
+use oce_model::ModelGraph;
 
 const MODEL: &str = include_str!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 
@@ -124,6 +132,39 @@ fn load(bytes: &[u8]) -> (Result<LoadedModel, OcError>, AllocationInfo) {
     let mut result = None;
     let info = measure(|| result = Some(engine.load_cxf(bytes)));
     (result.expect("the load ran").map(|(_, model)| model), info)
+}
+
+/// One read of `bytes` by the CXF reader alone (the facade's first step, with its options),
+/// measured. The unedited model is read once first.
+fn read(bytes: &[u8]) -> (Result<ModelGraph, CxfError>, AllocationInfo) {
+    import_cxf(MODEL.as_bytes(), &ResolveOptions::default()).expect("the model reads");
+    let mut result = None;
+    let info = measure(|| {
+        result = Some(import_cxf(bytes, &ResolveOptions::default()).map(|(model, _)| model));
+    });
+    (result.expect("the read ran"), info)
+}
+
+/// Hold the facade to refusing `bytes` at its load gate for parameter names the class does not
+/// declare, and for nothing the reader's budget says.
+fn assert_refused_for_undeclared_names(bytes: &[u8]) {
+    let error = Engine::new()
+        .load_cxf(bytes)
+        .expect_err("the undeclared names are refused");
+    let diagnostics: Vec<&Diagnostic> = error.all_diagnostics().collect();
+    assert!(
+        diagnostics
+            .iter()
+            .any(|d| d.code == DiagCode::UnknownParameter),
+        "{:?}",
+        diagnostics.first()
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| !d.message.starts_with("array parameter")),
+        "the reader's budget refused it"
+    );
 }
 
 /// The diagnostics of a refused load of `bytes`, and what it cost.
@@ -257,8 +298,9 @@ fn a_value_refused_for_its_shape_builds_no_name() {
 }
 
 /// On the constant `instance`, an array `base[len]` and a one-element array whose path takes the
-/// rest of the budget to the byte: the document loads with every name in order, and holds at
-/// most `copies` times the budget at its peak. One byte more on the second name refuses it, at
+/// rest of the budget to the byte: the reader reads the document with every name in order, and
+/// holds at most `copies` times the budget at its peak (the facade then refuses the names, which
+/// the constant's class does not declare). One byte more on the second name refuses it, at
 /// no more than three times the paths of the first array, whose names were minted before the
 /// refusal.
 fn assert_budget_edge(instance: &str, base: &str, len: usize, copies: u64) {
@@ -272,15 +314,19 @@ fn assert_budget_edge(instance: &str, base: &str, len: usize, copies: u64) {
         instance,
         &[(base, &size, "[ 1.0 ]"), (&filler, "(1)", "[ 2.0 ]")],
     );
-    let (result, loaded) = load(&document);
-    let model = result.expect("paths that fill the budget exactly load");
+    let (result, loaded) = read(&document);
+    let model = result.expect("paths that fill the budget exactly are read");
     let block = model
-        .model
         .blocks
         .iter()
-        .find(|block| block.key.as_str() == instance_iri(instance))
+        .find(|block| block.instance_iri.as_deref() == Some(instance_iri(instance).as_str()))
         .expect("the constant");
-    let names: Vec<&str> = block.params.iter().map(|(name, _)| name.as_str()).collect();
+    let names: Vec<&str> = block
+        .params
+        .values
+        .iter()
+        .map(|(name, _)| name.as_ref())
+        .collect();
     let mut expected = vec!["k".to_owned()];
     expected.extend((1..=len).map(|i| format!("{base}_{i}")));
     expected.push(format!("{filler}_1"));
@@ -295,6 +341,8 @@ fn assert_budget_edge(instance: &str, base: &str, len: usize, copies: u64) {
         "{} bytes held for {PATH_BUDGET} bytes of paths",
         loaded.bytes_max
     );
+    drop(model);
+    assert_refused_for_undeclared_names(&document);
 
     let document = with_arrays(
         instance,

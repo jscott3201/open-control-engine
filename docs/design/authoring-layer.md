@@ -354,7 +354,7 @@ pre-empt where one exists. The table is a test fixture: gate item 3 is a table-d
 | `duplicate-name` | author-only | `duplicate-name` | 1 | `duplicate-id` |
 | `class-not-found` | engine | `unknown-class` | 1 | — |
 | `class-not-authorable` | author-only | `class-not-authorable` | 1 | — (reserved classes) |
-| `unknown-parameter` | author-only | `unknown-param` | 1 | none: the engine ignores an unknown name (#467; amended 2026-11-09). *Amended 2026-11-12, GitHub #635:* an element at index 0 (`k_0`), which stage 1 reads as no parameter of the class, the engine refuses as `parameter-out-of-range`, so for it this row pre-empts that code |
+| `unknown-parameter` | engine (amended 2026-11-22, issue #748) | `unknown-param` | 1 | — (the load gate refuses a name the class does not declare under the same code, at the block, naming the parameter; before #748 the engine ignored the name, #467). *Amended 2026-11-12, GitHub #635:* an element at index 0 (`k_0`), which stage 1 reads as no parameter of the class, the engine refuses as `parameter-out-of-range`, so for it this row pre-empts that code; so do a signed or zero-padded element index (`non-canonical-element-name`) and a name under a matrix's prefix that is no cell (`parameter-out-of-range`) |
 | `parameter-not-settable` | author-only | `unsupported-param` | 1 | — (reserved classes only; #440's settable flag) |
 | `duplicate-parameter` | author-only (amended 2026-11-09) | `duplicate-param` | 1 | `duplicate-id` (the repeated parameter node) |
 | `missing-required-parameter` | engine | `missing-required-param` | 1 | — |
@@ -409,7 +409,10 @@ nothing, because the load gate ignores a parameter name it does not read (#467) 
 `unknown-parameter`, because its own name check finds no such parameter; the load gate refuses
 it as `parameter-out-of-range`, outside the resolved array length. Both refuse, under different
 codes, so for that element the row pre-empts `parameter-out-of-range`. The parity table's
-`unknown-parameter` row stays `Silent`: its defect is a name no rule reads.)*; and `unknown-port`
+`unknown-parameter` row stays `Silent`: its defect is a name no rule reads.)* *(amended
+2026-11-22, issue #748: the load gate now refuses a name the class does not declare as
+`unknown-parameter`, at the block, with the name first in backticks, so stage 2 maps it to the
+assignment and the row is an engine row, `Same`.)*; and `unknown-port`
 pre-empts `unresolved-reference`, because the emitter writes every port the catalog resolves, so a
 wrong port name is a dangling target rather than a port-name mismatch. Stage 2 also has two codes of
 its own: `document-too-large` (the emitter's size refusal after a clean stage 1) and `load-failed`.

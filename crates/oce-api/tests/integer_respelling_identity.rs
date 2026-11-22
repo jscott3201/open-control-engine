@@ -189,18 +189,11 @@ fn outcome(bytes: &[u8]) -> Result<Loaded, Vec<String>> {
     }
 }
 
-/// The tracked documents whose blocks carry a parameter their class does not declare, bound to
-/// an integral Real: no catalog type holds such a value, so its respelling moves the id and the
-/// blob (GitHub issue #748 asks whether the load gate refuses such a name).
-const UNDECLARED_PARAMETER_DOCUMENTS: &[&str] =
-    &["composite_contract/accepted/leaf_array_parameter_conditional_member.jsonld"];
-
 #[test]
 fn every_tracked_document_is_one_model_whether_its_integral_reals_are_written_as_integers() {
     let documents = tracked_documents();
     assert!(documents.len() > 200, "{} documents", documents.len());
     let (mut respelled_documents, mut literals, mut loading) = (0usize, 0usize, 0usize);
-    let mut undeclared = 0usize;
     for path in &documents {
         let Ok(document) = serde_json::from_slice::<Json>(&fs::read(path).expect("readable"))
         else {
@@ -230,27 +223,16 @@ fn every_tracked_document_is_one_model_whether_its_integral_reals_are_written_as
                 "{} respelled {respelling:?} ({count} literals)",
                 path.display()
             );
-            match (outcome(&bytes), &base) {
-                // A parameter the catalog does not type keeps what the document wrote: only
-                // the listed documents carry one, and every typed parameter is still one model.
-                (Ok(head), Ok(base)) if head.untyped != base.untyped => {
-                    assert_eq!(head.typed, base.typed, "{what}");
-                    assert!(
-                        UNDECLARED_PARAMETER_DOCUMENTS
-                            .iter()
-                            .any(|listed| path.ends_with(listed)),
-                        "{what}: an undeclared parameter moved\n{:?}\n{:?}",
-                        head.untyped,
-                        base.untyped
-                    );
-                    undeclared += 1;
-                }
-                (head, base) => assert_eq!(&head, base, "{what}"),
-            }
+            assert_eq!(&outcome(&bytes), &base, "{what}");
+        }
+        // A parameter the catalog does not type is a name the class does not declare, which
+        // the load gate refuses (issue #748): no loading document carries one, so no value
+        // escapes the catalog's types and the comparison above covers every parameter.
+        if let Ok(loaded) = &base {
+            assert_eq!(loaded.untyped, Vec::<String>::new(), "{}", path.display());
         }
         loading += usize::from(base.is_ok());
     }
-    assert_eq!(undeclared, 2 * UNDECLARED_PARAMETER_DOCUMENTS.len());
     // The sweep is not vacuous: most tracked documents write some integral Real.
     assert!(
         respelled_documents > 100 && literals > 1000 && loading > 100,

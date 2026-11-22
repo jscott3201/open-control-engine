@@ -38,10 +38,10 @@ use oce_model::{ParamTable, Value, enum_descriptor};
 const MAX_WIRED_PORTS: usize = 2048;
 const MAX_WIRED_STATE_WORDS: usize = 1 << 16;
 
-/// The table as the decoder would construct from it: one binding per name, no non-finite Real,
-/// no Enum the wire form cannot carry and no value its parameter's catalog type does not admit
-/// (issue #734). The decoder refuses each of those before it constructs the block, which is not
-/// what this fuzz is about.
+/// The table as the decoder would construct from it: one binding per name, no name its class
+/// does not declare (issue #748), no non-finite Real, no Enum the wire form cannot carry and no
+/// value its parameter's catalog type does not admit (issue #734). The decoder refuses each of
+/// those before it constructs the block, which is not what this fuzz is about.
 fn constructible(class_path: &str, table: &ParamTable) -> ParamTable {
     let mut values: Vec<(Arc<str>, Value)> = Vec::new();
     for (name, value) in &table.values {
@@ -51,7 +51,8 @@ fn constructible(class_path: &str, table: &ParamTable) -> ParamTable {
                 *ordinal >= 1 && *ordinal as usize <= descriptor.members.len()
             }),
             _ => true,
-        } && oce_blocks::parameter_kind_fault(class_path, name, value).is_none();
+        } && oce_blocks::declares_parameter(class_path, name) == Some(true)
+            && oce_blocks::parameter_kind_fault(class_path, name, value).is_none();
         if carried && !values.iter().any(|(seen, _)| seen == name) {
             values.push((Arc::clone(name), value.clone()));
         }

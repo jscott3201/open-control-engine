@@ -262,20 +262,30 @@ CDL has no spelling for a partial array, so this is an engine extension. For exa
 `MultiSum(nin = 3, k_1 = 10, k_3 = 30)` runs with the gains `[10, 1, 30]`, and an
 `ExtractSignal(nout = 2)` that sets only `extract_2` selects input 1 for its first output.
 
-What the load gate still ignores is a name that is not a canonical element spelling of a declared
-array, or that the class does not declare at all. Each such name loads with no warning, and its
-value is never read:
-- a wrong case (`K_1` on `MultiSum`);
+A name that is not a canonical element spelling of a declared array, or that the class does not
+declare at all, is refused at load as `unknown-parameter` (issue #748; before, it loaded with no
+warning and its value was never read, so a misspelt `amplitud` ran the block on its default
+amplitude). The finding names the block, the parameter and, when one is a few edits away, the
+declared parameter it probably meant (`did you mean `amplitude`?`). It covers:
+- a misspelt or invented name (`amplitud`, `bogus`), and a name another class declares (`nin` on
+  `Logical.Not`);
+- a wrong case (`K_1` on `MultiSum`, which suggests `k_<i>`);
 - a scalar `k` where the class declares the vector `k_<i>`;
 - a non-decimal or non-ASCII index (`k_x`, `k_1e0`, `k_1.0`, the full-width `k_１`);
 - a matrix spelling on a vector (`k_1_2`);
 - a malformed separator (`k_`, `k__1`, `k_1_`);
 - an element on a class with no such array (`k_1` on `Reals.Add`, `k_3` on `MultiMax`).
 
-GitHub #467 keeps that half open. The authoring validator refuses each of these names at stage 1
-as `unknown-parameter`, so only CXF from another producer reaches the load with one. A signed or
-zero-padded index (`k_01`, `k_+1`) is refused at load as `non-canonical-element-name` (GitHub
-#470).
+Three element-shaped names keep the refusal they had, so each is reported once: a signed or
+zero-padded index (`k_01`, `k_+1`) is `non-canonical-element-name` (GitHub #470), an index of zero
+or past the extent is `parameter-out-of-range` (GitHub #635), and any name under a matrix's or a
+`TimeTable` offset's prefix that is no cell of its shape (`K_1`, `table_1_2_3`, `offset_x`) is the
+matrix or offset rule's `parameter-out-of-range`. The authoring validator refuses all of them at
+stage 1 as `unknown-parameter`; the compiled-schedule blob decoder refuses a blob carrying a
+parameter its class does not declare (`UndeclaredParameter`). The catalog lists every public
+parameter the pinned upstream source declares for each class, which `oce-cxf`'s
+`fixture_port_order` test holds class by class, so a parameter CDL defines is never refused as
+unknown.
 
 `oce_api::class_metadata()` adds, for every class in catalog order, a one-sentence `description`
 (the upstream Modelica class description string where a vendored source exists, held to it by a

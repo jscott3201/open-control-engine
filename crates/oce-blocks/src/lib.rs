@@ -50,6 +50,7 @@ mod class_descriptions;
 mod class_metadata;
 mod class_signature;
 mod constructed;
+mod declared_parameters;
 pub use catalog_rules::ParamRuleProjection;
 pub use class_signature::{class_is_target_bound, class_signature_hash};
 pub use constructed::MAX_CONSTRUCTION_PEAK_BYTES;
@@ -94,6 +95,10 @@ pub use catalog::{
 #[cfg(feature = "std")]
 pub use class_metadata::class_description;
 pub use class_metadata::{ClassParameter, class_parameters, parameter_value_type};
+pub use declared_parameters::{
+    MAX_COMPARED_NAME_BYTES, MAX_SUGGESTION_DISTANCE, declares_parameter,
+    nearest_declared_parameter, spells_array_element,
+};
 pub use param_kinds::{
     MAX_EXACT_INTEGER_AS_REAL, ParameterKindFault, admits_parameter_value, exact_real,
     parameter_kind_fault, parameter_kind_is_ruled,

@@ -284,10 +284,15 @@ The hash does not cover tick behaviour; behavioural identity rests on the exact 
 ## Trust model
 
 For **semantics** a blob is trusted: a well-formed but wrong parameter executes as written, because
-the validator's parameter rules are not linked on a target. One check is linked: a parameter of a
-kind its catalog type does not admit is refused (`ParameterKindMismatch`, issue #734), since a
-block would otherwise run on its default rather than on anything the blob wrote. A value of the
-right kind outside a class rule's range still executes. A 0.6.0 blob written before that check
+the validator's parameter rules are not linked on a target. Two checks are linked, since in each a
+block would otherwise run on its default rather than on anything the blob wrote: a parameter under
+a name its class does not declare is refused (`UndeclaredParameter`, issue #748), and a parameter
+of a kind its catalog type does not admit is refused (`ParameterKindMismatch`, issue #734). A value of the
+right kind outside a class rule's range still executes. So does an array element past its
+array's extent: its canonical name is a declared name, and the extent rules that refuse it run at
+load, not in the decoder, so `table_3_2` on a 2-row `TimeTable` decodes and reshapes the table, and
+`k_3` on a `MultiSum` with `nin = 2` decodes and is dropped (issue #772 proposes the decoder
+check). A 0.6.0 blob written before that check
 (GitHub #754) and carrying such a value, for example an ordinal on `zerTim` or `smoothness`, which
 the readers then decoded, is refused rather than read with another meaning; no version bump is
 owed, since no release has been tagged since 0.6.0. Authenticate and authorize blobs in your
@@ -344,7 +349,10 @@ the CRC; profile and flags; structure
 (section order and lengths, bounded counts, port lists no longer than any class resolves, UTF-8,
 tags, canonical list order, no trailing bytes);
 each class (registered, same hash), then each instance in turn (class index, unique parameter
-names, finite Reals, known enum classes and in-range ordinals, each parameter a value its class's
+names, each name one its class declares (`UndeclaredParameter`: a scalar parameter of the class or
+an element of one of its arrays in the canonical spelling, the load gate's own predicate
+`oce_blocks::declares_parameter`, issue #748; judged before the value), finite Reals, known enum
+classes and in-range ordinals, each parameter a value its class's
 catalog type admits (`ParameterKindMismatch`: a Real on an Integer parameter, an Integer past
 2^53 on a Real one, and on an enumeration parameter anything but an enumeration value of its own
 class: an ordinal, a string, another enumeration's member; the load gate's own predicate,

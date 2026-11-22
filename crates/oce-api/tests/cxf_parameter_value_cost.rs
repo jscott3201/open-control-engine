@@ -13,14 +13,21 @@
 //! The set of sibling names an array's minted names are checked against was built again for every
 //! array parameter of a leaf, so `P` arrays cost `P²`; it is built once per leaf.
 //!
+//! Both budgets are the reader's, and the parameters these documents add (`q`, `r`, `e0` …) are
+//! names the constant's class does not declare, which the facade's load gate refuses (issue
+//! #748). So a document the budget admits is read by the reader (`oce_cxf::import_cxf`, the
+//! facade's first step) and measured there, and the facade is held to refusing it for the
+//! undeclared names, never for a budget.
+//!
 //! Measured with `allocation-counter`, whose counters are local to the measuring thread. The
 //! ceilings have headroom over what was measured (in brackets, with what the same document cost
 //! before the change).
 
 use allocation_counter::{AllocationInfo, measure};
 use oce_api::{Engine, LoadedModel, OcError};
+use oce_cxf::{CxfError, ResolveOptions, import_cxf};
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::resolved_model::OcValue;
+use oce_model::{ModelGraph, Value};
 
 const MODEL: &str = include_str!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 
@@ -85,6 +92,40 @@ fn load(bytes: &[u8]) -> (Result<LoadedModel, OcError>, AllocationInfo) {
     (result.expect("the load ran").map(|(_, model)| model), info)
 }
 
+/// One read of `bytes` by the CXF reader alone (the facade's first step, with its options),
+/// measured. The unedited model is read once first.
+fn read(bytes: &[u8]) -> (Result<ModelGraph, CxfError>, AllocationInfo) {
+    import_cxf(MODEL.as_bytes(), &ResolveOptions::default()).expect("the model reads");
+    let mut result = None;
+    let info = measure(|| {
+        result = Some(import_cxf(bytes, &ResolveOptions::default()).map(|(model, _)| model));
+    });
+    (result.expect("the read ran"), info)
+}
+
+/// Hold the facade to refusing `bytes` at its load gate for parameter names the class does not
+/// declare, and for nothing a budget of the reader says.
+fn assert_refused_for_undeclared_names(bytes: &[u8]) {
+    let error = Engine::new()
+        .load_cxf(bytes)
+        .expect_err("the undeclared names are refused");
+    let diagnostics: Vec<&Diagnostic> = error.all_diagnostics().collect();
+    assert!(
+        diagnostics
+            .iter()
+            .any(|d| d.code == DiagCode::UnknownParameter),
+        "{:?}",
+        diagnostics.first()
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| !d.message.starts_with("string parameter value")
+                && !d.message.starts_with("array parameter")),
+        "a budget of the reader refused it"
+    );
+}
+
 /// The diagnostics of a refused load of `bytes`, and what it cost.
 fn refused(bytes: &[u8]) -> (Vec<Diagnostic>, AllocationInfo) {
     let (result, info) = load(bytes);
@@ -107,20 +148,18 @@ fn over_strings(subject: &str, owner: &str, bytes: usize, used: usize) -> Diagno
     .with_subject(subject.to_owned())
 }
 
-/// The string values of the parameters of the block `instance` in a loaded model, in order. The
-/// loaded model is a projection that copies each, so it is one of the consumers that pay for a
-/// string once per entry.
-fn strings_of<'m>(model: &'m LoadedModel, instance: &str) -> Vec<(&'m str, &'m str)> {
+/// The string values of the parameters of the block `instance` in a read model, in order.
+fn strings_of<'m>(model: &'m ModelGraph, instance: &str) -> Vec<(&'m str, &'m str)> {
     model
-        .model
         .blocks
         .iter()
-        .find(|block| block.key.as_str() == instance)
+        .find(|block| block.instance_iri.as_deref() == Some(instance))
         .expect("the block")
         .params
+        .values
         .iter()
         .filter_map(|(name, value)| match value {
-            OcValue::String(text) => Some((name.as_str(), text.as_str())),
+            Value::String(text) => Some((name.as_ref(), text.as_ref())),
             _ => None,
         })
         .collect()
@@ -164,10 +203,11 @@ fn a_broadcast_string_past_the_budget_is_refused_at_the_cost_of_reading_the_docu
 fn a_broadcast_string_that_fills_the_budget_loads_and_one_byte_more_is_refused() {
     // 136 elements of 60 KiB and a scalar of the rest fill the budget to the byte (the reader
     // shares one allocation among the elements, pinned in `oce-cxf`). One byte more on the
-    // scalar is refused. [measured: a peak of 8,593,382 bytes loaded, 1.02 times the budget,
-    // the loaded model and the content id's canonical bytes copying each element once, and
-    // 773,306 refused; before, the same document loaded at 16,889,942 after requesting
-    // 96,419,439]
+    // scalar is refused. [measured: a peak of 8,593,382 bytes loaded through the facade, 1.02
+    // times the budget, the loaded model and the content id's canonical bytes copying each
+    // element once, and 773,306 refused; before, the same document loaded at 16,889,942 after
+    // requesting 96,419,439. Since issue #748 the facade refuses `q` and `r`, so the admitted
+    // document is measured at the reader.]
     let each = 60 * 1024;
     let rest = STRING_BUDGET - 136 * each;
     let (q, r) = (format!("{CON}.q"), format!("{CON}.r"));
@@ -180,8 +220,8 @@ fn a_broadcast_string_that_fills_the_budget_loads_and_one_byte_more_is_refused()
             ],
         )
     };
-    let (result, loaded) = load(&edge(rest));
-    let model = result.expect("strings that fill the budget exactly load");
+    let (result, loaded) = read(&edge(rest));
+    let model = result.expect("strings that fill the budget exactly are read");
     let strings = strings_of(&model, CON);
     assert_eq!(strings.len(), 137);
     let (elements, last) = strings.split_at(136);
@@ -195,6 +235,8 @@ fn a_broadcast_string_that_fills_the_budget_loads_and_one_byte_more_is_refused()
         "{} bytes held for {STRING_BUDGET} bytes of strings",
         loaded.bytes_max
     );
+    drop(model);
+    assert_refused_for_undeclared_names(&edge(rest));
 
     let (diagnostics, refusal) = refused(&edge(rest + 1));
     assert_eq!(diagnostics, [over_strings(&r, CON, rest + 1, 136 * each)]);
@@ -229,8 +271,8 @@ fn a_string_node_listed_by_two_instances_is_counted_once_for_each() {
     };
     let half = STRING_BUDGET / 2;
     let document = shared(half);
-    let (result, loaded) = load(&document);
-    let model = result.expect("two entries of half the budget load");
+    let (result, loaded) = read(&document);
+    let model = result.expect("two entries of half the budget are read");
     let (a, b) = (
         strings_of(&model, CON),
         strings_of(&model, "http://example.org#MinLoop.gain"),
@@ -244,6 +286,8 @@ fn a_string_node_listed_by_two_instances_is_counted_once_for_each() {
         loaded.bytes_max,
         document.len()
     );
+    drop(model);
+    assert_refused_for_undeclared_names(&document);
     let (diagnostics, _) = refused(&shared(half + 1));
     assert_eq!(
         diagnostics,
@@ -266,20 +310,26 @@ fn arrays(count: usize, size: usize, value: &str) -> Vec<u8> {
 #[test]
 fn array_parameters_on_one_leaf_cost_a_fixed_amount_each_however_many_there_are() {
     // The issue's document, 1,000 and 2,000 empty arrays on one leaf, and the same with one
-    // element each: every further array costs what reading its node costs. [measured: 7,320
+    // element each, read by the reader: every further array costs what reading its node costs. [measured: 7,320
     // bytes a further empty array and 9,532 a further one-element array; before, 216,228 a
     // further empty array, the sibling-name set of 1,000 to 2,000 names built again for each]
     for (size, value, further_bytes) in [(0, "[]", 12_288), (1, "[ 1.0 ]", 16_384)] {
-        let (result, small) = load(&arrays(1_000, size, value));
-        result.expect("the arrays load");
-        let (result, large) = load(&arrays(2_000, size, value));
-        result.expect("the arrays load");
+        let (result, small) = read(&arrays(1_000, size, value));
+        result.expect("the arrays are read");
+        let (result, large) = read(&arrays(2_000, size, value));
+        result.expect("the arrays are read");
         let further = large.bytes_total - small.bytes_total;
         assert!(
             further <= further_bytes * 1_000,
             "{size}: {further} more bytes requested for 1,000 more arrays"
         );
     }
+    // An empty array mints no parameter, so the facade loads those documents; a one-element
+    // array mints `e<i>_1`, which the constant's class does not declare (issue #748).
+    Engine::new()
+        .load_cxf(&arrays(1_000, 0, "[]"))
+        .expect("empty arrays load");
+    assert_refused_for_undeclared_names(&arrays(1_000, 1, "[ 1.0 ]"));
 }
 
 #[test]

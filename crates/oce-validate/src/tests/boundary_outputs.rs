@@ -101,7 +101,7 @@ fn connection_to_reserved_input_satisfies_deep_graph_rules() {
 }
 
 #[test]
-fn reserved_pass_through_parameter_satisfies_current_deep_graph_rules() {
+fn a_reserved_pass_through_with_a_parameter_is_refused_for_the_undeclared_name() {
     let mut reserved = block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1]);
     reserved.params.values.push(rp("ghost", 42.0));
     let model = ModelGraph {
@@ -114,10 +114,16 @@ fn reserved_pass_through_parameter_satisfies_current_deep_graph_rules() {
         ..ModelGraph::new()
     };
 
-    assert!(
-        validate(&model)
-            .expect("deep gate currently accepts an extra reserved parameter")
-            .is_empty()
+    // A lowering identity declares no parameter, so the name is undeclared (issue #748); the
+    // resolver never writes one.
+    let refused = validate(&model).expect_err("an undeclared parameter is refused");
+    assert_eq!(
+        refused
+            .diagnostics
+            .iter()
+            .map(|d| d.code)
+            .collect::<Vec<_>>(),
+        vec![oce_diag::DiagCode::UnknownParameter]
     );
 }
 

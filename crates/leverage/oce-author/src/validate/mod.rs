@@ -54,7 +54,8 @@ mod codes {
     pub const CLASS_NOT_FOUND: &str = "class-not-found";
     /// A block's class is an engine-reserved lowering identity.
     pub const CLASS_NOT_AUTHORABLE: &str = "class-not-authorable";
-    /// An assignment names no parameter of the block's class.
+    /// An assignment names no parameter of the block's class (the engine's load gate refuses such
+    /// a name under the same code, issue #748).
     pub const UNKNOWN_PARAMETER: &str = "unknown-parameter";
     /// An assignment names a parameter no author may set (reserved classes only).
     pub const PARAMETER_NOT_SETTABLE: &str = "parameter-not-settable";
