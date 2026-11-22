@@ -336,5 +336,9 @@ fn a_spec_directory_that_can_be_searched_but_not_listed_is_read_failed() {
     }
     let (code, at, _) = refusal(&run);
     assert_eq!((code.as_str(), at.as_str()), ("read-failed", ""));
-    assert_eq!(detail(&run), "permission denied");
+    assert_eq!(
+        detail(&run),
+        "the directory `locked` cannot be listed (permission denied); oce reads a document only \
+         through its directory"
+    );
 }

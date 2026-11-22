@@ -87,6 +87,18 @@ fn a_umask_that_leaves_outputs_unreadable_is_refused_and_leaves_nothing() {
     if privileged {
         return;
     }
+    // A directory left behind with mode `0300` cannot be cleared by the next run's scratch:
+    // whatever happens, give every directory under `out` its search and list bits back.
+    struct Listable<'d>(&'d Path);
+    impl Drop for Listable<'_> {
+        fn drop(&mut self) {
+            let _ = Command::new("chmod")
+                .args(["-R", "u+rwx"])
+                .arg(self.0)
+                .status();
+        }
+    }
+    let _listable = Listable(&dir);
     let (code, stdout) = shell_run(&dir, "umask 0477");
     assert_eq!(code, Some(2), "{stdout}");
     assert_eq!(

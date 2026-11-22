@@ -356,7 +356,14 @@ fn a_directory_that_can_be_searched_but_not_listed_is_refused_as_permission_deni
     if !listable {
         let (code, detail) = result.expect_err("a search-only directory");
         assert_eq!(code, codes::WRITE_FAILED);
-        assert_eq!(detail, "the output could not be written: permission denied");
+        assert_eq!(
+            detail,
+            format!(
+                "the output could not be written: the directory `{}` cannot be listed \
+                 (permission denied); oce writes a file only through its directory",
+                parent.display()
+            )
+        );
         assert!(names(&parent).is_empty(), "nothing is created");
     }
     let _ = fs::remove_dir_all(&dir);
