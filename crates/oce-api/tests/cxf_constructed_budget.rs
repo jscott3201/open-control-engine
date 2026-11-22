@@ -406,3 +406,71 @@ fn exactly_the_budget_passes_both_probes_and_one_word_more_is_refused_by_the_fir
         );
     }
 }
+
+/// One `MultiSum` leaf `name` of `nin` inputs, gains left to their default, that declares one
+/// output and no input: an interface the class does not have, whose probe still builds `nin`
+/// gains and input kinds before the arity is compared.
+fn mismatched_sum(name: &str, nin: u64) -> Leaf {
+    let id = format!("{ROOT}.{name}");
+    Leaf {
+        name: name.to_owned(),
+        nodes: vec![
+            format!(
+                r#"{{"@id":"{id}","@type":"http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiSum","S231:hasParameter":{{"@id":"{id}.nin"}},"S231:hasOutput":{{"@id":"{id}.y"}}}}"#
+            ),
+            integer(&format!("{id}.nin"), i64::try_from(nin).unwrap()),
+            real(&format!("{id}.y"), "Output", None),
+        ],
+        real_inputs: Vec::new(),
+        boolean_inputs: Vec::new(),
+    }
+}
+
+#[test]
+fn probes_of_blocks_whose_interface_does_not_match_are_charged_too() {
+    // The review's shape (GitHub #788): a `MultiSum` of 2^20 inputs declaring none, about 420
+    // bytes of CXF a block, 9.4 MB a probe. Every probe is charged whether or not the block's
+    // declared ports match its class, so the fourth crosses the budget (4 x 1,179,648 words) and
+    // no later block is built; three interface mismatches are reported before it. Measured by
+    // the review on the base: 151 MB requested at 16 blocks and 606 MB at 64.
+    const NIN: u64 = 1 << 20;
+    let probe = sum_words(NIN) * 8;
+    let mut measured = Vec::new();
+    for blocks in [16_usize, 64] {
+        let leaves: Vec<Leaf> = (0..blocks)
+            .map(|index| mismatched_sum(&format!("s{index}"), NIN))
+            .collect();
+        let bytes = document(&leaves);
+        let (_, refused, info) = load(&bytes);
+        let error = refused.expect_err("mismatched and past the budget");
+        let limits: Vec<_> = error
+            .all_diagnostics()
+            .filter(|d| d.code == DiagCode::ResourceLimitExceeded)
+            .map(|d| (d.subject.as_deref().unwrap_or_default(), d.message.clone()))
+            .collect();
+        assert_eq!(
+            limits,
+            [(
+                format!("{ROOT}.s3").as_str(),
+                crossing_message(4 * sum_words(NIN))
+            )],
+            "{blocks} blocks"
+        );
+        let mismatches = error
+            .all_diagnostics()
+            .filter(|d| d.message.starts_with("block interface mismatch"))
+            .count();
+        assert_eq!(mismatches, 3, "{blocks} blocks: {error:?}");
+        assert!(
+            info.bytes_total < 5 * probe + 256 * bytes.len() as u64,
+            "{blocks} blocks: {} bytes requested",
+            info.bytes_total
+        );
+        measured.push(info.bytes_total);
+    }
+    let growth = measured[1] - measured[0];
+    assert!(
+        growth < probe,
+        "{growth} more bytes requested from 16 to 64 blocks, a probe is {probe}"
+    );
+}

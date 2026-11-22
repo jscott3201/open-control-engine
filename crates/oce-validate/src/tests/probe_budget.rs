@@ -188,3 +188,31 @@ fn the_probe_refusal_is_the_same_on_every_run() {
     }
     assert_eq!(first[0].subject.as_deref(), Some("block#4"));
 }
+
+#[test]
+fn blocks_whose_declared_ports_do_not_match_their_class_are_charged_too() {
+    // Each of five quarter-budget tables declares two outputs where its class has one (review of
+    // GitHub #788): the probe is charged before the interface is compared, so the fifth crosses
+    // the budget, and the four before it are each an interface mismatch.
+    let mut model = tables(&[QUARTER_BUDGET; 5]);
+    for index in 0..5 {
+        let id = u32::try_from(model.connectors.len()).unwrap();
+        let block = u32::try_from(index).unwrap();
+        model
+            .connectors
+            .push(conn(id, block, Dir::Out, ValueType::Real));
+        model.blocks[index].outputs.push(ConnectorId(id));
+    }
+    let refusals = budget_refusals(&model);
+    assert_eq!(refusals.len(), 1, "{refusals:?}");
+    assert_eq!(refusals[0].subject.as_deref(), Some("block#4"));
+    assert_eq!(
+        refusals[0].message,
+        crossing_message(MAX_CONSTRUCTED_WORDS + (1 << 20))
+    );
+    let mismatches = diagnostics(&model)
+        .into_iter()
+        .filter(|d| d.message.starts_with("block interface mismatch"))
+        .count();
+    assert_eq!(mismatches, 4);
+}
