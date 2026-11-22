@@ -33,7 +33,7 @@ use std::ffi::OsStr;
 use crate::report::Report;
 use crate::{Exit, Streams, input};
 
-pub(crate) use atomic_write::write_atomically;
+pub(crate) use atomic_write::{write_atomically, write_atomically_no_follow};
 pub(crate) use file_identity::{same_file, stdin_is_file};
 
 /// What one command produced.

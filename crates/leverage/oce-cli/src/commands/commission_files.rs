@@ -22,8 +22,11 @@
 //!
 //! The bound on the files together is the library's own, counted the library's way, and refused
 //! under the library's own word before the bytes are held, so a run the CLI lets through is never
-//! refused for it later. The read itself stops one byte past what is still allowed, so a file
-//! that grew after its metadata was read is refused, never held. Every refusal is at the spec
+//! refused for it later. The read itself stops one byte past what is still allowed: a file that
+//! grew after its metadata was read is read up to that room and one byte more, and then refused.
+//! Paths resolve against the directory of the spec's path as given (`dir/spec.json` gives `dir`),
+//! so a spec reached through a symbolic link reads the files beside the link, not beside its
+//! target. Every refusal is at the spec
 //! field that names the file (`references[0].inputs[1].path`) and names the path as the spec
 //! writes it, never a host path.
 
@@ -229,7 +232,7 @@ fn read_within(
             per_file
         };
         // The read stops one byte past what is still allowed: a file that grew since its
-        // metadata was read is refused, never held.
+        // metadata was read is read that far and refused.
         let bytes = read_bounded(opened.file, usize::try_from(room).unwrap_or(usize::MAX))
             .map_err(refuse)?;
         if counted {

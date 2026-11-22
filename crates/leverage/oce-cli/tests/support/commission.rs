@@ -167,23 +167,31 @@ pub fn edit(dir: &Path, name: &str, old: &str, new: &str) {
     fs::write(&path, text.replacen(old, new, 1)).expect("write the edit");
 }
 
-/// Every file under `dir`, as `(path relative to dir with `/`, bytes)`, sorted by path.
+/// Every entry under `dir` but a directory, as `(path relative to dir with `/`, bytes)`, sorted
+/// by path. A symbolic link is never followed: its bytes are `-> ` and its target.
 pub fn tree(dir: &Path) -> Vec<(String, Vec<u8>)> {
     fn walk(root: &Path, at: &Path, out: &mut Vec<(String, Vec<u8>)>) {
         for entry in fs::read_dir(at).expect("list") {
             let path = entry.expect("entry").path();
-            if path.is_dir() {
+            let kind = fs::symlink_metadata(&path).expect("metadata").file_type();
+            if kind.is_dir() {
                 walk(root, &path, out);
-            } else {
-                let relative = path
-                    .strip_prefix(root)
-                    .expect("under the root")
-                    .components()
-                    .map(|c| c.as_os_str().to_string_lossy().into_owned())
-                    .collect::<Vec<_>>()
-                    .join("/");
-                out.push((relative, fs::read(&path).expect("read")));
+                continue;
             }
+            let relative = path
+                .strip_prefix(root)
+                .expect("under the root")
+                .components()
+                .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+                .join("/");
+            let bytes = if kind.is_symlink() {
+                let target = fs::read_link(&path).expect("a link");
+                format!("-> {}", target.to_string_lossy()).into_bytes()
+            } else {
+                fs::read(&path).expect("read")
+            };
+            out.push((relative, bytes));
         }
     }
     let mut out = Vec::new();

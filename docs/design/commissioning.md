@@ -1265,6 +1265,28 @@ open:
    under `curves` every compared output with its `index`, its canonical path and the `files`
    written for it.
 
+**The orchestrator's calls in the review of GitHub #757** (not owner rulings):
+
+5. **Nothing may already be at `DIR/receipt.json`.** "Output" above says a `DIR/outputs` that
+   exists is `write-failed`, and says nothing of `receipt.json`. As first built, an existing
+   `receipt.json` was replaced, and the atomic writer followed a symbolic link there: a link to
+   a file outside `DIR` was overwritten, and a stale receipt could stand beside a partial
+   `outputs/`. Any entry at `DIR/receipt.json` that is not one of the run's inputs (those stay
+   `output-is-input`), a file, a directory or a link, dangling or not, is now `write-failed`,
+   before the run; and every file is written without following a link at its name, so a link
+   planted after the check is replaced and its target untouched. A `receipt.json` beside the
+   curves is therefore always the run's own, as "Output" promises.
+6. **A failed write lists what was written.** The report of a write that fails part-way carries
+   `curves`, the files written before it, so a reader need not walk the directory.
+7. **The last component is checked without following a link.** The file reader checks the
+   canonical path's own entry (`symlink_metadata`); a canonical path holds no link, so one found
+   there is a path that changed under the check (`read-failed`). The residual, an intermediate
+   directory swapped for a link, needs a component-by-component no-follow open std does not
+   offer; it is issue #758, beside the vector `--out`, which still writes through a link at its
+   `receipt.json`.
+8. **Two usage lines.** `oce verify --help` and every usage error print the vector form and the
+   commissioning form as two lines, so clap never prints the combination it refuses.
+
 **Readings of this build**, from the note:
 
 - **`errors.csv`** is `Curve::to_csv`, pyfunnel's shape: the line `x,y`, then each point with
@@ -1283,6 +1305,9 @@ open:
   path, link or (on Unix) hard link, is `output-is-input`, so a refusal writes nothing and an
   existing `outputs/` is refused before a run is spent. `outputs/` is then made with a plain
   create, which also refuses one a racing writer made.
+- **Where paths resolve**: the directory of `SPEC` as given, so a spec reached through a
+  symbolic link reads the files beside the link, not beside its target. A file that grows after
+  its metadata is read is read up to its remaining room and one byte more, then refused.
 - **Which files** the CLI reads is the library's list (`TrendSources::read`): the mapping when a
   path, then the trend sources in the receipt's order, the `controllerOutput` only when the
   reference has no `expected` key at all, a path named twice read once. A list that drifted

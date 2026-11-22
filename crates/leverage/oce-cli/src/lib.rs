@@ -148,6 +148,11 @@ pub(crate) enum DataLabel {
     Synthetic,
 }
 
+/// The two forms of `verify`, as its help and its usage errors print them: clap's own usage line
+/// would write the two forms as one (`--commission <SPEC> [VECTORS]`), a combination it refuses.
+const VERIFY_USAGE: &str = "oce verify [OPTIONS] --subject <SUBJECT> <VECTORS>\n       \
+oce verify [OPTIONS] --commission <SPEC>";
+
 /// The `verify` arguments only a vector run reads. A commissioning flag conflicts with each of
 /// them as well as requiring `--commission`: clap drops a requirement whose argument conflicts
 /// with one that is present, so `requires` alone would let `--reference` pass beside a vector set.
@@ -177,7 +182,8 @@ pub(crate) struct VerifyArgs {
     #[arg(long, value_enum, conflicts_with = "commission")]
     pub(crate) subject_form: Option<SubjectForm>,
     /// Run a commissioning spec (`oce/commissioning-spec/v1`, OBC §12.7) instead of a vector set:
-    /// its CXF, mapping and trend files resolve against its directory and may not leave it.
+    /// its CXF, mapping and trend files resolve against the directory of SPEC as given and may
+    /// not leave it.
     #[arg(long, value_name = "SPEC")]
     pub(crate) commission: Option<OsString>,
     /// The zero-based index of the spec's reference to run; needed when it has several.
@@ -433,6 +439,7 @@ enum Command {
     /// --commission, every compared output) passed, 1 when one failed or the run checked nothing.
     /// Anything that prevents a verdict is exit 2 with the JSON report. With --out the receipt
     /// goes to DIR/receipt.json and the report to stdout.
+    #[command(override_usage = VERIFY_USAGE)]
     Verify(VerifyArgs),
     /// Print the canonical content id of a CXF document or an authored sequence.
     ///

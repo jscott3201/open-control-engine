@@ -105,7 +105,7 @@ pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused
             ));
         }
         // The read stops one byte past what is still allowed: a file that grew since its
-        // metadata was read is refused, never held.
+        // metadata was read is read that far and refused.
         let room = per_file.min(total_bound - total);
         let bound = usize::try_from(room).unwrap_or(usize::MAX);
         let bytes = read_bounded(file, bound).map_err(|refusal| refuse(index, path, refusal))?;

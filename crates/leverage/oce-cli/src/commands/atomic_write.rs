@@ -1,4 +1,4 @@
-//! Writing a file atomically, for `fmt --write` and `emit -o`.
+//! Writing a file atomically, for `fmt --write`, `emit -o`, `import -o` and `verify --out`.
 //!
 //! The bytes go to a uniquely named temporary file beside the target, opened with `create_new`
 //! (`O_EXCL`: it never follows a symbolic link and never truncates a file that is already there),
@@ -41,13 +41,38 @@ pub(crate) fn write_atomically(path: &Path, bytes: &[u8]) -> Result<(), (&'stati
     let target = resolve(path).map_err(failed)?;
     // The target's permissions, when it exists; a missing target is a new file.
     let existing = fs::metadata(&target).ok();
-    let (temporary, mut file) = create_temporary(&target, existing.as_ref())?;
+    write_over(&target, existing.as_ref(), bytes)
+}
+
+/// Write `bytes` to `path` atomically **without following a symbolic link at `path`**: the
+/// temporary file is created beside `path` and renamed over the entry itself, so a link planted
+/// at `path` is replaced by the new file and its target is never written. Only an existing
+/// regular file at `path` lends its permissions; anything else is a new file (`0600` on Unix).
+/// For `verify --commission --out`, whose files must stay inside `DIR` (issue #664's review).
+pub(crate) fn write_atomically_no_follow(
+    path: &Path,
+    bytes: &[u8],
+) -> Result<(), (&'static str, String)> {
+    let existing = fs::symlink_metadata(path)
+        .ok()
+        .filter(fs::Metadata::is_file);
+    write_over(path, existing.as_ref(), bytes)
+}
+
+/// The shared write: a fresh temporary file beside `target`, created no more permissive than
+/// `existing`, written, given `existing`'s permissions, synced and renamed over `target`.
+fn write_over(
+    target: &Path,
+    existing: Option<&fs::Metadata>,
+    bytes: &[u8],
+) -> Result<(), (&'static str, String)> {
+    let (temporary, mut file) = create_temporary(target, existing)?;
     let written = file
         .write_all(bytes)
-        .and_then(|()| copy_permissions(&file, existing.as_ref()))
+        .and_then(|()| copy_permissions(&file, existing))
         .and_then(|()| file.sync_all());
     drop(file);
-    let result = written.and_then(|()| fs::rename(&temporary, &target));
+    let result = written.and_then(|()| fs::rename(&temporary, target));
     result.map_err(|error| {
         let _ = fs::remove_file(&temporary);
         failed(error)
@@ -149,6 +174,35 @@ fn failed(error: io::Error) -> (&'static str, String) {
 mod tests {
     use super::*;
     use std::sync::Mutex;
+
+    #[cfg(unix)]
+    #[test]
+    fn the_no_follow_write_replaces_a_link_and_never_writes_its_target() {
+        let dir = scratch("no_follow");
+        let victim = dir.join("victim.txt");
+        fs::write(&victim, b"PRECIOUS").expect("victim");
+        let target = dir.join("receipt.json");
+        std::os::unix::fs::symlink(&victim, &target).expect("a link");
+        assert_eq!(write_atomically_no_follow(&target, b"new"), Ok(()));
+        assert_eq!(fs::read(&victim).expect("victim"), b"PRECIOUS");
+        let entry = fs::symlink_metadata(&target).expect("the entry");
+        assert!(
+            entry.file_type().is_file(),
+            "the link was replaced by a file"
+        );
+        assert_eq!(fs::read(&target).expect("target"), b"new");
+        // A dangling link is replaced too, and nothing is created where it pointed.
+        let dangling = dir.join("dangling.json");
+        std::os::unix::fs::symlink(dir.join("nowhere.txt"), &dangling).expect("a link");
+        assert_eq!(write_atomically_no_follow(&dangling, b"x"), Ok(()));
+        assert!(!dir.join("nowhere.txt").exists());
+        // The following writer, by contrast, writes through a link to its target.
+        let followed = dir.join("followed.json");
+        std::os::unix::fs::symlink(&victim, &followed).expect("a link");
+        assert_eq!(write_atomically(&followed, b"through"), Ok(()));
+        assert_eq!(fs::read(&victim).expect("victim"), b"through");
+        let _ = fs::remove_dir_all(&dir);
+    }
 
     /// Serializes the tests that predict the counter, for a runner that shares one process.
     static COUNTER: Mutex<()> = Mutex::new(());

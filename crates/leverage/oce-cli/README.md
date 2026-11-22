@@ -161,13 +161,18 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
 - **Reads.** The spec at 4 MiB (`SpecLimits::MAX.max_bytes`), then the files the reference names:
   its `cxf`, its `pointNameMapping` when that is a path, and its trend sources in the receipt's
   order (`inputs`, `expected` or, with no `expected` key, the `controllerOutput`,
-  `indicatorSources`), a path named twice read once. Each path resolves against the spec's
-  directory and may not leave it: its segments are joined onto that directory and canonicalized,
-  following links, and a path that resolves outside is `file-outside-directory` (the rule
-  `mutant-outside-directory` holds a mutant to; the spec reader has already refused an absolute
-  path, an empty, `.` or `..` segment and a backslash as `path-invalid`). Each must be a regular
-  file by its metadata before it is opened (`not-a-file`; a named pipe never blocks the run), is
-  opened once, and its size is judged from that handle before a byte is read:
+  `indicatorSources`), a path named twice read once. Each path resolves against the directory of
+  `SPEC` as given (a spec reached through a symbolic link reads the files beside the link, not
+  beside its target) and may not leave it: its segments are joined onto that directory and
+  canonicalized, following links, and a path that resolves outside is `file-outside-directory`
+  (the rule `mutant-outside-directory` holds a mutant to; the spec reader has already refused an
+  absolute path, an empty, `.` or `..` segment and a backslash as `path-invalid`). The canonical
+  path's own entry, read without following a link, must be a regular file before it is opened
+  (`not-a-file`; a named pipe never blocks the run; a link found there was swapped in after the
+  canonicalization and is `read-failed`), the file is opened once, and its size is judged from
+  that handle before a byte is read. A file that grows after its metadata is read is read up to
+  its bound and one byte more, then refused. What stays racy is an intermediate directory swapped
+  for a link after the canonicalization, which std's opens follow (issue #758):
 
   | File | Bound | Refusal |
   | --- | --- | --- |
@@ -210,11 +215,17 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   and is named by index, so no name a spec, mapping or CXF writes reaches a file name or a cell.
   `DIR` must be an existing directory (it is never created) and `DIR/outputs` must not exist
   (`write-failed`: the curves of two runs are never mixed); a `DIR/receipt.json` that is the spec
-  or a file the run reads, by path, link or (on Unix) hard link, is `output-is-input`. These are
-  checked after the reads and **before the run**, so a refusal leaves nothing written. Each file
-  goes through the atomic writer; a write that fails part-way is `write-failed` naming the file,
-  and the files already written stay (without `receipt.json` they are not a run's output). No trace
-  file is written.
+  or a file the run reads, by path, link or (on Unix) hard link, is `output-is-input`, and any
+  other entry at `DIR/receipt.json`, a file, a directory or a symbolic link, dangling or not, is
+  `write-failed`, so a receipt this run did not write never stands beside its curves and a link
+  never carries a write out of `DIR` (the orchestrator's call in the review of GitHub #757). These
+  are checked after the reads and **before the run**, so a refusal leaves nothing written. Each
+  file goes through the atomic writer without following a link at its name (a link planted after
+  the check is replaced, its target untouched), and is created owner-only (`0600` on Unix; the
+  directories `outputs/` and `outputs/<k>/` take the process's default mode). A write that fails
+  part-way is `write-failed` naming the file; the files already written stay (without
+  `receipt.json` they are not a run's output), and the report's `curves` lists them. No trace file
+  is written.
 - **Exit-only and label flags.** `--deny-warnings` makes exit `1` when `load_warnings_total` or
   `warnings_total` is not zero. `--timings` fills the header's `timings` (`load_ms`: reading every
   file; `run_ms`: the whole `run_commissioning` call; `compare_ms`: `0`). `--data` is the
@@ -692,6 +703,11 @@ run fixture, read in place, `tests/support/commission.rs`):
   curves and a golden (`tests/fixtures/commission/`), the report's `curves`, two runs giving the
   same files, the flags, nothing written on a refusal, a part-way failure, links at
   `receipt.json`, hostile names, and the streams;
+- `tests/commission_out_guards.rs` covers what `--out` refuses to write over (a stale
+  `receipt.json`; a link there to a file outside `DIR`, to an unread file, dangling; a dangling
+  link at `outputs`; a `DIR` that is a file), a curve that cannot be written (a `DIR` path swept
+  across the platform's path limit, so writes fail at every stage, each run's `curves` holding
+  exactly the files that exist), and `--deny-warnings` on a load warning;
 - `tests/commission_reads.rs` covers the reads: each bound from metadata at and one past its
   edge, the files together, links out of and inside the spec's directory, a directory and a named
   pipe;

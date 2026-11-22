@@ -13,8 +13,8 @@
 //! 3. the reference's own completeness, decided by the library before any other file is read:
 //!    an index past the end (`reference-out-of-range`), no `cxf` or no `window`
 //!    (`reference-incomplete`), no `sampling` (`sampling-required`);
-//! 4. its files, each resolved inside the spec's directory and bounded from its metadata
-//!    ([`super::commission_files`]);
+//! 4. its files, each resolved inside the directory of the spec's path as given and bounded from
+//!    its metadata ([`super::commission_files`]);
 //! 5. with `--out DIR`, the output checks ([`super::commission_out::check`]);
 //! 6. `oce_verify::run_commissioning`, which binds, replays, masks and compares, every refusal
 //!    its own code;
@@ -25,7 +25,8 @@
 //! the run is `no_data` (decision 21). With `--out DIR` stdout is the report instead, with
 //! `passed`, `status`, `receipt_id` and `output`, as a vector run's `--out` prints it, and
 //! `curves`: per compared output its `index`, its canonical path (`output`) and the `files`
-//! written for it, so no reader infers anything from a file that is absent.
+//! written for it, so no reader infers anything from a file that is absent. A write that fails
+//! part-way is `write-failed`, and its report's `curves` lists the files written before it.
 //!
 //! `--deny-warnings` (decision 33) makes exit `1` when the receipt counts a load warning or a
 //! run-time warning (`load_warnings_total`, `warnings_total`), and changes nothing else.
@@ -221,17 +222,7 @@ fn answer(args: &CommissionArgs, run: &CommissionRun, mut report: Report) -> Out
     let shown = commission_out::shown(dir, RECEIPT);
     match commission_out::write(dir, &run.curves, &document) {
         Ok(written) => {
-            let curves = written
-                .into_iter()
-                .map(|output| {
-                    json!({
-                        "files": output.files,
-                        "index": output.index,
-                        "output": output.output,
-                    })
-                })
-                .collect();
-            report.set("curves", Value::Array(curves));
+            report.set("curves", curves_json(written));
             report.set("passed", Value::Bool(run.receipt.header.passed));
             report.set("status", Value::from(status));
             report.set(
@@ -243,6 +234,8 @@ fn answer(args: &CommissionArgs, run: &CommissionRun, mut report: Report) -> Out
             Outcome::with_exit(exit, report)
         }
         Err(refusal) => {
+            // The files written before the failure, so no reader has to walk the directory.
+            report.set("curves", curves_json(refusal.written));
             report.error_at(
                 refusal.code,
                 refusal.detail,
@@ -252,6 +245,22 @@ fn answer(args: &CommissionArgs, run: &CommissionRun, mut report: Report) -> Out
             refused(report, "the output could not be written")
         }
     }
+}
+
+/// The report's `curves`: per output written, its `files`, `index` and canonical path.
+fn curves_json(written: Vec<commission_out::Written>) -> Value {
+    Value::Array(
+        written
+            .into_iter()
+            .map(|output| {
+                json!({
+                    "files": output.files,
+                    "index": output.index,
+                    "output": output.output,
+                })
+            })
+            .collect(),
+    )
 }
 
 /// The run's status and the exit status, `--deny-warnings` applied.

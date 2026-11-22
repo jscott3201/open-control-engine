@@ -4,7 +4,8 @@ Replay a vector set against a subject, or a commissioning spec against its trend
 
 Stdout is the receipt when the run reaches a verdict: exit 0 when every scenario (with --commission, every compared output) passed, 1 when one failed or the run checked nothing. Anything that prevents a verdict is exit 2 with the JSON report. With --out the receipt goes to DIR/receipt.json and the report to stdout.
 
-Usage: oce verify [OPTIONS] [VECTORS]
+Usage: oce verify [OPTIONS] --subject <SUBJECT> <VECTORS>
+       oce verify [OPTIONS] --commission <SPEC>
 
 Arguments:
   [VECTORS]
@@ -26,7 +27,7 @@ Options:
           [possible values: cxf, text, wire]
 
       --commission <SPEC>
-          Run a commissioning spec (`oce/commissioning-spec/v1`, OBC §12.7) instead of a vector set: its CXF, mapping and trend files resolve against its directory and may not leave it
+          Run a commissioning spec (`oce/commissioning-spec/v1`, OBC §12.7) instead of a vector set: its CXF, mapping and trend files resolve against the directory of SPEC as given and may not leave it
 
       --reference <N>
           The zero-based index of the spec's reference to run; needed when it has several

@@ -3,6 +3,7 @@ exit: 2
 --- stderr
 error: the argument '--commission <SPEC>' cannot be used with '[VECTORS]'
 
-Usage: oce verify --commission <SPEC> [VECTORS]
+Usage: oce verify [OPTIONS] --subject <SUBJECT> <VECTORS>
+       oce verify [OPTIONS] --commission <SPEC>
 
 For more information, try '--help'.

@@ -400,35 +400,6 @@ fn the_output_checks_come_before_the_run_so_an_existing_outputs_beats_a_run_refu
 }
 
 #[test]
-fn a_write_that_fails_part_way_names_its_file_and_keeps_the_curves_already_written() {
-    // A non-empty directory at receipt.json: the guard does not see an input there, the curves
-    // are written, and the receipt's rename fails.
-    let dir = run_layout("commission_out_part_way", "pass");
-    fs::create_dir_all(dir.join("out/receipt.json/inside")).expect("a directory at the receipt");
-    let run = commission(&dir, &["--out", "out"]);
-    assert_eq!(run.code, 2, "{}", run.transcript());
-    let error = &run.report()["errors"][0];
-    assert_eq!(error["code"], "write-failed");
-    assert_eq!(error["at"], "receipt.json");
-    assert!(
-        error["detail"]
-            .as_str()
-            .expect("detail")
-            .starts_with("`out/receipt.json`: the output could not be written"),
-        "{error}"
-    );
-    assert!(
-        run.report().get("curves").is_none(),
-        "no file list without the receipt"
-    );
-    let names: Vec<String> = tree(&dir.join("out/outputs"))
-        .into_iter()
-        .map(|(n, _)| n)
-        .collect();
-    assert_eq!(names.len(), 4, "the curves stay: {names:?}");
-}
-
-#[test]
 fn a_hostile_name_reaches_no_csv_cell_and_is_escaped_on_stderr() {
     // A device point named with a formula, quotes, a comma and a right-to-left override, and a
     // model with a line separator. None can reach a CSV file: the cells are numbers under a
