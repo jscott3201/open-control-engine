@@ -516,8 +516,9 @@ pub struct VectorBody {
     pub load_warnings: Vec<String>,
     /// The number of load warnings before the cap.
     pub load_warnings_total: u64,
-    /// The series a tolerance window's envelope is built around: always [`VECTOR_FUNNEL_REFERENCE`],
-    /// the expectation (decision 38), present exactly when the header's mode is `tolerance`.
+    /// The series a tolerance window's envelope is built around: always
+    /// [`VECTOR_FUNNEL_REFERENCE`], the expectation (decision 38), present exactly when the
+    /// header's mode is `tolerance`.
     pub funnel_reference: Option<&'static str>,
     /// Sums over every scenario.
     pub totals: Totals,

@@ -153,7 +153,19 @@ fn the_notes_worked_example_loads_whole_with_its_mutant() {
         "an empty map is present"
     );
     let names: Vec<&str> = set.scenarios().iter().map(|s| s.name()).collect();
-    assert_eq!(names, ["transient_overlap", "short_delay"]);
+    assert_eq!(
+        names,
+        ["transient_overlap", "short_delay", "valve_follows_command"]
+    );
+    assert_eq!(set.written_envelope(), Some(oce_verify::Envelope::Funnel));
+    assert!(set.uses_tolerance());
+    let Expectation::Window(tolerance) = &set.scenarios()[2].expectations()[1] else {
+        panic!("the third scenario's second expectation is the tolerance window");
+    };
+    let within = tolerance.within().expect("a tolerance window");
+    assert_eq!(within.names().collect::<Vec<_>>(), ["atolx", "atoly"]);
+    assert_eq!(within.of().len(), 2);
+    assert_eq!(tolerance.when(), ["htg_enabled"]);
     let short_delay = &set.scenarios()[1];
     let params = short_delay.params().expect("its own params");
     assert_eq!(params[0].path(), "persist.delayTime");

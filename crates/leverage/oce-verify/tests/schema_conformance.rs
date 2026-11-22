@@ -105,6 +105,13 @@ fn every_document_the_reader_loads_conforms_to_the_schema() {
         "canonical/every_field.json",
         "canonical/AHU-0016.json",
         "canonical/AHU-0004.json",
+        "sets/tolerance_every_key.json",
+        "canonical/tolerance_every_key.json",
+        "note/worked_example.json",
+        "receipts/tolerance_pass.vectors.json",
+        "receipts/tolerance_fail.vectors.json",
+        "receipts/tolerance_masked.vectors.json",
+        "receipts/tolerance_no_data.vectors.json",
     ] {
         documents.push(String::from_utf8(fixture_bytes(fixture)).expect("UTF-8"));
     }

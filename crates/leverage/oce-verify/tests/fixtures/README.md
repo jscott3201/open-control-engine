@@ -6,12 +6,16 @@
 | `canonical/every_field.json` | The canonical form of that set. | `derive_canonical.py`, by hand |
 | `canonical/AHU-0016.json`, `canonical/AHU-0004.json` | The canonical forms of the two in-repo library rules' vector files (`crates/oce-api/tests/fixtures/library_rules/<rule>/vectors.json`, read in place by the tests). | `derive_canonical.py`, by hand |
 | `note/worked_example.json` | The JSON block of the design note's "The vector format" section (`docs/design/vectors.md`), copied verbatim; `tests/closed_objects.rs` reads the note and fails when the two differ, and loads it whole, its one mutant included. | copy the block again when the test says the note changed |
-| `derive_canonical.py` | The independent derivation of the canonical goldens and their ids. | nobody: it is the reference |
+| `derive_canonical.py` | The independent derivation of the canonical goldens and their ids, and, with `--receipt`, of a golden receipt's `receipt_id`. | nobody: it is the reference |
 | `receipts/AHU-0016.receipt.json`, `receipts/AHU-0004.receipt.json` | The pass receipts of the two in-repo library rules, run in place (the vector files and the `rule.cxf.jsonld` subjects under `crates/oce-api/tests/fixtures/library_rules/`). | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
 | `receipts/both_open_900.vectors.json` | AHU-0016's vector file with one edit: `both_open`'s first window ends at 900 s instead of 840 s, the tick at which the persistence timer fires. `tests/receipt_goldens.rs` holds it equal to the in-place file in every other respect. | nobody: edit it by hand |
 | `receipts/both_open_900.receipt.json` | Its receipt against AHU-0016: the fail golden, one `value-mismatch` at 900 s. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
 | `receipts/empty_expect.vectors.json` | One scenario with AHU-0016's `both_open` inputs and an empty `expect`. | nobody: edit it by hand |
 | `receipts/empty_expect.receipt.json` | Its receipt against AHU-0016: the `no_data` golden. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
+| `sets/tolerance_every_key.json` | A hand-written set that uses every key of the tolerance windows (issue #684) in an awkward spelling: the set's `envelope`, a `within` with all six names out of order (`-0`, `1e-4`, `0.00001`, an integer `ltolx` of 1), an `of` step list with an integer, a real and a `-0.0` value and a step between ticks, an `of` number written `2.5e1`, `when` lists on both window forms, `\u` escapes in names. | nobody: edit it by hand |
+| `canonical/tolerance_every_key.json` | The canonical form of that set. | `derive_canonical.py`, by hand |
+| `receipts/tolerance_pass.vectors.json`, `receipts/tolerance_fail.vectors.json`, `receipts/tolerance_masked.vectors.json`, `receipts/tolerance_no_data.vectors.json` | Four sets of tolerance windows against `subjects/signals.cxf.json`: a pass (a step inside a quarter degree and one tick, beside an exact window), a failure (an output one tick late with no time tolerance, and a NaN from `0 / 0`), a masked window under `aligned-grid` (an exact window masked too), and an all-masked `no_data` scenario. | nobody: edit it by hand |
+| `receipts/tolerance_*.receipt.json` | Their receipts, the `tolerance` header's goldens. Each `receipt_id` is also pinned in `tests/receipt_goldens.rs` as `derive_canonical.py --receipt` derives it. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
 | `subjects/signals.cxf.json` | A subject for the run's tests: Real, Integer and Boolean inputs, two inputs ending in `T` and two outputs ending in `y` (ambiguous suffixes), an input bounded to `[0, 10]`, an unused input (one load warning), a `CDL.Utilities.Assert`, a `CDL.Reals.Divide` (a NaN from `0 / 0`) and pass-through outputs (a `-0.0` reaches an output with its sign). Named `.cxf.json` so the workspace's `.jsonld` census does not move. | nobody: edit it by hand |
 | `subjects/hysteresis.cxf.json` | One `CDL.Reals.Hysteresis` (`uLow` 1, `uHigh` 2), for the parameter passes. | nobody: edit it by hand |
 | `receipts/AHU-0016.mutants.receipt.json` | The receipt of `AHU-0016/vectors.json` against AHU-0016 with its three mutants: two caught, one survivor. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
@@ -43,10 +47,10 @@ substituting each platform's behaviour for the copy's rule leaves all of them un
 
 ## The golden receipts are blessed
 
-Unlike the canonical goldens, a receipt can only be produced by running the engine, so the five
+Unlike the canonical goldens, a receipt can only be produced by running the engine, so the nine
 `*.receipt.json` goldens are written by the crate's bless switch and reviewed. Each embeds the
 engine version (inside its `receipt_id`) and its subject's content id, so a workspace version
-bump re-blesses all five, and so does re-vendoring either rule (#517), which also re-makes the
+bump re-blesses all nine (and the four tolerance ids pinned beside them are derived again), and so does re-vendoring either rule (#517), which also re-makes the
 three mutants. Their `receipt_id` is not
 taken on trust: `tests/receipt_goldens.rs` cuts the `receipt_id` line and the `timings` block out
 of each golden's text and hashes the rest with a second FNV-1a-128, which must give the id the
@@ -82,4 +86,8 @@ python3 -I derive_canonical.py \
   ../../../../oce-api/tests/fixtures/library_rules/AHU-0016/vectors.json canonical/AHU-0016.json
 python3 -I derive_canonical.py \
   ../../../../oce-api/tests/fixtures/library_rules/AHU-0004/vectors.json canonical/AHU-0004.json
+python3 -I derive_canonical.py sets/tolerance_every_key.json canonical/tolerance_every_key.json
+for name in pass fail masked no_data; do
+  python3 -I derive_canonical.py --receipt receipts/tolerance_$name.receipt.json
+done
 ```

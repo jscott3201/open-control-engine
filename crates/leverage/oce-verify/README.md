@@ -12,10 +12,12 @@ compares exactly and issues the receipt. **Mutant mode** (issue #521): it valida
 deliberately broken copies of the subject a set lists and scores which ones the vectors catch. The
 `oce verify` verb builds on it.
 
-Of the fourth part, tolerance mode, the **envelope arithmetic** is in (issue #655): a port of LBNL
-funnel and the conformance harness's grid envelope, as a library surface
-([Envelopes](#envelopes-funnel-and-aligned-grid) below). Nothing asks for it yet: comparison in a
-run is exact, a receipt's mode is `exact`, and `within`, `of` and `when` are still unknown keys.
+The fourth part, tolerance mode, is in too. Its **envelope arithmetic** (issue #655) is a port of
+LBNL funnel and the conformance harness's grid envelope, as a library surface
+([Envelopes](#envelopes-funnel-and-aligned-grid) below). **Tolerance windows** (issue #684) ask
+for it from a vector file: a window's `within` and `of` in place of `equals`, a `when` mask on
+either window form, and the set's `envelope`; such a set's receipt says `tolerance`
+([Tolerance windows](#tolerance-windows) below).
 
 The commissioning verifier (OBC §12) is being built beside it, in seven parts. The first is in
 (issue #658): [the readers of its two files](#the-commissioning-spec-and-the-point-mapping), the
@@ -45,6 +47,7 @@ println!("{}", run.receipt.to_canonical_json()); // `passed`, the body, `receipt
 ```json
 {
   "schema": "oce/vectors/v1",
+  "envelope": "funnel",
   "clock": { "step_s": 60, "horizon_s": 1800 },
   "params": {},
   "scenarios": [
@@ -68,6 +71,17 @@ println!("{}", run.receipt.to_canonical_json()); // `passed`, the body, `receipt
         { "diagnostic": { "block": "CDL.Utilities.Assert", "message": "Both valves open." },
           "at_s": 360 }
       ]
+    },
+    {
+      "name": "valve_follows_command",
+      "inputs": { "htg_vlv_cmd": [ { "t": 0, "value": 0.0 }, { "t": 300, "value": 20.0 } ],
+                  "clg_vlv_cmd": 0.0 },
+      "expect": [
+        { "output": "htg_vlv_pos", "from_s": 300, "to_s": 1800,
+          "within": { "atoly": 0.5, "atolx": 60 },
+          "of": [ { "t": 300, "value": 0.0 }, { "t": 360, "value": 20.0 } ],
+          "when": [ "htg_enabled" ] }
+      ]
     }
   ]
 }
@@ -81,12 +95,16 @@ println!("{}", run.receipt.to_canonical_json()); // `passed`, the body, `receipt
 | `mutants[]` | no | `path` (relative to this file: `/`-separated, no empty, `.` or `..` segment, no backslash, unique) and an optional `description`; at most 256 |
 | `scenarios[]` | yes | `name` (not empty, unique), optional `description`, optional `params`, `inputs`, `expect` |
 | `inputs` | yes | input name to a constant, or to a step list `[{ "t", "value" }]` from `t = 0` |
-| `expect[]` | yes | a window (`output`, `from_s`, `to_s`, `equals`) or an instant (`diagnostic { block, message? }`, `at_s`) |
+| `expect[]` | yes | a window (`output`, `from_s`, `to_s`, `equals`), a tolerance window (`output`, `from_s`, `to_s`, `within`, `of`), either with an optional `when`, or an instant (`diagnostic { block, message? }`, `at_s`) |
+| `envelope` | no | `funnel` (the default when absent) or `aligned-grid`: the envelope every tolerance window of the set is compared under |
+| `within` | with `of` | the six tolerance names `atolx`, `atoly`, `ltolx`, `ltoly`, `rtolx`, `rtoly`: each optional, at least one, finite and not negative, `ltolx` at most 1; an absent name is zero |
+| `of` | with `within` | the expected signal: a number, or a step list `[{ "t", "value" }]` of numbers whose first `t` is `from_s`, strictly increasing, none after `to_s` |
+| `when` | no | 1 to 16 names of Boolean inputs or outputs; a tick counts only where every one is true |
 
-The format stays `v1` until 1.0.0 and changes in place. Keys it does not have yet (`within`, `of`,
-`when`) are `unknown-key`: refused, never ignored, so no set is ever checked with part of it
-skipped. `mutants` arrived in place with mutant mode; it belongs to the set and to no other
-object.
+The format stays `v1` until 1.0.0 and changes in place. A key it does not define, or one of its
+keys in any object but its own, is `unknown-key`: refused, never ignored, so no set is ever
+checked with part of it skipped. `mutants` arrived in place with mutant mode, and `envelope`,
+`within`, `of` and `when` with tolerance windows (issue #684).
 
 **A value** is a number or a boolean, and keeps the kind it was written as: `1` is an integer
 token, `1.0` and `1e0` are reals, `-0` is the integer zero and `-0.0` keeps its sign
@@ -153,6 +171,8 @@ measured against.
 | `VerifyLimits::max_total_instants` | 2^28 = 268,435,456 | `too-many-instants` | `(1 + mutants)` times every window's ticks and every diagnostic, at the budget step; the library's largest set compares 41,488 (the work-budget note) |
 | `VerifyLimits::max_total_load_bytes` | 2^30 = 1,073,741,824 | `too-many-load-bytes` | the subject's and the supplied mutants' bytes times `1 + e + s` (`e` distinct edit lists, `s` scenarios), at the budget step; the library's largest is 847,757 |
 | `VerifyLimits::max_total_frame_bytes` | 2^40 = 1,099,511,627,776 | `too-many-frame-bytes` | `(N + 1) * s` times the same bytes, a frame weighted by the document that runs it, at the budget step; the library's largest is 426,133,620 |
+| `VerifyLimits::max_when_signals` | 16 names per `when` | `too-many-when-signals`, at load | a mask costs its names times its window's ticks; the note's work bound |
+| `VerifyLimits::compare` | `CompareLimits::MAX` | `too-many-points` (a tolerance window past the cap of the set's envelope, at the budget step), else `compare-refused` with `work-limit-exceeded` | the limits each envelope comparison runs under: 1,048,576 points for `funnel`, 32,768 for `aligned-grid`, 2^28 units of loop-removal work |
 | `VerifyLimits::replay` | `ReplayLimits::MAX` | `too-many-frames` (its `max_frames` against one scenario's `N + 1`, at bind), else `replay-failed` | the limits each scenario's replay runs under |
 | `VerifyLimits::max_recorded_failures` | 16 per scenario | none: the list stops, `failures_total` keeps the count | the note's failure-record cap |
 | `VerifyLimits::max_recorded_warnings` | 16 per scenario | none: the list stops, `warnings_total` keeps the count | the note's warning-row cap |
@@ -229,14 +249,18 @@ says where: a line and column for a refusal found in the text, a path such as
 | `not-utf8`, `byte-order-mark`, `json-syntax` | bytes that are not one strict JSON document |
 | `input-too-large`, `nesting-too-deep`, `list-too-long`, `string-too-long` | a read bound |
 | `duplicate-key`, `unknown-key`, `missing-key`, `wrong-type` | a closed object's shape |
-| `non-finite-number`, `integer-out-of-range`, `control-character` | a lexical refusal; the second also an integer time beyond ±2^53 |
+| `non-finite-number`, `integer-out-of-range`, `control-character` | a lexical refusal; the second also an integer time, tolerance or `of` value beyond ±2^53 |
 | `unknown-schema` | a `schema` other than `oce/vectors/v1` |
 | `invalid-clock`, `horizon-off-cadence`, `too-many-ticks` | the clock |
 | `too-many-scenarios`, `too-many-expectations`, `too-many-mutants`, `too-many-parameters` | a set bound |
 | `duplicate-scenario`, `empty-name` | scenario names; an empty name in any name position |
 | `step-list-empty`, `step-list-not-from-zero`, `step-times-not-increasing`, `step-after-horizon` | a step list |
 | `invalid-window`, `window-outside-clock`, `window-uncovered` | a window |
-| `ambiguous-expectation` | an expectation that is not exactly one of the two forms |
+| `ambiguous-expectation` | an expectation that is not exactly one of its forms: `equals` with `within`, `within` or `of` alone, a `when` on an instant |
+| `unknown-envelope` | an `envelope` other than `funnel` or `aligned-grid` |
+| `invalid-tolerance` | a `within` with no name, a negative tolerance, or `ltolx` above 1 |
+| `of-not-from-window-start`, `of-step-after-window` | an `of` step list whose first `t` is not `from_s`, or with a `t` after `to_s` (an empty list and times that do not increase reuse the step-list codes) |
+| `when-empty`, `too-many-when-signals` | a `when` with no name, or more than 16 |
 | `instant-off-cadence` | a diagnostic `at_s` that is not a tick |
 | `mutant-path-invalid`, `duplicate-mutant` | a mutant path that is absolute, has an empty, `.` or `..` segment or a backslash; a path listed twice |
 
@@ -336,12 +360,16 @@ A replay that ends in an error is `replay-failed` with a cause from a closed tab
 | `value-type-mismatch`, `value-not-representable` | a value its port or parameter type cannot take |
 | `enum-port-unsupported`, `unsupported-port-type` | an Enum or a String boundary port |
 | `too-many-frames` | the frame budget, or one scenario's `N + 1` past the replay limits |
+| `when-unknown`, `when-ambiguous`, `when-not-boolean` | a `when` name that matches no input or output, matches several, or names a port that is not a Boolean |
+| `tolerance-on-discrete-output` | a tolerance window on a Boolean or Integer output |
+| `too-many-points` | a tolerance window with more ticks than `CompareLimits` allows the set's envelope (1,048,576 for `funnel`, 32,768 for `aligned-grid`), checked straight after the instant budget |
 | `too-many-instants`, `too-many-load-bytes`, `too-many-frame-bytes` | the compared-instant, load-byte and byte-frame budgets |
 | `mutant-missing`, `mutant-unlisted`, `duplicate-mutant` | mutant bytes not given, given for a path the set does not list, or given twice |
 | `too-many-mutant-bytes` | the mutants' bytes together |
 | `mutant-load-failed`, `mutant-boundary-differs`, `mutant-identical` | an invalid mutant: refused by the engine, another boundary, or the subject's content id |
 | `mutant-param-refused` | a mutant that refuses an edit the subject admits, with its cause (`MUTANT_PARAM_REFUSAL_CAUSES`) |
 | `run-refused` | a run-class engine refusal |
+| `compare-refused` | a tolerance window the envelope gave no result for, with its cause (`COMPARE_REFUSAL_CAUSES`: the port's ten codes and `reference-outside-envelope`) |
 | `replay-failed` | any other replay error, with its cause |
 | `window-uncovered` | a window with no executed tick after a run that refused no frame |
 
@@ -400,12 +428,17 @@ the vector file's canonical rules. The header is the one the commissioning verif
 `schema` (`oce/receipt/v1`), `kind` (`vectors`), the subject's `content_id` as loaded, the
 `engine_version` (`oce_api::ENGINE_VERSION` as `major.minor.patch`, the version every blob and
 state snapshot of the same build records, without the Cargo version's pre-release suffix; issue
-#593), the set's `spec_id`, `comparison` (`{ "mode": "exact" }`), `passed`, `receipt_id` and
-`timings`. The body holds the set's `status` (`pass`, `fail` or `no_data`), its
-`clock` as written, the load-warning codes (at most 64, `load_warnings_total` beside them), the
-totals, and one object per scenario: its verdict, its effective parameter edits by canonical path
-with the `content_id` of what ran when it has any, frame and instant counts, failure records
-(`value-mismatch`, `diagnostic-missing`, `frame-refused`, each shaped by its code, by tick then by
+#593), the set's `spec_id`, `comparison`, `passed`, `receipt_id` and `timings`. `comparison` is
+`{ "mode": "exact" }` when no window of the set is a tolerance window, else `{ "mode":
+"tolerance", "envelope", "envelope_version" }` with `funnel` and `funnel@a12fa96` or
+`aligned-grid` and `aligned-grid@1`. The body holds the set's `status` (`pass`, `fail` or
+`no_data`), its `clock` as written, the load-warning codes (at most 64, `load_warnings_total`
+beside them), `funnel_reference` (always `expectation`) under the tolerance mode, the totals, and
+one object per scenario: its verdict, its effective parameter edits by canonical path with the
+`content_id` of what ran when it has any, frame and instant counts (`masked` counts the ticks a
+`when` excluded), failure records (`value-mismatch`, `tolerance-exceeded` with its `expected`,
+`actual` and `exceedance`, `diagnostic-missing`, `frame-refused`, each shaped by its code, by tick
+then by
 expectation, at most 16 with `failures_total`; when a frame was refused the last slot is kept for
 its `frame-refused` record, so earlier mismatches never push it out) and unmatched warnings (at
 most 16 with `warnings_total`). When the set lists a mutant, the body has a `mutants` section:
@@ -432,7 +465,8 @@ a change of the pre-release suffix alone moves none (issue #593). `oce-verify` m
 `schemars` from the reader's own shapes (`src/dto.rs`) and written canonically.
 `tests/schema_pinned.rs` regenerates it and compares byte for byte, and walks it for keywords
 outside the strict profile (`SCHEMA_PROFILE_KEYWORDS`): closed objects, two map shapes (`inputs`
-and `params`), `anyOf` only over a value's shapes, an input's and an expectation's two forms, and
+and `params`), `anyOf` only over a value's shapes, an input's, an `of`'s and an expectation's
+three forms, and
 no `oneOf`, `const`, `format`, `default` or `null`. `tests/schema_conformance.rs` holds the schema
 and the reader together: every document the reader loads conforms, and for every closed object the
 schema's properties and required keys are exactly the keys the reader knows and requires.
@@ -445,13 +479,40 @@ Regenerate with `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`, run it aga
 switch, and say in the pull request why it moved (a shape, or a doc comment in `src/dto.rs`). The
 same switch rewrites the golden receipts and the funnel's bit goldens.
 
+## Tolerance windows
+
+A tolerance window (vectors note, "Tolerance windows", decisions 38 to 50) compares a Real output
+with an expected signal under the set's envelope, on the window's ticks only:
+
+- the **reference** is `of` by zero-order hold, the **test** the engine's output, `x` each
+  tick's time in seconds; the envelope is built around the expectation, never the output;
+- a **masked** tick (a `when` signal false there) is zero in both series and counted as
+  `masked`, never `checked`; in an exact window a masked tick is skipped;
+- an **out-of-range output** (a NaN, an infinity, or above 2^1000 in magnitude) fails its
+  instant with the exceedance positive infinity, and carries the reference's value into the test
+  so the other ticks are judged as they would have been;
+- **self-enclosure**: the reference is first compared against itself. A port refusal, a bound
+  past 2^1000 (`non-finite-envelope`) or any error above zero (`reference-outside-envelope`) is
+  `compare-refused`, an error with no receipt that never depends on the output. Funnel's one
+  known case is no `y` tolerance, an `x` tolerance of a whole number of steps and a step of about
+  a million: give such a window any `y` tolerance, an `x` tolerance off the step, or
+  `"envelope": "aligned-grid"`;
+- **the judgement** is a second call, with the output: an instant's exceedance is the error at
+  its tick, `max(0, y - y_up) - min(0, y - y_low)`; exactly zero passes, anything above is a
+  `tolerance-exceeded` record. `aligned-grid`'s errors between ticks are not read.
+
+No output can turn a run into an error: with every bound and test value inside 2^1000, every
+error is finite. A refused frame cuts a tolerance window as it cuts an exact one. A scenario whose
+`when` names an input keeps the inputs in its trace (`TraceOptions::inputs`); no other trace
+changes.
+
 ## Envelopes: `funnel` and `aligned-grid`
 
 The arithmetic of tolerance mode (design note
 [`docs/design/commissioning.md`](../../../docs/design/commissioning.md), "Envelope"; issue #655):
 is a **test** series inside a band built around a **reference** series? It is a pure library
-surface. No vector file, receipt or CLI verb reaches it yet; how a vector file asks for a tolerance
-is #656, and the commissioning comparison that calls it is #663.
+surface, which [tolerance windows](#tolerance-windows) call twice per window; the commissioning
+comparison that calls it is #663.
 
 ```rust
 use oce_verify::{CompareLimits, Envelope, Series, Tolerances, funnel};

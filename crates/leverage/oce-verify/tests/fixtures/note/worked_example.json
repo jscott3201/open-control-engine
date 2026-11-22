@@ -1,5 +1,6 @@
 {
   "schema": "oce/vectors/v1",
+  "envelope": "funnel",
   "clock": { "step_s": 60, "horizon_s": 1800 },
   "params": {},
   "mutants": [
@@ -27,6 +28,20 @@
         { "output": "yFault", "from_s": 360, "to_s": 1800, "equals": true },
         { "diagnostic": { "block": "CDL.Utilities.Assert", "message": "Both valves open." },
           "at_s": 360 }
+      ]
+    },
+    {
+      "name": "valve_follows_command",
+      "inputs": {
+        "htg_vlv_cmd": [ { "t": 0, "value": 0.0 }, { "t": 300, "value": 20.0 } ],
+        "clg_vlv_cmd": 0.0
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 1800, "equals": false },
+        { "output": "htg_vlv_pos", "from_s": 300, "to_s": 1800,
+          "within": { "atoly": 0.5, "atolx": 60 },
+          "of": [ { "t": 300, "value": 0.0 }, { "t": 360, "value": 20.0 } ],
+          "when": [ "htg_enabled" ] }
       ]
     }
   ]

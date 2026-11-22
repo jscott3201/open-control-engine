@@ -3,10 +3,10 @@
 //! `docs/design/vectors.md`, issues #519 to #521), and the envelope arithmetic of its tolerance
 //! mode (design note `docs/design/commissioning.md`, issue #655).
 //!
-//! Status: three of the four parts of the verification product (M3): the one vector format,
-//! `oce/vectors/v1`, the run that checks a set against a sequence and issues the receipt, and
-//! mutant mode. The `oce verify` verb builds on it. Of the fourth, tolerance mode, the envelope
-//! arithmetic is in as a library surface; no vector file, receipt or verb asks for it yet.
+//! Status: the four parts of the verification product (M3): the one vector format,
+//! `oce/vectors/v1`, the run that checks a set against a sequence and issues the receipt, mutant
+//! mode, and tolerance mode: the envelope arithmetic, and the tolerance windows a vector file
+//! asks for it with (issue #684). The `oce verify` verb builds on it.
 //!
 //! A **vector set** is a strict-JSON document of scenarios, each a schedule of inputs over one
 //! clock and expectations over windows of it, to be checked against one loaded sequence, the
@@ -15,13 +15,15 @@
 //! - **The reader** ([`VectorSet::from_json_bytes`]): strict and bounded. The document is one
 //!   UTF-8 JSON value under the authoring wire form's profile ([`MAX_DEPTH`], [`MAX_LIST_LEN`],
 //!   [`MAX_STRING_BYTES`], no repeated key, no control character, no non-finite number) and the
-//!   lowerable [`VerifyLimits`]; every object is closed, so a key the format does not define
-//!   (`within`, `of` and `when` among them, until the format gains them) is refused, never
-//!   ignored. It takes bytes, opens nothing and never panics.
+//!   lowerable [`VerifyLimits`]; every object is closed, so a key the format does not define,
+//!   or one of its keys in another object, is refused, never ignored. It takes bytes, opens
+//!   nothing and never panics.
 //! - **The rules** a shape cannot say, checked at load: the clock's cadence, decided by
 //!   multiplication ([`Clock`]); step lists from `t = 0`, strictly increasing, never past the
 //!   horizon; windows inside the clock that hold at least one tick; a diagnostic instant on a
-//!   tick.
+//!   tick; a tolerance window's `within` (at least one of the six names, none negative, `ltolx`
+//!   at most 1), its `of` (from the window's start, never past its end) and a `when` of 1 to 16
+//!   names; the set's `envelope`, `funnel` or `aligned-grid`.
 //! - **The canonical form** ([`VectorSet::to_canonical_json`]) and the set's identity over it
 //!   ([`VectorSet::spec_id`], `spec:fnv1a128:<32 hex>`).
 //! - **Typed refusals** ([`VectorError`], [`VectorErrorKind`]): one closed kind per refusal,
@@ -37,7 +39,10 @@
 //!   frames, compared instants, bytes loaded and byte-frames) before every other load, and each
 //!   distinct parameter-edit list tried once on a fresh engine.
 //! - **The run**: each scenario on a freshly loaded engine, its parameter edits applied in passes
-//!   inside one halt, then one replay on the set's grid, compared exactly (a Real by its bits).
+//!   inside one halt, then one replay on the set's grid. An exact window is compared exactly (a
+//!   Real by its bits); a tolerance window under the set's envelope, built around its expected
+//!   signal after that signal is checked to lie inside its own envelope; a `when` masks the ticks
+//!   where one of its Boolean signals is false.
 //! - **The receipt** ([`Receipt`]): the header shared with the commissioning verifier and the
 //!   vector body, written canonically ([`Receipt::to_canonical_json`]) and named by `receipt_id`.
 //! - **Mutant mode**: the deliberately broken copies of the subject a set lists ([`Mutant`]),
@@ -47,8 +52,8 @@
 //!   and run refusal is an error with no receipt; a failed expectation is a failed scenario
 //!   inside one.
 //!
-//! and, apart from all of the above, the **envelopes** a tolerance comparison is made with: is a
-//! test series inside a band built around a reference series?
+//! and the **envelopes** a tolerance comparison is made with, a library surface of their own: is
+//! a test series inside a band built around a reference series?
 //!
 //! - **[`funnel()`]**: a port of LBNL funnel, the tool OBC §12 cites ([`FUNNEL_VERSION`]), held
 //!   to the pinned `pyfunnel` by a differential test: its five curves print, in C's `%.16g`
