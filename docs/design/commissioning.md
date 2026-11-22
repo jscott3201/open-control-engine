@@ -1360,7 +1360,7 @@ verdict results; a failure is a finding to adjudicate, never a reason to widen t
 
 ### As landed: the Building 33 material
 
-*(GitHub #N, issue #661.)* The eight files of the trend directory, the sequence's `.mo` and its
+*(GitHub #761, issue #661.)* The eight files of the trend directory, the sequence's `.mo` and its
 translation are under `third_party/modelica-buildings-cdl/`, verbatim at the pins the tree
 already records; neither pin moved. Each upstream file's Git blob OID equals upstream's at
 `a131864` (`.agents/revendor-upstream.sh`, whose fidelity leg now reads the two new upstream

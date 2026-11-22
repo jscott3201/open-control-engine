@@ -1911,7 +1911,7 @@ so far, and no tag is cut by the bump.
 ### Verification
 
 - **The OBC §12.6 Building 33 commissioning material is vendored, verbatim and whole; its
-  sequence's translation does not load** (GitHub #PRNUM, issue #661).
+  sequence's translation does not load** (GitHub #761, issue #661).
   `third_party/modelica-buildings-cdl/` gains the eight files of upstream's
   `Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/`
   (six `CombiTimeTable` trends of three days at 5 s from LBNL Building 33, their `README.md` and
