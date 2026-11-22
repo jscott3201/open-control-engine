@@ -348,7 +348,7 @@ so far, and no tag is cut by the bump.
 
 - **A value read more than once is grounded once, string parameter values are held to 8 MiB a
   document, the sibling names of a leaf are built once, and nine more refusal routes are raised**
-  (GitHub #PRNUM, issues #736, #731 and #711).
+  (GitHub #752, issues #736, #731 and #711).
   - **A broadcast value is grounded once** (issue #736). The one value of a broadcast array
     (`q[n]` with the value `[v]`) was grounded again for each element, each a value of its own,
     so a string was copied `n` times: `q[1024]` with a 60 KB string, a 67 KB document, loaded
@@ -381,9 +381,9 @@ so far, and no tag is cut by the bump.
     findings of a pass-through pair. Past the diagnostic list's budget each costs a count: on a
     256 KiB `@id` a further item requests 0 to 582 bytes where it requested 524,904 to 1,311,378
     (7,544 with the sibling node a collision needs, where 531,985), and 512 pass-through pairs
-    onto a 12 KiB output add 17,480,217 bytes where they added 76,830,733. A parameter node listed again no longer copies its `@id` to find it was checked.
-    The `@context` route of the issue was raised by GitHub #730, and the validator's list by
-    GitHub #732.
+    onto a 12 KiB output add 17,480,217 bytes where they added 76,830,733. A parameter node
+    listed again no longer copies its `@id` to find it was checked. The `@context` route of the
+    issue was raised by GitHub #730, and the validator's list by GitHub #732.
   - **What grounding once changes:** nothing for a document that loads. A later read could only
     differ if a name the value reads were bound in between in the region the reads share; for a
     broadcast that is another array of the same instance minting the same element name, and a
@@ -850,7 +850,7 @@ so far, and no tag is cut by the bump.
     it was 262,144 or more. Elsewhere a finding past the bound is built and dropped (issue
     #711): memory is bounded there, time is not, so a document that failed on allocation within
     seconds can instead run for as long as building its findings takes. (Nine more routes are
-    raised since GitHub #PRNUM.)
+    raised since GitHub #752.)
   - **Withheld findings are references.** What the specialization pass withholds until lowering
     (a re-bound declaration, a declaration cycle) is kept as references into the document and
     built into a diagnostic only when it is released, so it holds three references a finding
@@ -983,7 +983,7 @@ so far, and no tag is cut by the bump.
   - **Not bounded yet: an element's value.** The two budgets count elements and the bytes of
     their paths. A broadcast array whose one value is a string literal grounds the string again
     for each element, each a string of its own, and no budget counts those bytes: `q[1024]` with
-    a 60 KB string, a 66 KB document, loads at 124 MB (issue #736). (Bounded since GitHub #PRNUM:
+    a 60 KB string, a 66 KB document, loads at 124 MB (issue #736). (Bounded since GitHub #752:
     the value is grounded once and string values are held to 8 MiB a document.)
   - **Breaking, in place:** a document whose array element paths total more than 64 MiB loaded
     before, memory permitting, and is now refused, among them the 38 KB document above and a
