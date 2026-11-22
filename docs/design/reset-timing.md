@@ -324,6 +324,10 @@ to decide something the note left open, the record is here; the decided text abo
   `generic_time_suppression` blob as `blob_triggered_sampler_pre_trigger_false.oceb`, refused with
   `InitialStateMismatch`. Section 4 missed two artefacts, found in review: `oce-replay`'s
   `controller_minute_day.trace` and `controller_grid_hold.trace`, which run
-  `cooling_only_controller` (its supply-fan status is true at frame 0, so the frame-0 reset the
-  previous engine fired shows from the second frame on, as in the G36 trace), and the
-  authority-claims projection (`docs/authority-claims.md`), which hashes the golden corpora.
+  `cooling_only_controller`, and the authority-claims projection (`docs/authority-claims.md`),
+  which hashes the golden corpora. The minute day carries both changes: `VSet_flow` moves at rows
+  1 to 55 (the supply-fan status is true at frame 0, and the frame-0 reset the previous engine
+  fired showed from row 1, as in the G36 trace); `yDam` moves by 1 ulp at rows 200, 203 and 204
+  and from 1.0 to 0.01 at row 314 (the reset shown at its own frame); `yZonPreResReq`, downstream,
+  moves at rows 314 and 315 (3 to 0). The 5 s grid run moves `VSet_flow` only, 660 rows from
+  row 1.

@@ -135,6 +135,10 @@ the block's schedule shape, and `resume` does not reschedule: `Engine::set_param
 `ParamStructural`, a value that (with the block's other pending edits) changes the scheduled
 instance's feedthrough, the inputs it reads when it fires or an input's event role. That refuses
 a switch between {P, PD} and {PI, PID}, and between P and PD; PI and PID stay interchangeable.
+P↔PD is refused even on a model without feedback into `trigger`, where it would be harmless: P
+reads `trigger` when it fires and PD never does, so the two schedules differ, and one rule judged
+on the block alone keeps a halted edit consistent with what a fresh load of the edited model
+would schedule.
 
 `TriggeredSampler` seeds its previous-trigger word `true` in `init_state`, so no false-to-true
 transition can be seen at frame 0, whatever `trigger` is there; the frame-0 update stores frame

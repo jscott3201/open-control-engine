@@ -128,8 +128,7 @@ fn assert_structural(result: Result<(), OcError>, what: &str) {
 }
 
 #[test]
-fn reviewer_scenario_pd_to_pi_with_a_late_declared_trigger_is_refused_and_the_engine_stays_usable()
-{
+fn pd_to_pi_with_a_late_declared_trigger_is_refused_and_the_engine_stays_usable() {
     // A fresh PI load resets at the frame the trigger rises (t = 2): 1, 1, 5, 5, 6.
     let fresh_pi = run_frames(&mut load(&reset_pid("PI", false)));
     assert_eq!(fresh_pi, bits(&[1.0, 1.0, 5.0, 5.0, 6.0]));
@@ -168,7 +167,7 @@ fn reviewer_scenario_pd_to_pi_with_a_late_declared_trigger_is_refused_and_the_en
 }
 
 #[test]
-fn reviewer_scenario_feedback_loaded_as_pd_cannot_be_switched_to_a_mode_that_refuses_it() {
+fn feedback_loaded_as_pd_cannot_be_switched_to_a_mode_that_refuses_it() {
     let fresh_pi = Engine::new().load_cxf(&reset_pid("PI", true).bytes());
     assert!(
         fresh_pi.is_err(),
@@ -232,6 +231,12 @@ fn pi_to_pid_and_back_is_accepted_and_runs_like_a_fresh_load() {
 
 #[test]
 fn the_guard_judges_the_cumulative_pending_edits_of_the_block() {
+    // The guard instantiates the block with every pending edit applied, as `resume` does. On the
+    // current registry no class's shape depends on two parameters at once, so this test cannot
+    // tell cumulative judging from judging the single edit alone: it pins the sequences that
+    // must hold either way. The registry sweep's final assertion
+    // (`params_schedule_shape_tests`: the set of value-dependent shapes is exactly
+    // `PIDWithReset.controllerType`) is what flags a class that makes the distinction matter.
     let mut engine = load(&reset_pid("PI", false));
     engine.halt().unwrap();
     // PI -> PID (same shape), then PID -> PI (back): both accepted.

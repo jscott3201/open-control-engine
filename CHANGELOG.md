@@ -255,12 +255,15 @@ so far, and no tag is cut by the bump.
   with `OcError::ParamStructural` when its port counts, feedthrough, the inputs it reads when it
   fires or an input's event role differ from the scheduled instance (one constructor call and
   `O(inputs x outputs)` comparisons per edit). Refused now: `PIDWithReset.controllerType` between
-  {P, PD} and {PI, PID}, and between P and PD. PI and PID stay interchangeable, every other
+  {P, PD} and {PI, PID}, and between P and PD (refused even on a model without feedback, where
+  it would be harmless: P reads `trigger` when it fires and PD never does, and one rule judged on
+  the block alone keeps a halted edit consistent with a fresh load). PI and PID stay
+  interchangeable, every other
   parameter of every class is unaffected (a registry sweep of every class and settable scalar
   parameter over a value grid finds no other value-dependent shape), and `CDL.Reals.PID`'s
   `controllerType` stays settable in every direction. The engine stays halted with its pending
   edits unchanged. The `ParamStructural` message now also covers a value that changes the
-  block's feedthrough. The earlier note that no edit a subject admits can meet `param-structural`
+  block's schedule shape (its feedthrough, or which inputs it reads when it fires). The earlier note that no edit a subject admits can meet `param-structural`
   on an `oce-verify` mutant no longer holds for a mutant that changes a reset PID's mode. A
   compiled-schedule blob has no parameter edit, so it was never affected.
 

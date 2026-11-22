@@ -189,8 +189,12 @@ impl Engine {
     /// for a value that, with the block's other pending edits, changes what the frozen schedule
     /// was derived from: the block's port counts, feedthrough, the inputs it reads when it fires,
     /// or an input's event role (for example `PIDWithReset.controllerType` between the modes with
-    /// an integrator, PI and PID, and those without, P and PD; also between P and PD); the check
-    /// instantiates the edited block once and costs `O(inputs × outputs)`; [`OcError::ParamRange`]
+    /// an integrator, PI and PID, and those without, P and PD; also between P and PD, which is
+    /// refused even on a model where it would be harmless, so one rule matches a fresh load). The
+    /// check costs, per edit: a scan of the model's parameter entries for the block's pending
+    /// edits, a lookup in the block's parameter table per pending entry, one constructor call
+    /// (`O(table size)` for a class with settable table elements) and an `O(inputs × outputs)`
+    /// comparison; the trial instance is no larger than the live one. [`OcError::ParamRange`]
     /// for a non-finite Real value or a value rejected by declared bounds or registry parameter
     /// rules. Never panics (R-ERR-1).
     pub fn set_param(&mut self, path: &str, value: Value) -> Result<(), OcError> {

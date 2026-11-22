@@ -68,9 +68,13 @@ impl Engine {
     /// parameters with every pending edit of that block and this value applied, through the same
     /// registry constructor. The constructed budget is not charged here: no parameter `set_param`
     /// accepts sizes a block's buffers (the sizing parameters are `Structural`), and `resume`
-    /// still charges the whole model. Cost: one constructor call and `O(inputs × outputs)`
-    /// `feeds_through` calls for each of the two instances. Never panics: a constructor accepts any
-    /// parameter table and degrades an invalid value to its documented default.
+    /// still charges the whole model. Cost per edit: a scan of the model's parameter entries for
+    /// the block's pending edits, a lookup in the block's parameter table per pending entry, a
+    /// copy of that table, one constructor call (`O(table size)` for a class with settable table
+    /// elements) and `O(inputs × outputs)` `feeds_through` calls for each of the two instances.
+    /// The trial instance is no larger than the live one: the parameters that size a block are
+    /// `Structural`, so `set_param` never stages a different size. Never panics: a constructor
+    /// accepts any parameter table and degrades an invalid value to its documented default.
     pub(super) fn edit_changes_schedule_shape(&self, idx: usize, value: &Value) -> bool {
         let edited = &self.params.entries[idx];
         let BlockId(block_index) = edited.block;

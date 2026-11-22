@@ -94,13 +94,14 @@ pub enum OcError {
         path: String,
     },
     /// A `set_param` that changes the block structure the frozen schedule was built from: a
-    /// structural (conditional-instance) parameter, or a value that changes the block's
-    /// feedthrough, the inputs it reads when it fires or an input's event role (such as
-    /// `PIDWithReset.controllerType` into or out of the modes with an integrator). Reload
-    /// required (CDL §7.7.4).
+    /// structural (conditional-instance) parameter, or a value that changes the block's schedule
+    /// shape: its port counts, its feedthrough, which inputs it reads when it fires, or an
+    /// input's event role (such as `PIDWithReset.controllerType` into or out of the modes with an
+    /// integrator, or between P and PD). Reload required (CDL §7.7.4).
     #[error(
         "parameter '{path}' is structural (conditional-instance), or this value changes the \
-         block's feedthrough; reload required (CDL §7.7.4)"
+         block's schedule shape (its feedthrough, or which inputs it reads when it fires); reload \
+         required (CDL §7.7.4)"
     )]
     ParamStructural {
         /// The dotted instance path of the parameter.

@@ -14,7 +14,6 @@
 //! re-blessed. Its header carries this build's engine version (0.6.0 was already the version
 //! after the v0.5.0 tag, so standing rule 10's bump was done and the version does not separate
 //! the two meanings); the schedule check is what refuses it.
-
 //!
 //! `fixtures/blob_triggered_sampler_pre_trigger_false.oceb` is the `generic_time_suppression`
 //! golden as `development` encoded it before the change (at 56c81a85, path
