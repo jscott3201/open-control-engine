@@ -140,7 +140,8 @@ pub const MAX_DOCUMENT_EVAL_FUEL: u64 = 1 << 26;
 /// to it (GitHub issue #709). A token read through a prefix is as long as the IRI the prefix
 /// binds, so each expansion is counted as its length less the length of the token as written,
 /// over every `@id`, reference, `@type`, `isOfDataType` and unit IRI node, and every property
-/// key that ends in `hasUnit` and is read through a prefix. The first expansion that does not
+/// key that ends in `hasUnit` and is read through the `@context`, by a prefix or as a term. The
+/// first expansion that does not
 /// fit is refused with one [`oce_diag::DiagCode::ResourceLimitExceeded`] error whose subject is
 /// the node it is written on (the token as written, for a node's own `@id`); nothing after it is
 /// read, so the list holds that error and what was raised before it, sorted as every list is. A
