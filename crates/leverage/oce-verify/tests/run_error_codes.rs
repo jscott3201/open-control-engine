@@ -38,6 +38,11 @@ const PINNED: &[&str] = &[
     "enum-port-unsupported",
     "unsupported-port-type",
     "too-many-frames",
+    "when-unknown",
+    "when-ambiguous",
+    "when-not-boolean",
+    "tolerance-on-discrete-output",
+    "too-many-points",
     "too-many-instants",
     "too-many-load-bytes",
     "too-many-frame-bytes",
@@ -50,6 +55,7 @@ const PINNED: &[&str] = &[
     "mutant-identical",
     "mutant-param-refused",
     "run-refused",
+    "compare-refused",
     "replay-failed",
     "window-uncovered",
 ];
@@ -81,6 +87,21 @@ fn the_code_list_is_pinned() {
 
 fn window(output: &str, equals: &str) -> String {
     format!(r#"{{"output": "{output}", "from_s": 0, "to_s": 1800, "equals": {equals}}}"#)
+}
+
+/// A tolerance window on `output` over the whole clock, `atoly` 0.5, around the constant `of`.
+fn within(output: &str, of: &str) -> String {
+    format!(
+        r#"{{"output": "{output}", "from_s": 0, "to_s": 1800, "within": {{"atoly": 0.5}}, "of": {of}}}"#
+    )
+}
+
+/// An exact window on `output` (true over the whole clock) masked by the `when` names `names`,
+/// written as the inside of a JSON string list.
+fn masked(output: &str, names: &str) -> String {
+    format!(
+        r#"{{"output": "{output}", "from_s": 0, "to_s": 1800, "equals": true, "when": ["{names}"]}}"#
+    )
 }
 
 fn with_limits(limits: VerifyLimits) -> VerifyOptions {
@@ -214,6 +235,44 @@ fn cases() -> Vec<(
                 &ahu,
                 &with_limits(VerifyLimits {
                     max_total_frames: 216,
+                    ..VerifyLimits::MAX
+                }),
+            ),
+        ),
+        (
+            "when-unknown",
+            "scenarios[0].expect[0].when[1]".to_owned(),
+            run(
+                &one(SIGNALS_INPUTS, &masked("bOut", "b\", \"occupied")),
+                &signals,
+            ),
+        ),
+        (
+            "when-ambiguous",
+            "scenarios[0].expect[0].when[0]".to_owned(),
+            run(&one(SIGNALS_INPUTS, &masked("bOut", "y")), &signals),
+        ),
+        (
+            "when-not-boolean",
+            "scenarios[0].expect[0].when[0]".to_owned(),
+            run(&one(SIGNALS_INPUTS, &masked("bOut", "nOut")), &signals),
+        ),
+        (
+            "tolerance-on-discrete-output",
+            "scenarios[0].expect[0].within".to_owned(),
+            run(&one(SIGNALS_INPUTS, &within("nOut", "3")), &signals),
+        ),
+        (
+            "too-many-points",
+            "scenarios[0].expect[0]".to_owned(),
+            run_with(
+                &one(SIGNALS_INPUTS, &within("limOut", "5.0")),
+                &signals,
+                &with_limits(VerifyLimits {
+                    compare: oce_verify::CompareLimits {
+                        max_funnel_points: 30,
+                        ..oce_verify::CompareLimits::MAX
+                    },
                     ..VerifyLimits::MAX
                 }),
             ),
@@ -360,6 +419,19 @@ fn cases() -> Vec<(
                 )],
             ),
         ),
+        // The rounding case of decision 41: no y tolerance, an x tolerance of one whole step and
+        // a step of 2e6, where funnel's own band rounds its reference outside it.
+        (
+            "compare-refused",
+            "scenarios[0].expect[0]".to_owned(),
+            run(
+                &one(
+                    SIGNALS_INPUTS,
+                    r#"{"output": "ahu.y", "from_s": 0, "to_s": 120, "within": {"atolx": 60}, "of": [{"t": 0, "value": 2e6}, {"t": 60, "value": 0}]}"#,
+                ),
+                &signals,
+            ),
+        ),
         (
             "replay-failed",
             "scenarios[0]".to_owned(),
@@ -399,6 +471,20 @@ fn every_reachable_code_is_produced_by_its_case_at_the_place_it_names() {
             ("param-path-ambiguous", error.candidates().len() == 2),
             ("param-refused", error.cause() == Some("param-range")),
             ("replay-failed", error.cause() == Some("trace-too-large")),
+            (
+                "compare-refused",
+                error.cause() == Some("reference-outside-envelope")
+                    && error.path() == Some(&format!("{SIGNALS}ahu.y")[..]),
+            ),
+            ("when-ambiguous", error.candidates().len() == 2),
+            (
+                "when-not-boolean",
+                error.path() == Some(&format!("{SIGNALS}nOut")[..]),
+            ),
+            (
+                "tolerance-on-discrete-output",
+                error.path() == Some(&format!("{SIGNALS}nOut")[..]),
+            ),
             (
                 "input-not-supplied",
                 error.path() == Some(&format!("{SIGNALS}lim")[..]),

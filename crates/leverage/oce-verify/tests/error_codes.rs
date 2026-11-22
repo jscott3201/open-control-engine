@@ -13,8 +13,9 @@ use oce_verify::{
 
 use support::{one, scenario, set_of, set_on};
 
-/// The note's load rows, in the order `VectorErrorKind` declares them: the table's order, with
-/// the two rows of the mutant list's paths last.
+/// The note's load rows, in the order `VectorErrorKind` declares them: the table's order (the
+/// six tolerance rows straight after `ambiguous-expectation`), with the two rows of the mutant
+/// list's paths last.
 const PINNED: &[&str] = &[
     "not-utf8",
     "byte-order-mark",
@@ -48,6 +49,12 @@ const PINNED: &[&str] = &[
     "window-outside-clock",
     "window-uncovered",
     "ambiguous-expectation",
+    "unknown-envelope",
+    "invalid-tolerance",
+    "of-not-from-window-start",
+    "of-step-after-window",
+    "when-empty",
+    "too-many-when-signals",
     "instant-off-cadence",
     "mutant-path-invalid",
     "duplicate-mutant",
@@ -59,6 +66,12 @@ fn the_code_list_is_pinned() {
 }
 
 const WINDOW: &str = r#"{"output": "y", "from_s": 0, "to_s": 1800, "equals": false}"#;
+
+/// A tolerance window on `y` over 60 s to 120 s with the given `within`, `of` and trailing
+/// members.
+fn tolerance(within: &str, of: &str, rest: &str) -> String {
+    format!(r#"{{"output": "y", "from_s": 60, "to_s": 120, "within": {within}, "of": {of}{rest}}}"#)
+}
 
 fn many(item: &str, count: usize) -> String {
     vec![item; count].join(",")
@@ -258,6 +271,53 @@ fn cases() -> Vec<(&'static str, String, Vec<u8>)> {
             ),
         ),
         text(
+            "unknown-envelope",
+            "envelope",
+            set_of("").replacen("{", "{\"envelope\": \"Funnel\", ", 1),
+        ),
+        text(
+            "invalid-tolerance",
+            "scenarios[0].expect[0].within.ltolx",
+            one("", &tolerance(r#"{"ltolx": 1.0000000000000002}"#, "0", "")),
+        ),
+        text(
+            "of-not-from-window-start",
+            "scenarios[0].expect[0].of[0].t",
+            one(
+                "",
+                &tolerance(r#"{"atoly": 1}"#, r#"[{"t": 0, "value": 1}]"#, ""),
+            ),
+        ),
+        text(
+            "of-step-after-window",
+            "scenarios[0].expect[0].of[1].t",
+            one(
+                "",
+                &tolerance(
+                    r#"{"atoly": 1}"#,
+                    r#"[{"t": 60, "value": 1}, {"t": 121, "value": 2}]"#,
+                    "",
+                ),
+            ),
+        ),
+        text(
+            "when-empty",
+            "scenarios[0].expect[0].when",
+            one("", &tolerance(r#"{"atoly": 1}"#, "1", r#", "when": []"#)),
+        ),
+        text(
+            "too-many-when-signals",
+            "line 1 column 276",
+            one(
+                "",
+                &tolerance(
+                    r#"{"atoly": 1}"#,
+                    "1",
+                    &format!(", \"when\": [{}]", many("\"b\"", 17)),
+                ),
+            ),
+        ),
+        text(
             "instant-off-cadence",
             "scenarios[0].expect[0].at_s",
             one("", r#"{"diagnostic": {"block": "B"}, "at_s": 90}"#),
@@ -416,6 +476,29 @@ fn each_case_stops_being_refused_when_its_one_defect_is_removed() {
         ),
         one("", r#"{"diagnostic": {"block": "B"}, "at_s": 60}"#),
         one("", &many(WINDOW, 4_096)),
+        set_of("").replacen("{", "{\"envelope\": \"funnel\", ", 1),
+        set_of("").replacen("{", "{\"envelope\": \"aligned-grid\", ", 1),
+        one("", &tolerance(r#"{"ltolx": 1}"#, "0", "")),
+        one(
+            "",
+            &tolerance(r#"{"atoly": 1}"#, r#"[{"t": 60, "value": 1}]"#, ""),
+        ),
+        one(
+            "",
+            &tolerance(
+                r#"{"atoly": 1}"#,
+                r#"[{"t": 60, "value": 1}, {"t": 120, "value": 2}]"#,
+                "",
+            ),
+        ),
+        one(
+            "",
+            &tolerance(
+                r#"{"atoly": 1}"#,
+                "1",
+                &format!(", \"when\": [{}]", many("\"b\"", 16)),
+            ),
+        ),
         set_on("60", "1800", ""),
         set_on("1", "16777215", ""),
     ] {

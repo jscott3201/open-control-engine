@@ -263,6 +263,7 @@ fn expectation(
             }))
         }
         ExpectationDto::ToleranceWindow(window) => {
+            let window = *window;
             let (first_tick, last_tick) =
                 window_ticks(&window.output, window.from_s, window.to_s, place, clock)?;
             let written = tolerances(&window.within, place)?;

@@ -395,8 +395,9 @@ impl JsonSchema for InputDto {
 pub(crate) enum ExpectationDto {
     /// `output`, `from_s`, `to_s`, `equals`, optionally `when`.
     Window(WindowDto),
-    /// `output`, `from_s`, `to_s`, `within`, `of`, optionally `when`.
-    ToleranceWindow(ToleranceWindowDto),
+    /// `output`, `from_s`, `to_s`, `within`, `of`, optionally `when`. Boxed, so a list of exact
+    /// windows holds no room for the tolerance form's keys.
+    ToleranceWindow(Box<ToleranceWindowDto>),
     /// `diagnostic`, `at_s`.
     Instant(InstantDto),
 }

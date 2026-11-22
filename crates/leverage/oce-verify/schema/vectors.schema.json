@@ -43,10 +43,13 @@
           "$ref": "#/$defs/Window"
         },
         {
+          "$ref": "#/$defs/ToleranceWindow"
+        },
+        {
           "$ref": "#/$defs/Instant"
         }
       ],
-      "description": "One expectation, in exactly one of two forms: a window (output, from_s, to_s, equals) or an instant (diagnostic, at_s)."
+      "description": "One expectation, in exactly one of three forms: a window (output, from_s, to_s, equals), a tolerance window (output, from_s, to_s, within, of), either with an optional when, or an instant (diagnostic, at_s)."
     },
     "Input": {
       "anyOf": [
@@ -99,6 +102,39 @@
       },
       "required": [
         "path"
+      ],
+      "type": "object"
+    },
+    "Of": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/OfStep"
+          },
+          "type": "array"
+        }
+      ],
+      "description": "The expected signal of a tolerance window: one number at every tick, or a step list of at least one step (at most 65,536) whose first t is the window's from_s."
+    },
+    "OfStep": {
+      "additionalProperties": false,
+      "description": "One step of an expected signal: from time t on, the signal holds value (zero-order hold).",
+      "properties": {
+        "t": {
+          "description": "The time in seconds from which the value holds. The first step is at the window's from_s\nexactly, each later one is after the one before it, and none is after to_s. It need not\nbe a tick: it takes effect at the first tick at or after it.",
+          "type": "number"
+        },
+        "value": {
+          "description": "The value held from t: a number.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "t",
+        "value"
       ],
       "type": "object"
     },
@@ -162,6 +198,47 @@
       ],
       "type": "object"
     },
+    "ToleranceWindow": {
+      "additionalProperties": false,
+      "description": "A tolerance window: a Real output lies inside the envelope built around the expected signal\n`of` with the tolerances `within`, at every tick from from_s to to_s, both ends included.",
+      "properties": {
+        "from_s": {
+          "description": "The first second of the window: not negative, not after to_s.",
+          "type": "number"
+        },
+        "of": {
+          "$ref": "#/$defs/Of",
+          "description": "The expected signal: a number at every tick, or a step list from from_s."
+        },
+        "output": {
+          "description": "The output name: a Real output.",
+          "type": "string"
+        },
+        "to_s": {
+          "description": "The last second of the window: not after horizon_s. The window must hold at least one\ntick.",
+          "type": "number"
+        },
+        "when": {
+          "description": "The window's mask: 1 to 16 names of Boolean inputs or outputs. A tick counts only where\nevery one is true; elsewhere both signals are zero there and the tick is masked, never\nchecked.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "within": {
+          "$ref": "#/$defs/Within",
+          "description": "The tolerances of the envelope: at least one of the six names."
+        }
+      },
+      "required": [
+        "output",
+        "from_s",
+        "to_s",
+        "within",
+        "of"
+      ],
+      "type": "object"
+    },
     "Value": {
       "anyOf": [
         {
@@ -192,6 +269,13 @@
         "to_s": {
           "description": "The last second of the window: not after horizon_s. The window must hold at least one\ntick.",
           "type": "number"
+        },
+        "when": {
+          "description": "The window's mask: 1 to 16 names of Boolean inputs or outputs. A tick counts only where\nevery one is true; elsewhere it is masked, never checked.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -200,6 +284,37 @@
         "to_s",
         "equals"
       ],
+      "type": "object"
+    },
+    "Within": {
+      "additionalProperties": false,
+      "description": "The six tolerances of a tolerance window, funnel's names: each optional, at least one\npresent, each finite and not negative; an absent name is zero.",
+      "properties": {
+        "atolx": {
+          "description": "Absolute tolerance along time, in seconds.",
+          "type": "number"
+        },
+        "atoly": {
+          "description": "Absolute tolerance along the value, in the output's unit.",
+          "type": "number"
+        },
+        "ltolx": {
+          "description": "Tolerance along time relative to the time of each point: a fraction, at most 1.",
+          "type": "number"
+        },
+        "ltoly": {
+          "description": "Tolerance along the value relative to the magnitude of each point: a fraction.",
+          "type": "number"
+        },
+        "rtolx": {
+          "description": "Tolerance along time relative to the window's span: a fraction.",
+          "type": "number"
+        },
+        "rtoly": {
+          "description": "Tolerance along the value relative to the expected signal's range: a fraction.",
+          "type": "number"
+        }
+      },
       "type": "object"
     }
   },
@@ -210,6 +325,14 @@
     "clock": {
       "$ref": "#/$defs/Clock",
       "description": "The set's clock. Every scenario runs on it."
+    },
+    "envelope": {
+      "description": "The envelope every tolerance window of the set is compared under: \"funnel\" (LBNL funnel,\nthe default when the key is absent) or \"aligned-grid\".",
+      "enum": [
+        "funnel",
+        "aligned-grid"
+      ],
+      "type": "string"
     },
     "mutants": {
       "description": "Mutants: CXF documents that should fail the vectors, each a deliberate defect in the\nsequence, scored only when the sequence itself passes. At most 256, in order.",

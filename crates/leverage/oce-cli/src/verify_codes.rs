@@ -30,7 +30,7 @@ pub(crate) const VECTOR_MEANINGS: &[(&str, &str)] = &[
     ("duplicate-key", "an object writes one key twice"),
     (
         "unknown-key",
-        "an object carries a key the format does not define (within, when: not yet)",
+        "an object carries a key the format does not define",
     ),
     ("missing-key", "an object lacks a required key"),
     (
@@ -92,8 +92,23 @@ pub(crate) const VECTOR_MEANINGS: &[(&str, &str)] = &[
     ("window-uncovered", "a window holds no tick of the clock"),
     (
         "ambiguous-expectation",
-        "an expectation is not exactly one of the window and instant forms",
+        "an expectation is not exactly one of the window (equals, or within and of) and instant forms",
     ),
+    ("unknown-envelope", "envelope is not funnel or aligned-grid"),
+    (
+        "invalid-tolerance",
+        "a within names no tolerance, a tolerance is negative, or ltolx is above 1",
+    ),
+    (
+        "of-not-from-window-start",
+        "an of step list does not start at the window's from_s",
+    ),
+    (
+        "of-step-after-window",
+        "an of step's t is after the window's to_s",
+    ),
+    ("when-empty", "a when names no signal"),
+    ("too-many-when-signals", "a when names more than 16 signals"),
     (
         "instant-off-cadence",
         "a diagnostic at_s is not a tick of the clock",
@@ -166,6 +181,26 @@ pub(crate) const VERIFY_MEANINGS: &[(&str, &str)] = &[
         "the run would execute more than 16,777,216 frames, or one scenario more than replay allows",
     ),
     (
+        "when-unknown",
+        "a when name matches no boundary input or output",
+    ),
+    (
+        "when-ambiguous",
+        "a when suffix matches several boundary inputs and outputs (candidates)",
+    ),
+    (
+        "when-not-boolean",
+        "a when name is not a Boolean input or output (path)",
+    ),
+    (
+        "tolerance-on-discrete-output",
+        "a tolerance window on a Boolean or Integer output (path)",
+    ),
+    (
+        "too-many-points",
+        "a tolerance window has more ticks than the set's envelope compares (1,048,576 funnel, 32,768 aligned-grid)",
+    ),
+    (
         "too-many-instants",
         "the run would compare more than 268,435,456 instants",
     ),
@@ -203,6 +238,10 @@ pub(crate) const VERIFY_MEANINGS: &[(&str, &str)] = &[
     (
         "run-refused",
         "the engine refused a frame for a reason about the run, not the frame",
+    ),
+    (
+        "compare-refused",
+        "the envelope gave a tolerance window no result (cause: reference-outside-envelope, work-limit-exceeded, ...)",
     ),
     (
         "replay-failed",

@@ -170,7 +170,7 @@ vector file codes (verify, exit 2):
   list-too-long              a list has more than 65,536 entries, a step list included
   string-too-long            a string is longer than 4,096 bytes as written
   duplicate-key              an object writes one key twice
-  unknown-key                an object carries a key the format does not define (within, when: not yet)
+  unknown-key                an object carries a key the format does not define
   missing-key                an object lacks a required key
   wrong-type                 a value has the wrong JSON type for its position
   non-finite-number          NaN or Infinity as a number, or a real that overflows binary64
@@ -193,42 +193,54 @@ vector file codes (verify, exit 2):
   invalid-window             a window's from_s is after its to_s
   window-outside-clock       a window starts before 0 or ends after horizon_s
   window-uncovered           a window holds no tick of the clock
-  ambiguous-expectation      an expectation is not exactly one of the window and instant forms
+  ambiguous-expectation      an expectation is not exactly one of the window (equals, or within and of) and instant forms
+  unknown-envelope           envelope is not funnel or aligned-grid
+  invalid-tolerance          a within names no tolerance, a tolerance is negative, or ltolx is above 1
+  of-not-from-window-start   an of step list does not start at the window's from_s
+  of-step-after-window       an of step's t is after the window's to_s
+  when-empty                 a when names no signal
+  too-many-when-signals      a when names more than 16 signals
   instant-off-cadence        a diagnostic at_s is not a tick of the clock
   mutant-path-invalid        a mutant path is absolute, has an empty, . or .. segment, or holds a backslash
   duplicate-mutant           two mutants share a path
 
 bind and run codes (verify, exit 2):
-  subject-load-failed      the engine refused the subject, or a text or wire subject has an error finding
-  unknown-input            an input name matches no boundary input
-  ambiguous-input          an input suffix matches several boundary inputs (candidates)
-  duplicate-input          two input names of one scenario resolve to one boundary input
-  input-not-supplied       a scenario supplies no value for a boundary input
-  unknown-output           an output name matches no boundary output
-  ambiguous-output         an output suffix matches several boundary outputs (candidates)
-  param-path-unknown       a parameter key matches no parameter
-  param-path-ambiguous     a parameter suffix matches several parameters (candidates)
-  param-path-duplicate     two keys of one params map name one parameter
-  param-refused            the engine refuses an edit in every pass (cause: param-range, param-type, param-structural)
-  value-type-mismatch      a value its port's or parameter's type does not take
-  value-not-representable  a number no binary64 holds exactly where a Real is read
-  enum-port-unsupported    the subject has an Enum boundary input or output
-  unsupported-port-type    the subject has a String boundary input or output
-  too-many-frames          the run would execute more than 16,777,216 frames, or one scenario more than replay allows
-  too-many-instants        the run would compare more than 268,435,456 instants
-  too-many-load-bytes      the run would load more than 1 GiB of subject and mutant bytes
-  too-many-frame-bytes     the run's frames weighted by document bytes would pass 2^40
-  mutant-missing           a listed mutant was given no bytes
-  mutant-unlisted          mutant bytes were given for a path the set does not list
-  duplicate-mutant         one mutant given twice, or two listings that resolve to one file
-  too-many-mutant-bytes    the mutants are larger than 64 MiB together; refused before any is read
-  mutant-load-failed       the engine refused a mutant
-  mutant-boundary-differs  a mutant's input or output paths or types are not the subject's (path)
-  mutant-identical         a mutant has the subject's content id
-  mutant-param-refused     a mutant refuses an edit the subject admits (cause)
-  run-refused              the engine refused a frame for a reason about the run, not the frame
-  replay-failed            the replay stopped with an error (cause: trace-too-large, engine-setup, ...)
-  window-uncovered         a window held no executed tick after a run with no refused frame
+  subject-load-failed           the engine refused the subject, or a text or wire subject has an error finding
+  unknown-input                 an input name matches no boundary input
+  ambiguous-input               an input suffix matches several boundary inputs (candidates)
+  duplicate-input               two input names of one scenario resolve to one boundary input
+  input-not-supplied            a scenario supplies no value for a boundary input
+  unknown-output                an output name matches no boundary output
+  ambiguous-output              an output suffix matches several boundary outputs (candidates)
+  param-path-unknown            a parameter key matches no parameter
+  param-path-ambiguous          a parameter suffix matches several parameters (candidates)
+  param-path-duplicate          two keys of one params map name one parameter
+  param-refused                 the engine refuses an edit in every pass (cause: param-range, param-type, param-structural)
+  value-type-mismatch           a value its port's or parameter's type does not take
+  value-not-representable       a number no binary64 holds exactly where a Real is read
+  enum-port-unsupported         the subject has an Enum boundary input or output
+  unsupported-port-type         the subject has a String boundary input or output
+  too-many-frames               the run would execute more than 16,777,216 frames, or one scenario more than replay allows
+  when-unknown                  a when name matches no boundary input or output
+  when-ambiguous                a when suffix matches several boundary inputs and outputs (candidates)
+  when-not-boolean              a when name is not a Boolean input or output (path)
+  tolerance-on-discrete-output  a tolerance window on a Boolean or Integer output (path)
+  too-many-points               a tolerance window has more ticks than the set's envelope compares (1,048,576 funnel, 32,768 aligned-grid)
+  too-many-instants             the run would compare more than 268,435,456 instants
+  too-many-load-bytes           the run would load more than 1 GiB of subject and mutant bytes
+  too-many-frame-bytes          the run's frames weighted by document bytes would pass 2^40
+  mutant-missing                a listed mutant was given no bytes
+  mutant-unlisted               mutant bytes were given for a path the set does not list
+  duplicate-mutant              one mutant given twice, or two listings that resolve to one file
+  too-many-mutant-bytes         the mutants are larger than 64 MiB together; refused before any is read
+  mutant-load-failed            the engine refused a mutant
+  mutant-boundary-differs       a mutant's input or output paths or types are not the subject's (path)
+  mutant-identical              a mutant has the subject's content id
+  mutant-param-refused          a mutant refuses an edit the subject admits (cause)
+  run-refused                   the engine refused a frame for a reason about the run, not the frame
+  compare-refused               the envelope gave a tolerance window no result (cause: reference-outside-envelope, work-limit-exceeded, ...)
+  replay-failed                 the replay stopped with an error (cause: trace-too-large, engine-setup, ...)
+  window-uncovered              a window held no executed tick after a run with no refused frame
 
 diff codes (diff, exit 2):
   outside-root        a CXF block or boundary is not named under its document's root (one the engine exported included); at names the side

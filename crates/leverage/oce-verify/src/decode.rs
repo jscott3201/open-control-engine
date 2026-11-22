@@ -164,7 +164,7 @@ fn clock(cursor: &mut Cursor<'_>) -> Read<ClockDto> {
 
 /// A time: a number whose integer token, if it is one, is within [`MAX_TIME_INTEGER`].
 fn seconds(cursor: &mut Cursor<'_>) -> Read<Seconds> {
-    exact_number(cursor, "a time in seconds", "time").map(Seconds)
+    exact_number(cursor, "a time in seconds, a number", "time").map(Seconds)
 }
 
 /// A tolerance or an expected signal's value: a number whose integer token, if it is one, is
@@ -177,7 +177,7 @@ fn amount(cursor: &mut Cursor<'_>, what: &str) -> Read<Amount> {
 /// A number whose integer token, if it is one, is within [`MAX_TIME_INTEGER`]; `what` names the
 /// position in a `wrong-type` refusal and `noun` in an `integer-out-of-range` one.
 fn exact_number(cursor: &mut Cursor<'_>, what: &str, noun: &str) -> Read<Number> {
-    let at = cursor.expect(Kind::Number, &format!("{what}, a number"))?;
+    let at = cursor.expect(Kind::Number, what)?;
     let number = cursor.number()?;
     if let Number::Integer(value) = number
         && value.unsigned_abs() > MAX_TIME_INTEGER.unsigned_abs()
@@ -443,14 +443,16 @@ fn expectation(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<Expectati
         (true, false) if keys.within.is_some() != keys.of.is_some() => {
             ambiguous("a tolerance window needs within and of together")
         }
-        (true, false) if tolerance => Ok(ExpectationDto::ToleranceWindow(ToleranceWindowDto {
-            output: required(keys.output, "output", opened)?,
-            from_s: required(keys.from_s, "from_s", opened)?,
-            to_s: required(keys.to_s, "to_s", opened)?,
-            within: required(keys.within, "within", opened)?,
-            of: required(keys.of, "of", opened)?,
-            when: Optional(keys.when),
-        })),
+        (true, false) if tolerance => Ok(ExpectationDto::ToleranceWindow(Box::new(
+            ToleranceWindowDto {
+                output: required(keys.output, "output", opened)?,
+                from_s: required(keys.from_s, "from_s", opened)?,
+                to_s: required(keys.to_s, "to_s", opened)?,
+                within: required(keys.within, "within", opened)?,
+                of: required(keys.of, "of", opened)?,
+                when: Optional(keys.when),
+            },
+        ))),
         (true, false) => Ok(ExpectationDto::Window(WindowDto {
             output: required(keys.output, "output", opened)?,
             from_s: required(keys.from_s, "from_s", opened)?,
@@ -480,7 +482,7 @@ fn within(cursor: &mut Cursor<'_>) -> Read<WithinDto> {
         if slot.0.is_some() {
             return Err(duplicate_key(&key, at));
         }
-        slot.0 = Some(amount(cursor, "a tolerance")?);
+        slot.0 = Some(amount(cursor, "a tolerance, a number")?);
     }
     Ok(tolerances)
 }
@@ -490,7 +492,7 @@ fn within(cursor: &mut Cursor<'_>) -> Read<WithinDto> {
 fn of(cursor: &mut Cursor<'_>) -> Read<OfDto> {
     let (kind, at) = cursor.peek()?;
     match kind {
-        Kind::Number => amount(cursor, "the expected value").map(OfDto::Constant),
+        Kind::Number => amount(cursor, "the expected value, a number").map(OfDto::Constant),
         Kind::Array => {
             let mut list = cursor.open_list()?;
             let mut steps = Vec::new();
@@ -517,7 +519,12 @@ fn of_step(cursor: &mut Cursor<'_>) -> Read<OfStepDto> {
     while let Some((key, at)) = cursor.next_key(&mut object)? {
         match key.as_str() {
             "t" => put(&mut t, seconds(cursor)?, &key, at)?,
-            "value" => put(&mut held, amount(cursor, "the expected value")?, &key, at)?,
+            "value" => put(
+                &mut held,
+                amount(cursor, "the expected value, a number")?,
+                &key,
+                at,
+            )?,
             _ => return Err(unknown_key(&key, at)),
         }
     }

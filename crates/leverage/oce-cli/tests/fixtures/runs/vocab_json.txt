@@ -1307,7 +1307,7 @@ exit: 0
     },
     {
       "code": "unknown-key",
-      "meaning": "an object carries a key the format does not define (within, when: not yet)"
+      "meaning": "an object carries a key the format does not define"
     },
     {
       "code": "missing-key",
@@ -1399,7 +1399,31 @@ exit: 0
     },
     {
       "code": "ambiguous-expectation",
-      "meaning": "an expectation is not exactly one of the window and instant forms"
+      "meaning": "an expectation is not exactly one of the window (equals, or within and of) and instant forms"
+    },
+    {
+      "code": "unknown-envelope",
+      "meaning": "envelope is not funnel or aligned-grid"
+    },
+    {
+      "code": "invalid-tolerance",
+      "meaning": "a within names no tolerance, a tolerance is negative, or ltolx is above 1"
+    },
+    {
+      "code": "of-not-from-window-start",
+      "meaning": "an of step list does not start at the window's from_s"
+    },
+    {
+      "code": "of-step-after-window",
+      "meaning": "an of step's t is after the window's to_s"
+    },
+    {
+      "code": "when-empty",
+      "meaning": "a when names no signal"
+    },
+    {
+      "code": "too-many-when-signals",
+      "meaning": "a when names more than 16 signals"
     },
     {
       "code": "instant-off-cadence",
@@ -1480,6 +1504,26 @@ exit: 0
       "meaning": "the run would execute more than 16,777,216 frames, or one scenario more than replay allows"
     },
     {
+      "code": "when-unknown",
+      "meaning": "a when name matches no boundary input or output"
+    },
+    {
+      "code": "when-ambiguous",
+      "meaning": "a when suffix matches several boundary inputs and outputs (candidates)"
+    },
+    {
+      "code": "when-not-boolean",
+      "meaning": "a when name is not a Boolean input or output (path)"
+    },
+    {
+      "code": "tolerance-on-discrete-output",
+      "meaning": "a tolerance window on a Boolean or Integer output (path)"
+    },
+    {
+      "code": "too-many-points",
+      "meaning": "a tolerance window has more ticks than the set's envelope compares (1,048,576 funnel, 32,768 aligned-grid)"
+    },
+    {
       "code": "too-many-instants",
       "meaning": "the run would compare more than 268,435,456 instants"
     },
@@ -1526,6 +1570,10 @@ exit: 0
     {
       "code": "run-refused",
       "meaning": "the engine refused a frame for a reason about the run, not the frame"
+    },
+    {
+      "code": "compare-refused",
+      "meaning": "the envelope gave a tolerance window no result (cause: reference-outside-envelope, work-limit-exceeded, ...)"
     },
     {
       "code": "replay-failed",

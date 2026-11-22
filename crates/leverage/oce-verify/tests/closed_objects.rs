@@ -583,12 +583,14 @@ fn member_order_is_free_and_changes_nothing() {
     let ordered = load(&full()).expect("loads");
     let shuffled = load(
         r#"{"scenarios": [{"expect": [{"equals": false, "to_s": 1800, "from_s": 0, "output": "y"},
-                {"at_s": 60, "diagnostic": {"message": "m", "block": "CDL.Utilities.Assert"}}],
+                {"at_s": 60, "diagnostic": {"message": "m", "block": "CDL.Utilities.Assert"}},
+                {"when": ["v"], "of": [{"value": 1.5, "t": 0}], "within": {"rtolx": 0.1, "atoly": 0.5},
+                 "to_s": 1800, "from_s": 0, "output": "z"}],
               "inputs": {"v": true, "u": [{"value": 1, "t": 0}]}, "params": {"b.k": 2.5},
               "description": "d", "name": "s"}],
             "mutants": [{"description": "e", "path": "m/a.cxf.json"}],
             "params": {"a.k": 1}, "clock": {"horizon_s": 1800, "step_s": 60},
-            "schema": "oce/vectors/v1"}"#,
+            "envelope": "funnel", "schema": "oce/vectors/v1"}"#,
     )
     .expect("loads");
     assert_eq!(ordered, shuffled);
