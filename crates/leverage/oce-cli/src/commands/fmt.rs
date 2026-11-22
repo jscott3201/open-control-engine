@@ -19,8 +19,10 @@
 //! size and bytes come from that handle. The rewrite goes into the same directory handle, takes
 //! the mode of the file read (from its handle, never from whatever is at the name later), and is
 //! renamed over the entry only if the entry is still the file read (device and inode, checked
-//! just before the rename; `write-failed` otherwise, and nothing is written). Windows reads and
-//! writes by path (`directory`).
+//! just before the rename; `write-failed` otherwise, and nothing is written). A file swapped in
+//! between that check and the rename is replaced (never written through); the review of GitHub
+//! #777 hit that window in 402 of 3,000 contended runs, and issue #780 closes it. Windows reads
+//! and writes by path (`directory`).
 
 use std::ffi::OsString;
 use std::path::Path;

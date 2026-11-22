@@ -31,8 +31,13 @@
 //! Two more conditions hold a write when its caller asks: every directory `oce` made for it must
 //! be owned by the owner of the temporary file (a directory another user swapped in is refused
 //! before a byte is written), and the entry must still be the file that was read
-//! (`fmt --write`: device and inode, checked just before the rename; a swap in the instant
-//! between that check and the rename replaces whatever was swapped in, never writes through it).
+//! (`fmt --write`: device and inode, checked just before the rename). A swap that lands between
+//! that check and the rename replaces whatever was swapped in, never writes through it, and the
+//! window is hit often under contention: the review of GitHub #777 exchanged the file flat out
+//! with another regular file in the same directory and destroyed that file's content in 402 of
+//! 3,000 runs, each exiting 0 "rewritten" (756 before #771); with a link swapped in, the link's
+//! entry was replaced in 195 runs and the file outside never written. Closing it with an
+//! exchange-based compare-and-swap is issue #780.
 //!
 //! **Windows** keeps the path-based write, untested: the parent is reached by path at each step.
 

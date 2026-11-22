@@ -9,9 +9,10 @@
 //! `renamex_np` with `RENAME_SWAP` on macOS, `renameat2` with `RENAME_EXCHANGE` on Linux), so the
 //! name always exists, as the real thing or as a link out. Other Unix systems have no such call
 //! here and run none of these tests; on Linux or macOS a file system under the temporary
-//! directory that refuses the exchange (`EINVAL`, `ENOTSUP`, `ENOSYS`) skips each test that
-//! swaps, with a note, rather than failing: the rule is then untested there. CI's Linux runners
-//! and APFS support it.
+//! directory that refuses the exchange (`EINVAL`, `ENOTSUP`, `ENOSYS`) fails each test that swaps,
+//! unless `OCE_TESTS_ALLOW_NO_EXCHANGE=1` is set, when it skips with a note (`steps.rs`), so a
+//! missing exchange never passes for a race that ran. CI's Linux runners (ext4) and APFS support
+//! it.
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod schedules {
@@ -96,7 +97,7 @@ mod schedules {
         }
 
         /// Whether this file system exchanges two entries atomically; when it does not, the
-        /// test that asks is skipped with a note (module header).
+        /// test that asks fails, or skips with a note when that is allowed (module header).
         fn swappable(&self) -> bool {
             use rustix::io::Errno;
             match renameat_with(CWD, &self.name, CWD, &self.link, RenameFlags::EXCHANGE) {

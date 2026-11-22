@@ -244,10 +244,13 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   be listed (mode `--x` or `-wx`) is now `write-failed` ("the output directory cannot be read:
   permission denied"), and a `DIR` removed during the run is `write-failed` at `outputs`. Each
   file is created owner-only (`0600` on Unix; the directories `outputs/` and `outputs/<k>/` take
-  the process's default mode). A write that fails
-  part-way is `write-failed` naming the file; the files already written stay (without
-  `receipt.json` they are not a run's output), and the report's `curves` lists them. No trace file
-  is written.
+  the process's default mode). A directory made and then not opened (a umask that leaves it
+  unreadable, no descriptor left) is removed again and named as such ("it was made but could not
+  be opened (...), and is removed"). A write that fails part-way is `write-failed` naming the
+  file; what was made before it stays: `outputs/`, an `outputs/<k>/` that may be empty, and the
+  curves already written, with no receipt (without `receipt.json` they are not a run's output),
+  and the report's `curves` lists the files (an output none of whose files was written is not
+  listed). No trace file is written.
 - **Exit-only and label flags.** `--deny-warnings` makes exit `1` when `load_warnings_total` or
   `warnings_total` is not zero. `--timings` fills the header's `timings` (`load_ms`: reading every
   file; `run_ms`: the whole `run_commissioning` call; `compare_ms`: `0`). `--data` is the
@@ -724,13 +727,22 @@ target became a regular file.
   entry checked; the new file takes the mode of the file read, from its handle, and is renamed
   over the entry only if the entry still has the device and inode that were read (`write-failed`
   "the file changed after it was read; nothing is written" otherwise). That check comes just
-  before the rename: a file swapped in during the one instant between them is replaced, never
-  written through.
+  before the rename, and a file swapped in between the two is replaced, never written through.
+  Under contention that window is hit often: the review of GitHub #777 exchanged the file flat
+  out with another regular file in the same directory and destroyed that file's content in 402
+  of 3,000 runs, each exiting 0 "rewritten" (756 before issue #771); with a link swapped in, the
+  link's entry was replaced in 195 runs and the file outside never written. Issue #780 closes it
+  with an exchange-based compare-and-swap.
 - **Breaking in place** (issue #771): a directory a write goes into, or a document's directory,
-  that can be searched but not listed (mode `--x` or `-wx`) is refused with `permission denied`
-  (`write-failed` for a write, `read-failed` for a read), where a path-based call used to pass
-  through it: the handles are opened read-only, since rustix offers no `O_SEARCH` on macOS (nor
-  `O_PATH` outside Linux). And a `--commission --out DIR` just under the platform's path limit
+  that can be searched but not listed (mode `--x` or `-wx`) is refused (`write-failed` for a
+  write, `read-failed` for a read) with "the directory `D` cannot be listed (permission denied)",
+  `D` as the caller's path gives it, where a path-based call used to pass through it: the handles
+  are opened read-only, since rustix offers no `O_SEARCH` on macOS (nor `O_PATH` outside Linux),
+  on every platform alike (the orchestrator's call in the review of GitHub #777). For the same
+  reason a `--commission --out` run under a umask that leaves the directories it makes unreadable
+  (`umask 0477`) is refused: "`DIR/outputs`: it was made but could not be opened (permission
+  denied), and is removed". A descriptor limit met there reads "too many open files", never
+  "uncategorized error". And a `--commission --out DIR` just under the platform's path limit
   now has its curves written (each name is relative to its directory's handle), where until then
   the longer names under it were refused (`write-failed`, ENAMETOOLONG).
 - **The output is never an input.** `emit -o` and `import -o` refuse an output that is their own
@@ -823,8 +835,10 @@ The deterministic proofs are the adversaries in `src/commands/contained_tests.rs
 of the swap between the code's own file-system calls, and a copy of the path-based code that came
 before runs under the same adversary as the control, which some schedule must beat.
 `tests/directory_handle_races.rs` and `tests/read_containment_race.rs` race the binary. All of
-them need an atomic exchange (Linux, macOS); on a file system that refuses it they skip with a
-note, and the rule is then untested there (CI's Linux runners and APFS support it).
+them need an atomic exchange (Linux, macOS). On a file system that refuses it they **fail**,
+unless `OCE_TESTS_ALLOW_NO_EXCHANGE=1` is set, when they skip with a note and the rules are untested
+there: a missing exchange never passes for a race that ran. CI's Linux runners (ext4 under the
+workspace) and macOS (APFS) support it.
 
 **Windows** has less, and none of it is tested there: a document is read by path and its
 directory canonicalized by path; each named file's canonical path's own entry must be a regular
@@ -856,6 +870,8 @@ after a refusal, and the vector `--out`'s `output-is-input` against the set, the
 mutant; `tests/read_containment_race.rs` the containment rule raced through the binary;
 `tests/directory_handle_races.rs` issue #771's three races (the curve files, a document's folder,
 `fmt --write`'s file) and a named pipe swapped in, each through the binary;
+`tests/trailing_slashes.rs` a document, `fmt --write`'s file and an output named with a trailing
+`/`; `tests/commission_out_limits.rs` `--commission --out` under a umask and a descriptor limit;
 `tests/hostile_inputs.rs` the bounds. For `verify`:
 - `tests/verify_runs.rs` pins one transcript per verdict and refusal class, with each exit-only
   flag flipping the status over the same receipt bytes;

@@ -2,8 +2,8 @@
 //! and the writer's own file-system calls, for a link to a victim outside its directory or for
 //! another regular file with a wider mode. No schedule may read the victim, write through the
 //! link, or give the new file a mode other than the one of the file read; and no schedule may
-//! replace the file that was not read, except one whose swap lands in the one instant between the
-//! entry's last check and the rename (the documented window: that entry is replaced, never
+//! replace the file that was not read, except one whose swap lands between the entry's last
+//! check and the rename (the documented window, issue #780: that entry is replaced, never
 //! written through). A copy of the path-based flow that came before (the target checked, then
 //! read by path, then written by path with the mode of whatever was at the name) runs under the
 //! same adversary as the control, and some schedule must beat it.

@@ -19,7 +19,8 @@
 //! exchange a named pipe in for the document and for `FILE`, under a hang guard: a run must never
 //! block on it. The swap is an atomic exchange (`renameat_with` with `RenameFlags::EXCHANGE`), so
 //! these run on Linux and macOS; a file system under cargo's target directory that refuses the
-//! exchange (`EINVAL`, `ENOTSUP`, `ENOSYS`) skips each with a note rather than failing. Windows
+//! exchange (`EINVAL`, `ENOTSUP`, `ENOSYS`) fails each, unless `OCE_TESTS_ALLOW_NO_EXCHANGE=1` is
+//! set, when each skips with a note (`support::skip_without_exchange`). Windows
 //! keeps the path-based reads and writes and is untested here.
 
 #![cfg(any(target_os = "linux", target_os = "macos"))]
@@ -46,7 +47,8 @@ fn over_the_bound() -> u64 {
     u64::try_from(oce_api::MAX_CXF_BYTES).expect("fits") + 1
 }
 
-/// Exchange `a` and `b`; whether the file system can (a skip note when it cannot).
+/// Exchange `a` and `b`; whether the file system can (a failure when it cannot, unless the skip
+/// is allowed).
 fn exchangeable(a: &Path, b: &Path) -> bool {
     match renameat_with(CWD, a, CWD, b, RenameFlags::EXCHANGE) {
         Ok(()) => {

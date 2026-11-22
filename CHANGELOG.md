@@ -1319,8 +1319,13 @@ so far, and no tag is cut by the bump.
     the handle a regular file with the identity checked), takes the new file's mode from that
     handle rather than from whatever regular file is at the name when it writes, and renames
     only if the entry still has the device and inode it read (`write-failed`, "the file changed
-    after it was read; nothing is written", otherwise). A file swapped in during the one instant
-    between that check and the rename is replaced, never written through.
+    after it was read; nothing is written", otherwise). A file swapped in between that check and
+    the rename is replaced, never written through, and under contention the window is hit often:
+    the review exchanged the file flat out with another regular file in the same directory and
+    destroyed that file's content in 402 of 3,000 runs, each exiting 0 "rewritten" (756 before);
+    with a link swapped in, the link's entry was replaced in 195 runs and the file outside never
+    written. The orchestrator's call: merge with the window documented; issue #780 closes it with
+    an exchange-based compare-and-swap.
   - **Measured** (before → after, the reviewer's reproductions as a harness through the built
     binary): (i) `outputs` exchanged for a link while the first curve was
     written sent the curves outside `DIR` in 200 of 200 runs on macOS and 198 of 200 on Linux,
@@ -1332,11 +1337,19 @@ so far, and no tag is cut by the bump.
     network; the CLI README has the table.
   - **Breaking, in place:** a directory that can be searched but not listed (mode `--x` or
     `-wx`) is refused where a path-based call passed through it, since the handles are opened
-    read-only (rustix offers no `O_SEARCH` on macOS): a document's directory is `read-failed`
-    "permission denied" (was a successful read of the document), a write's parent is
-    `write-failed` "permission denied", and a `--commission --out DIR` is `write-failed` "the
-    output directory cannot be read: permission denied" before the run. The orchestrator
-    accepted this on issue #771. Also changed: a `--commission --out DIR` just under the
+    read-only (rustix offers no `O_SEARCH` on macOS; refused on every platform alike, the
+    orchestrator's call): a document's directory is `read-failed` "the directory `D` cannot be
+    listed (permission denied); oce reads a document only through its directory" (was a
+    successful read of the document), a write's parent is `write-failed` "... cannot be listed
+    (permission denied); oce writes a file only through its directory" (`fmt --write`'s parent
+    the same with "rewrites"), and a `--commission --out DIR` is `write-failed` "the output
+    directory cannot be read: permission denied" before the run. The orchestrator accepted this
+    on issue #771. For the same reason, **a `--commission --out` run under a umask that leaves the
+    directories it makes unreadable** (`umask 0477`; exit 0 before) is now `write-failed` at
+    `outputs`: "it was made but could not be opened (permission denied), and is removed; nothing
+    is written there". A directory made and not opened is removed again (it is empty), where the
+    first round of GitHub #777 said "it could not be created" and left it. A descriptor limit is
+    named "too many open files" in every refusal (it read "uncategorized error"). Also changed: a `--commission --out DIR` just under the
     platform's path limit now has its curves written (each name is relative to its directory's
     handle), where the longer names under it were `write-failed` (ENAMETOOLONG);
     `commission_out_guards.rs`'s path-limit sweep now pins that. No other code, message or exit
@@ -1352,13 +1365,18 @@ so far, and no tag is cut by the bump.
     during the run, a directory made then replaced by a non-empty one, a directory owned by
     another user, the entry changed after it was read. `tests/directory_handle_races.rs` races
     each of the three through the binary and swaps a named pipe in for a document and for `fmt
-    --write`'s file under a hang guard (each skips with a note on a file system with no atomic
-    exchange). Of 20 mutants of the change (19 single, one pair), 16 are killed; the
-    four that survive alone each have a stated cover: the last entry's `O_NOFOLLOW` and its
-    identity check each cover the other (the pair is killed), the temporary file's `O_NOFOLLOW`
-    is covered by `O_EXCL` (it never follows a link at the name), and the identity check between
-    a document's directory handle and its canonical path keeps the outside refusal consistent,
-    while no read can leave the handle without it (the adversary proves it). Windows keeps the path-based reads and writes and says so (the CLI
+    --write`'s file under a hang guard. A test that needs an atomic exchange **fails** on a file
+    system without one unless `OCE_TESTS_ALLOW_NO_EXCHANGE=1` is set, when it skips with a note,
+    so a missing exchange never passes for a race that ran (CI's ext4 and APFS have it).
+    `tests/trailing_slashes.rs` pins `SPEC/`, `VECTORS/`, `fmt --write FILE/` and `-o OUT/`
+    (`not a directory`, nothing read through or written); `tests/commission_out_limits.rs` a
+    umask and a descriptor-limit sweep. Of 24 mutants of the change (23 single, one pair), 21 are
+    killed; the three that survive alone each have a stated cover: the last entry's
+    `O_NOFOLLOW` and its identity check each cover the other (the pair is killed), and the
+    temporary file's `O_NOFOLLOW` is covered by `O_EXCL` (it never follows a link at the name).
+    Follow-ups: #780 (the `fmt --write` window), #781 (inputs still opened by path without
+    `O_NONBLOCK`; setuid and sticky bits on a rewrite), #782 (unit-test scratch left on a
+    failure). Windows keeps the path-based reads and writes and says so (the CLI
     README, "Writing a file" and "Reading a file a document names"); it type-checks
     (`--target x86_64-pc-windows-msvc --all-targets`) and is untested.
 
