@@ -32,7 +32,7 @@ Options:
           The zero-based index of the spec's reference to run; needed when it has several
 
       --out <DIR>
-          Write the receipt to DIR/receipt.json (atomically) and print the report on stdout; with --commission also each output's exceedance curve, DIR/outputs/<k>/errors.csv
+          Write the receipt to DIR/receipt.json (atomically) and print the report on stdout; with --commission also each output's exceedance curve, `DIR/outputs/<k>/errors.csv`
 
       --bounds
           With --commission and --out: also each Real output's reference, test and bound curves beside its errors.csv, under pyfunnel's names

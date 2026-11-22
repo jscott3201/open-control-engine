@@ -184,7 +184,7 @@ pub(crate) struct VerifyArgs {
     #[arg(long, value_name = "N", requires = "commission", conflicts_with_all = VECTOR_ONLY)]
     pub(crate) reference: Option<usize>,
     /// Write the receipt to DIR/receipt.json (atomically) and print the report on stdout; with
-    /// --commission also each output's exceedance curve, DIR/outputs/<k>/errors.csv.
+    /// --commission also each output's exceedance curve, `DIR/outputs/<k>/errors.csv`.
     #[arg(long, value_name = "DIR")]
     pub(crate) out: Option<OsString>,
     /// With --commission and --out: also each Real output's reference, test and bound curves

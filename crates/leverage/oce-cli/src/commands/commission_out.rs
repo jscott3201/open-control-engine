@@ -21,10 +21,10 @@
 //! header and no name, and a file is named by the output's index, never by its path: nothing a
 //! spec, a mapping or a CXF document writes can reach a file name or a cell.
 //!
-//! **Before the run** ([`check`]): `DIR` must be an existing directory (it is never created) and
+//! **Before the run** ([`check()`]): `DIR` must be an existing directory (it is never created) and
 //! `DIR/outputs` must not exist (`write-failed`), so the curves of two runs are never mixed; and
 //! `DIR/receipt.json` must not be the spec or any file the run read (`output-is-input`). So a
-//! refusal before the first write leaves nothing behind. **The writes** ([`write`]): `outputs/` is
+//! refusal before the first write leaves nothing behind. **The writes** ([`write()`]): `outputs/` is
 //! made with a plain create, which fails on anything already there, a directory a racing writer
 //! made included (`write-failed`); each file goes through `write_atomically` (a fresh temporary
 //! file, synced, renamed over the target). A write that fails part-way is `write-failed` naming
