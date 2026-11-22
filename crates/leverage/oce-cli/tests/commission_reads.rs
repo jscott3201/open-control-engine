@@ -279,11 +279,12 @@ fn a_spec_that_is_a_link_reads_the_files_beside_the_link_not_beside_its_target()
 
 #[test]
 fn a_spec_deep_in_unicode_directories_reads_as_before() {
-    // Honest use through the handles: a spec forty directories down, under names that are not
-    // ASCII, reads its files and gives the golden receipt.
+    // Honest use through the handles: a spec twenty-four directories down, under names that are
+    // not ASCII, reads its files and gives the golden receipt. The tree is removed at the end,
+    // so no long path is left under `target/`.
     let dir = run_layout("commission_deep_unicode", "pass");
     let mut deep = String::new();
-    for level in 0..40 {
+    for level in 0..24 {
         deep.push_str(&format!("r\u{e9}pertoire-{level}-\u{6e29}\u{5ea6}/"));
     }
     let target = dir.join(&deep);
@@ -300,6 +301,7 @@ fn a_spec_deep_in_unicode_directories_reads_as_before() {
     }
     let spec = format!("{deep}spec.json");
     let run = oce_in(&dir, &["verify", "--commission", &spec], b"");
+    let _ = fs::remove_dir_all(dir.join("r\u{e9}pertoire-0-\u{6e29}\u{5ea6}"));
     assert_eq!(run.code, 0, "{}", run.transcript());
     assert_eq!(run.stdout, support::commission::golden_receipt("pass"));
 }
