@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "references[0].outputs",
+      "cause": "unmatched-key",
+      "code": "spec-refused",
+      "detail": "outputs: the key `plant.TSetx` selects no output of the sequence; it was read as an exact name; the outputs are `plant.TSet`, `plant.enOut`, `plant.limOut`, `plant.nOut`",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

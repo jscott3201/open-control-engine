@@ -5,12 +5,16 @@
 //! Markdown table) that stdout carries instead of the report's JSON. Exactly one of the two is
 //! written to stdout; the human-readable rendering goes to stderr when asked for: the report's
 //! own, or one the command gives (a diff's text). A document comes with exit `0`, except a
-//! `verify` receipt and a `diff` table, which are also stdout for an answer of exit `1` (vectors
-//! note, "CLI"; diff note, "CLI").
+//! `verify` receipt (of a vector set or a commissioning spec) and a `diff` table, which are also
+//! stdout for an answer of exit `1` (vectors note, "CLI"; commissioning note, "CLI"; diff note,
+//! "CLI").
 
 mod atomic_write;
 pub(crate) mod catalog;
 mod catalog_params;
+mod commission_files;
+mod commission_out;
+mod contained;
 pub(crate) mod diff;
 pub(crate) mod emit;
 mod file_identity;
@@ -19,6 +23,7 @@ pub(crate) mod id;
 pub(crate) mod import;
 pub(crate) mod validate;
 pub(crate) mod verify;
+pub(crate) mod verify_commission;
 mod verify_mutants;
 mod verify_subject;
 pub(crate) mod vocab;
@@ -28,7 +33,7 @@ use std::ffi::OsStr;
 use crate::report::Report;
 use crate::{Exit, Streams, input};
 
-pub(crate) use atomic_write::write_atomically;
+pub(crate) use atomic_write::{write_atomically, write_atomically_no_follow};
 pub(crate) use file_identity::{same_file, stdin_is_file};
 
 /// What one command produced.

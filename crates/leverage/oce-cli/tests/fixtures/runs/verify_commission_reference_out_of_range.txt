@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "references",
+      "code": "reference-out-of-range",
+      "detail": "the spec has 2 references, so no reference 2",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "two.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

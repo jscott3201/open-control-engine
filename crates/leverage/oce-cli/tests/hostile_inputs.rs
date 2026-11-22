@@ -487,3 +487,75 @@ fn diff_refuses_hostile_bytes_on_either_side_about_that_side() {
         }
     }
 }
+
+#[test]
+fn hostile_commissioning_bytes_never_panic_the_binary() {
+    // GitHub issue #664: seeded byte edits of the spec, the mapping and a trend file of
+    // `oce-verify`'s run fixture, each run through `oce verify --commission`. Every run answers
+    // with one document on stdout and nothing on stderr: the receipt for a verdict (exit 0 or 1),
+    // or the report with exactly one typed error (exit 2). A panic would print to stderr and
+    // exit 101.
+    let mut seed: u64 = 0x9e37_79b9_7f4a_7c15;
+    let mut next = move || {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        seed
+    };
+    let dir = support::commission::run_layout("commission_hostile_bytes", "pass");
+    let originals: Vec<(&str, Vec<u8>)> = ["spec.json", "points.json", "inputs.csv"]
+        .iter()
+        .map(|name| {
+            (
+                *name,
+                std::fs::read(dir.join(name)).expect("a fixture file"),
+            )
+        })
+        .collect();
+    let (mut verdicts, mut refusals) = (0, 0);
+    for round in 0..150_usize {
+        let (name, original) = &originals[round % originals.len()];
+        let mut bytes = original.clone();
+        for _ in 0..=(next() % 4) {
+            let at = usize::try_from(next() % bytes.len() as u64).expect("fits");
+            match next() % 3 {
+                0 => bytes[at] = (next() & 0xff) as u8,
+                1 => {
+                    bytes.remove(at);
+                }
+                _ => {
+                    let pool = b"{}[],:\"\\0e-9\n\xff";
+                    let pick = usize::try_from(next() % pool.len() as u64).expect("fits");
+                    bytes.insert(at, pool[pick]);
+                }
+            }
+        }
+        std::fs::write(dir.join(name), &bytes).expect("write the edit");
+        let run = oce_in(&dir, &["verify", "--commission", "spec.json"], b"");
+        assert!(
+            run.stderr.is_empty(),
+            "round {round} ({name}): {}",
+            run.transcript()
+        );
+        match run.code {
+            0 | 1 => {
+                let receipt: serde_json::Value =
+                    serde_json::from_slice(&run.stdout).expect("a receipt");
+                assert_eq!(receipt["kind"], "commissioning", "round {round}");
+                verdicts += 1;
+            }
+            2 => {
+                let report = run.report();
+                assert_eq!(
+                    report["errors"].as_array().map(Vec::len),
+                    Some(1),
+                    "round {round}"
+                );
+                refusals += 1;
+            }
+            other => panic!("round {round} ({name}): exit {other}\n{}", run.transcript()),
+        }
+        std::fs::write(dir.join(name), original).expect("restore");
+    }
+    assert!(refusals > 50, "{refusals} refusals, {verdicts} verdicts");
+}

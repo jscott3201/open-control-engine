@@ -1,0 +1,21 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "references[0].pointNameMapping[TSet]",
+      "cause": "port-unit-mismatch",
+      "code": "unit-refused",
+      "detail": "port urn:verify:plant#top.TSet: the mapping gives the CDL point `degC` and the sequence port declares `K`",
+      "path": "urn:verify:plant#top.TSet",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

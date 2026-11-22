@@ -727,7 +727,7 @@ exit: 0
     },
     {
       "code": "input-too-large",
-      "meaning": "the input is over its limit (4 MiB a sequence or vector file, 8 MiB CXF); refused before it is read"
+      "meaning": "the input is over its limit (4 MiB a sequence, vector, commissioning spec or mapping file, 8 MiB CXF, 1 GiB a trend source); refused before it is read"
     },
     {
       "code": "invalid-namespace",
@@ -739,7 +739,7 @@ exit: 0
     },
     {
       "code": "write-failed",
-      "meaning": "the output could not be written or renamed into place"
+      "meaning": "the output could not be written or renamed into place, or (verify --out) DIR is not an existing directory, or (verify --commission --out) DIR/outputs already exists"
     },
     {
       "code": "write-needs-file",
@@ -782,6 +782,14 @@ exit: 0
       "meaning": "a mutant path resolves, through a link or a drive prefix, outside the vector file's directory"
     },
     {
+      "code": "reference-required",
+      "meaning": "verify --commission: the spec has several references and --reference was not given; the detail lists each"
+    },
+    {
+      "code": "file-outside-directory",
+      "meaning": "verify --commission: a CXF, mapping or trend source path resolves, through a link or a drive prefix, outside the spec's directory"
+    },
+    {
       "code": "namespace-needs-authored",
       "meaning": "id --namespace was given beside a CXF document; only a text or wire file is emitted"
     },
@@ -799,7 +807,7 @@ exit: 0
     },
     {
       "code": "output-is-input",
-      "meaning": "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; nothing is written"
+      "meaning": "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; or verify --commission --out DIR would write DIR/receipt.json over a file the run reads; nothing is written"
     },
     {
       "code": "mixed-forms",
@@ -814,7 +822,7 @@ exit: 0
   "exit_codes": [
     {
       "code": 0,
-      "meaning": "yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported, nothing differs"
+      "meaning": "yes: clean, canonical, resolved, every scenario or compared output passed, an id printed, a document imported, nothing differs"
     },
     {
       "code": 1,
@@ -968,6 +976,44 @@ exit: 0
     }
   ],
   "findings": [],
+  "frame_refusal_codes": [
+    {
+      "code": "input-type",
+      "meaning": "an input value of the wrong type for its port"
+    },
+    {
+      "code": "input-non-finite",
+      "meaning": "an infinite input value"
+    },
+    {
+      "code": "input-domain",
+      "meaning": "an input value outside its port's declared bounds (a wrong unit or mapping, most often)"
+    },
+    {
+      "code": "non-finite-time",
+      "meaning": "a frame time that is not finite"
+    },
+    {
+      "code": "time-out-of-range",
+      "meaning": "a frame time beyond the engine's magnitude limit"
+    },
+    {
+      "code": "time-regression",
+      "meaning": "a frame time earlier than the one before"
+    },
+    {
+      "code": "non-finite-time-step",
+      "meaning": "a time step that is not finite"
+    },
+    {
+      "code": "model-time-unrepresentable",
+      "meaning": "a model time the engine cannot represent"
+    },
+    {
+      "code": "run",
+      "meaning": "a refusal about the engine or the run, not the frame (run-refused carries it)"
+    }
+  ],
   "import_codes": [
     {
       "code": "too-large",
@@ -1254,6 +1300,290 @@ exit: 0
     }
   ],
   "schema": "oce-report/1",
+  "source_codes": [
+    {
+      "code": "reference-out-of-range",
+      "meaning": "the reference index is past the end of the spec's references"
+    },
+    {
+      "code": "too-many-sources",
+      "meaning": "the reference names more than 256 trend sources"
+    },
+    {
+      "code": "duplicate-file",
+      "meaning": "the run was handed one path's bytes twice"
+    },
+    {
+      "code": "file-unlisted",
+      "meaning": "the run was handed bytes under a path the reference does not name"
+    },
+    {
+      "code": "file-missing",
+      "meaning": "the reference names a mapping or trend source the run was handed no bytes for"
+    },
+    {
+      "code": "too-many-total-bytes",
+      "meaning": "the mapping and the trend sources are more than 1 GiB together (each path once, the CXF not counted); oce refuses it from the files' metadata before reading them"
+    },
+    {
+      "code": "mapping-required",
+      "meaning": "the reference reads trend sources and names no pointNameMapping"
+    },
+    {
+      "code": "mapping-refused",
+      "meaning": "the point-mapping file does not load (the detail says where and why)"
+    },
+    {
+      "code": "column-reference-invalid",
+      "meaning": "a timeColumn, columns key or table its format does not take, or the time column mapped to a point"
+    },
+    {
+      "code": "unmapped-point",
+      "meaning": "a column names a device point the mapping does not have"
+    },
+    {
+      "code": "point-read-twice",
+      "meaning": "two columns of one role name one device point"
+    },
+    {
+      "code": "type-pair-refused",
+      "meaning": "no rule converts the point's device type to its CDL type"
+    },
+    {
+      "code": "unit-refused",
+      "meaning": "the point's two units have no conversion, or a reading overflows"
+    },
+    {
+      "code": "unit-on-discrete-point",
+      "meaning": "a unit conversion other than the identity on an int or bool CDL point"
+    },
+    {
+      "code": "format-tag-missing",
+      "meaning": "a combiTimeTable file does not start with #1"
+    },
+    {
+      "code": "table-syntax",
+      "meaning": "a combiTimeTable file is not the format (a matrix header, a cell, a separator)"
+    },
+    {
+      "code": "table-required",
+      "meaning": "a combiTimeTable file holds several matrices and the source names no table"
+    },
+    {
+      "code": "table-not-found",
+      "meaning": "no matrix of the file has the source's table name"
+    },
+    {
+      "code": "duplicate-table",
+      "meaning": "two matrices of the file have the source's table name"
+    },
+    {
+      "code": "size-mismatch",
+      "meaning": "a matrix holds fewer or more values than its declared size"
+    },
+    {
+      "code": "bad-number",
+      "meaning": "a combiTimeTable value is not a decimal number in C syntax"
+    },
+    {
+      "code": "non-finite-number",
+      "meaning": "an infinity in a csv cell or time, or a combiTimeTable value beyond the largest binary64"
+    },
+    {
+      "code": "bad-cell",
+      "meaning": "a csv cell its column's device type does not read"
+    },
+    {
+      "code": "cell-refused",
+      "meaning": "a value the point's type rule refuses: a 0.5 Boolean, a non-integral Integer"
+    },
+    {
+      "code": "column-missing",
+      "meaning": "a column the source names, or its time column, is not in the file"
+    },
+    {
+      "code": "duplicate-column",
+      "meaning": "a csv header names one column twice"
+    },
+    {
+      "code": "no-header",
+      "meaning": "a controllerOutput file has no header row"
+    },
+    {
+      "code": "no-point-columns",
+      "meaning": "a controllerOutput file's header names no column but the time"
+    },
+    {
+      "code": "ragged-row",
+      "meaning": "a csv row has a different number of fields from the header"
+    },
+    {
+      "code": "not-utf8",
+      "meaning": "a csv cell or header is not UTF-8"
+    },
+    {
+      "code": "cell-too-long",
+      "meaning": "a csv cell, combiTimeTable number or matrix name is longer than 256 bytes"
+    },
+    {
+      "code": "too-many-rows",
+      "meaning": "more than 16,777,216 rows in one file or frames in the merged inputs"
+    },
+    {
+      "code": "too-many-columns",
+      "meaning": "more than 4,096 columns in one file or in the merged inputs, the time included"
+    },
+    {
+      "code": "too-many-bytes",
+      "meaning": "more than 1 GiB in one file or held by a source's or the merged inputs' columns"
+    },
+    {
+      "code": "time-missing",
+      "meaning": "a csv row's time cell is empty, NA or NaN"
+    },
+    {
+      "code": "bad-time",
+      "meaning": "a time cell is neither seconds nor an instant, or not the first row's kind"
+    },
+    {
+      "code": "time-origin-required",
+      "meaning": "a csv time column of instants in a spec with no time.origin"
+    },
+    {
+      "code": "time-regression",
+      "meaning": "a time earlier than the row before it in one file"
+    },
+    {
+      "code": "unreadable",
+      "meaning": "a replay reader refusal with no word of its own (never expected)"
+    }
+  ],
+  "spec_codes": [
+    {
+      "code": "not-utf8",
+      "meaning": "the spec is not UTF-8"
+    },
+    {
+      "code": "byte-order-mark",
+      "meaning": "the spec starts with a byte-order mark"
+    },
+    {
+      "code": "json-syntax",
+      "meaning": "the spec, its // and /* */ comments removed, is not one strict JSON document (a trailing comma included)"
+    },
+    {
+      "code": "input-too-large",
+      "meaning": "the spec is larger than 4 MiB, comments included"
+    },
+    {
+      "code": "nesting-too-deep",
+      "meaning": "objects and arrays nest deeper than 8 levels"
+    },
+    {
+      "code": "list-too-long",
+      "meaning": "a list has more than 65,536 entries"
+    },
+    {
+      "code": "string-too-long",
+      "meaning": "a string is longer than 4,096 bytes as written"
+    },
+    {
+      "code": "duplicate-key",
+      "meaning": "an object writes one key twice"
+    },
+    {
+      "code": "unknown-key",
+      "meaning": "an object carries a key the format does not define"
+    },
+    {
+      "code": "missing-key",
+      "meaning": "an object lacks a required key"
+    },
+    {
+      "code": "wrong-type",
+      "meaning": "a value has the wrong JSON type for its position"
+    },
+    {
+      "code": "non-finite-number",
+      "meaning": "NaN or Infinity as a number, or a real that overflows binary64"
+    },
+    {
+      "code": "integer-out-of-range",
+      "meaning": "an integer outside 64 bits, or one read as a real above 2^53"
+    },
+    {
+      "code": "control-character",
+      "meaning": "a string carries a control character, raw or escaped (an escaped \\n excepted)"
+    },
+    {
+      "code": "unterminated-comment",
+      "meaning": "a /* comment is never closed"
+    },
+    {
+      "code": "unknown-schema",
+      "meaning": "schema is not oce/commissioning-spec/v1"
+    },
+    {
+      "code": "too-many-parameters",
+      "meaning": "a reference's parameters map has more than 256 entries"
+    },
+    {
+      "code": "too-many-keys",
+      "meaning": "an outputs, indicators or columns map has more than 4,096 keys"
+    },
+    {
+      "code": "empty-name",
+      "meaning": "an empty model, sequence, key, indicator, parameter path, point name or unit, table, timeColumn or column"
+    },
+    {
+      "code": "unknown-value",
+      "meaning": "a format, envelope, funnelReference or point type outside its list"
+    },
+    {
+      "code": "path-invalid",
+      "meaning": "a cxf, mapping, source or controllerOutput path is absolute, has an empty, . or .. segment, or holds a backslash"
+    },
+    {
+      "code": "invalid-time-origin",
+      "meaning": "time.origin is not an RFC 3339 instant with an explicit offset"
+    },
+    {
+      "code": "invalid-tolerance",
+      "meaning": "a tolerance is negative"
+    },
+    {
+      "code": "invalid-sampling",
+      "meaning": "a sampling is not above zero"
+    },
+    {
+      "code": "invalid-window",
+      "meaning": "a window's start is after its stop"
+    },
+    {
+      "code": "invalid-hold",
+      "meaning": "a hold.maxAge is negative"
+    },
+    {
+      "code": "duplicate-point",
+      "meaning": "two points of one mapping share a name on one side, cdl or device"
+    },
+    {
+      "code": "unmatched-key",
+      "meaning": "the cause of spec-refused: an outputs or indicators key selects no output of the sequence"
+    },
+    {
+      "code": "ambiguous-output",
+      "meaning": "the cause of spec-refused: an exact outputs or indicators key names several outputs"
+    },
+    {
+      "code": "conflicting-override",
+      "meaning": "the cause of spec-refused: two outputs keys of one kind give one output one tolerance field two values"
+    },
+    {
+      "code": "work-limit-exceeded",
+      "meaning": "the cause of spec-refused: matching the keys against the outputs needs more than 2^28 work units"
+    }
+  ],
   "tags": [
     "@unit",
     "@quantity",
@@ -1271,6 +1601,36 @@ exit: 0
     "Real",
     "Integer",
     "Boolean"
+  ],
+  "unit_codes": [
+    {
+      "code": "unknown-pair",
+      "meaning": "units/v1 lists no conversion from the device's unit to the CDL point's"
+    },
+    {
+      "code": "one-sided",
+      "meaning": "one side of a mapped point has a unit and the other none"
+    },
+    {
+      "code": "empty-unit",
+      "meaning": "a unit is written as the empty string"
+    },
+    {
+      "code": "overflow",
+      "meaning": "a finite reading's conversion is beyond the largest binary64"
+    },
+    {
+      "code": "absolute-for-difference",
+      "meaning": "an absolute temperature pair on a TemperatureDifference port"
+    },
+    {
+      "code": "difference-for-absolute",
+      "meaning": "a temperature difference pair on a ThermodynamicTemperature port"
+    },
+    {
+      "code": "port-unit-mismatch",
+      "meaning": "the mapping's cdl.unit is not the unit the sequence port declares"
+    }
   ],
   "vector_codes": [
     {

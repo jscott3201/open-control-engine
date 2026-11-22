@@ -4,7 +4,8 @@
 //! 12, GitHub issue #500; vectors note `docs/design/vectors.md`, "CLI", decision 34, GitHub issue
 //! #522; content-id note `docs/design/content-id.md`, GitHub issue #513; importer note
 //! `docs/design/importer.md`, GitHub issue #514; diff note `docs/design/diff.md`, "CLI", decisions
-//! 1 and 16, GitHub issue #668).
+//! 1 and 16, GitHub issue #668; commissioning note `docs/design/commissioning.md`, "CLI",
+//! decisions 21 and 33 to 37, GitHub issue #664).
 //!
 //! The binary (`src/main.rs`) is a thin shell over [`run`], which parses the arguments with `clap`
 //! and dispatches to one of nine commands over `oce-author`, `oce-vocab`, `oce-verify`, `oce-diff`
@@ -17,7 +18,8 @@
 //!   descriptions, declared units and quantities, ranges, typed notes and upstream links;
 //! - `vocab`: the text-form vocabulary, the unit scale factors and every code the tool can
 //!   report;
-//! - `verify`: a vector set replayed against a subject, the receipt on stdout;
+//! - `verify`: a vector set replayed against a subject, or (`--commission`) one reference of a
+//!   commissioning spec run against its trends, the receipt on stdout;
 //! - `id`: the canonical content id of a CXF document or an authored sequence, alone on stdout;
 //! - `import`: a flat CXF document into the authoring form, canonical text or wire;
 //! - `diff`: the structural diff of two authoring models or two CXF documents.
@@ -44,6 +46,7 @@
 
 mod codes;
 mod commands;
+mod commission_codes;
 mod diff_codes;
 mod input;
 mod report;
@@ -136,31 +139,164 @@ pub(crate) enum SubjectForm {
     Wire,
 }
 
-/// What `verify` runs and how it answers.
+/// The label a commissioning receipt gives its trend files (`--data`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub(crate) enum DataLabel {
+    // Recorded by a real controller.
+    Trended,
+    // Generated, for instance from the engine and perturbed.
+    Synthetic,
+}
+
+/// The two forms of `verify`, as its help and its usage errors print them: clap's own usage line
+/// would write the two forms as one (`--commission <SPEC> [VECTORS]`), a combination it refuses.
+const VERIFY_USAGE: &str = "oce verify [OPTIONS] --subject <SUBJECT> <VECTORS>\n       \
+oce verify [OPTIONS] --commission <SPEC>";
+
+/// The `verify` arguments only a vector run reads. A commissioning flag conflicts with each of
+/// them as well as requiring `--commission`: clap drops a requirement whose argument conflicts
+/// with one that is present, so `requires` alone would let `--reference` pass beside a vector set.
+const VECTOR_ONLY: [&str; 4] = [
+    "vectors",
+    "subject",
+    "subject_form",
+    "require_mutants_caught",
+];
+
+/// What `verify` runs and how it answers: a vector set against a subject, or, with
+/// `--commission`, one reference of a commissioning spec against its trends.
 #[derive(Debug, Args)]
 pub(crate) struct VerifyArgs {
     /// The vector set (`oce/vectors/v1`); mutant paths resolve against its directory.
-    pub(crate) vectors: OsString,
+    #[arg(required_unless_present = "commission", conflicts_with = "commission")]
+    pub(crate) vectors: Option<OsString>,
     /// The sequence the vectors check: CXF (`.jsonld`, `.cxf.json`), text (`.oce`) or wire
     /// (`.json`).
-    #[arg(long)]
-    pub(crate) subject: OsString,
+    #[arg(
+        long,
+        required_unless_present = "commission",
+        conflicts_with = "commission"
+    )]
+    pub(crate) subject: Option<OsString>,
     /// The subject's form; overrides the name.
-    #[arg(long, value_enum)]
+    #[arg(long, value_enum, conflicts_with = "commission")]
     pub(crate) subject_form: Option<SubjectForm>,
-    /// Write the receipt to DIR/receipt.json (atomically) and print the report on stdout.
+    /// Run a commissioning spec (`oce/commissioning-spec/v1`, OBC §12.7) instead of a vector set:
+    /// its CXF, mapping and trend files resolve against the directory of SPEC as given and may
+    /// not leave it.
+    #[arg(long, value_name = "SPEC")]
+    pub(crate) commission: Option<OsString>,
+    /// The zero-based index of the spec's reference to run; needed when it has several.
+    #[arg(long, value_name = "N", requires = "commission", conflicts_with_all = VECTOR_ONLY)]
+    pub(crate) reference: Option<usize>,
+    /// Write the receipt to DIR/receipt.json (atomically) and print the report on stdout; with
+    /// --commission also each output's exceedance curve, `DIR/outputs/<k>/errors.csv`.
     #[arg(long, value_name = "DIR")]
     pub(crate) out: Option<OsString>,
+    /// With --commission and --out: also each Real output's reference, test and bound curves
+    /// beside its errors.csv, under pyfunnel's names.
+    #[arg(
+        long,
+        requires = "commission",
+        requires = "out",
+        conflicts_with_all = VECTOR_ONLY
+    )]
+    pub(crate) bounds: bool,
+    /// With --commission: what the trend files are, the receipt's data label (trended when
+    /// absent).
+    #[arg(long, value_enum, requires = "commission", conflicts_with_all = VECTOR_ONLY)]
+    pub(crate) data: Option<DataLabel>,
     /// Exit 1 when a mutant survived or the set lists none; no receipt byte changes.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "commission")]
     pub(crate) require_mutants_caught: bool,
-    /// Exit 1 when the subject warned at load or a scenario left a warning unmatched; no receipt
-    /// byte changes.
+    /// Exit 1 when the subject warned at load or a scenario left a warning unmatched (with
+    /// --commission: any load or run-time warning); no receipt byte changes.
     #[arg(long)]
     pub(crate) deny_warnings: bool,
     /// Measure the run into the receipt's timings, which receipt_id never covers.
     #[arg(long)]
     pub(crate) timings: bool,
+}
+
+/// A vector run of `verify`: the set, its subject and the flags a vector run reads.
+#[derive(Debug)]
+pub(crate) struct VectorArgs {
+    /// The vector set.
+    pub(crate) vectors: OsString,
+    /// The subject.
+    pub(crate) subject: OsString,
+    /// The subject's form, when given.
+    pub(crate) subject_form: Option<SubjectForm>,
+    /// `--out DIR`.
+    pub(crate) out: Option<OsString>,
+    /// `--require-mutants-caught`.
+    pub(crate) require_mutants_caught: bool,
+    /// `--deny-warnings`.
+    pub(crate) deny_warnings: bool,
+    /// `--timings`.
+    pub(crate) timings: bool,
+}
+
+/// A commissioning run of `verify` (`--commission`): the spec and the flags it reads.
+#[derive(Debug)]
+pub(crate) struct CommissionArgs {
+    /// The commissioning spec.
+    pub(crate) spec: OsString,
+    /// `--reference N`, when given.
+    pub(crate) reference: Option<usize>,
+    /// `--out DIR`.
+    pub(crate) out: Option<OsString>,
+    /// `--bounds` (clap holds it to `--out`).
+    pub(crate) bounds: bool,
+    /// `--data`, trended when absent.
+    pub(crate) data: DataLabel,
+    /// `--deny-warnings`.
+    pub(crate) deny_warnings: bool,
+    /// `--timings`.
+    pub(crate) timings: bool,
+}
+
+/// What one `verify` invocation runs.
+#[derive(Debug)]
+pub(crate) enum VerifyMode {
+    /// A vector set against a subject.
+    Vectors(VectorArgs),
+    /// One reference of a commissioning spec.
+    Commission(CommissionArgs),
+}
+
+impl VerifyArgs {
+    /// The run these arguments ask for. clap requires `<VECTORS>` and `--subject` unless
+    /// `--commission` is given and refuses them beside it, so the error is never reached; it is
+    /// clap's own usage error all the same, never a panic.
+    fn mode(self) -> Result<VerifyMode, clap::Error> {
+        if let Some(spec) = self.commission {
+            return Ok(VerifyMode::Commission(CommissionArgs {
+                spec,
+                reference: self.reference,
+                out: self.out,
+                bounds: self.bounds,
+                data: self.data.unwrap_or(DataLabel::Trended),
+                deny_warnings: self.deny_warnings,
+                timings: self.timings,
+            }));
+        }
+        match (self.vectors, self.subject) {
+            (Some(vectors), Some(subject)) => Ok(VerifyMode::Vectors(VectorArgs {
+                vectors,
+                subject,
+                subject_form: self.subject_form,
+                out: self.out,
+                require_mutants_caught: self.require_mutants_caught,
+                deny_warnings: self.deny_warnings,
+                timings: self.timings,
+            })),
+            _ => Err(clap::Error::raw(
+                clap::error::ErrorKind::MissingRequiredArgument,
+                "verify needs <VECTORS> and --subject, or --commission <SPEC>\n",
+            )),
+        }
+    }
 }
 
 /// The forms `id` and `diff` read an input in.
@@ -296,11 +432,14 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Replay a vector set against a subject and print the receipt.
+    /// Replay a vector set against a subject, or a commissioning spec against its trends, and
+    /// print the receipt.
     ///
-    /// Stdout is the receipt when the run reaches a verdict: exit 0 when every scenario passed, 1
-    /// when one failed or the set checked nothing. Anything that prevents a verdict is exit 2 with
-    /// the JSON report. With --out the receipt goes to DIR/receipt.json and the report to stdout.
+    /// Stdout is the receipt when the run reaches a verdict: exit 0 when every scenario (with
+    /// --commission, every compared output) passed, 1 when one failed or the run checked nothing.
+    /// Anything that prevents a verdict is exit 2 with the JSON report. With --out the receipt
+    /// goes to DIR/receipt.json and the report to stdout.
+    #[command(override_usage = VERIFY_USAGE)]
     Verify(VerifyArgs),
     /// Print the canonical content id of a CXF document or an authored sequence.
     ///
@@ -386,7 +525,11 @@ where
             params,
         } => commands::catalog::run(class.as_deref(), json, &params),
         Command::Vocab { json } => commands::vocab::run(json),
-        Command::Verify(args) => commands::verify::run(&args),
+        Command::Verify(args) => match args.mode() {
+            Ok(VerifyMode::Vectors(args)) => commands::verify::run(&args),
+            Ok(VerifyMode::Commission(args)) => commands::verify_commission::run(&args),
+            Err(error) => return clap_exit(&error, streams),
+        },
         Command::Id(args) => commands::id::run(&args, streams),
         Command::Import(args) => commands::import::run(&args, streams),
         Command::Diff(args) => commands::diff::run(&args, render, streams),

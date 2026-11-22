@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "references[0].cxf",
+      "code": "subject-load-failed",
+      "detail": "the engine refused to load the subject: CXF ingest error: CXF JSON parse error: missing field `@context` at line 1 column 14",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr
