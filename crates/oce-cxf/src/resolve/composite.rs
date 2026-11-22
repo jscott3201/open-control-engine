@@ -4,8 +4,8 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::bridge;
+use crate::document_groundings::DocumentGroundings;
 use crate::dto::{CxfDocument, IriRef, Node, OneOrMany};
-use crate::parameter_reads::DocumentGroundings;
 use oce_diag::DiagnosticList;
 use oce_diag::{DiagCode, Diagnostic};
 

@@ -574,7 +574,7 @@ pub(crate) fn expand_array_param(
                     reads
                         .groundings
                         .document()
-                        .evaluate_array(pnode, cxf_val, text, &scope),
+                        .evaluate_array(pnode, cxf_val, text, n, &scope),
                 )
             };
             match array_expression_elements(evaluated.as_deref(), &dims, n) {

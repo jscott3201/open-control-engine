@@ -130,6 +130,13 @@ impl DiagnosticList {
         }
     }
 
+    /// Whether the list has ended: a diagnostic did not fit, so it and every later one are
+    /// counted and none is built. A list never reopens. A caller that would record findings to
+    /// raise again later records only their count once the list has ended.
+    pub fn has_ended(&self) -> bool {
+        self.unlisted > 0
+    }
+
     /// How many diagnostics were raised, listed or not; the closing error is not one of them.
     pub fn raised(&self) -> u64 {
         let closing = usize::from(self.unlisted > 0);

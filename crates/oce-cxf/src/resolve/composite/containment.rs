@@ -17,8 +17,8 @@ use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
 
+use crate::document_groundings::DocumentGroundings;
 use crate::dto::Node;
-use crate::parameter_reads::DocumentGroundings;
 use crate::scope_chain::ScopeFrame;
 use oce_diag::DiagnosticList;
 

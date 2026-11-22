@@ -11,9 +11,9 @@ use oce_model::{
 };
 
 use crate::bridge::class_path_of;
+use crate::document_groundings::DocumentGroundings;
 use crate::dto::{IriRef, Node};
 use crate::ground::non_canonical_enumeration_message;
-use crate::parameter_reads::DocumentGroundings;
 use crate::scope_chain::ScopeFrame;
 use oce_diag::DiagnosticList;
 

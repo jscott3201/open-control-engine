@@ -746,10 +746,14 @@ of a node two owners or more list, written as an expression or a typed literal, 
 each pass when its grounding looks up no name, and every owner shares the result (and the parse
 that orders a composite's declarations); 1,024 such leaves request what reading their own nodes
 costs, 26.5 KB a leaf, and the value a fixed number of times. This is exact: a grounding that
-looks no name up gives the same value under every scope. It is also evaluating once, charged to the
-evaluation budget once. A value that reads a name (`k + 1`) is still grounded under each owner's
-scope, since each may give it a different value; such a value with long text still costs its text
-once an owner.
+looks no name up gives the same value under every scope. The evaluation budget sees no
+difference: each owner that takes the shared result is charged the fuel the one grounding spent,
+which is what grounding it again would spend, and an owner whose fuel left does not cover that
+grounds the value itself. So sharing changes no outcome. What the document keeps for its owners is
+built from the values' own text, and an array evaluation is kept only at the element count the
+element budget charged. A value that reads a name (`k + 1`) is still grounded under each owner's
+scope, since each may give it a different value, and such a value with long text still costs its
+text once an owner (issue #798 charges lexing to the evaluation budget).
 
 The set of sibling names an array's minted names are checked against is built once per leaf
 (issue #731); it was built again for each array parameter, so 2,000 empty arrays on one leaf, a

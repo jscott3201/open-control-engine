@@ -679,44 +679,65 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
-- **A value many owners read is grounded once for the document** (GitHub #797, issue #749). A
-  parameter node that many leaves list was grounded again by each leaf in resolver Step 7, and a
-  declaration many composites list again by each composite in lowering and in the guard scope of
-  each composite with a conditional child, where it was also parsed again for the declarations'
-  dependency order. Each grounding lexed the value's text and built its result anew, so a long
-  string cost `owners × text` while each further owner cost the document a reference: 1,024
-  `Constant` leaves listing one 60 KB string, a 702 KB document, requested 1.31 GB before the
-  string budget refused them (reproduced on the base, debug: 322,197,867 bytes at 256 leaves).
+- **A value many owners read is grounded once for the document, and each owner is charged what
+  grounding it again would spend** (GitHub #797, issue #749). A parameter node that many leaves
+  list was grounded again by each leaf in resolver Step 7, and a declaration many composites list
+  again by each composite in lowering and in the guard scope of each composite with a conditional
+  child, where it was also parsed again for the declarations' dependency order. Each grounding
+  lexed the value's text and built its result anew, so a long string cost `owners × text` while
+  each further owner cost the document a reference: 1,024 `Constant` leaves listing one 60 KB
+  string, a 702 KB document, requested 1.31 GB before the string budget refused them (reproduced
+  on the base, debug: 322,197,867 bytes at 256 leaves).
   - **The rule.** In each of the three passes, a value of a node that two owners or more list,
-    written as an expression or a typed literal, is grounded once when its grounding looks up no
-    name, and every owner shares the result; so is the parse of a declaration's expression and
-    the evaluation of an array expression (`oce_cxf`'s `DocumentGroundings`). The grounding runs
-    under a scope that forwards to the owner's and records whether a name was looked up. This is
-    exact: the evaluator consults a scope only to look a name up, to resolve an enumeration (the
-    same catalog tables under every scope of the resolver) and to ask whether non-finite values
-    are refused, so a grounding that looked no name up is the one every owner's scope gives. Only
-    values of nodes two owners list are kept, so the cache never holds more than the tables do.
+    written as an expression or a typed literal, is grounded once and every owner shares the
+    result, when the grounding looked up no name and was not refused for the evaluation budget;
+    so is the parse of a declaration's expression, and the evaluation of an array expression when
+    it is an array of exactly the element count the element budget charged for its owner
+    (`oce_cxf`'s `DocumentGroundings`). The grounding runs under a scope that forwards to the
+    owner's and records whether a name was looked up. This is exact: the evaluator consults a
+    scope only to look a name up, to resolve an enumeration (the same catalog tables under every
+    scope of the resolver) and to ask whether non-finite values are refused.
+  - **The evaluation budget is charged as before.** The fuel the one grounding spent is recorded
+    (`oce_expr::eval_fuel_remaining`, new), and every later owner that takes the result is charged
+    that much (`oce_expr::spend_eval_fuel`, new), which is what grounding it again would spend:
+    an evaluation is deterministic. When the fuel left does not cover it, grounding again would
+    refuse partway, at a point only grounding again finds, so that owner grounds the value itself,
+    as before. A broadcast's one value is still charged once per instance (issue #736). So no
+    outcome changes: 40 leaves of `sum(fill(1.0, 1000000))` are refused from the same leaf with the
+    same diagnostics whether they share one node or each has its own, and so are the most leaves
+    that fit the budget and one more.
+  - **What the caches hold.** Only what the document paid for: a kept result or error is built
+    from its value's own text (a string from its literal, shared with the tables), and an array
+    evaluation is kept only at the element count the budget charged. An evaluation of another
+    length is dropped once its owner has read it: before this was pinned, array nodes declared at
+    one element whose value builds a million held each evaluation to the end of the pass (8 such
+    nodes peaked at 192.3 MB); they now peak at 24.4 MB, as with a node for each leaf.
   - **What changes.** The 256-leaf document requests 10,483,283 bytes, and the issue's shape
     costs 26.5 KB a further leaf, what reading the leaf's own nodes costs, with the value
     grounded once; each listing is still charged to the string budget, so the same listings are
-    refused. A shared value is charged its evaluation once against the document's evaluation
-    budget, where each owner was charged again: a document refused before for evaluating the same
-    value again may now load. No document that loaded before is refused, and none changes
-    outcome, content id, blob, warnings, export or diagnostics: 540 loads of the tracked and
-    `open-control-library` corpus are byte-identical before and after.
+    refused. No outcome, content id, blob, warning, export or diagnostic changes: 540 loads of the
+    tracked and `open-control-library` corpus are byte-identical before and after.
   - **What does not.** A value that reads a name (`k + 1`) is grounded under each owner's scope,
     since each may give it a different value; such a value with long text still costs its text
-    once an owner (a follow-up decides whether lexing is charged to the evaluation budget).
+    once an owner, and so does every owner whose fuel left is below a shared value's cost. Issue
+    #798 charges lexing to the evaluation budget.
   - **Evidence.** `oce-cxf` `document_groundings_tests.rs` counts groundings and parses: one for
     the shared value at 16, 32 and 64 leaves and at 8, 16 and 32 composites (before: one an
-    owner and pass), each leaf's table equal entry by entry to the table of a node of its own (a
-    string, a Real, an Integer expression, a typed literal, a Boolean, a literal), a value reading
-    `k` grounded under each leaf, a failure (`1/0`) grounded once and reported for every leaf as
-    each own copy reports it, the two-owner edge, the exact set of shared nodes, and a shared
-    array expression evaluated once. `oce-api` `cxf_shared_parameter_cost.rs` holds the issue's
-    60 KB value at 256, 512 and 1,024 leaves to a fixed number of copies over the same documents
-    with a one-letter value (measured 2.31, 2.52 and 2.91 MB more; 1.26 MB a leaf before) and the
-    leaves sharing one allocation.
+    owner and pass), each leaf's table equal entry by entry to the table of a node of its own, the
+    two-owner edge, the exact set of shared nodes, and a shared array expression evaluated once.
+    `document_groundings_parity_tests.rs` holds each leaf to its own value where the value reads
+    the leaf's `k` (`fill(k, 2)`, `k + 1` listed twice, a broadcast `[k * 2]`), the evaluation
+    budget shared against separate at the review's 40 leaves and at the edge, a shared broadcast,
+    failing values, and what the caches retain. `oce-api` `cxf_shared_parameter_identity.rs`
+    loads leaves of `Reals` and `Integers` `Constant` sharing `k`, and composites with and
+    without a conditional child sharing a Real or Integer declaration, over fourteen values (an
+    Integer on a Real, past 2^53, `1/0`, a string, a Boolean, typed literals, an enumeration, an
+    undefined name, an array on a scalar, `1e308*10`, a parse error), and requires the outcome,
+    content id, blob bytes, warnings and diagnostics of the separate form. `cxf_shared_parameter_cost.rs`
+    holds the issue's 60 KB value at 256, 512 and 1,024 leaves to a fixed number of copies over
+    the same documents with a one-letter value (measured 2.31, 2.52 and 2.91 MB more; 1.26 MB a
+    leaf before), the leaves sharing one allocation, and the one-element arrays' peak flat at 1,
+    4 and 8 nodes.
 
 - **A boundary output's attributes are read once for all the pass-through pairs wired to it**
   (GitHub #797, issue #750). A root boundary output wired from many boundary inputs gets one
@@ -726,12 +747,19 @@ so far, and no tag is cut by the bump.
   multiply driven (256 pairs: 18,624,899 bytes on the base). The output is now read once for each
   type a pair reads it as; every pair shares the reading (its terms are one `Arc<str>` each), and
   the reading's findings, recorded once, are raised again for each pair in the order a read of
-  its own raised them, so the diagnostic list is the one a read per pair made. 256 pairs peak at
-  1,909,151 bytes, and a further pair costs 6,373 bytes whether the term is 64 KiB or one letter.
-  Pinned by `oce-api` `cxf_pass_through_attribute_cost.rs` (256 to 1,024 pairs; the long term
-  against a one-letter one; 40 pairs raising both findings of the output 40 times each) and
-  `oce-cxf` `pass_through_tests.rs` (an output read as Integer and as Real gives each pair the
-  attribute set of its own type).
+  its own raised them, so the diagnostic list is the one a read per pair made. A reading made once
+  the import's list has ended builds no finding and keeps only their count
+  (`oce_diag::DiagnosticList::has_ended`, new), so the readings hold at most what the list holds
+  and one reading's findings more. 256 pairs peak at 1,909,151 bytes, and a further
+  pair costs 6,373 bytes whether the term is 64 KiB or one letter; 192 outputs with 16 KiB `@id`s
+  and six malformed attributes each add 6,584,230 requested bytes for their findings, where
+  holding every reading's findings added 39,321,550. Pinned by `oce-api`
+  `cxf_pass_through_attribute_cost.rs` (256 to 1,024 pairs; the long term against a one-letter
+  one; 40 pairs raising both findings of the output 40 times each; the 192 outputs) and `oce-cxf`
+  `pass_through_tests.rs`: an output read as Integer and as Real gives each pair the attribute
+  set of its own type, and fourteen pairs of three types onto two outputs list, count and order
+  their 43 findings as a read per pair does, at ids of 8 bytes to 3 MB (43, 27, 11, 5 and 2
+  listed).
 
 - **A node's second spellings of a property are looked up in its keys sorted once** (GitHub
   #797, issue #751). Each alias of a node (a key `s<i>:min` through a `@context` term bound to

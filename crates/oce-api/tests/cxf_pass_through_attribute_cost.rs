@@ -152,3 +152,85 @@ fn every_pair_still_raises_the_findings_of_the_output_it_reads() {
         .count();
     assert_eq!((quantity, min), (40, 40), "{about_output:?}");
 }
+
+/// A root with one `Constant` leaf and `outputs` boundary outputs, each with an `@id` of
+/// `id_bytes` bytes and wired from two boundary inputs; with `malformed` set each output declares
+/// six malformed attributes, so each reading of it raises six findings naming its `@id`.
+fn many_outputs(outputs: usize, id_bytes: usize, malformed: bool) -> Vec<u8> {
+    let attributes = if malformed {
+        ", \"S231:quantity\": 5, \"S231:unit\": 5, \"S231:displayUnit\": 5, \"S231:min\": \"no\", \
+         \"S231:max\": \"no\", \"S231:nominal\": \"no\""
+    } else {
+        ""
+    };
+    let id = |j: usize| format!("urn:o{j:03}:{}", "x".repeat(id_bytes - 10));
+    let mut inputs = Vec::new();
+    let mut nodes = String::new();
+    for j in 0..outputs {
+        for side in 0..2 {
+            let input = format!("urn:i{j:03}{side}");
+            nodes.push_str(&format!(
+                ",\n  {{ \"@id\": \"{input}\", \"@type\": \"S231:RealInput\", \"S231:isOfDataType\": \
+                 {{ \"@id\": \"S231:Real\" }}, \"S231:isConnectedTo\": {{ \"@id\": \"{}\" }} }}",
+                id(j)
+            ));
+            inputs.push(format!("{{ \"@id\": \"{input}\" }}"));
+        }
+        nodes.push_str(&format!(
+            ",\n  {{ \"@id\": \"{}\", \"@type\": \"S231:RealOutput\", \
+             \"S231:isOfDataType\": {{ \"@id\": \"S231:Real\" }}{attributes} }}",
+            id(j)
+        ));
+    }
+    let declared: Vec<String> = (0..outputs)
+        .map(|j| format!("{{ \"@id\": \"{}\" }}", id(j)))
+        .collect();
+    format!(
+        "{{ \"@context\": {{ \"S231\": \"http://data.ashrae.org/S231#\" }}, \"@graph\": [
+  {{ \"@id\": \"urn:r\", \"@type\": \"S231:Block\", \"S231:hasInput\": [ {} ],
+    \"S231:hasOutput\": [ {} ], \"S231:containsBlock\": {{ \"@id\": \"urn:r.keep\" }} }},
+  {{ \"@id\": \"urn:r.keep\",
+    \"@type\": \"http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant\",
+    \"S231:hasParameter\": {{ \"@id\": \"urn:r.keep.k\" }},
+    \"S231:hasOutput\": {{ \"@id\": \"urn:r.keep.y\" }} }},
+  {{ \"@id\": \"urn:r.keep.k\", \"S231:value\": 1.0 }},
+  {{ \"@id\": \"urn:r.keep.y\", \"@type\": \"S231:RealOutput\",
+    \"S231:isOfDataType\": {{ \"@id\": \"S231:Real\" }} }}{nodes} ] }}",
+        inputs.join(", "),
+        declared.join(", ")
+    )
+    .into_bytes()
+}
+
+/// What one read of `bytes` by the CXF reader alone (it has no admission limit) requested, and
+/// whether it was refused with the diagnostic list ended.
+fn read_total(bytes: &[u8]) -> (u64, bool) {
+    oce_cxf::import_cxf(MODEL.as_bytes(), &oce_cxf::ResolveOptions::default()).expect("reads");
+    let mut ended = false;
+    let info = measure(|| {
+        ended = match oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default()) {
+            Err(oce_cxf::CxfError::Validation(diagnostics)) => diagnostics
+                .last()
+                .is_some_and(|d| d.code == DiagCode::ResourceLimitExceeded),
+            _ => false,
+        };
+    });
+    (info.bytes_total, ended)
+}
+
+#[test]
+fn readings_made_once_the_list_has_ended_hold_no_findings() {
+    // 192 outputs with 16 KiB `@id`s, each read by its two pairs: a reading made once the list
+    // has ended builds no finding and keeps only their count, so what the malformed attributes
+    // add to the bytes the read requests is about the list, never every output's findings. (The read's peak is its 12 MB document's, which
+    // the findings never reach.) [measured: 6,584,230 bytes more than the same document with
+    // well-formed attributes; 39,321,550 when every reading built and held its findings]
+    let (malformed, ended) = read_total(&many_outputs(192, 16 * 1024, true));
+    assert!(ended, "the list ends");
+    let (clean, _) = read_total(&many_outputs(192, 16 * 1024, false));
+    let added = malformed.saturating_sub(clean);
+    assert!(
+        added <= 3 * 8 * 1024 * 1024 / 2,
+        "{added} bytes more requested for the findings"
+    );
+}

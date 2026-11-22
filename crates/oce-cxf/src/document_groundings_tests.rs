@@ -14,8 +14,9 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{ModelGraph, Value};
 
-use super::{DocumentGroundings, heads_parsed_by, reads_counted_by};
+use super::{DocumentGroundings, heads_parsed_by};
 use crate::dto::{CxfDocument, CxfValue, Node};
+use crate::parameter_reads::reads_counted_by;
 use crate::{CxfError, ResolveOptions, import_cxf, parse_document};
 
 const MODEL: &str = include_str!("../tests/fixtures/minimal_loop.jsonld");
@@ -24,11 +25,11 @@ const LAST: &str = "\"S231:isOfDataType\": { \"@id\": \"S231:Boolean\" } }\n  ]"
 
 /// The groundings [`MODEL`]'s own parameters take: the constant's `k`, the delay's `y_start` and
 /// `samplePeriod`, and the gain's `k`.
-const MODEL_GROUNDINGS: u64 = 4;
+pub(super) const MODEL_GROUNDINGS: u64 = 4;
 
 /// [`MODEL`] with `leaves` more `Constant` leaves, each listing its own `k` and then the node
 /// `shared(i)` names for leaf `i`, and `nodes` declared at the end.
-fn leaves(leaves: usize, shared: impl Fn(usize) -> String, nodes: &str) -> Vec<u8> {
+pub(super) fn leaves(leaves: usize, shared: impl Fn(usize) -> String, nodes: &str) -> Vec<u8> {
     assert_eq!(MODEL.matches(GT).count(), 1);
     assert_eq!(MODEL.matches(LAST).count(), 1);
     let mut contains = String::new();
@@ -63,12 +64,12 @@ fn leaves(leaves: usize, shared: impl Fn(usize) -> String, nodes: &str) -> Vec<u
 }
 
 /// A scalar parameter node `id` whose `S231:value` is the JSON `value`, led by a comma.
-fn node(id: &str, value: &str) -> String {
+pub(super) fn node(id: &str, value: &str) -> String {
     format!(",\n    {{ \"@id\": \"{id}\", \"S231:value\": {value} }}")
 }
 
 /// `leaves` leaves listing the one node `urn:shared.q` of `value`.
-fn shared(count: usize, value: &str) -> Vec<u8> {
+pub(super) fn shared(count: usize, value: &str) -> Vec<u8> {
     leaves(
         count,
         |_| "urn:shared.q".to_owned(),
@@ -76,23 +77,23 @@ fn shared(count: usize, value: &str) -> Vec<u8> {
     )
 }
 
-/// `leaves` leaves each listing a node of its own, `urn:own<i>.q`, of `value`.
-fn separate(count: usize, value: &str) -> Vec<u8> {
+/// `leaves` leaves each listing a node of its own, `urn:own<iii>.q` (zero-padded, so the ids sort in leaf order), of `value`.
+pub(super) fn separate(count: usize, value: &str) -> Vec<u8> {
     let nodes: String = (0..count)
-        .map(|i| node(&format!("urn:own{i}.q"), value))
+        .map(|i| node(&format!("urn:own{i:03}.q"), value))
         .collect();
-    leaves(count, |i| format!("urn:own{i}.q"), &nodes)
+    leaves(count, |i| format!("urn:own{i:03}.q"), &nodes)
 }
 
 /// The groundings one read of `bytes` makes, and what it read.
-fn read_counted(bytes: &[u8]) -> (u64, Result<ModelGraph, CxfError>) {
+pub(super) fn read_counted(bytes: &[u8]) -> (u64, Result<ModelGraph, CxfError>) {
     let (_, grounded, result) =
         reads_counted_by(|| import_cxf(bytes, &ResolveOptions::default()).map(|(model, _)| model));
     (grounded, result)
 }
 
 /// Every parameter table of `model`, by instance: names and values.
-fn tables(model: &ModelGraph) -> Vec<Vec<(Arc<str>, Value)>> {
+pub(super) fn tables(model: &ModelGraph) -> Vec<Vec<(Arc<str>, Value)>> {
     model
         .blocks
         .iter()
@@ -101,7 +102,7 @@ fn tables(model: &ModelGraph) -> Vec<Vec<(Arc<str>, Value)>> {
 }
 
 /// Whether two sets of tables hold the same names and bit-identical values.
-fn same_tables(a: &[Vec<(Arc<str>, Value)>], b: &[Vec<(Arc<str>, Value)>]) -> bool {
+pub(super) fn same_tables(a: &[Vec<(Arc<str>, Value)>], b: &[Vec<(Arc<str>, Value)>]) -> bool {
     a.len() == b.len()
         && a.iter().zip(b).all(|(a, b)| {
             a.len() == b.len()
@@ -225,7 +226,7 @@ fn a_node_one_leaf_lists_twice_is_not_shared_with_the_document() {
 
 /// A root composite over `count` composites `urn:s<i>`, each declaring a Boolean `flag` of its
 /// own and the node `q(i)` names, holding a `Constant` and a `Not` conditional on `flag`.
-fn composites(count: usize, q: impl Fn(usize) -> String, nodes: &str) -> Vec<u8> {
+pub(super) fn composites(count: usize, q: impl Fn(usize) -> String, nodes: &str) -> Vec<u8> {
     let subs: Vec<String> = (0..count)
         .map(|i| format!("{{ \"@id\": \"urn:s{i}\" }}"))
         .collect();
@@ -260,7 +261,7 @@ fn composites(count: usize, q: impl Fn(usize) -> String, nodes: &str) -> Vec<u8>
 }
 
 /// A String declaration node `id` of the expression `value`, led by a comma.
-fn declaration(id: &str, value: &str) -> String {
+pub(super) fn declaration(id: &str, value: &str) -> String {
     format!(
         ",\n{{ \"@id\": \"{id}\", \"@type\": \"S231:Parameter\", \
          \"S231:isOfDataType\": {{ \"@id\": \"S231:String\" }}, \"S231:value\": {value} }}"
@@ -285,9 +286,9 @@ fn a_declaration_many_composites_list_is_parsed_and_grounded_once_a_pass() {
         let own_k = count as u64;
         assert_eq!(grounded, 2 + 2 * count as u64 + own_k, "{count} composites");
         let separate: String = (0..count)
-            .map(|i| declaration(&format!("urn:own{i}.q"), "\"\\\"text\\\"\""))
+            .map(|i| declaration(&format!("urn:own{i:03}.q"), "\"\\\"text\\\"\""))
             .collect();
-        let separate = composites(count, |i| format!("urn:own{i}.q"), &separate);
+        let separate = composites(count, |i| format!("urn:own{i:03}.q"), &separate);
         let (parsed, (_, separate)) = heads_parsed_by(|| read_counted(&separate));
         assert_eq!(parsed, 2 * count as u64);
         match (result, separate) {

@@ -172,3 +172,73 @@ fn leaves_within_the_string_budget_share_one_allocation_of_the_value() {
         info.bytes_total
     );
 }
+
+/// [`MODEL`] with `2 × nodes` more `Constant` leaves, leaf `i` listing its own `k` and the array
+/// node `q(i)`, declared at one element with the value `fill(1.0, 1000000)`; `node_ids` are the
+/// array nodes to declare.
+fn mismatched_arrays(leaves: usize, q: impl Fn(usize) -> String, node_ids: &[String]) -> Vec<u8> {
+    let mut contains = String::new();
+    let mut nodes = String::new();
+    for i in 0..leaves {
+        contains.push_str(&format!(", {{ \"@id\": \"urn:c{i}\" }}"));
+        nodes.push_str(&format!(
+            ",\n    {{ \"@id\": \"urn:c{i}\", \"@type\": \
+             \"http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant\", \
+             \"S231:hasParameter\": [ {{ \"@id\": \"urn:c{i}.k\" }}, {{ \"@id\": \"{}\" }} ], \
+             \"S231:hasOutput\": {{ \"@id\": \"urn:c{i}.y\" }} }},\n    \
+             {{ \"@id\": \"urn:c{i}.k\", \"S231:value\": 1.0 }},\n    \
+             {{ \"@id\": \"urn:c{i}.y\", \"@type\": \"S231:RealOutput\", \
+             \"S231:isOfDataType\": {{ \"@id\": \"S231:Real\" }} }}",
+            q(i)
+        ));
+    }
+    for id in node_ids {
+        nodes.push_str(&format!(
+            ",\n    {{ \"@id\": \"{id}\", \"S231:isArray\": true, \"S231:numberDimensions\": 1, \
+             \"S231:sizeOfDimensions\": \"(1)\", \"S231:value\": \"fill(1.0, 1000000)\" }}"
+        ));
+    }
+    MODEL
+        .replacen(
+            GT,
+            &format!("{{ \"@id\": \"http://example.org#MinLoop.gt\" }}{contains}\n      ],"),
+            1,
+        )
+        .replacen(
+            LAST,
+            &format!("\"S231:isOfDataType\": {{ \"@id\": \"S231:Boolean\" }} }}{nodes}\n  ]"),
+            1,
+        )
+        .into_bytes()
+}
+
+#[test]
+fn an_array_node_declared_at_one_element_keeps_no_million_element_evaluation() {
+    // Array nodes declared at one element whose value builds a million, each listed by two
+    // leaves: each listing's evaluation is refused by its shape and dropped, never kept for the
+    // other leaf, so the peak is one evaluation's whatever the number of such nodes, as with a
+    // node for each leaf. [measured: shared peaks of 24,135,083 / 24,231,658 / 24,387,942,
+    // separate 24,137,542 / 24,241,006 / 24,407,542;
+    // when the refused evaluation was kept, 24.1 / 96.2 / 192.3 MB (review)]
+    let mut peaks = Vec::new();
+    for nodes in [1, 4, 8] {
+        let shared_ids: Vec<String> = (0..nodes).map(|m| format!("urn:a{m:02}.q")).collect();
+        let shared = mismatched_arrays(2 * nodes, |i| shared_ids[i / 2].clone(), &shared_ids);
+        let own_ids: Vec<String> = (0..2 * nodes).map(|i| format!("urn:a{i:02}.q")).collect();
+        let separate = mismatched_arrays(2 * nodes, |i| own_ids[i].clone(), &own_ids);
+        let (shared_result, shared_info) = read(&shared);
+        let (separate_result, separate_info) = read(&separate);
+        assert!(
+            shared_result.is_err() && separate_result.is_err(),
+            "both refused by shape"
+        );
+        assert!(
+            shared_info.bytes_max <= separate_info.bytes_max + 1024 * 1024,
+            "{nodes} nodes: a peak of {} shared, {} separate",
+            shared_info.bytes_max,
+            separate_info.bytes_max
+        );
+        peaks.push(shared_info.bytes_max);
+    }
+    assert!(peaks[2] <= peaks[0] + 2 * 1024 * 1024, "{peaks:?}");
+}

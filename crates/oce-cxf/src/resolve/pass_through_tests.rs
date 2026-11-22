@@ -136,3 +136,97 @@ fn an_output_read_under_two_types_gives_each_pair_the_attributes_of_its_own_type
         assert!(connector.attrs.matches(connector.value_type));
     }
 }
+
+/// Two outputs with ids of `id_bytes` bytes, each declaring malformed attributes that every type
+/// refuses in its own way, read by fourteen pairs of mixed types (43 findings in all).
+/// `materialize` must list what a read per pair straight into the import's list lists, in the
+/// same order, count what it counts, and give each pair the attributes that read gives (issue
+/// #750). Returns how many findings were listed and how many raised.
+fn reference_case(id_bytes: usize) -> (usize, u64) {
+    use std::collections::HashMap;
+
+    use oce_model::ValueType;
+
+    use super::super::attrs::connector_attrs;
+    use super::materialize;
+    use crate::dto::Node;
+
+    let ids = [
+        format!("urn:o1:{}", "a".repeat(id_bytes.saturating_sub(7))),
+        format!("urn:o2:{}", "b".repeat(id_bytes.saturating_sub(7))),
+    ];
+    let outputs: Vec<Node> = ids
+        .iter()
+        .map(|id| {
+            serde_json::from_value(json!({
+                "@id": id, "@type": "S231:RealOutput",
+                "S231:quantity": " ", "S231:unit": 5, "S231:min": "no", "S231:nominal": "no"
+            }))
+            .expect("node")
+        })
+        .collect();
+    let by_id: HashMap<&str, &Node> = outputs.iter().map(|n| (n.id.as_str(), n)).collect();
+    let kinds = [ValueType::Real, ValueType::Integer, ValueType::Boolean];
+    let inputs: Vec<String> = (0..14).map(|i| format!("urn:i{i:02}")).collect();
+    let types: HashMap<&str, Option<ValueType>> = inputs
+        .iter()
+        .enumerate()
+        .map(|(i, input)| (input.as_str(), Some(kinds[(i * 5 + i / 3) % 3])))
+        .collect();
+    let pairs: Vec<(String, String)> = inputs
+        .iter()
+        .enumerate()
+        .map(|(i, input)| (input.clone(), ids[(i * 7 / 3) % 2].clone()))
+        .collect();
+
+    let (mut blocks, mut connectors, mut external) = (Vec::new(), Vec::new(), Vec::new());
+    let mut diags = DiagnosticList::new();
+    materialize(
+        pairs.clone(),
+        &types,
+        &by_id,
+        &mut blocks,
+        &mut connectors,
+        &mut external,
+        &mut diags,
+    );
+
+    let mut reference = DiagnosticList::new();
+    let attrs: Vec<_> = pairs
+        .iter()
+        .map(|(input, output)| {
+            let value_type = types[input.as_str()].expect("typed");
+            connector_attrs(by_id[output.as_str()], value_type, &mut reference)
+        })
+        .collect();
+    assert_eq!(
+        format!("{diags:?}"),
+        format!("{reference:?}"),
+        "{id_bytes}-byte ids"
+    );
+    assert_eq!(diags.raised(), reference.raised());
+    assert_eq!(diags.has_ended(), reference.has_ended());
+    let minted: Vec<_> = connectors
+        .iter()
+        .skip(1)
+        .step_by(2)
+        .map(|c| c.attrs.clone())
+        .collect();
+    assert_eq!(minted, attrs);
+    let listed = diags.len() - usize::from(diags.has_ended());
+    (listed, diags.raised())
+}
+
+#[test]
+fn every_pair_raises_what_a_read_of_its_own_raises_wherever_the_list_ends() {
+    // At ids of 8 bytes every finding is listed; at longer ids the list ends after fewer and
+    // fewer, and the shared readings must still list, count and order them as reads per pair.
+    // Of the 43 findings, 43, 27, 11, 5 and 2 are listed.
+    let mut listed = Vec::new();
+    for id_bytes in [8, 300_000, 700_000, 1_400_000, 3_000_000] {
+        let (count, raised) = reference_case(id_bytes);
+        assert_eq!(raised, 43);
+        listed.push(count);
+    }
+    assert_eq!(listed, [43, 27, 11, 5, 2]);
+}

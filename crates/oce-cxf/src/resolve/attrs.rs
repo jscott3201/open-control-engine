@@ -24,6 +24,17 @@ impl Findings for DiagnosticList {
     }
 }
 
+/// A sink that counts findings and builds none: for a reading made once the import's list has
+/// ended, when every finding raised again will only be counted.
+#[derive(Default)]
+pub(super) struct FindingCount(pub(super) usize);
+
+impl Findings for FindingCount {
+    fn raise(&mut self, _build: impl FnOnce() -> Diagnostic) {
+        self.0 += 1;
+    }
+}
+
 impl Findings for Vec<Diagnostic> {
     fn raise(&mut self, build: impl FnOnce() -> Diagnostic) {
         self.push(build());

@@ -189,24 +189,52 @@ pub fn with_eval_budget<R>(budget: u64, f: impl FnOnce() -> R) -> R {
     metered_with(budget, f)
 }
 
+/// The units remaining in the innermost active budget, or `None` outside every frame (where
+/// nothing is metered).
+///
+/// With [`spend_eval_fuel`] this lets a host that keeps the result of an evaluation for a later
+/// reading of the same text charge that reading exactly what evaluating again would: an
+/// evaluation is deterministic, so it spends the same units every time it runs to the same end,
+/// and running it again would spend them again. The host reads the remainder before and after
+/// the first evaluation, and charges the difference to each reading that reuses the result, but
+/// only when the remainder covers it; when it does not, evaluating again would refuse partway,
+/// and only evaluating again says how far. Deterministic (counts operations, never time). Never
+/// panics.
+pub fn eval_fuel_remaining() -> Option<u64> {
+    ambient::get().map(|frame| frame.remaining)
+}
+
+/// Spend `units` of the innermost active budget, as the evaluation they stand for would have,
+/// or refuse with [`ExprError::ExpressionTooExpensive`] (spending nothing) when fewer remain.
+/// Outside every frame nothing is metered, and it spends nothing. See [`eval_fuel_remaining`].
+///
+/// # Errors
+/// [`ExprError::ExpressionTooExpensive`], naming the budget that ran out, when the innermost
+/// frame holds fewer than `units`. Never panics.
+pub fn spend_eval_fuel(units: u64) -> Result<(), ExprError> {
+    charge_units(units)
+}
+
 /// Spend `units` of the active frame, or refuse with [`ExprError::ExpressionTooExpensive`]
 /// (spending nothing) when fewer remain.
 pub(crate) fn charge(units: usize) -> Result<(), ExprError> {
+    charge_units(u64::try_from(units).unwrap_or(u64::MAX))
+}
+
+/// [`charge`] in `u64` units.
+fn charge_units(units: u64) -> Result<(), ExprError> {
     match ambient::get() {
         None => Ok(()),
-        Some(frame) => {
-            let units = u64::try_from(units).unwrap_or(u64::MAX);
-            match frame.remaining.checked_sub(units) {
-                Some(left) => {
-                    ambient::set(Some(Frame {
-                        remaining: left,
-                        limit: frame.limit,
-                    }));
-                    Ok(())
-                }
-                None => Err(ExprError::ExpressionTooExpensive { limit: frame.limit }),
+        Some(frame) => match frame.remaining.checked_sub(units) {
+            Some(left) => {
+                ambient::set(Some(Frame {
+                    remaining: left,
+                    limit: frame.limit,
+                }));
+                Ok(())
             }
-        }
+            None => Err(ExprError::ExpressionTooExpensive { limit: frame.limit }),
+        },
     }
 }
 

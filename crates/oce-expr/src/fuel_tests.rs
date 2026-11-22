@@ -225,3 +225,38 @@ fn the_document_budget_boundary_binding_costs_exactly_two_to_the_twenty_one() {
     // these bindings: four nodes plus 2^20 - 2 elements built and reduced.
     assert_eq!(cost("sum(fill(1, 1048574))"), 1 << 21);
 }
+
+#[test]
+fn the_remainder_is_read_and_spent_as_an_evaluation_would_spend_it() {
+    // Outside every frame nothing is metered: no remainder, and spending is free.
+    assert_eq!(crate::eval_fuel_remaining(), None);
+    assert_eq!(crate::spend_eval_fuel(u64::MAX), Ok(()));
+    let spent = cost("sum({1, 2, 3}) + 4");
+    with_eval_budget(100, || {
+        assert_eq!(crate::eval_fuel_remaining(), Some(100));
+        // An evaluation spends what `cost` says, and the difference of the remainders is it.
+        let before = crate::eval_fuel_remaining().expect("metered");
+        eval_str("sum({1, 2, 3}) + 4", &NoScope).expect("fits");
+        let after = crate::eval_fuel_remaining().expect("metered");
+        assert_eq!(before - after, spent);
+        // Spending that amount again leaves what evaluating again leaves.
+        assert_eq!(crate::spend_eval_fuel(spent), Ok(()));
+        assert_eq!(crate::eval_fuel_remaining(), Some(after - spent));
+        // Exactly the remainder is spent; one unit more refuses, spending nothing, and names
+        // the budget that ran out.
+        let left = after - spent;
+        assert_eq!(
+            crate::spend_eval_fuel(left + 1),
+            Err(ExprError::ExpressionTooExpensive { limit: 100 })
+        );
+        assert_eq!(crate::eval_fuel_remaining(), Some(left));
+        assert_eq!(crate::spend_eval_fuel(left), Ok(()));
+        assert_eq!(crate::eval_fuel_remaining(), Some(0));
+        assert_eq!(crate::spend_eval_fuel(0), Ok(()));
+    });
+    assert_eq!(
+        crate::eval_fuel_remaining(),
+        None,
+        "the idle state is restored"
+    );
+}

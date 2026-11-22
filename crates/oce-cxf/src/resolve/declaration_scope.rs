@@ -58,9 +58,9 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::{EvalResult, ExprAst, Scope};
 use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal};
 
+use crate::document_groundings::DocumentGroundings;
 use crate::dto::{CxfValue, Node};
 use crate::ground::ground_failure;
-use crate::parameter_reads::DocumentGroundings;
 use crate::scope_chain::{IndexedEntries, ScopeFrame};
 use oce_diag::DiagnosticList;
 

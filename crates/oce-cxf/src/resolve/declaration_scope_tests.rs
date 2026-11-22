@@ -18,7 +18,7 @@ use oce_diag::DiagnosticList;
 use super::declaration_scope::{Pass, TaggedFinding, evaluate_declarations, identifier_heads};
 use super::parameter_attrs::CheckedParameters;
 use super::specialize::Specialization;
-use crate::parameter_reads::DocumentGroundings;
+use crate::document_groundings::DocumentGroundings;
 
 fn node(json: serde_json::Value) -> Node {
     serde_json::from_value(json).expect("test node parses")
