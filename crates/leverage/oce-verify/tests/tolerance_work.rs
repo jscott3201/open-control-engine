@@ -135,3 +135,60 @@ fn the_point_cap_is_judged_before_the_quadratic_work() {
         ("too-many-points", "scenarios[0].expect[0]")
     );
 }
+
+#[test]
+fn a_masked_window_counts_its_ticks_in_the_quadratic_work() {
+    // A `when` changes which ticks are judged, never the comparison's cost: both calls still run
+    // over every tick of the window.
+    let text =
+        windows("aligned-grid", 30, 1, 2).replace(r#""of": 1}"#, r#""of": 1, "when": ["b"]}"#);
+    assert!(run_with(&text, &subject("signals"), &with_work(1_922)).is_ok());
+    let error = run_with(&text, &subject("signals"), &with_work(1_921)).expect_err("one past");
+    assert_eq!(
+        (error.code(), error.subject()),
+        ("too-many-points", "scenarios")
+    );
+}
+
+#[test]
+fn the_quadratic_bound_is_checked_straight_after_the_instant_budget() {
+    // Past the work bound and past the load-byte or frame-byte budget at once: the work bound,
+    // checked straight after the instants, wins; past the instants too, the instants win.
+    let text = windows("aligned-grid", 30, 1, 2);
+    let options = |limits: VerifyLimits| VerifyOptions {
+        limits,
+        ..VerifyOptions::default()
+    };
+    let over = VerifyLimits {
+        max_total_aligned_grid_work: 1_921,
+        ..VerifyLimits::MAX
+    };
+    for limits in [
+        VerifyLimits {
+            max_total_load_bytes: 0,
+            ..over
+        },
+        VerifyLimits {
+            max_total_frame_bytes: 0,
+            ..over
+        },
+        VerifyLimits {
+            max_total_load_bytes: 0,
+            max_total_frame_bytes: 0,
+            ..over
+        },
+    ] {
+        let error = run_with(&text, &subject("signals"), &options(limits)).expect_err("refused");
+        assert_eq!(error.code(), "too-many-points", "{limits:?}");
+    }
+    let error = run_with(
+        &text,
+        &subject("signals"),
+        &options(VerifyLimits {
+            max_total_instants: 61,
+            ..over
+        }),
+    )
+    .expect_err("refused");
+    assert_eq!(error.code(), "too-many-instants");
+}

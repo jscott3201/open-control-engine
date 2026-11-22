@@ -100,10 +100,12 @@ pub struct VerifyLimits {
     /// ticks squared, since that envelope tests every grid point against every rectangle.
     /// Maximum 2^32 = 4,294,967,296 (four windows at the aligned-grid point cap of 32,768
     /// ticks, or fourteen days at 5 s); past it the refusal is `too-many-points`, at bind's
-    /// budget step, before any comparison work (owner ruling of 2026-11-21). Measured on arm64:
-    /// a window's two comparisons cost about one nanosecond per unit in a release build, and the
-    /// largest admitted run, four windows of 32,768 ticks, takes 2.4 s end to end in a release
-    /// build and 45 s in a debug one.
+    /// budget step, before any comparison work (owner ruling of 2026-11-21). The worst case,
+    /// measured in a release build on arm64, end to end at exactly 2^32 units: any nonzero `x`
+    /// tolerance gives each rectangle three grid points, tripling the grid, so a window's two
+    /// comparisons cost about 2.25 ns per unit; 4,096 windows of 1,024 ticks with `atolx` 0.3
+    /// took 9.7 s and four windows of 32,768 ticks 7.2 s, against 3.1 s and 2.4 s with a `y`
+    /// tolerance only. So the largest admitted run takes about ten seconds.
     pub max_total_aligned_grid_work: u64,
     /// The limits each scenario's replay runs under ([`oce_replay::ReplayLimits`]); each field is
     /// lowered to that crate's documented maximum, never raised. A scenario whose `N + 1` ticks

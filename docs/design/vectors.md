@@ -1217,11 +1217,13 @@ instant budget alone admitted hours of it (two scenarios of 4,096 windows of 32,
 `VerifyLimits::max_total_aligned_grid_work`: `(1 + mutants)` times the sum, over the tolerance
 windows of an `aligned-grid` set, of each window's ticks squared, at most 2^32, lowerable only,
 refused as `too-many-points` (place `scenarios`) at the same step, after every window's point
-cap. 2^32 admits four windows at the 32,768-point cap, or fourteen days at 5 s; measured on
-arm64, the largest admitted run takes 2.4 s end to end in a release build and 45 s in a debug
-one, about one nanosecond per unit. `funnel` needs no such bound: its cost at its cap is linear,
-a 1,048,576-tick window running end to end in 0.16 s in a release build and 1.7 s in a debug
-one.
+cap. 2^32 admits four windows at the 32,768-point cap, or fourteen days at 5 s. The worst case,
+measured end to end in a release build on arm64 at exactly 2^32 units: any nonzero `x`
+tolerance gives each rectangle three grid points, tripling the grid, so the cost is about
+2.25 ns per unit, and the largest admitted run took about 10 s (4,096 windows of 1,024 ticks
+with `atolx` 0.3: 9.7 s; four windows of 32,768 ticks: 7.2 s; 3.1 s and 2.4 s with a `y`
+tolerance only). `funnel` needs no such bound: its cost at its cap is linear, a 1,048,576-tick
+window running end to end in 0.16 s in a release build.
 
 **49. File-backed series have their own issue.** An input and `of` take a constant or a step
 list. A file-backed series is #685, after the commissioning sources (#660) and outside the M3
