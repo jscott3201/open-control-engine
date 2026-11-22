@@ -8,6 +8,12 @@
 //! path, the final path Windows gives, which folds case and trailing dots and spaces and
 //! resolves links; std has no stable file index there, so **a hard link is not recognised on
 //! Windows**.
+//!
+//! Both forms of `verify --out` compare an output with the identity of each file the run read:
+//! the document and each file it names **as they were read** (from the handle each was read
+//! through, on Unix; issue #771), a vector subject by its path. `--commission` takes its output's
+//! identity, `DIR/receipt.json`, from `DIR`'s handle; the vector form resolves `DIR/receipt.json`
+//! by path, as it writes a single file whose parent is opened only at the write.
 
 use std::fs::Metadata;
 use std::path::Path;

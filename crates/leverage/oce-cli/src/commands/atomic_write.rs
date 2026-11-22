@@ -196,6 +196,7 @@ pub(crate) fn write_in(
     bytes: &[u8],
     plan: &Plan<'_>,
 ) -> Result<(), (&'static str, String)> {
+    step();
     let mode = match plan.lend {
         Lend::Entry => directory
             .entry(name, false)

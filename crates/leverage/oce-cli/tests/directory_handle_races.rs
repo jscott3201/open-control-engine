@@ -2,8 +2,10 @@
 //! directory or an entry atomically while `oce` runs:
 //!
 //! - `verify --commission --out DIR`: `DIR/outputs` exchanged for a link to a victim directory
-//!   the moment the first curve's temporary file appears (the reviewer's reproduction, which sent
-//!   the curves into the victim in 50 runs of 50 before the change);
+//!   the moment `outputs/0` appears (the reviewer's reproduction waited for the first curve's
+//!   temporary file, and sent the curves into the victim in 50 runs of 50 before the change;
+//!   waiting for the folder catches a wider window, which a fast file system can otherwise
+//!   finish inside);
 //! - `verify --commission SPEC` and `verify VECTORS`: the document's folder exchanged flat out
 //!   with another folder whose files of the same names are over-size decoys, so a run that pairs
 //!   one folder's document with the other's file answers `input-too-large`;
@@ -135,8 +137,8 @@ fn names(dir: &Path) -> Vec<String> {
 #[test]
 fn outputs_swapped_for_a_link_mid_write_never_carries_a_curve_out_of_dir() {
     // The reviewer's reproduction of issue #771 (i): `out/outl` is a link to `victim`, and
-    // `victim/0` a link back to `out/outl/0`; once the first curve's temporary file exists under
-    // `out/outputs/0`, `outputs` and `outl` exchange.
+    // `victim/0` a link back to `out/outl/0`; once `out/outputs/0` exists, `outputs` and `outl`
+    // exchange, so every later folder and curve is made while `outputs` names the victim.
     const RUNS: usize = 20;
     let dir = run_layout("handle_race_outputs", "pass");
     let (out, victim) = (dir.join("out"), dir.join("victim"));
@@ -159,13 +161,7 @@ fn outputs_swapped_for_a_link_mid_write_never_carries_a_curve_out_of_dir() {
             let (done, out) = (done.clone(), out.clone());
             std::thread::spawn(move || {
                 while !done.load(Ordering::Relaxed) {
-                    let Ok(entries) = fs::read_dir(out.join("outputs/0")) else {
-                        continue;
-                    };
-                    if entries
-                        .flatten()
-                        .any(|e| e.file_name().to_string_lossy().ends_with(".oce-tmp"))
-                    {
+                    if fs::symlink_metadata(out.join("outputs/0")).is_ok() {
                         return renameat_with(
                             CWD,
                             out.join("outputs"),

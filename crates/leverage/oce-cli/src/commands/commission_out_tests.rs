@@ -299,10 +299,12 @@ mod schedules {
         base: PathBuf,
         name: PathBuf,
         link: PathBuf,
+        /// The victim holds nothing (a directory a made directory's emptiness check accepts).
+        empty_victim: bool,
     }
 
     impl Layout {
-        fn make(test: &str, swap_dir: bool) -> Option<Self> {
+        fn make(test: &str, swap_dir: bool, empty_victim: bool) -> Option<Self> {
             let base = std::env::temp_dir().join(format!(
                 "oce-cli-commission-schedule-{test}-{}",
                 std::process::id()
@@ -315,7 +317,12 @@ mod schedules {
             } else {
                 (base.join("out").join(OUTPUTS), base.join("out/outl"))
             };
-            let layout = Self { base, name, link };
+            let layout = Self {
+                base,
+                name,
+                link,
+                empty_victim,
+            };
             layout.reset();
             // Probe the exchange on two scratch directories.
             let (a, b) = (layout.base.join("probe.a"), layout.base.join("probe.b"));
@@ -349,7 +356,11 @@ mod schedules {
             }
             fs::create_dir(self.base.join("out")).expect("out");
             fs::create_dir(self.base.join("victim")).expect("victim");
-            fs::write(self.base.join("victim/keep"), b"PRECIOUS").expect("keep");
+            if !self.empty_victim {
+                // `keep`, and a `0/` where a curve written by path through the link would land.
+                fs::write(self.base.join("victim/keep"), b"PRECIOUS").expect("keep");
+                fs::create_dir(self.base.join("victim/0")).expect("victim/0");
+            }
             std::os::unix::fs::symlink(self.base.join("victim"), &self.link).expect("link");
         }
 
@@ -367,8 +378,13 @@ mod schedules {
                 .collect();
             names.sort();
             Left {
-                victim_untouched: names == ["keep"]
-                    && fs::read(victim.join("keep")).expect("keep") == b"PRECIOUS",
+                victim_untouched: if self.empty_victim {
+                    names.is_empty()
+                } else {
+                    names == ["0", "keep"]
+                        && fs::read(victim.join("keep")).expect("keep") == b"PRECIOUS"
+                        && fs::read_dir(victim.join("0")).expect("victim/0").count() == 0
+                },
                 stranded: stranded(&self.base),
                 written,
             }
@@ -496,7 +512,7 @@ mod schedules {
         let _serial = crate::commands::atomic_write::tests::COUNTER
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let Some(layout) = Layout::make("outputs", false) else {
+        let Some(layout) = Layout::make("outputs", false, false) else {
             return;
         };
         let results = every_schedule(&layout, &handles);
@@ -517,7 +533,7 @@ mod schedules {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         // `DIR` exchanged for a link after the check: every file still goes into the directory
         // the check opened, and the run answers as if nothing had happened.
-        let Some(layout) = Layout::make("dir", true) else {
+        let Some(layout) = Layout::make("dir", true, false) else {
             return;
         };
         let results = every_schedule(&layout, &handles);
@@ -536,7 +552,7 @@ mod schedules {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         // The first point is right after `mkdirat` made `outputs`: a non-empty directory moved
         // in under that name is refused before a byte is written; the made one is left beside.
-        let Some(layout) = Layout::make("fresh", false) else {
+        let Some(layout) = Layout::make("fresh", false, false) else {
             return;
         };
         let out = layout.base.join("out");
@@ -569,5 +585,87 @@ mod schedules {
         );
         assert!(!out.join(RECEIPT).exists());
         assert!(!stranded(&layout.base));
+    }
+
+    #[test]
+    fn no_schedule_of_outputs_swaps_writes_into_an_empty_directory_linked_in() {
+        // The emptiness check cannot refuse a link to an empty directory: `O_NOFOLLOW` must.
+        let _serial = crate::commands::atomic_write::tests::COUNTER
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let Some(layout) = Layout::make("outputs_empty", false, true) else {
+            return;
+        };
+        let results = every_schedule(&layout, &handles);
+        assert_held(&results, "outputs, empty victim");
+        let control = every_schedule(&layout, &control);
+        assert!(
+            control.iter().any(|left| !left.victim_untouched),
+            "the adversary is not live: the path-based writer held: {control:?}"
+        );
+    }
+
+    #[test]
+    fn a_named_pipe_or_a_file_swapped_in_for_a_directory_just_made_is_refused_without_blocking() {
+        // `O_DIRECTORY` on the open of a directory just made: a named pipe moved in under its
+        // name is refused before it is opened (an open without the flag would wait for a writer
+        // forever, which the hang guard turns into a failure), and so is a regular file. The
+        // guard is a hang guard, never an assertion on speed.
+        let _serial = crate::commands::atomic_write::tests::COUNTER
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        for pipe in [true, false] {
+            let Some(layout) = Layout::make(&format!("swapped_in_{pipe}"), false, false) else {
+                return;
+            };
+            let out = layout.base.join("out");
+            let (sent, received) = std::sync::mpsc::channel();
+            let worker = {
+                let out = out.clone();
+                std::thread::spawn(move || {
+                    let checked = check(out.as_os_str(), &[]).expect("checked");
+                    let (outputs, aside) = (out.join(OUTPUTS), out.join("aside"));
+                    let mut acted = false;
+                    with_adversary(Some(Box::new(move || {
+                        if !acted {
+                            acted = true;
+                            fs::rename(&outputs, &aside).expect("aside");
+                            if pipe {
+                                let made = std::process::Command::new("mkfifo")
+                                    .arg(&outputs)
+                                    .status()
+                                    .expect("mkfifo runs");
+                                assert!(made.success());
+                            } else {
+                                fs::write(&outputs, b"x").expect("a file");
+                            }
+                        }
+                    })));
+                    let refused = write(&checked, &curves(1), b"{}\n").map(|_| ());
+                    with_adversary(None);
+                    let _ = sent.send(
+                        refused.map_err(|refused| (refused.code, refused.at, refused.detail)),
+                    );
+                })
+            };
+            match received.recv_timeout(std::time::Duration::from_secs(60)) {
+                Ok(result) => {
+                    worker.join().expect("the worker");
+                    let (code, at, detail) = result.expect_err("refused");
+                    assert_eq!((code, at.as_str()), (crate::codes::WRITE_FAILED, OUTPUTS));
+                    assert!(detail.contains("replaced after it was made"), "{detail}");
+                    assert!(!out.join(RECEIPT).exists());
+                    assert!(!stranded(&layout.base));
+                }
+                Err(_) => {
+                    let _ = rustix::fs::open(
+                        out.join(OUTPUTS),
+                        rustix::fs::OFlags::WRONLY | rustix::fs::OFlags::NONBLOCK,
+                        rustix::fs::Mode::empty(),
+                    );
+                    panic!("the open of a directory just made blocked on a named pipe");
+                }
+            }
+        }
     }
 }
