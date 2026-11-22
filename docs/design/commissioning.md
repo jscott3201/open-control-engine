@@ -676,7 +676,7 @@ row per case). Six things are as the tree found them, not as this section said:
 
 The Building 33 day of the differential set follows in #664, captured with the same script once
 the trends (#661) and an engine series (#663) exist. *(2026-11-21: moved to #755 with the worked
-example. Landed with it, GitHub #764: see "As landed: the worked example".)*
+example. Landed with it, GitHub #765: see "As landed: the worked example".)*
 
 **`aligned-grid`.** The conservative envelope `oce-conformance` uses today (`build_bounds`): a grid
 of every sample and rectangle edge, min and max over covering rectangles, half-sizes as a **sum** of
@@ -1419,7 +1419,7 @@ example.
 
 ### As landed: the worked example
 
-*(GitHub #764, issue #755.)* The worked example runs, and its first verdict is **`fail`**. The
+*(GitHub #765, issue #755.)* The worked example runs, and its first verdict is **`fail`**. The
 fixture is `crates/leverage/oce-verify/tests/fixtures/commissioning/building33/`, with a README
 that maps every line of the `.mo` to what was authored:
 

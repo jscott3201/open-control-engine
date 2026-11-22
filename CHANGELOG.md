@@ -1218,7 +1218,7 @@ so far, and no tag is cut by the bump.
 ### Leverage
 
 - **The OBC §12.6 Building 33 worked example runs, on a `CoolingCoilValve` authored from the
-  vendored model, not vendored, and its verdict is `fail`** (GitHub #764, issue #755; design
+  vendored model, not vendored, and its verdict is `fail`** (GitHub #765, issue #755; design
   note `docs/design/commissioning.md`, "As landed: the worked example"). Upstream's translation
   does not load (#760), so by the owner's ruling the sequence is transcribed by hand from the
   vendored `.mo` into the oce text form and emitted with `oce emit`
@@ -2075,7 +2075,7 @@ so far, and no tag is cut by the bump.
   (six `CombiTimeTable` trends from LBNL Building 33, their `README.md` and `csv2mos.py`; the
   5 s rows run to 376,910 s, about 4.36 days, then 600 s steps to 485,400 s, the supply air to
   484,800 s and the fan feedback to 493,800 s, where upstream's README says "3 days"; corrected
-  by GitHub #764, issue #755), the sequence
+  by GitHub #765, issue #755), the sequence
   `Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.mo` and its modelica-json
   translation under `cxf/`: 11,678,397 bytes, taking the tree from about 4.15 MB to about 15.8 MB. Neither pin moved (Buildings `a131864`, modelica-json `85721b82`), and
   the library's license covers the trends as it covers the `.mo` sources.
