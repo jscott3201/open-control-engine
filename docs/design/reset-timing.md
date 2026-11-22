@@ -5,7 +5,8 @@ to match Modelica". A reset of `CDL.Reals.PIDWithReset` takes effect at the fram
 trigger rises, not one frame later, and no reset fires at frame 0 when the trigger is already true
 at start. This note says how far each difference extends across the registered classes, states the
 rule once for the HostTick v1 profile, names the references that check it outside the engine,
-measures the blast radius, and lists what the ruling leaves open. The
+measures the blast radius, and records the [decisions](#decisions) on what the ruling left open: three
+owner rulings and seven orchestrator's calls of 2026-11-22. The
 [execution profile](../execution-profile.md) stays the authority for shipped behaviour until the
 implementation PR changes it.
 
@@ -65,9 +66,11 @@ and `Reals.MovingAverage` fire on time events (`sample(…)`, `time >= …`), no
 `IntegratorWithReset` and `OnCounter`, the three stateful blocks whose event input is declared a
 loop cut. The frame-0 event is in four: `PIDWithReset`, `IntegratorWithReset`, `TriggeredSampler`
 and `TriggeredMax`, the four that start their previous-trigger memory at `false` without a
-first-frame guard. In the Building 33 derivation the next-frame event shows at four frames, not two:
-25, 237, 272 and 307 s (section 3). The frame-0 reset is not invisible when `y_reset = xi_start`:
-the integrator is back-solved to `y_reset − (P + D)`, so it moves whenever `P + D ≠ 0` at frame 0.
+first-frame guard. Two statements in issue #768 are corrected by the probe. The next-frame event
+shows at **four** Building 33 frames, not two: 25, 237, 272 and 307 s (section 3). The frame-0
+reset is **not** invisible when `y_reset = xi_start`: the integrator is back-solved to
+`y_reset − (P + D)`, so the reset is visible whenever `P + D ≠ 0` at frame 0, not only when
+`y_reset ≠ xi_start`.
 
 ## 2. The rule (HostTick v1)
 
@@ -129,7 +132,7 @@ Consequences:
 | Hand derivation, PI `k = 1`, `Ti = 1`, `xi_start = 0`, `y_reset = 5`, `e = 1`, frames 1 s apart, unsaturated | Rising at t = 2: frame 2 emits `lim(5) = 5`, `I = 5 − 1 = 4` is held, frame 3 emits 5, frame 4 emits 6. True from t = 0 (`y_reset ≠ xi_start`): no reset, `I` = 0, 0, 1, 2, outputs 1, 1, 2, 3 | Anything beyond the recurrence |
 | Hand derivation, `IntegratorWithReset` `k = 1`, `y_start = 0`, `u = 1`, `y_reset_in = 10` | Rising at t = 2: 0, 0, 10, 10, 11. True from t = 0: 0, 0, 1, 2 | As above |
 | `tools/golden-gen` (its own workspace, `depends_on_oce_blocks: false`) | Re-derived per-block and G36 Tier-A references under the rule; `src/reals_pid.rs`, `src/reals_integrator.rs`, the discrete module and seven `sequences/*.rs` files encode today's convention and change with it | Independence from this note's reading of Modelica: it implements the same rule |
-| OpenModelica day (`building_33_openmodelica.rs`) | That the fix does not degrade agreement with the continuous model: with and without the scratch fix the largest difference is 3.39934346310633e-3 at 67,375 s and the mean 1.4689685623085045e-4, identical to every printed digit. **The 0.0034 bound does not tighten** | Either difference: the enable is on throughout the day, so the only event is at frame 0, and the valve is 0 for the day's first instants with or without that reset. A check of the next-frame event against OpenModelica needs a run with re-enables (decision 9) |
+| OpenModelica day (`building_33_openmodelica.rs`) | That the fix does not degrade agreement with the continuous model: with and without the scratch fix the largest difference is 3.39934346310633e-3 at 67,375 s and the mean 1.4689685623085045e-4, identical to every printed digit. **The 0.0034 bound does not tighten** | Either difference: the enable is on throughout the day, so the only event is at frame 0, and the valve is 0 for the day's first instants with or without that reset. A check of the next-frame event against OpenModelica needs a run with re-enables: GitHub #787 (decision 9) |
 
 ## 4. Blast radius
 
@@ -162,7 +165,7 @@ The PR touches `oce-blocks` and runs the determinism lane, in all four native ce
 
 ## 5. Plan
 
-**One PR**, `fix(blocks): …`, closing #768, with the five classes, because they share one rule,
+**One PR** (decision 1), `fix(blocks): …`, closing #768, with the five classes, because they share one rule,
 one re-bless of the same goldens and one CHANGELOG paragraph per behaviour (event at the frame;
 no event at frame 0; event inputs feed through). Splitting would re-bless
 `cooling_only_controller` and the economizer controller twice. Proof row: `light`
@@ -186,48 +189,52 @@ upgrade; the CHANGELOG and the load diagnostic must name the `Pre` remedy. An em
 `P + D + (y_reset − (P + D))` can differ from `y_reset` by an ulp; decision 8 fixes which. The
 `TriggeredSampler` first-frame marker must not leak into a capturable state (decision 7).
 
-## Decisions for the owner
+## Decisions
 
-1. **Scope.** (a) Fix `PIDWithReset` and `IntegratorWithReset` only, the `when … reinit` pair;
-   (b) also `OnCounter` (next-frame) and `TriggeredSampler` and `TriggeredMax` (frame 0); (c) (b)
-   in two PRs. *Recommend (b) in one PR*: one rule, one re-bless, and the same Modelica reading
-   that the ruling applies to `PIDWithReset`.
-2. **Feedback into an event input.** (a) Refuse it with `algebraic-loop`, remedy `Pre`;
-   (b) keep the event input a cut and accept the next-frame event only on a cycle, which makes a
-   block's timing depend on its surroundings; (c) keep the cut everywhere and document the
-   next-frame event as the profile's choice beside `Pre`. *Recommend (a)*: fail closed, the same
-   policy as atomic firing, and no tracked document is refused.
-3. **`OnCounter` as the integer loop cut.** Making it feed through removes the only integer
-   counter that cuts its own feedback; a counter that resets itself through a threshold then needs
-   `Pre`. *Recommend fixing it with the others* (no library sequence uses it), unless the owner
-   wants it kept as a documented exception under (c) above.
-4. **Inputs that change in the frame of the event.** The reset value is this frame's: for
-   `IntegratorWithReset` this frame's `y_reset_in`, for `PIDWithReset` `y_reset` minus this frame's
-   `P + D` (Modelica evaluates `reinit`'s expression at the instant). The frame's Euler step is
-   discarded. *Recommend as stated.*
-5. **A trigger true at frame 0.** It is latched as `pre(trigger)` for frame 1, so no reset fires at
-   frame 1 either, and the first event is its next false-to-true transition. *Recommend yes*:
-   this is §8.3.5's "becomes true" after §8.6's `pre(vi) := vi`.
-6. **`Change`, `Edge`, `FallingEdge` at frame 0.** (a) Keep the initialisation value (true when
-   `u` differs from `pre_u_start`), today's behaviour; (b) emit the value after Modelica's initial
-   event iteration (false). *Recommend (a)*: it is the initialisation solution, the consuming
-   `when` ignores it under the rule either way, and (b) would move the goldens of edge blocks
-   whose input starts true (not measured here) for no reset-timing gain. Differential runs against OpenModelica then compare
+Recorded on 2026-11-22. Decisions 1 to 3 are **owner rulings**. Decisions 4 to 10 are the
+**orchestrator's calls**, taken on the recommendations this note made; the owner can overrule any
+of them, and the implementation PR follows them until then.
+
+1. **Scope: all five classes in one PR** (owner ruling). `PIDWithReset`, `IntegratorWithReset` and
+   `OnCounter` move to the same-frame event; `PIDWithReset`, `IntegratorWithReset`,
+   `TriggeredSampler` and `TriggeredMax` stop firing at frame 0. Rejected: the `when … reinit` pair
+   alone, and the same scope split over two PRs, which would re-bless `cooling_only_controller` and
+   the economizer controller twice.
+2. **Feedback into an event input is refused with `algebraic-loop`; the remedy is `Pre`** (owner
+   ruling). Fail closed, as atomic firing does; no tracked document is refused. Rejected: keeping
+   the event input a cut only on a cycle, which makes a block's timing depend on its surroundings,
+   and keeping the cut everywhere as a documented profile choice beside `Pre`.
+3. **`OnCounter` is fixed with the others** (owner ruling, following from 1). It stops being an
+   integer loop cut: **a counter that resets itself, for example
+   `y → GreaterEqualThreshold → reset`, now needs a `Logical.Pre` on that path**, which restores
+   today's one-frame delay explicitly. The execution profile, `docs/cdl-coverage.md` and the
+   CHANGELOG say so. No library sequence uses `OnCounter`.
+4. **The reset uses this frame's inputs and discards the frame's Euler step** (orchestrator's
+   call). `IntegratorWithReset` resets to this frame's `y_reset_in`; `PIDWithReset` to `y_reset`
+   minus this frame's `P + D`. Modelica evaluates `reinit`'s expression at the instant, and the
+   step taken at the event's frame covers the interval before the event.
+5. **A trigger true at frame 0 is latched as `pre(trigger)`** (orchestrator's call). No reset fires
+   at frame 0 or at frame 1, and the first event is the trigger's next false-to-true transition:
+   §8.3.5's "becomes true" after §8.6's `pre(vi) := vi`.
+6. **`Change`, `Edge` and `FallingEdge` keep the initialisation value at frame 0** (orchestrator's
+   call): true when `u` differs from `pre_u_start`, today's behaviour. It is the initialisation
+   solution, and the consuming `when` ignores it under the rule either way. Rejected: the value
+   after Modelica's initial event iteration (false), which would move the goldens of edge blocks
+   whose input starts true for no reset-timing gain. Differential runs against OpenModelica compare
    frame 0 with the initialisation row.
-7. **`TriggeredSampler`'s first-frame marker.** It has no `prev_t` or `has_history` word. (a)
-   Start its trigger word at a third value meaning "no frame yet" (no `state_len` change; moves the
-   initial-state CRC of 2 blobs); (b) add a third word (`state_len` 2 → 3, moves its class
-   signature hash and every blob holding it). *Recommend (a)*, with the validator accepting the
-   marker only in a state no frame has touched; the implementation confirms whether capture can
-   see such a state (`TriggeredMax`'s `has_history == 1` check, `blocks/state_contract.rs:33-37`,
-   suggests it cannot).
-8. **Bits of the emitted reset.** (a) Emit `P + D + (y_reset − (P + D))` through the normal path,
-   the same bits the next frame emits when `P + D` is unchanged and what Modelica's `addPID`
-   computes; (b) emit `lim(y_reset)` exactly. *Recommend (a).*
-9. **Evidence for the next-frame change against OpenModelica.** (a) None beyond the
-   hand-derived and Python references; (b) add an OpenModelica run of the 74-frame scenario
-   (trend inputs, `CombiTimeTable` held) as a later evidence issue. *Recommend (b) as a follow-up
-   issue*, not in the fix PR.
-10. **`PIDWithReset` in P mode.** Keep `trigger` non-feedthrough there (the census stays at
-    twelve, the P-mode refusal stays `block-algebraic-loop`), or declare it feedthrough in every
-    mode. *Recommend keep*: out of scope.
+7. **`TriggeredSampler` marks "no frame yet" with a third value of its trigger word**
+   (orchestrator's call). `state_len` does not change; the initial-state CRC of 2 blobs moves. The
+   validator accepts the marker only in a state no frame has touched. The implementation must
+   confirm that capture cannot see such a state (`TriggeredMax`'s `has_history == 1` check,
+   `blocks/state_contract.rs:33-37`, suggests it cannot), and say so in its PR. Rejected: a third
+   state word, which changes the class signature hash and every blob holding the class.
+8. **The reset frame emits through the normal path, `P + D + (y_reset − (P + D))`**
+   (orchestrator's call): the bits Modelica's `addPID` computes and the next frame emits when
+   `P + D` is unchanged. It can differ from `y_reset` by an ulp. Rejected: emitting `lim(y_reset)`
+   exactly.
+9. **An OpenModelica check of the same-frame event is a follow-up, GitHub #787** (orchestrator's
+   call): upstream's `CoolingCoilValve` on the 74-frame scenario with held trend inputs, compared at
+   the four re-enable frames. It is not part of the fix PR, whose references are the hand
+   derivations, `derive_valve.py` and golden-gen.
+10. **`PIDWithReset` keeps `trigger` non-feedthrough in P mode** (orchestrator's call). The
+    mixed-feedthrough census stays at twelve, and the P-mode refusal stays `block-algebraic-loop`.
