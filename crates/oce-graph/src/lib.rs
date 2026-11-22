@@ -56,7 +56,8 @@ mod tick;
 mod topo;
 
 pub use build::{FeedthroughDag, build_driver_of, build_feedthrough_dag};
-pub use constructed::{ConstructedBudget, MAX_CONSTRUCTED_WORDS};
+pub use constructed::charge_instance;
+pub use oce_blocks::{ConstructedBudget, MAX_CONSTRUCTED_WORDS};
 pub use tick::{EvalContext, allocate_state, eval_tick, run_tick};
 pub use topo::topo_sort;
 

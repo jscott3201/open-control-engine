@@ -20,6 +20,7 @@ mod params;
 mod params_finite;
 mod params_required;
 mod params_sources;
+mod probe_budget;
 mod reals_matrix;
 mod routing_defaulted_selectors;
 mod routing_real;

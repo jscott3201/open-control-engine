@@ -10,6 +10,7 @@ use oce_model::{
     is_g36_type_path,
 };
 
+use crate::bridge::class_path_of;
 use crate::dto::{IriRef, Node};
 use crate::ground::non_canonical_enumeration_message;
 use crate::scope_chain::ScopeFrame;
@@ -19,6 +20,7 @@ use super::composite::is_runtime_composite;
 use super::declaration_scope::{Pass, WithheldFindings, evaluate_declarations};
 use super::instance_interface::{contains_block_referents, is_derivation_shaped};
 use super::local_name;
+use super::value_types::first_type;
 
 /// The result of pruning load-time conditional components/connectors.
 #[derive(Clone, Debug, Default)]
@@ -206,19 +208,28 @@ fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashS
 /// (`ConditionalGuardUnknownParameter` et al.) are unaffected — they emit from guard
 /// evaluation, not from scope construction. `members` is a derivation-shaped parent's
 /// value-carrying member appendix (R19-15 site 3), empty everywhere else.
+///
+/// A leaf parent's members are held in the types its class's catalog gives them, through the
+/// class its `@type` bridges to (issue #759): the guard reads the Real a Real member holds, as
+/// the parameter table does, and a composite's declared types are applied as before (issue
+/// #735).
 fn complete_scope<'a>(
     parent: &'a Node,
     members: &[&'a str],
     by_id: &HashMap<&str, &'a Node>,
     withheld: &mut WithheldFindings<'a>,
 ) -> CompleteScope {
+    let composite_chain = is_runtime_composite(parent);
     let evaluation = evaluate_declarations(
         parent,
         members,
         &ScopeFrame::root(),
         by_id,
         Pass::Specialize {
-            composite_chain: is_runtime_composite(parent),
+            composite_chain,
+            leaf_class: (!composite_chain)
+                .then(|| first_type(parent).map(class_path_of))
+                .flatten(),
         },
     );
     withheld.record(&parent.id, evaluation.withheld);

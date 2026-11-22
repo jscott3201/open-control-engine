@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use super::*;
-use crate::{ConstructedBudget, MAX_CONSTRUCTED_WORDS, MAX_STATE_WORDS};
+use crate::{ConstructedBudget, MAX_CONSTRUCTED_WORDS, MAX_STATE_WORDS, charge_instance};
 
 /// A block that reports a given number of constructed words, including counts no real block
 /// could hold.
@@ -128,11 +128,15 @@ fn a_model_refusal_names_the_crossing_instance_by_its_authored_identity() {
 
     let mut budget = ConstructedBudget::new();
     for index in 0..2 {
-        budget
-            .charge_instance(&b.model, BlockId(index), b.blocks[index as usize].as_ref())
-            .expect("within the budget");
+        charge_instance(
+            &mut budget,
+            &b.model,
+            BlockId(index),
+            b.blocks[index as usize].as_ref(),
+        )
+        .expect("within the budget");
     }
-    match budget.charge_instance(&b.model, BlockId(2), b.blocks[2].as_ref()) {
+    match charge_instance(&mut budget, &b.model, BlockId(2), b.blocks[2].as_ref()) {
         Err(BuildError::ConstructedTooLarge {
             block,
             requested,
@@ -148,13 +152,13 @@ fn a_model_refusal_names_the_crossing_instance_by_its_authored_identity() {
 
     // A hand-built instance without an IRI is named by class and block id, as in every other
     // build refusal, and the message carries the request and the limit.
-    let error = ConstructedBudget::new()
-        .charge_instance(
-            &b.model,
-            BlockId(1),
-            &ReportsWords(MAX_CONSTRUCTED_WORDS + 7),
-        )
-        .expect_err("past the budget");
+    let error = charge_instance(
+        &mut ConstructedBudget::new(),
+        &b.model,
+        BlockId(1),
+        &ReportsWords(MAX_CONSTRUCTED_WORDS + 7),
+    )
+    .expect_err("past the budget");
     assert_eq!(
         error.to_string(),
         "constructed blocks too large: 4194311 word(s) held by the blocks through block \

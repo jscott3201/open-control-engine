@@ -9,7 +9,7 @@
 //! A malformed graph yields a [`DiagCode::MalformedDocument`] diagnostic, never an abort
 //! (`08` R-ERR-1 / the safety-critical testing standard).
 
-use oce_blocks::{PortKind, lookup};
+use oce_blocks::{ConstructedBudget, MAX_CONSTRUCTED_WORDS, PortKind, lookup};
 use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{ConnectorId, Dir, ModelGraph, ValueType};
 use std::collections::HashSet;
@@ -277,13 +277,37 @@ pub(crate) fn check_connections(model: &ModelGraph, diags: &mut DiagnosticList) 
 /// An **unknown** class path is skipped (it is `oce-api`'s `OcError::Load` to report, R-IMPL-2).
 /// Out-of-range port connector ids are reported by [`check_arena_ids`]; this rule still bounds them
 /// before indexing so the validator remains panic-free even if rules are refactored later.
+///
+/// Each block is constructed to read its signature and dropped, and each construction is charged
+/// to one [`ConstructedBudget`] before the next (issue #722): the first block that takes the
+/// total past [`MAX_CONSTRUCTED_WORDS`] is refused with one `resource-limit-exceeded` error on
+/// it, and neither it nor any later block is compared or constructed, so the rule's work is
+/// bounded by the budget, never by the block count. The total is the one the facade's
+/// instantiation charges for the same model, so a model this rule passes is one that
+/// instantiation fits.
 pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut DiagnosticList) {
     let n = model.connectors.len() as u32;
+    let mut probes = ConstructedBudget::new();
     for blk in &model.blocks {
         let Some(entry) = lookup(&blk.class_iri) else {
             continue; // unknown class → oce-api OcError::Load owns this
         };
         let probe = (entry.make)(&blk.params);
+        if let Err(requested) = probes.charge(probe.as_ref()) {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::ResourceLimitExceeded,
+                    format!(
+                        "constructed blocks too large: {requested} word(s) held by the blocks \
+                         through this block exceed the supported maximum \
+                         ({MAX_CONSTRUCTED_WORDS} words). Remedy: reduce table, matrix or vector \
+                         sizes, or split the model."
+                    ),
+                )
+                .with_subject(block_subject_of(blk)),
+            );
+            return;
+        }
         let sig = probe.resolved_signature();
         let (got_in, got_out) = (blk.inputs.len(), blk.outputs.len());
         let (want_in, want_out) = (sig.inputs.len(), sig.outputs.len());
