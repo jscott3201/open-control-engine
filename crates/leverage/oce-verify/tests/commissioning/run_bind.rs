@@ -379,3 +379,20 @@ fn a_refused_source_keeps_the_readers_code_and_too_many_sources_is_the_runs_own(
         .expect_err("three sources");
     assert_eq!((error.code(), error.cause()), ("too-many-sources", None));
 }
+
+#[test]
+fn two_rules_selecting_one_output_gate_it_with_both_their_indicators() {
+    // A glob gives the fan (false from 15 to 25 s) and an exact name gives `en` (false from
+    // 20 s): every instant either masks is masked, 15 to 30 s.
+    let spec = run_spec_edited(&[(
+        r#""indicators": { "plant.lim*": [ "fanSta.y" ] }"#,
+        r#""indicators": { "plant.lim*": [ "fanSta.y" ], "plant.limOut": [ "plant.en" ] }"#,
+    )]);
+    let run = commissioned(&spec, &run_inputs(&[]));
+    let lim = output_named(body_of(&run.receipt), "limOut");
+    assert_eq!((lim.compared, lim.masked), (3, 4));
+    assert_eq!(
+        (lim.masked_intervals[0].from, lim.masked_intervals[0].to),
+        (15.0, 30.0)
+    );
+}

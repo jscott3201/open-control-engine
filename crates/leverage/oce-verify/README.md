@@ -975,10 +975,15 @@ reference, test and bound curves). Every refusal is a `VerifyError`, with no rec
   source's digest, the unit rows (at most 256), the frames, the warnings (at most 16) and the
   findings (at most 64). Every cap is a constant (`MAX_*`), never an option.
 
-**Bounds.** The merged trends up to 1 GiB (`TrendLimits`) and the trace up to 1 GiB
-(`max_trace_bytes`, checked before the replay), one output's held series and curves at a time
-(about 50 MB at 2^20 instants), so about 2.1 GiB at most beside the caller's file bytes; 365
-bytes a frame at peak measured at 20,000 frames (`tests/commissioning/run_cost.rs`). The
+**Bounds.** A run holds the merged trends (up to 1 GiB, `TrendLimits`), the expected and
+indicator series for the whole run (each sample its time and value, about four times the bytes
+of short `csv` cells), the trace (up to 1 GiB, `max_trace_bytes`, checked before the replay)
+and one output's held series and curves at a time (about 50 MB at 2^20 instants). The peak is
+therefore a multiple of the trend files' bytes plus the trace and the series. The review of
+GitHub #744 measured 3.2 GiB beyond 636 MB of expected `csv`, and 2.13 GiB beyond the `csv` of
+a 16M-frame run. The allocation test (`tests/commissioning/run_cost.rs`) pins the per-frame term
+only: 365 bytes a frame at 20,000 frames. Instants that round to one value are refused
+(`replay-failed`, cause `grid-not-increasing`). The
 receipt's complete lists are bounded at bind and the others capped by constants.
 
 **Evidence.** `tests/commissioning/run_*.rs` and the unit tests beside each module: goldens of a

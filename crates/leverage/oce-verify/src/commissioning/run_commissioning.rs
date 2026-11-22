@@ -12,8 +12,10 @@
 //! 4. **Bind** ([`super::bind_reference`]): the boundary, the mapped points, the compared
 //!    outputs, the keys, the indicators and the parameters.
 //! 5. **The bounds** ([`super::run_bounds`]), before the replay: the instants per output, the
-//!    run's work, the grid envelope's work (`too-many-points`) and the trace's bytes
-//!    (`replay-failed`, cause `trace-too-large`).
+//!    run's work, the grid envelope's work (`too-many-points`); the instants strictly
+//!    increasing (`replay-failed`, cause `grid-not-increasing`, as a vector grid refuses two
+//!    ticks that round to one time); and the trace's bytes (`replay-failed`, cause
+//!    `trace-too-large`).
 //! 6. **The parameter edits**, applied in passes inside one halt on the engine just loaded
 //!    (`param-refused`; decision 29), before any frame. The header keeps the content id as
 //!    loaded and the body takes the id after the edits (decision 30).
@@ -38,7 +40,7 @@ use super::choices::FunnelReference;
 use super::compare_output::{Comparing, OutputPlan, Sampled, Values, compare_output};
 use super::drive::{drive, executed_rows, uncovered_at, uncovered_stretches};
 use super::indicator_mask::{IndicatorSeries, active_at, indicator_series};
-use super::prepare::Instants;
+use super::prepare::{Instants, first_repeat};
 use super::report::{
     CommissioningBody, CommissioningParam, FindingRecord, MAX_FINDINGS, MAX_RUN_POINTS,
     MAX_RUN_WARNINGS, MAX_UNIT_COLUMNS, MAX_UNVERIFIED_OUTPUTS, OutputStatus, SpecNumber,
@@ -208,6 +210,21 @@ pub fn run_commissioning(
         },
         &place,
     )?;
+    // Built once the count is known to be within the caps: 8 bytes an instant.
+    let instants = window_instants.instants(count);
+    if let Some(at) = first_repeat(&instants) {
+        return Err(VerifyError::new(
+            Kind::ReplayFailed,
+            format!("{place}.sampling"),
+            format!(
+                "the comparison instants {} and {} are one value, {:?} s: the sampling is too small for the window's magnitude",
+                at - 1,
+                at,
+                instants[at]
+            ),
+        )
+        .with_cause("grid-not-increasing"));
+    }
     let replay_limits = lowered(&options.replay);
     check_trace_bytes(
         trends.inputs.times().len(),
@@ -219,7 +236,6 @@ pub fn run_commissioning(
         replay_limits.max_trace_bytes,
         &place,
     )?;
-    let instants = window_instants.instants(count);
 
     let edits: Vec<(&str, ReceiptValue)> = bound
         .edits

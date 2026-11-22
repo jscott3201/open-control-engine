@@ -310,7 +310,8 @@ fn indicators_count_against_the_runs_work() {
 }
 
 /// The fixture with `count` more Boolean points read from an indicator source and every one of
-/// them gating `limOut`, beside the fan.
+/// them gating `limOut`, beside the fan. Every one is true throughout, but the last, which is
+/// false from 25 s.
 fn with_indicators(count: usize) -> Result<CommissionRun, VerifyError> {
     let mut mapping = String::from_utf8(super::run_file("points.json")).expect("UTF-8");
     let extra: Vec<String> = (0..count)
@@ -324,7 +325,15 @@ fn with_indicators(count: usize) -> Result<CommissionRun, VerifyError> {
     mapping.replace_range(end.., &format!(",\n{}\n]\n", extra.join(",\n")));
     let names: Vec<String> = (0..count).map(|k| format!("G{k:03}")).collect();
     let trues = vec!["true"; count].join(",");
-    let csv = format!("time,{}\n0,{trues}\n", names.join(","));
+    let mut last_false = vec!["true"; count];
+    if let Some(last) = last_false.last_mut() {
+        *last = "false";
+    }
+    let csv = format!(
+        "time,{}\n0,{trues}\n25,{}\n",
+        names.join(","),
+        last_false.join(",")
+    );
     let columns: Vec<String> = names.iter().map(|n| format!(r#""{n}": "{n}""#)).collect();
     let indicators: Vec<String> = (0..count).map(|k| format!(r#""g{k}""#)).collect();
     let spec = run_spec_edited(&[
@@ -353,10 +362,11 @@ fn with_indicators(count: usize) -> Result<CommissionRun, VerifyError> {
 
 #[test]
 fn a_reference_holds_at_most_64_distinct_indicators() {
-    // The fan and 63 more: at the cap, and all true but where the fan is false.
+    // The fan and 63 more: at the cap. The fan masks 15 and 20 s, and the 64th indicator, the
+    // last bit of the set, masks 25 and 30 s.
     let run = with_indicators(oce_verify::MAX_INDICATORS - 1).expect("64 indicators");
     let lim = super::output_named(body_of(&run.receipt), "limOut");
-    assert_eq!((lim.compared, lim.masked), (5, 2));
+    assert_eq!((lim.compared, lim.masked), (3, 4));
     let error = with_indicators(oce_verify::MAX_INDICATORS).expect_err("65 indicators");
     assert_eq!(error.code(), "too-many-indicators");
     assert_eq!(error.subject(), "references[0].indicators.plant.lim*");
@@ -395,4 +405,26 @@ fn a_trace_too_long_for_its_bytes_is_refused_before_the_replay() {
         ("replay-failed", Some("trace-too-large"))
     );
     assert!(error.detail().contains("4 frames"), "{}", error.detail());
+}
+
+#[test]
+fn instants_that_round_to_one_value_are_refused_as_a_vector_grid_is() {
+    // At 1e16 s one ulp is 2 s, so a 1 s sampling repeats an instant.
+    let spec = run_spec_edited(&[(
+        r#""window": { "start": 0, "stop": 30 },"#,
+        r#""window": { "start": 1.0e16, "stop": 1.0000000000000008e16 }, "sampling": 1,"#,
+    )]);
+    let error = commission(&spec, &run_inputs(&[]), &CommissionOptions::default())
+        .expect_err("repeated instants");
+    assert_eq!(
+        (error.code(), error.cause()),
+        ("replay-failed", Some("grid-not-increasing"))
+    );
+    assert_eq!(error.subject(), "references[0].sampling");
+    // The same window with a sampling the magnitude can hold runs.
+    let spec = run_spec_edited(&[(
+        r#""window": { "start": 0, "stop": 30 },"#,
+        r#""window": { "start": 1.0e16, "stop": 1.0000000000000008e16 }, "sampling": 2,"#,
+    )]);
+    commission(&spec, &run_inputs(&[]), &CommissionOptions::default()).expect("2 s steps");
 }

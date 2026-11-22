@@ -1219,7 +1219,8 @@ so far, and no tag is cut by the bump.
     body only.
   - **Bounds before the replay**: instants per output under the envelope's cap; the run's
     `instants × (1 + indicators)` at most 16,777,216; the grid envelope's `instants²` at most
-    2^32 (`MAX_TOTAL_ALIGNED_GRID_WORK`); the trace's bytes at most `max_trace_bytes`.
+    2^32 (`MAX_TOTAL_ALIGNED_GRID_WORK`); the trace's bytes at most `max_trace_bytes`; the
+    instants strictly increasing (`replay-failed`, cause `grid-not-increasing`).
   - **Run**: one replay. A frame refused for a missing sample is recorded and its stretch
     uncovered, found in one linear walk. An engine refusal is `frame-refused` or `run-refused`,
     with no receipt.

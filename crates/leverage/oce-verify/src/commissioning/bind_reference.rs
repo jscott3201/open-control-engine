@@ -40,9 +40,10 @@ use crate::receipt::ReceiptValue;
 use crate::verify_error::{VerifyError, VerifyErrorKind as Kind};
 
 /// The most distinct indicator names one reference's rules may give: one bit each in a rule's
-/// set, so the rules selecting an output join in one OR apiece. Each costs one series held for
-/// the comparison and one read per instant of every output it gates, which the run's work
-/// budget counts.
+/// set of names, so the sets of the rules selecting an output are united with one bitwise OR
+/// apiece (the indicators' values are then ANDed at each instant). Each name costs one series
+/// held for the comparison and one read per instant of every output it gates, which the run's
+/// work budget counts.
 pub const MAX_INDICATORS: usize = 64;
 
 /// Where an indicator's values come from.
@@ -187,8 +188,9 @@ pub(crate) fn bind_reference(inputs: &BindInputs<'_>) -> Result<BoundReference, 
             expected,
             tolerances: selection.tolerances_for(slot, inputs.spec.tolerances()),
             indicators: {
-                // One bit per distinct indicator, so the rules selecting an output join in one
-                // OR each, whatever their lists hold.
+                // One bit per distinct indicator name: the name sets of the rules selecting the
+                // output are united, one OR each, whatever their lists hold. The indicators'
+                // values are ANDed later, at each instant.
                 let mask = indicator_selection
                     .keys_for(slot)
                     .fold(0_u64, |mask, rule| mask | rule_masks[rule]);

@@ -1016,8 +1016,9 @@ past:
   and masking reads each of an output's indicators once per instant (the review of GitHub
   #744).
 - **Distinct indicator names** per reference, at most 64 (`MAX_INDICATORS`;
-  `too-many-indicators`). A rule's names are one bit each, so the rules that select an output
-  join in one OR apiece. Names are found through a map and an `indicatorSources` point by a
+  `too-many-indicators`). A rule's names are one bit each, so the name sets of the rules that
+  select an output are united with one bitwise OR apiece; the indicators' values are then
+  ANDed at each instant, as "Indicators" says. Names are found through a map and an `indicatorSources` point by a
   binary search, so binding is `n log n` in the names. The review measured the earlier linear
   scans at 4.18 s for 32,760 names.
 - **The grid envelope's quadratic work**, `instants²` summed over the Real outputs under
@@ -1032,18 +1033,35 @@ past:
   linear in the two (the review of GitHub #744 measured the earlier per-instant scan at 16.6 s
   for 160,000 alternating refused frames).
 
-**What a run holds.** At the default limits a run can hold, beside the caller's own file bytes:
+- **The instants strictly increase.** With a large `start` and a small `sampling`,
+  `start + k * s` can round to one value for two `k`; such a reference is refused as
+  `replay-failed` with the cause `grid-not-increasing`, the word a vector grid uses for two
+  ticks that round to one time. An off-grid `stop` one ulp past the grid's last instant is not
+  refused; issue #747 records it.
+
+**What a run holds.** Beside the caller's own file bytes, a run holds:
 
 - the merged trend inputs, up to 1 GiB (`TrendLimits`);
-- the trace, up to 1 GiB (`max_trace_bytes`);
+- the expected and indicator series, kept for the whole run: each source up to
+  `max_source_bytes` of file, and each sample held as its time and its value (16 bytes for a
+  Real), so a multiple of the file bytes: about four times for short `csv` cells;
+- the trace, up to 1 GiB (`max_trace_bytes`, checked before the replay);
 - the instants, 8 bytes each;
 - for one output at a time, its held series, mask and curves, a few `f64` per instant under the
   per-output cap: about 50 MB at 2^20 instants;
 - the indicator series, one per distinct name.
 
-That is about 2.1 GiB at most. Measured on the whole run (`tests/commissioning/run_cost.rs`):
-365 bytes a frame at peak at 20,000 frames, with four outputs and five retained inputs; the
-review measured about 250 at 2^20 frames. The receipt's complete lists are bounded at bind
+So the peak is a multiple of the expected and indicator files' bytes plus the merged inputs,
+the trace and one output's series, not a fixed figure. Two measurements from the review of
+GitHub #744:
+
+- four expected `csv` sources of 4M rows × 16 Real columns (636 MB of files), with tiny inputs,
+  peaked at 4.09 GB of resident memory, about 3.2 GiB beyond the file bytes;
+- a run of 16M input frames peaked about 2.13 GiB beyond its `csv`.
+
+The allocation test (`tests/commissioning/run_cost.rs`) pins the per-frame term only: 365 bytes
+a frame at peak at 20,000 frames, with four outputs and five retained inputs (the review
+measured about 250 at 2^20 frames). The receipt's complete lists are bounded at bind
 (`parameters` 256, `sources` 256, `outputs` 4,096). Its other lists are capped by constants
 (`MAX_UNIT_COLUMNS`, `MAX_RUN_WARNINGS`, `MAX_FINDINGS`, `MAX_UNVERIFIED_OUTPUTS`,
 `MAX_MASKED_INTERVALS`, `MAX_MASKED_EXCEEDANCE`; decision 42).

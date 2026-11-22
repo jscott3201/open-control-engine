@@ -23,6 +23,28 @@ fn the_instants_are_the_grid_then_stop_when_the_grid_does_not_reach_it() {
 }
 
 #[test]
+fn each_instant_is_start_plus_k_times_s_never_an_accumulated_sum() {
+    // Adding 0.1 ten times gives 0.9999999999999999; 0 + 10 * 0.1 is 1.0 exactly, so the grid
+    // ends on `stop` and no off-grid instant follows.
+    let instants = all(window(0.0, 1.0, 0.1));
+    assert_eq!(instants.len(), 11);
+    assert_eq!(instants[10].to_bits(), 1.0_f64.to_bits());
+    assert_eq!(instants[3].to_bits(), (3.0 * 0.1_f64).to_bits());
+    assert_eq!(first_repeat(&instants), None);
+}
+
+#[test]
+fn a_grid_whose_steps_round_away_repeats_an_instant() {
+    // At 1e16 one ulp is 2, so a step of 1 leaves the sum where it was.
+    let instants = all(window(1e16, 1e16 + 8.0, 1.0));
+    let at = first_repeat(&instants).expect("a repeat");
+    assert_eq!(instants[at].to_bits(), instants[at - 1].to_bits());
+    assert_eq!(first_repeat(&[0.0, 1.0, 2.0]), None);
+    assert_eq!(first_repeat(&[0.0, 1.0, 1.0]), Some(2));
+    assert_eq!(first_repeat(&[]), None);
+}
+
+#[test]
 fn the_count_saturates_above_the_cap_without_walking_the_grid() {
     assert!(window(0.0, 1e300, 1e-300).count(10) > 10);
     // At the cap exactly, and one past it: on the grid, and with an off-grid stop.

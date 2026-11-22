@@ -79,6 +79,15 @@ impl Instants {
     }
 }
 
+/// The index of the first of `instants` equal to the one before it, when one is: with a large
+/// `start` and a small `sampling`, `start + k * s` can round to the same value for two `k`.
+pub(crate) fn first_repeat(instants: &[f64]) -> Option<usize> {
+    instants
+        .windows(2)
+        .position(|pair| pair[1] <= pair[0])
+        .map(|at| at + 1)
+}
+
 /// The index of the sample of `times` (non-decreasing) held at each of `instants`
 /// (non-decreasing), or `None` when the series has no sample at or before the first instant.
 /// One pass over both.
