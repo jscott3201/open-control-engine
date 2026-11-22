@@ -68,9 +68,11 @@ impl CheckedParameters {
         subject: &str,
         diags: &mut DiagnosticList,
     ) {
-        if !self.0.insert(subject.to_owned()) {
+        // Looked up before it is copied, so a node listed again costs no copy of its `@id`.
+        if self.0.contains(subject) {
             return;
         }
+        self.0.insert(subject.to_owned());
         for (which, bound) in [("min", &node.min), ("max", &node.max)] {
             let found = match bound {
                 Some(CxfValue::List(_)) => "a list",

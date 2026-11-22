@@ -346,6 +346,69 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
+- **A value read more than once is grounded once, string parameter values are held to 8 MiB a
+  document, the sibling names of a leaf are built once, and nine more refusal routes are raised**
+  (GitHub #752, issues #736, #731 and #711).
+  - **A broadcast value is grounded once** (issue #736). The one value of a broadcast array
+    (`q[n]` with the value `[v]`) was grounded again for each element, each a value of its own,
+    so a string was copied `n` times: `q[1024]` with a 60 KB string, a 67 KB document, loaded
+    at a peak of 126,551,003 bytes after requesting 704,483,762, and `q[4096]` at 506,136,539.
+    It is now grounded once, at the first element not refused for a collision, and every element
+    shares the result: one allocation for a string, one error for a failure, raised once an
+    element as before. So is every value of a parameter node an instance lists more than once.
+  - **String parameter values are held to 8 MiB a document** (`MAX_DOCUMENT_STRING_PARAMETER_BYTES`,
+    issue #736; owner ruling of 2026-11-21, recorded on GitHub #752). A value shared by many table
+    entries is still written out once per entry by each consumer of the table (the content id's
+    canonical bytes, the loaded model's projection, a compiled blob), so sharing alone left the
+    issue's `q[4096]` at a peak of 254 MB. The string values of every parameter table of a document
+    are now counted once per entry, shared or not, and the first that does not fit is refused as
+    `resource-limit-exceeded`, subject the parameter and naming its instance: ``string parameter
+    value of 61440 byte(s) on `http://example.org#MinLoop.con` does not fit: the parameter tables of
+    the document already hold 8355840 of the 8388608 bytes of string values a document may hold,
+    each table entry counted``. An array mints none of its later elements. The issue's documents are
+    refused at their 137th element at a peak of 672,380 bytes; a document whose strings fill the
+    budget to the byte loads at 8,593,382. The catalog's string parameters are `Utilities.Assert`
+    messages, and no tracked or library model holds more than 176 bytes of them.
+  - **Sibling names are built once per leaf** (issue #731). Each array parameter rebuilt the set
+    of the leaf's parameter names its minted names are checked against, so `P` arrays cost `P²`:
+    2,000 empty arrays on one leaf, a 415 KB document, took 1.6 s and requested 293,333,683
+    bytes. The set is built once, on the first name minted, and holds the array's own local name
+    too, which no element name can equal. The same document requests 14,797,731 bytes, and a
+    further array costs 7.3 KB (216 KB before); a count of names inserted pins it at `P + 1`.
+  - **Nine more refusal routes raise their findings** (issue #711): an element of a broadcast
+    whose one value fails, a parameter listed again whose value fails, a non-finite parameter
+    listed again, a minted name a sibling has, a guard operand naming no parameter or outside
+    the guard profile, a back-reference closing a `containsBlock` cycle, and the six attribute
+    findings of a pass-through pair. Past the diagnostic list's budget each costs a count: on a
+    256 KiB `@id` a further item requests 0 to 582 bytes where it requested 524,904 to 1,311,378
+    (7,544 with the sibling node a collision needs, where 531,985), and 512 pass-through pairs
+    onto a 12 KiB output add 17,480,217 bytes where they added 76,830,733. A parameter node
+    listed again no longer copies its `@id` to find it was checked. The `@context` route of the
+    issue was raised by GitHub #730, and the validator's list by GitHub #732.
+  - **A broadcast or repeated value is charged its evaluation once** (the coordinator's call in
+    the review of GitHub #752). The per-document evaluation budget (`MAX_DOCUMENT_EVAL_FUEL`,
+    2^26 work units) bounds the work evaluation does, and that work is now done once: so a
+    document refused before for the cost of evaluating the same value again now loads.
+    `minimal_loop.jsonld` with `q[40]` broadcasting `sum(1:1048576)` was refused with nine
+    `grounding-failed` (expression too expensive) and now loads, each element
+    `Integer(549756338176)`. The same values written out forty times are forty evaluations,
+    charged each, and that document is still refused.
+  - **What else grounding once changes:** nothing for a document that loads either way. A later
+    read could only differ if a name the value reads were bound in between in the region the
+    reads share; for a broadcast that is another array of the same instance minting the same
+    element name, and a node listed twice is always refused (`duplicate-parameter`, or its failed
+    grounding). In those refused documents the reader's diagnostics may differ from grounding
+    each read again. The 257 tracked documents that hold an `@graph` and the 139 CXF documents of
+    `open-control-library` (as written and with the retired namespace rewritten), 535 loads, give
+    byte-identical outcomes, diagnostics, `Engine::params()`, resolved models and content ids
+    before and after. A seeded comparison of 2,000 random leaves against a reader that shares
+    nothing pins the same.
+  - **Breaking, in place:** a document whose parameter tables hold more than 8 MiB of string
+    values loaded before, memory permitting, and is now refused, among them a 4 MiB string node
+    listed by two instances. Tightening accepted CXF input is not a format change (as for GitHub
+    #713 and #724), so no format, content id, blob or golden moves and the workspace version is
+    not bumped.
+
 - **Breaking in place: a Real parameter written as an Integer loads as a Real, and the workspace
   moves to 0.6.0** (GitHub #720, issue #683). A CXF document may write a Real parameter's number
   as an Integer: a bare JSON integer, a typed `xsd:integer`, an Integer expression, or a reference
@@ -795,7 +858,8 @@ so far, and no tag is cut by the bump.
     were 106 to 316 MB at 400 items, and 142 to 1,966 requested bytes for a further item where
     it was 262,144 or more. Elsewhere a finding past the bound is built and dropped (issue
     #711): memory is bounded there, time is not, so a document that failed on allocation within
-    seconds can instead run for as long as building its findings takes.
+    seconds can instead run for as long as building its findings takes. (Nine more routes are
+    raised since GitHub #752.)
   - **Withheld findings are references.** What the specialization pass withholds until lowering
     (a re-bound declaration, a declaration cycle) is kept as references into the document and
     built into a diagnostic only when it is released, so it holds three references a finding
@@ -928,7 +992,8 @@ so far, and no tag is cut by the bump.
   - **Not bounded yet: an element's value.** The two budgets count elements and the bytes of
     their paths. A broadcast array whose one value is a string literal grounds the string again
     for each element, each a string of its own, and no budget counts those bytes: `q[1024]` with
-    a 60 KB string, a 66 KB document, loads at 124 MB (issue #736).
+    a 60 KB string, a 66 KB document, loads at 124 MB (issue #736). (Bounded since GitHub #752:
+    the value is grounded once and string values are held to 8 MiB a document.)
   - **Breaking, in place:** a document whose array element paths total more than 64 MiB loaded
     before, memory permitting, and is now refused, among them the 38 KB document above and a
     65,000-byte name over 1,024 elements beside a one-element array named by 513,075 bytes,

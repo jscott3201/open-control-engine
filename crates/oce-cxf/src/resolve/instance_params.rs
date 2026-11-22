@@ -8,8 +8,9 @@
 //! [`ParamScope`]. VALUE references resolve on the split view — the inherited (enclosing)
 //! region wins over a same-named sibling member (issue #239) — while array DIMENSION parsing
 //! keeps the undivided latest-wins view (see `arrays.rs`). The appended members enter
-//! `expand_array_param`'s sibling-name collision set, which is built from `param_iris` itself;
-//! that set is lookup-only and never iterated into a model id or a vector order.
+//! `expand_array_param`'s sibling-name collision set, which is built once per instance from
+//! `param_iris` itself (issue #731); that set is lookup-only and never iterated into a model id or
+//! a vector order.
 //!
 //! Once an instance's table is complete, an Integer bound to a parameter its class types Real is
 //! held as that Real, or refused above 2^53 in magnitude (`real_parameters`, issue #683). The
@@ -18,7 +19,10 @@
 //! Bounded on hostile input: each instance reads its enclosing scope through the shared,
 //! hash-indexed [`ScopeFrame`] its parent composite built (never a per-instance copy), siblings
 //! accumulate in a hash-indexed region, and every preserved array parameter in the document draws
-//! on one [`ArrayElementBudget`].
+//! on one [`ArrayElementBudget`]. A value the instance reads more than once (a node it lists
+//! again, a broadcast array's one value) is grounded once ([`InstanceReads`], issues #711 and
+//! #736), every string value a table holds is counted against one [`StringParameterBudget`] for
+//! the document, and each diagnostic is raised, so none is built once the list has ended.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -29,7 +33,7 @@ use oce_model::{BlockId, BlockInstance, ParamTable, Value};
 
 use crate::arrays::{ArrayElementBudget, expand_array_param};
 use crate::dto::Node;
-use crate::ground::ground_param_value;
+use crate::parameter_reads::{InstanceReads, StringParameterBudget};
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
 use oce_diag::DiagnosticList;
 
@@ -68,6 +72,7 @@ pub(super) fn ground_instance_params(
     diags: &mut DiagnosticList,
 ) {
     let mut array_budget = ArrayElementBudget::per_document();
+    let mut string_budget = StringParameterBudget::per_document();
     for inst in insts {
         let mut table: Vec<(Arc<str>, Value)> = Vec::new();
         // The parameter node each table entry came from, in step with `table`.
@@ -91,23 +96,24 @@ pub(super) fn ground_instance_params(
                     .map(String::as_str),
             )
             .collect();
+        let mut reads = InstanceReads::of(&param_iris);
         for &piri in &param_iris {
             let Some(pnode) = by_id.get(piri).copied() else {
-                diags.push(
+                diags.raise(|| {
                     Diagnostic::error(DiagCode::UnresolvedReference, "parameter node not found")
-                        .with_subject(piri.to_owned()),
-                );
+                        .with_subject(piri.to_owned())
+                });
                 continue;
             };
             checked.refuse_malformed(pnode, piri, diags);
             let Some(cxf_val) = &pnode.value else {
-                diags.push(
+                diags.raise(|| {
                     Diagnostic::error(
                         DiagCode::GroundingFailed,
                         "parameter has no value (Ground mode)",
                     )
-                    .with_subject(piri.to_owned()),
-                );
+                    .with_subject(piri.to_owned())
+                });
                 continue;
             };
             validate_g36_parameter_value(
@@ -126,22 +132,29 @@ pub(super) fn ground_instance_params(
                     pnode,
                     cxf_val,
                     enclosing,
-                    &param_iris,
+                    &mut reads,
                     &mut table,
                     &mut siblings,
                     &mut array_budget,
+                    &mut string_budget,
                     diags,
                 );
             } else {
-                // Scalar parameter.
-                let name: Arc<str> = Arc::from(local_name(piri));
-                match ground_param_value(cxf_val, &ParamScope::with_enclosing(enclosing, &siblings))
-                {
-                    Ok(v) => {
-                        siblings.push(Arc::clone(&name), EvalResult::Scalar(v.clone()));
-                        table.push((name, v));
+                // Scalar parameter: grounded once however often the instance lists it.
+                let scope = ParamScope::with_enclosing(enclosing, &siblings);
+                let repeated = reads.groundings.is_repeated(piri);
+                match &*reads.groundings.ground(cxf_val, &scope, repeated) {
+                    Ok(v) => match string_budget.take(v) {
+                        Ok(()) => {
+                            let name: Arc<str> = Arc::from(local_name(piri));
+                            siblings.push(Arc::clone(&name), EvalResult::Scalar(v.clone()));
+                            table.push((name, v.clone()));
+                        }
+                        Err(refusal) => diags.raise(|| refusal.diagnostic(piri, &inst.node.id)),
+                    },
+                    Err(e) => {
+                        diags.raise(|| crate::ground::ground_failure(e, piri, &inst.node.id));
                     }
-                    Err(e) => diags.push(crate::ground::ground_failure(&e, piri, &inst.node.id)),
                 }
             }
             sources.resize(table.len(), piri);

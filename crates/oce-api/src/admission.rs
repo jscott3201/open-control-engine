@@ -9,8 +9,9 @@ use crate::{Engine, OcError};
 /// rather than a panic or allocation abort (issue #365): lowering visits each `containsBlock`
 /// composite and leaf at most once (`shared-instance`); inherited parameter scopes are shared,
 /// not copied per leaf; array parameters total at most 1,048,576 elements per document, whose
-/// paths (instance IRI, `.`, element name) total at most 64 MiB (issue #710), though a broadcast
-/// string value is still copied once per element, uncounted (issue #736); run state at most
+/// paths (instance IRI, `.`, element name) total at most 64 MiB (issue #710), and whose string
+/// values, with every other parameter's, total at most 8 MiB, each table entry counted (issue
+/// #736); run state at most
 /// 4,194,304 words, what the constructed blocks hold outside their state at most 4,194,304 words
 /// (issue #700), and what `@context` expansion adds to a document's tokens at most 8,388,608
 /// bytes (issue #709), each `resource-limit-exceeded`; and binding evaluation spends at most

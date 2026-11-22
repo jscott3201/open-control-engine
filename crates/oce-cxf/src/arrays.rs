@@ -6,7 +6,6 @@
 //! array subset. Split out of `resolve.rs` to keep that file under the 700-LOC cap; the only entry
 //! point the resolver calls is [`expand_array_param`].
 
-use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::sync::Arc;
 
@@ -15,7 +14,10 @@ use oce_expr::{ArrayValue, EvalResult};
 use oce_model::Value;
 
 use crate::dto::{CxfValue, Node};
-use crate::ground::{GroundErr, ground_param_value};
+use crate::ground::GroundErr;
+use crate::parameter_reads::{
+    InstanceReads, SiblingNames, StringBudgetRefusal, StringParameterBudget,
+};
 use crate::resolve::local_name;
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
 use oce_diag::DiagnosticList;
@@ -341,9 +343,10 @@ fn eval_array_expression(
 
 /// Report the `ArrayFlattenCollision` diagnostic when a minted element name collides with a
 /// sibling parameter's local name. Returns `true` when a collision was reported (the caller skips
-/// the element).
+/// the element). The diagnostic is raised, so once the list has ended a collision costs a count
+/// and copies nothing (issue #711).
 fn collides_with_sibling(
-    siblings: &HashSet<&str>,
+    siblings: &SiblingNames<'_>,
     ename: &str,
     piri: &str,
     diags: &mut DiagnosticList,
@@ -351,29 +354,35 @@ fn collides_with_sibling(
     if !siblings.contains(ename) {
         return false;
     }
-    diags.push(
+    diags.raise(|| {
         Diagnostic::error(
             DiagCode::ArrayFlattenCollision,
             format!(
                 "array element {ename:?} collides with an existing sibling parameter of the same name"
             ),
         )
-        .with_subject(piri.to_owned()),
-    );
+        .with_subject(piri.to_owned())
+    });
     true
 }
 
 /// Append one minted per-element entry to both the param table and the incremental sibling
-/// scope (so a later sibling binding can reference it by its `k_i` name).
+/// scope (so a later sibling binding can reference it by its `k_i` name), once its string bytes,
+/// if it is a string, are reserved from the document's `strings` budget (issue #736). Mints
+/// nothing and returns the refusal when they do not fit: the caller refuses the array there with
+/// one `ResourceLimitExceeded` and mints none of its later elements.
 fn mint_element(
     ename: &str,
     value: Value,
     table: &mut Vec<(Arc<str>, Value)>,
     siblings: &mut IndexedEntries,
-) {
+    strings: &mut StringParameterBudget,
+) -> Result<(), StringBudgetRefusal> {
+    strings.take(&value)?;
     let key: Arc<str> = Arc::from(ename);
     siblings.push(Arc::clone(&key), EvalResult::Scalar(value.clone()));
     table.push((key, value));
+    Ok(())
 }
 
 /// Expand one **preserved** array parameter (`isArray=true`) into per-element scalar entries on the
@@ -415,16 +424,24 @@ fn mint_element(
 /// element name) are reserved from the document's `budget` ([`MAX_DOCUMENT_ARRAY_ELEMENTS`] and
 /// [`MAX_DOCUMENT_ARRAY_PATH_BYTES`], `ResourceLimitExceeded`), before any element name is built
 /// or any value expression is evaluated. So the elements an array mints and their names and
-/// paths stay within those budgets. Their values do not yet: a broadcast string value is
-/// grounded again for each element, each a string of its own, and neither budget counts its
-/// bytes (issue #736). A parameter refused for size draws nothing from either budget. Names are
-/// built one at a time where their elements are minted, once the value's shape is checked
-/// (issue #710): a refused value builds none, and nothing holds every name beside the minted
-/// entries.
+/// paths stay within those budgets. A parameter refused for size draws nothing from either
+/// budget. Names are built one at a time where their elements are minted, once the value's shape
+/// is checked (issue #710): a refused value builds none, and nothing holds every name beside the
+/// minted entries.
+///
+/// Values (issue #736): the one value of a broadcast is grounded once, through `reads`, at the
+/// first element that is not refused for a collision, and every element shares the result, a
+/// string value as one allocation and a failure as one error raised once per element. So is
+/// every value of a node the instance lists more than once
+/// ([`Groundings`](crate::parameter_reads::Groundings)). Each minted string value is counted
+/// against the document's `strings` budget, once per element; the first that does not fit
+/// refuses the array with one `ResourceLimitExceeded` and mints none of its later elements. The collision check reads the instance's sibling names, built once per instance
+/// ([`SiblingNames`], issue #731).
 ///
 /// Every failure is a typed diagnostic; never panics (no `unwrap`/index on input-derived data).
 /// A non-finite element or expression intermediate reports `non-finite-parameter` on `owner`, the
-/// declaring instance, exactly like a scalar parameter (issue #362).
+/// declaring instance, exactly like a scalar parameter (issue #362). Every diagnostic here is
+/// raised, so once the document's list has ended none is built (issue #711).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn expand_array_param(
     piri: &str,
@@ -432,20 +449,22 @@ pub(crate) fn expand_array_param(
     pnode: &Node,
     cxf_val: &CxfValue,
     enclosing: &ScopeFrame,
-    param_iris: &[&str],
+    reads: &mut InstanceReads<'_>,
     table: &mut Vec<(Arc<str>, Value)>,
     siblings: &mut IndexedEntries,
     budget: &mut ArrayElementBudget,
+    strings: &mut StringParameterBudget,
     diags: &mut DiagnosticList,
 ) {
+    let refuse = |diags: &mut DiagnosticList, code: DiagCode, message: String| {
+        diags.raise(|| Diagnostic::error(code, message).with_subject(piri.to_owned()));
+    };
     let base = strip_array_label(local_name(piri));
     let Some(size) = pnode.size_dims.as_deref() else {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::MalformedDocument,
-                "array parameter (isArray) lacks sizeOfDimensions",
-            )
-            .with_subject(piri.to_owned()),
+        refuse(
+            diags,
+            DiagCode::MalformedDocument,
+            "array parameter (isArray) lacks sizeOfDimensions".to_owned(),
         );
         return;
     };
@@ -457,40 +476,19 @@ pub(crate) fn expand_array_param(
         &ParamScope::undivided(enclosing, siblings),
     ) {
         Ok(d) => d,
-        Err(msg) => {
-            diags.push(
-                Diagnostic::error(DiagCode::MalformedDocument, msg).with_subject(piri.to_owned()),
-            );
-            return;
-        }
+        Err(msg) => return refuse(diags, DiagCode::MalformedDocument, msg),
     };
     let count = match array_element_count(&dims) {
         Ok(count) => count,
-        Err(msg) => {
-            diags.push(
-                Diagnostic::error(DiagCode::MalformedDocument, msg).with_subject(piri.to_owned()),
-            );
-            return;
-        }
+        Err(msg) => return refuse(diags, DiagCode::MalformedDocument, msg),
     };
     let path_bytes = array_element_path_bytes(owner.len(), base.len(), &dims, count);
     if let Err(msg) = budget.take(count, path_bytes) {
-        diags.push(
-            Diagnostic::error(DiagCode::ResourceLimitExceeded, msg).with_subject(piri.to_owned()),
-        );
-        return;
+        return refuse(diags, DiagCode::ResourceLimitExceeded, msg);
     }
     let n = count;
-    // Sibling local-names (every OTHER param node on this instance) for the minted-name collision
-    // check. Lookup-only set — never iterated into a model id/vector order (determinism contract).
-    // Scope: flat single-level instances. `param_iris` carries the authored chain plus the
-    // instance's classified `hasInstance` parameter members (R19-13), all direct members of one
-    // owner; nested instances are refused upstream, so no deeper scoping is reachable here.
-    let sibling_names: HashSet<&str> = param_iris
-        .iter()
-        .filter(|&&p| p != piri)
-        .map(|&p| local_name(p))
-        .collect();
+    // Every value of a node the instance lists again is kept for its later listings.
+    let repeated = reads.groundings.is_repeated(piri);
     match cxf_val {
         // Preserved per-element values as a JSON list of element literals.
         CxfValue::List(elems) => {
@@ -500,30 +498,34 @@ pub(crate) fn expand_array_param(
             // broadcast — the value would be silently dropped — so it falls through to this
             // GroundingFailed length error.
             if !(m == n || (m == 1 && n >= 1)) {
-                diags.push(
-                    Diagnostic::error(
-                        DiagCode::GroundingFailed,
-                        format!(
-                            "array value list has {m} element(s) but the declared dimensions imply {n}"
-                        ),
-                    )
-                    .with_subject(piri.to_owned()),
+                return refuse(
+                    diags,
+                    DiagCode::GroundingFailed,
+                    format!(
+                        "array value list has {m} element(s) but the declared dimensions imply {n}"
+                    ),
                 );
-                return;
             }
             // Each element's name is built where it is minted, once the list's length is known
-            // to fit (issue #710).
+            // to fit (issue #710). A broadcast's one value is grounded once and kept for every
+            // element (issue #736).
             let mut names = ElementNames::new(base, &dims);
             for k in 0..n {
                 let ename = names.next_name();
-                if collides_with_sibling(&sibling_names, ename, piri, diags) {
+                if collides_with_sibling(&reads.sibling_names, ename, piri, diags) {
                     continue;
                 }
                 let elem = if m == 1 { &elems[0] } else { &elems[k] };
                 let scope = ParamScope::with_enclosing(enclosing, siblings);
-                match ground_param_value(elem, &scope) {
-                    Ok(v) => mint_element(ename, v, table, siblings),
-                    Err(e) => diags.push(crate::ground::ground_failure(&e, piri, owner)),
+                let value = match &*reads.groundings.ground(elem, &scope, m == 1 || repeated) {
+                    Ok(value) => value.clone(),
+                    Err(e) => {
+                        diags.raise(|| crate::ground::ground_failure(e, piri, owner));
+                        continue;
+                    }
+                };
+                if let Err(refusal) = mint_element(ename, value, table, siblings, strings) {
+                    return diags.raise(|| refusal.diagnostic(piri, owner));
                 }
             }
         }
@@ -543,23 +545,26 @@ pub(crate) fn expand_array_param(
                     let mut names = ElementNames::new(base, &dims);
                     for v in av.as_slice() {
                         let ename = names.next_name();
-                        if collides_with_sibling(&sibling_names, ename, piri, diags) {
+                        if collides_with_sibling(&reads.sibling_names, ename, piri, diags) {
                             continue;
                         }
-                        mint_element(ename, v.clone(), table, siblings);
+                        if let Err(refusal) =
+                            mint_element(ename, v.clone(), table, siblings, strings)
+                        {
+                            return diags.raise(|| refusal.diagnostic(piri, owner));
+                        }
                     }
                 }
-                Err(e) => diags.push(crate::ground::ground_failure(&e, piri, owner)),
+                Err(e) => diags.raise(|| crate::ground::ground_failure(&e, piri, owner)),
             }
         }
         // A bare/typed scalar literal on an isArray parameter is malformed.
-        _ => diags.push(
-            Diagnostic::error(
-                DiagCode::GroundingFailed,
-                "array parameter value must be a JSON list of element literals or an \
-                 array expression string",
-            )
-            .with_subject(piri.to_owned()),
+        _ => refuse(
+            diags,
+            DiagCode::GroundingFailed,
+            "array parameter value must be a JSON list of element literals or an array \
+             expression string"
+                .to_owned(),
         ),
     }
 }

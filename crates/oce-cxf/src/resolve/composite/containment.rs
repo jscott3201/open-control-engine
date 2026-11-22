@@ -175,15 +175,19 @@ impl<'a, 'd> Containment<'a, 'd> {
     /// re-entered id's position on the spine onward, closing with the re-entered id. Traversal
     /// follows `containsBlock` document order, so the list is deterministic. (`position` cannot
     /// miss — `stack` membership implies `path` membership — but falls back to the whole spine.)
+    ///
+    /// Raised: each back-reference costs the document a few bytes and its message names every
+    /// `@id` on the spine, so once the list has ended a back-reference costs a count and the
+    /// spine is neither searched nor copied (issue #711).
     fn report_cycle(&mut self, composite_id: &str) {
-        let start = self
-            .path
-            .iter()
-            .position(|id| id == composite_id)
-            .unwrap_or_default();
-        let mut participants: Vec<&str> = self.path[start..].iter().map(String::as_str).collect();
-        participants.push(composite_id);
-        self.diags.push(
+        let path = &self.path;
+        self.diags.raise(|| {
+            let start = path
+                .iter()
+                .position(|id| id == composite_id)
+                .unwrap_or_default();
+            let mut participants: Vec<&str> = path[start..].iter().map(String::as_str).collect();
+            participants.push(composite_id);
             Diagnostic::error(
                 CONTAINS_CYCLE.code,
                 CONTAINS_CYCLE.message(format!(
@@ -191,8 +195,8 @@ impl<'a, 'd> Containment<'a, 'd> {
                     participants.join(" -> ")
                 )),
             )
-            .with_subject(composite_id.to_owned()),
-        );
+            .with_subject(composite_id.to_owned())
+        });
     }
 
     /// Report a second reach of an already-reached composite or leaf, naming the composite whose

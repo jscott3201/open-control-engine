@@ -39,6 +39,7 @@ mod cxf_array_element_names_cost;
 mod cxf_constructed_budget;
 mod cxf_context_expansion_cost;
 mod cxf_diagnostic_list_cost;
+mod cxf_parameter_value_cost;
 mod cxf_pass_through_key_cost;
 mod hostile_load_bounds;
 mod prepare_frame;
