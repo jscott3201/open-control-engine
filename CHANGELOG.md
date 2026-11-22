@@ -191,7 +191,7 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
-- **An enumeration is named by its canonical class path, and by nothing else** (GitHub #PRNUM,
+- **An enumeration is named by its canonical class path, and by nothing else** (GitHub #779,
   issues #762 and #637; the owner's ruling of 2026-11-22). **Breaking, in place:** a CDL
   enumeration was matched by the last segment of its path, so `controllerType` written
   `SimpleController.PD`, `Foo.SimpleController.PD`,
@@ -232,7 +232,7 @@ so far, and no tag is cut by the bump.
     has a byte-identical content id and blob, and none is newly refused for an enumeration
     spelling; no model or translation writes a non-canonical path. No format byte changes and no
     version bump (no release has been tagged since 0.6.0).
-- **The blob decoder applies each class's shape rules** (GitHub #PRNUM, issue #772; owner ruling
+- **The blob decoder applies each class's shape rules** (GitHub #779, issue #772; owner ruling
   of 2026-11-22). **Breaking, in place:** a blob carrying an array element past its vector's
   resolved length, an index too large for any width, a `TimeTable` offset past its table's
   outputs, or a table or matrix whose bound cells do not fill the rectangle their largest row and
@@ -252,7 +252,7 @@ so far, and no tag is cut by the bump.
   reaches the budget (a dense matrix writes its cells, issue #773, and a document holds at most 2^20
   array elements; the largest measured holds about a quarter of it).
 - **`MatrixGain`'s input and output counts are `K`'s shape; `nin` and `nout` are refused**
-  (GitHub #PRNUM, issue #773; owner ruling of 2026-11-22). **Breaking, in place:** upstream
+  (GitHub #779, issue #773; owner ruling of 2026-11-22). **Breaking, in place:** upstream
   declares `nin = size(K, 2)` and `nout = size(K, 1)` `protected`, but the catalog listed both as
   settable and nothing held them to `K`, so `nout = 7` on a 2×2 `K` loaded with seven outputs,
   five of them `0.0`. They are no parameters of the class now: `unknown-parameter` at load and
@@ -313,12 +313,12 @@ so far, and no tag is cut by the bump.
     there too. It applies no extent rule, which the load gate does: a canonical element past its
     array's extent (`table_3_2` on a 2-row `TimeTable`, `k_3` on a `MultiSum` with `nin = 2`) is a
     declared name and still decodes, as before; the decoder applies the class's shape rules since
-    issue #772 (GitHub #PRNUM, below). `no_std + alloc` builds.
+    issue #772 (GitHub #779, below). `no_std + alloc` builds.
   - **The catalog is complete.** Every public parameter the pinned upstream source declares for
     each of the 132 vendored classes is a catalog parameter and no other is (186 between them;
     `Reals.MatrixGain` listed its protected `nin` and `nout` as settable, and nothing held them
     to `K`'s shape: `nout = 7` on a 2x2 `K` loaded with seven outputs, five of them `0.0`; since
-    issue #773 they are no catalog parameters and the counts are `K`'s, GitHub #PRNUM, below), held
+    issue #773 they are no catalog parameters and the counts are `K`'s, GitHub #779, below), held
     class by class by a new `fixture_port_order` test from the same scan of the vendored Modelica
     that checks port order. So no parameter CDL defines is refused as unknown.
   - **What moved.** No vendored translation that loads and no `open-control-library` rule (139,
@@ -906,7 +906,7 @@ so far, and no tag is cut by the bump.
     and `isOfDataType` in 257 tracked and 140 library documents).
   - **Follow-ups:** composites typed in another namespace, including near-miss spellings of the
     S231 namespace IRI itself (#636); CDL enumeration IRIs in another namespace matched by last
-    segment (#637, closed by GitHub #PRNUM: an enumeration is named by its canonical path only); role-aware checking (#638); the authoring importer's reading of the compact
+    segment (#637, closed by GitHub #779: an enumeration is named by its canonical path only); role-aware checking (#638); the authoring importer's reading of the compact
     spelling (#639).
 - **A `unit`, `quantity` or `displayUnit` term carrying an invisible character is refused, in both
   readers** (GitHub #646, issue #629; owner ruling of 2026-11-12). A term on a connector, a
@@ -1461,7 +1461,7 @@ so far, and no tag is cut by the bump.
     (`--target x86_64-pc-windows-msvc --all-targets`) and is untested.
 
 - **`oce import` names an enumeration through the engine's own lookup, and reads one typed in the
-  S231 namespace** (GitHub #PRNUM, issue #762). The importer resolves a member path and an
+  S231 namespace** (GitHub #779, issue #762). The importer resolves a member path and an
   `isOfDataType` through `oce_api::enumeration_by_path` and `enumeration_by_iri`, so it accepts
   exactly the canonical paths the engine accepts: an enumeration declared
   `S231:Buildings.Controls.OBC.CDL.Types.ZeroTime` (CXF-Core's `EnumerationType`), refused as
