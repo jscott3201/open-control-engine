@@ -192,7 +192,7 @@ so far, and no tag is cut by the bump.
 ### Execution core
 
 - **A parameter name the block's class does not declare is refused, never dropped while the
-  block runs on its default** (GitHub #PRNUM, issue #748; the remaining half of #467).
+  block runs on its default** (GitHub #766, issue #748; the remaining half of #467).
   **Breaking, in place:** a document or a blob that binds a block a parameter under a name its
   class does not declare loaded before, carried the name and its value into the model, the content
   id and the blob, and ran the block on its default; it is refused now. No format byte changes and
