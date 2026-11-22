@@ -21,7 +21,8 @@
 //! An error is `{ "code", "detail", "span" }`, plus optional keys, each written only when it has
 //! a value. `at` is the place the refusal is about: a `verify` refusal's (`scenarios[0].inputs.u`,
 //! `mutants[2]`, `subject`, `line 3 column 7`; owner rulings of 2026-11-11, vectors note "Part
-//! 4's readings"), `"input"` for an `id` document the engine refuses, an `import` refusal's
+//! 4's readings"; for `--commission`, a spec field such as `references[0].inputs[1].path` or a
+//! file under `--out` such as `outputs/0/errors.csv`), `"input"` for an `id` document the engine refuses, an `import` refusal's
 //! subject (a node `@id`, or `document`), and the side of a `diff` refusal (`base`, `head`). In
 //! the human-readable rendering an error whose `at` names a place the command registered
 //! ([`Report::place`]) is located at that place's input name, so a refusal of `diff`'s head is
@@ -32,7 +33,7 @@
 //! load.
 
 use oce_author::{Finding, Location, Origin, ParseError, Severity};
-use oce_verify::{VectorError, VerifyError};
+use oce_verify::{SpecError, VectorError, VerifyError};
 use serde_json::{Map, Value, json};
 
 /// The report schema identifier every report carries under `schema`.
@@ -141,6 +142,21 @@ impl Report {
     /// Record a vector file `oce-verify` refused to load: its code, the place and, for a refusal
     /// found in the text, its line and column.
     pub(crate) fn vector_error(&mut self, error: &VectorError) {
+        let wide = |count: u32| usize::try_from(count).unwrap_or(usize::MAX);
+        let at = error
+            .at()
+            .map(|at| Location::new(wide(at.line), wide(at.column)));
+        self.error_at(
+            error.code(),
+            error.detail(),
+            at,
+            &Facts::about(error.subject()),
+        );
+    }
+
+    /// Record a commissioning spec `oce-verify` refused to load: its code, the place and, for a
+    /// refusal found in the text, its line and column.
+    pub(crate) fn spec_error(&mut self, error: &SpecError) {
         let wide = |count: u32| usize::try_from(count).unwrap_or(usize::MAX);
         let at = error
             .at()

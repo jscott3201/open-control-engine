@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "inputs.csv",
+      "cause": "cell-refused",
+      "code": "source-refused",
+      "detail": "`inputs.csv` row 2 column `Enable`: `maybe` is not a Boolean: only `true`, `false`, `active`, `inactive`, `1` and `0` are",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

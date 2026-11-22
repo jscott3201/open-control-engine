@@ -20,14 +20,14 @@ use serde_json::Value;
 use super::validate::record;
 use crate::input::{self, Loaded};
 use crate::report::{Facts, Report};
-use crate::{Form, SubjectForm, VerifyArgs, codes};
+use crate::{Form, SubjectForm, VectorArgs, codes};
 
 /// The code `oce-verify` gives a subject the engine refuses; a refused authored subject gets it
 /// too.
 const SUBJECT_LOAD_FAILED: &str = "subject-load-failed";
 
 /// The form of the subject `args` names.
-pub(crate) fn form_of(args: &VerifyArgs) -> Result<SubjectForm, (&'static str, String)> {
+pub(crate) fn form_of(args: &VectorArgs) -> Result<SubjectForm, (&'static str, String)> {
     if let Some(form) = args.subject_form {
         return Ok(form);
     }
@@ -52,7 +52,7 @@ pub(crate) fn form_of(args: &VerifyArgs) -> Result<SubjectForm, (&'static str, S
 }
 
 /// The CXF bytes the engine is given for the subject, or the refusal recorded in `report`.
-pub(crate) fn load(args: &VerifyArgs, report: &mut Report) -> Option<Vec<u8>> {
+pub(crate) fn load(args: &VectorArgs, report: &mut Report) -> Option<Vec<u8>> {
     let refuse = |report: &mut Report, (code, detail): (&'static str, String)| {
         report.error_at(code, detail, None, &Facts::about("subject"));
     };
@@ -139,8 +139,8 @@ pub(crate) fn load(args: &VerifyArgs, report: &mut Report) -> Option<Vec<u8>> {
 mod tests {
     use super::*;
 
-    fn args(subject: &str, form: Option<SubjectForm>) -> VerifyArgs {
-        VerifyArgs {
+    fn args(subject: &str, form: Option<SubjectForm>) -> VectorArgs {
+        VectorArgs {
             vectors: "v.json".into(),
             subject: subject.into(),
             subject_form: form,

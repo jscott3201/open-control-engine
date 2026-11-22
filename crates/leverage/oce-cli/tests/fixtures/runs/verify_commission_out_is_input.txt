@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "receipt.json",
+      "code": "output-is-input",
+      "detail": "`./receipt.json` is `receipt.json`, which the run reads; nothing is written",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "receipt.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

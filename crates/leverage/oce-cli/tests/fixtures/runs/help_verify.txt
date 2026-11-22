@@ -1,13 +1,13 @@
 exit: 0
 --- stdout
-Replay a vector set against a subject and print the receipt.
+Replay a vector set against a subject, or a commissioning spec against its trends, and print the receipt.
 
-Stdout is the receipt when the run reaches a verdict: exit 0 when every scenario passed, 1 when one failed or the set checked nothing. Anything that prevents a verdict is exit 2 with the JSON report. With --out the receipt goes to DIR/receipt.json and the report to stdout.
+Stdout is the receipt when the run reaches a verdict: exit 0 when every scenario (with --commission, every compared output) passed, 1 when one failed or the run checked nothing. Anything that prevents a verdict is exit 2 with the JSON report. With --out the receipt goes to DIR/receipt.json and the report to stdout.
 
-Usage: oce verify [OPTIONS] --subject <SUBJECT> <VECTORS>
+Usage: oce verify [OPTIONS] [VECTORS]
 
 Arguments:
-  <VECTORS>
+  [VECTORS]
           The vector set (`oce/vectors/v1`); mutant paths resolve against its directory
 
 Options:
@@ -25,14 +25,28 @@ Options:
           
           [possible values: cxf, text, wire]
 
+      --commission <SPEC>
+          Run a commissioning spec (`oce/commissioning-spec/v1`, OBC §12.7) instead of a vector set: its CXF, mapping and trend files resolve against its directory and may not leave it
+
+      --reference <N>
+          The zero-based index of the spec's reference to run; needed when it has several
+
       --out <DIR>
-          Write the receipt to DIR/receipt.json (atomically) and print the report on stdout
+          Write the receipt to DIR/receipt.json (atomically) and print the report on stdout; with --commission also each output's exceedance curve, DIR/outputs/<k>/errors.csv
+
+      --bounds
+          With --commission and --out: also each Real output's reference, test and bound curves beside its errors.csv, under pyfunnel's names
+
+      --data <DATA>
+          With --commission: what the trend files are, the receipt's data label (trended when absent)
+          
+          [possible values: trended, synthetic]
 
       --require-mutants-caught
           Exit 1 when a mutant survived or the set lists none; no receipt byte changes
 
       --deny-warnings
-          Exit 1 when the subject warned at load or a scenario left a warning unmatched; no receipt byte changes
+          Exit 1 when the subject warned at load or a scenario left a warning unmatched (with --commission: any load or run-time warning); no receipt byte changes
 
       --timings
           Measure the run into the receipt's timings, which receipt_id never covers

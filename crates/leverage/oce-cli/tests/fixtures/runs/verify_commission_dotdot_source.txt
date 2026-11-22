@@ -1,0 +1,22 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "line 14 column 19",
+      "code": "path-invalid",
+      "detail": "the source path `../inputs.csv` has a `..` segment; it must stay inside the spec file's directory",
+      "span": {
+        "column": 19,
+        "line": 14
+      }
+    }
+  ],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

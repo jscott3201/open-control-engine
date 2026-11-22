@@ -675,7 +675,8 @@ row per case). Six things are as the tree found them, not as this section said:
   Linux result on every target, which is why the capture requires that platform.
 
 The Building 33 day of the differential set follows in #664, captured with the same script once
-the trends (#661) and an engine series (#663) exist.
+the trends (#661) and an engine series (#663) exist. *(2026-11-21: moved to #755 with the worked
+example; #661 has not landed.)*
 
 **`aligned-grid`.** The conservative envelope `oce-conformance` uses today (`build_bounds`): a grid
 of every sample and rectangle edge, min and max over covering rectangles, half-sizes as a **sum** of
@@ -1231,6 +1232,82 @@ every file, `run_ms` the whole `run_commissioning` call, `compare_ms` zero. No r
 outside `timings` depends on either flag. `--data` sets the body's `data` label (decision 41).
 `oce vocab` lists every code the verb can print.
 
+### As landed: the verb
+
+*(GitHub #PR_NUMBER, issue #664.)* `oce verify --commission` is in `crates/leverage/oce-cli`
+(`src/commands/verify_commission.rs`, `commission_files.rs`, `commission_out.rs`, and
+`contained.rs`, the path rule it now shares with the mutant reader). The receipt on stdout is
+the library's, byte for byte: the tests hold the binary's stdout to `oce-verify`'s golden
+`pass`, `fail` and `no_data` receipts. The Building 33 worked example and the Building 33 day of
+the funnel differential need #661's vendored trends and moved to issue #755.
+
+**The orchestrator's calls on 2026-11-21** (not owner rulings), on four places this note left
+open:
+
+1. **Scope.** The worked example moved to #755 (blocked on #661), and #664 closes with the verb.
+2. **The bound on the files together** is the library's own: `TrendLimits::MAX.max_total_bytes`,
+   1 GiB, over the mapping file and the trend sources, each path once, the CXF not counted. It is
+   decided from each opened file's metadata before its bytes are read, and refused under the
+   library's own word, `source-refused` with the cause `too-many-total-bytes`, at the spec field
+   of the file that passes it. One file is bounded the same way: the CXF at `MAX_CXF_BYTES`, the
+   mapping at `SpecLimits::MAX.max_bytes` (4 MiB), a trend source at `max_source_bytes` (1 GiB),
+   each `input-too-large`. The Building 33 files, 11.6 MB, fit. Peak memory is a few times the
+   bytes of the expected and indicator files, beside the merged inputs and the trace ("What a run
+   holds", above).
+3. **A path that resolves outside the spec's directory** is `file-outside-directory`. The issue
+   asked for "a code named for a source"; the rule covers the CXF and the mapping file as well,
+   so the code names what all three are.
+4. **`--bounds` writes the four bound files only where an envelope was built.** "Output" above
+   says "for every Real output"; a Real output with no compared instant, or one failed by a
+   non-finite engine sample, has no envelope (`half_width` is absent from its receipt row), so no
+   bound curve exists to write. `errors.csv` is written for every compared output. Because a
+   missing file must never be read as anything, a pass least of all, the report on stdout lists
+   under `curves` every compared output with its `index`, its canonical path and the `files`
+   written for it.
+
+**Readings of this build**, from the note:
+
+- **`errors.csv`** is `Curve::to_csv`, pyfunnel's shape: the line `x,y`, then each point with
+  both numbers through the `%.16g` writer. So an uncovered instant is `nan` and each compared
+  instant of an output failed by a non-finite engine sample is `inf`, C's spellings; the library
+  writes the constant `f64::NAN`, so never `-nan`. A test pins both spellings and holds every
+  `errors.csv` of the run fixture to the library's golden column and, for the oracle case, to
+  `derive_run.py`'s independent derivation.
+- **Order of the refusals**: usage; the spec (4 MiB from metadata, then the spec reader); the
+  reference (`reference-required`, decision 35); the reference's own completeness, decided by
+  the library before any other file is read (`reference-out-of-range`, `reference-incomplete`,
+  `sampling-required`); the files, in the receipt's order of sources after the CXF and the
+  mapping; with `--out`, the output checks; the run; the writes. The output checks come after
+  the reads and before the run: `DIR` must be an existing directory and `DIR/outputs` must not
+  exist (`write-failed`), and a `DIR/receipt.json` that is the spec or a file the run read, by
+  path, link or (on Unix) hard link, is `output-is-input`, so a refusal writes nothing and an
+  existing `outputs/` is refused before a run is spent. `outputs/` is then made with a plain
+  create, which also refuses one a racing writer made.
+- **Which files** the CLI reads is the library's list (`TrendSources::read`): the mapping when a
+  path, then the trend sources in the receipt's order, the `controllerOutput` only when the
+  reference has no `expected` key at all, a path named twice read once. A list that drifted
+  would be refused by the library as `file-missing` or `file-unlisted`, never run.
+- **Flags.** `--reference`, `--bounds` and `--data` without `--commission` are usage errors
+  (clap drops a `requires` whose argument conflicts with one present, so each also conflicts
+  with the vector flags). `--data` absent is `trended`.
+- **Names.** No name reaches a file name or a CSV cell: files are named by index and hold
+  numbers under a fixed header. A name reaches the report only inside a detail (a refusal), as
+  JSON, and the stderr rendering writes every format, control and separator character as an
+  escape. The receipt's names are the library's JSON, which writes a format character as
+  `\uXXXX`.
+- **Vocabulary.** `oce vocab` gains the spec reader's codes (`spec_codes`), and as causes the
+  source reader's (`source_codes`), the unit table's (`unit_codes`) and the engine refusal
+  classes of `frame-refused` (`frame_refusal_codes`), each pinned to the library's list; the
+  tool's own `reference-required` and `file-outside-directory`.
+- **What a source refusal carries.** A `source-refused` error's cause is the source reader's
+  code (`cell-refused`, `mapping-refused`, `unit-refused`); that reader's own cause (the cell
+  rule's `not-boolean`, the mapping's spec code, the unit code) is not carried to the report,
+  because `VerifyError` holds one cause, and the detail names the place and the reason instead.
+
+**Open, and not resolved here:** the change-of-value comparison that lifts `sampling-required`
+(#746), the library's follow-ups from the review of GitHub #744, among them the 1-ulp last
+instant (#747), and the zero fill of masked ticks (#745).
+
 ## Building 33 data
 
 The trend files exist upstream and are vendorable. `Buildings/Resources/Data/Utilities/Plotters/
@@ -1572,7 +1649,8 @@ caller's option.**
 - **Implementation issues.** The funnel port and its differential fixtures are #655. The
   verifier is seven parts: the spec and mapping readers (#658), the unit table (#659), the trend
   sources (#660), the Building 33 vendoring (#661), bind and run (#662), the comparison, report
-  and receipt (#663), and the verb with the worked example (#664). Goldens use `oce-bless` as a
+  and receipt (#663), and the verb with the worked example (#664; the worked example moved to
+#755). Goldens use `oce-bless` as a
   dev-dependency (authoring note, decision 19).
 
 ## Test plan

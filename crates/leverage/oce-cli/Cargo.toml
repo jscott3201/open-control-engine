@@ -8,7 +8,7 @@
 # switch (decision 19).
 [package]
 name = "oce-cli"
-description = "The oce command-line tool: emit, validate, fmt, catalog, vocab, verify, id, import and diff over the Open Control Engine authoring layer, vector verification and structural diff."
+description = "The oce command-line tool: emit, validate, fmt, catalog, vocab, verify, id, import and diff over the Open Control Engine authoring layer, vector and commissioning verification and structural diff."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -31,7 +31,8 @@ oce-api = { workspace = true }
 oce-author = { path = "../oce-author" }
 # The block vocabulary `oce catalog` serves and the scale-factor table `oce vocab` prints.
 oce-vocab = { path = "../oce-vocab" }
-# Vector verification (`oce verify`, vectors note decision 34): the set, the run and the receipt.
+# Verification (`oce verify`, vectors note decision 34; commissioning note, "CLI"): the vector set
+# and the commissioning spec, their runs and the receipt.
 oce-verify = { path = "../oce-verify" }
 # Structural diff (`oce diff`, diff note decision 9): the authoring diff, the CXF adapter and the
 # two renderers. A leverage-to-leverage edge, allowed by crates/leverage/README.md's rule 1.
