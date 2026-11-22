@@ -1,0 +1,14 @@
+[
+  { "cdl": { "name": "TSup", "unit": "K", "type": "float" },
+    "device": { "name": "Supply Air Temp", "unit": "degF", "type": "float" } },
+  { "cdl": { "name": "TSupSet", "unit": "K", "type": "float" },
+    "device": { "name": "SA Clg Stpt", "unit": "degF", "type": "float" } },
+  { "cdl": { "name": "TOut", "unit": "K", "type": "float" },
+    "device": { "name": "OA Temp", "unit": "degF", "type": "float" } },
+  { "cdl": { "name": "uFanFee", "type": "float" },
+    "device": { "name": "VFD Fan Feedback", "type": "float" } },
+  { "cdl": { "name": "uFanSta", "type": "bool" },
+    "device": { "name": "VFD Fan Enable", "type": "float" } },
+  { "cdl": { "name": "yCooVal", "unit": "1", "type": "float" },
+    "device": { "name": "Clg Coil Valve", "unit": "percent", "type": "float" } }
+]

@@ -7,6 +7,7 @@
 
 #![allow(dead_code)]
 
+pub mod building33;
 pub mod commission;
 pub mod cxf_edit;
 pub mod diff_inputs;

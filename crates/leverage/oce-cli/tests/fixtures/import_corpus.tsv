@@ -17,6 +17,7 @@ refused	class-outside-obc	-	-	crates/leverage/oce-cli/tests/fixtures/inputs/veri
 same-id	-	0	0	crates/leverage/oce-verify/tests/fixtures/AHU-0016/mutants/late_alarm.cxf.json
 same-id	-	0	0	crates/leverage/oce-verify/tests/fixtures/AHU-0016/mutants/no_persistence.cxf.json
 same-id	-	0	0	crates/leverage/oce-verify/tests/fixtures/AHU-0016/mutants/threshold_inclusive.cxf.json
+same-id	-	0	0	crates/leverage/oce-verify/tests/fixtures/commissioning/building33/cooling_coil_valve.cxf.json
 refused	class-outside-obc	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/gate.cxf.json
 refused	class-outside-obc	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/gate_multiand.cxf.json
 refused	class-outside-obc	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/hysteresis.cxf.json

@@ -396,12 +396,17 @@ propagation, expression folding, conditional-instance removal, `replaceable`/`re
 — is not implemented. If your sequence exists only as `.mo`, something
 upstream has to produce CXF first.
 
-**Upstream modelica-json output does not load today.** The 44 G36 modelica-json CXF
-translations vendored under `third_party/modelica-buildings-cdl/cxf/` all fail to load. So does
-the 45th, the Building 33 sequence `CoolingCoilValve` (issue #661), for a cause of its own: the
-translator writes the string `undefined` for every parameter binding with a parenthesised
-sub-expression. They depend on a
-cross-document class library the engine does not have, and they use array connectors and array
+**Most upstream modelica-json output does not load today.** Of the 44 G36 modelica-json CXF
+translations vendored under `third_party/modelica-buildings-cdl/cxf/`, 37 fail to load and 7 load
+with no error (issue #633): `ReliefDamper`, `ReliefFan` and `SupplySignals` under
+`AHUs/MultiZone/VAV/SetPoints/`, `Generic/TimeSuppression`,
+`TerminalUnits/Reheat/Subsequences/Overrides`, and `ControlLoops` and `ZoneStates` under
+`ThermalZones/`. The 45th, the Building 33 sequence
+`CoolingCoilValve` (issue #661), fails for a cause of its own: the translator writes the string
+`undefined` for every parameter binding with a parenthesised sub-expression (issue #760), so the
+Building 33 worked example runs from a transcription authored from the vendored `.mo` instead
+(issue #755). The 37 depend on a
+cross-document class library the engine does not have, or use array connectors and array
 instances, which Rule 7 of the [CXF composite subset](cxf-composite-subset.md) refuses. The test
 header in `crates/oce-cxf/tests/vendored_corpus_delta.rs` states the same limit, and that test pins
 the diagnostic counts per document, not a successful load. A host must pre-flatten each sequence

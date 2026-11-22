@@ -46,7 +46,7 @@ pub const CURVE_FILES: [&str; 5] = [
 pub struct Case {
     /// The directory name, unique across both sets.
     pub name: String,
-    /// `upstream` or `hostile`.
+    /// `upstream`, `hostile` or `recorded`.
     pub set: &'static str,
     /// The reference series: `x`, then `y`.
     pub reference: (Vec<f64>, Vec<f64>),
@@ -155,6 +155,19 @@ pub fn cases() -> Vec<Case> {
         .iter()
         .map(|name| load_in(&root(), "upstream", name))
         .chain(hostile.iter().map(|name| load_in(&root(), "hostile", name)))
+        .collect()
+}
+
+/// The recorded days under `recorded/`, a set of their own: series a commissioning run compared,
+/// written by the crate's tests so that they read back to the run's bits (issue #755). They are
+/// kept out of [`cases`], whose counts and goldens the other envelope tests pin.
+pub const RECORDED_CASES: [&str; 1] = ["building_33_day"];
+
+/// Every recorded day, in [`RECORDED_CASES`]' order.
+pub fn recorded_cases() -> Vec<Case> {
+    RECORDED_CASES
+        .iter()
+        .map(|name| load_in(&root(), "recorded", name))
         .collect()
 }
 

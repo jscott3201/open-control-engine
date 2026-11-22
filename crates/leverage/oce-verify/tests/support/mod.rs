@@ -15,10 +15,12 @@ use oce_verify::{
 /// The golden switch for this crate (see `.agents/project-facts.md`). It rewrites the published
 /// schema, the golden receipts under `tests/fixtures/receipts/`, the funnel port's bit goldens
 /// under `tests/fixtures/funnel/golden/`, the two trend-source goldens under
-/// `tests/fixtures/commissioning/trends/` and the commissioning run's receipts and columns under
-/// `tests/fixtures/commissioning/run/receipts/`; the canonical goldens, pyfunnel's files, the
-/// `aligned-grid` parity goldens and the trend oracle come from outside the crate and are never
-/// blessed.
+/// `tests/fixtures/commissioning/trends/`, the commissioning run's receipts and columns under
+/// `tests/fixtures/commissioning/run/receipts/`, and the Building 33 day's receipt
+/// (`tests/fixtures/commissioning/building33/receipts/`) with the two input series of its funnel
+/// case (`tests/fixtures/funnel/recorded/building_33_day/`); the canonical goldens, pyfunnel's
+/// files, the `aligned-grid` parity goldens, the trend oracle and the Building 33 derivations
+/// and OpenModelica series come from outside the crate and are never blessed.
 ///
 /// The mutant set and its mutants under `tests/fixtures/AHU-0016/` are hand-written, never
 /// blessed.

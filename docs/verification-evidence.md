@@ -17,7 +17,9 @@ two-input Boolean states; Toggle covers one exact stateful event schedule with i
 repeated rises, and clear priority; Line covers four limit modes across five finite input regions.
 Reliefs covers one seven-state exact-bit case for a composed G36 leaf. The global Tier-3 report
 remains skipped; no full-sequence, arbitrary Real, general tolerance, solver, or cross-architecture
-raw-byte claim follows from these cases.
+raw-byte claim follows from these cases. A fifth OpenModelica run, of upstream's Building 33
+verification model over one day, is a within-a-bound comparison for one commissioning example and
+none of these ([below](#commissioning-on-recorded-data-the-building-33-day)).
 
 `CDL.Logical.Pre` is outside those executed-reference claims. The engine's fixed
 [HostTick v1 profile](execution-profile.md) delays `Pre` by one HostTick transition rather than one
@@ -359,6 +361,108 @@ Regeneration assumes a trusted host account, checkout, Docker client, Git and sh
 executable search path. Rust and Python artifact tools are pinned and recorded; that does not turn
 the rest of the host into sandbox inputs. The recorded sandbox limits the OpenModelica container;
 it does not defend against another process running as the invoking user.
+
+### Commissioning on recorded data: the Building 33 day
+
+The commissioning verifier (OBC §12; [design note](design/commissioning.md)) has one worked
+example on recorded data: OBC §12.6's cooling-coil valve sequence against one day of LBNL
+Building 33's trends (issue #755). Its receipt is a golden
+(`crates/leverage/oce-verify/tests/fixtures/commissioning/building33/receipts/day.receipt.json`),
+and `oce verify --commission` prints it byte for byte.
+
+**What ran.** The sequence is a `CoolingCoilValve` **authored from the vendored model, not
+vendored**: upstream's modelica-json translation does not load (issue #760), so by the owner's
+ruling the example runs from a transcription of the vendored `.mo`, written in the oce text form
+and emitted with `oce emit`. **The verdict is about that transcription, not about upstream's
+translation.** The trends are the six vendored files, read in place. The spec is the design
+note's worked spec unchanged: the window 0 to 86,400 s from 2018-06-07 00:00 PDT, compared every
+5 s, the funnel built around the engine series, `atolx` 1 s and `rtoly` 0.01, no parameter edit.
+
+| Output | Status | Compared | Masked | Uncovered | Worst exceedance | First exceedance | Time outside the band |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `yCooVal` | **fail** | 17,281 | 0 | 0 | 0.020864709745257892 at 65,965 s | 61,770 s | 4,085 s (817 instants, 61,770 to 67,755 s) |
+
+The band is 1 s wide and 0.01 high everywhere (`half_width` 1.0, `half_height` 0.01): 1 % of the
+engine series' range, which spans 0 to 1 on this day. Outside 61,770 to 67,755 s, about 17:09 to
+18:49 local time, the trended valve is inside the band at every instant.
+
+**What the figures rest on.** Four checks, each from outside the authored file
+([fixture README](../crates/leverage/oce-verify/tests/fixtures/commissioning/building33/README.md)):
+
+- *Structure*: every parameter value, connector (type, unit, quantity, display unit, bounds),
+  block class, modifier and the 21 connections of the emitted CXF and the loaded engine equal
+  what a script read from the `.mo` with its own parser.
+- *Behaviour*: over 64 synthetic frames that take every branch (PI active, the supply-air high
+  limit, the outdoor-air and fan-feedback hysteresis, the fan status, each reset), the engine's
+  valve signal equals a derivation written from the `.mo` and the vendored CDL block sources, bit
+  for bit. Ten mutants of the transcription (a swapped connection, a wrong gain, a dropped limit,
+  reverse acting, …) are each caught by it; the day's receipt alone catches four, because on this
+  day the high limit never cuts the signal and the enable is on throughout.
+- *The continuous model*: OpenModelica 1.25.1, in the digest-pinned container the other
+  OpenModelica cases use, simulated upstream's own `ControlsVerification_CoolingCoilValve`,
+  unmodified at the pin, over the same day (cvode, tolerance 1e-6, trends interpolated linearly).
+  The engine's signal stays within **0.0034** of it at every 5 s instant (largest at 67,375 s),
+  well inside the band. This is one run on one architecture (`linux/arm64`), compared within a
+  bound, and none of the exact-bit, repeat-identical or two-architecture properties of the four
+  cases above is claimed for it.
+- *The envelope*: the day's five funnel curves, `errors.csv` included, print byte for byte as
+  the pinned `pyfunnel==2.1.1` printed them for the same two series on x86_64 Linux, the
+  Building 33 day of the funnel differential (decision 13).
+
+**OBC reports the same afternoon.** OBC §12.6 says only that the computed and the trended signals
+"show good agreement, which is also demonstrated by verifying the time series with the funnel
+software", under the same tolerances. Its funnel figure (Fig. 12.12, `funnel_valve_control.svg`,
+read 2026-11-22) plots the error over about 0 to 315,700 s: it is zero everywhere except about
+62,000 to 68,000 s on the first day, where it reaches about 0.02 (read from the plotted path; the
+axis tops out at 0.02). Our verdict differs from OBC's prose, not from OBC's figure. Run over
+OBC's whole window, 0 to 315,710 s (upstream's `StopTime`), the same spec gives the same worst
+instant and 4,120 s outside the band, 35 s more than the first day alone. And OpenModelica's run of
+upstream's own model, put through the same funnel against the same trend, leaves the band from
+the same first instant, 61,770 s, to 67,755 s (834 instants, worst 0.0234 at 67,335 s). So the
+`fail` is the recorded controller's departure from the CDL sequence that afternoon, which §12.6
+attributes to the ALC controller's discrete time step and its proprietary anti-windup, and not a
+defect the transcription introduced. The tolerances were taken from §12.6 and not tuned; with the
+trend as the funnel's reference instead, the day fails too (worst 0.0210 at 65,965 s).
+
+**What an honest reader may conclude:**
+
+- the transcribed `CoolingCoilValve`, run by this engine, reproduces upstream's model as
+  OpenModelica runs it within 0.0034 over this day, and takes every branch as the `.mo` and the
+  CDL sources say;
+- under OBC §12.6's own tolerances, LBNL Building 33's recorded valve signal on 2018-06-07 leaves
+  the funnel for about 68 minutes of the late afternoon, by at most 0.021, and is inside it the
+  rest of the day, which is what OBC's own figure shows.
+
+**What they may not conclude:**
+
+- anything about upstream's modelica-json translation, which does not load;
+- anything about another building, another day, another controller or another sequence: this is
+  recorded data from one air handler on one day;
+- that the tolerances are right for commissioning in general: 1 s and 1 % are §12.6's choice for
+  this example, and a band 1 % high is tight for a signal a controller computes with a different
+  integrator;
+- that the fan feedback hysteresis is checked on this data. `uFanFee` declares no unit, so by the
+  owner's ruling the mapping gives it none on either side and the raw percent (60.9 to 72.5)
+  reaches a port whose thresholds are 0.05 and 0.15, where upstream's model scales it by 0.01
+  first. The hysteresis is on either way here; on a feedback between 0.15 % and 15 % the two
+  would disagree;
+- that the outdoor-air cut-off is checked on this data. Upstream converts its 2 degF hysteresis
+  delta as an absolute temperature (`TOutDelta` 256.48 K), so the cut-off's lower threshold is
+  26.67 K and, once on, it never turns off; the transcription keeps upstream's value. The day's
+  outdoor air (48.89 to 65.68 degF) starts above the 50 degF cut-off and never falls below 48 degF,
+  so the enable is on all day under upstream's delta and under a corrected one alike, and a test
+  finds every figure the same with the corrected threshold;
+- that the indicator was exercised: `cooValSta.uFanSta` masked nothing, because the fan was
+  enabled all day (masking keeps OBC §12.7.2's zero fill, #745).
+
+**What CI executes.** The day runs in the leverage lane with no slow-test override: about 0.8 s
+and a 36 MB peak for one run of the library in a debug build, about 0.7 s and 36 MB for the
+`oce` binary, and 0.1 s and 33 MB for a release `oce`, which prints the same receipt bytes. The
+replay runs every frame the trend files hold, 75,583 frames to 493,800 s, and compares only the
+window's instants; over OBC's whole window, 0 to 315,710 s, the debug binary takes 1.2 s and
+44 MB. Each test that runs the day takes under 3 s. No CI job runs Python, Docker, pyfunnel or
+OpenModelica: the derivations, the capture and the OpenModelica run are scripts checked in beside
+their outputs, and the tests read the outputs.
 
 ---
 

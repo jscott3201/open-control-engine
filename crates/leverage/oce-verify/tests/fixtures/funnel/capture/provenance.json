@@ -12,6 +12,10 @@
       "return_code": 1,
       "set": "hostile"
     },
+    "building_33_day": {
+      "return_code": 0,
+      "set": "recorded"
+    },
     "constant_series": {
       "return_code": 0,
       "set": "hostile"

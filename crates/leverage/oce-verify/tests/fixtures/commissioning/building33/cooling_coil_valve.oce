@@ -1,0 +1,143 @@
+# AUTHORED FROM THE VENDORED MODEL, NOT VENDORED.
+#
+# Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve, transcribed by hand into the
+# oce text form from third_party/modelica-buildings-cdl/Buildings/Utilities/Plotters/Examples/
+# BaseClasses/CoolingCoilValve.mo (Modelica Buildings Library at a131864), then emitted with
+# `oce emit` into cooling_coil_valve.cxf.json beside this file. The vendored translation
+# (cxf/.../CoolingCoilValve.jsonld) does not load (issue #760) and is not copied, flattened or
+# edited here. A verdict reached with this file is about this transcription, not about upstream's
+# translation. README.md beside this file maps every line of the .mo to what is written here,
+# and every annotation, conditional and unit it drops.
+#
+# The text form takes no expression on the right of `=`, so each binding the .mo writes as an
+# expression is written as the f64 value Python gives that expression in the .mo's own operation
+# order, with the expression in a comment. TOutDelta is upstream's as written: a 2 degF difference
+# converted as an absolute temperature (256.48 K), which makes TOutThr's uLow about 26.67 K.
+sequence CoolingCoilValve
+derived_from none
+
+# .mo line 4: alc_prop_k(final unit="1/F") = 1/100
+param alc_prop_k : Real = 0.01
+# .mo line 8: alc_int_k(final unit="1/F") = 0.5/100
+param alc_int_k : Real = 0.005
+# .mo line 12: alc_k_unit_conv = 9/5
+param alc_k_unit_conv : Real = 1.8
+# .mo line 16: Temperature TOutCooCut = 50*(5/9) - 32*(5/9) + 273.15
+param TOutCooCut : Real = 283.15 K
+# .mo line 20: Temperature TOutDelta = 2*(5/9) - 32*(5/9) + 273.15, as upstream writes it
+param TOutDelta : Real = 256.4833333333333 K
+# .mo line 24: FanFeeCut = 15/100
+param FanFeeCut : Real = 0.15
+# .mo line 28: FanFeeDelta = 10/100
+param FanFeeDelta : Real = 0.1
+# .mo line 32: Temperature TSupHighLim = 50*(5/9) - 32*(5/9) + 273.15
+param TSupHighLim : Real = 283.15 K
+# .mo line 36: Temperature TSupHigLim = 42*(5/9) - 32*(5/9) + 273.15
+param TSupHigLim : Real = 278.7055555555555 K
+# .mo line 40: Time interval(min=1) = 15
+param interval : Real = 15 s
+# .mo line 44: Boolean reverseActing = false
+param reverseActing : Boolean = false
+# .mo line 47: k(final unit="1/K") = alc_prop_k * alc_k_unit_conv
+param k : Real = 0.018000000000000002 1/K
+# .mo line 51: Ti(final unit="s") = k*interval/(alc_int_k * alc_k_unit_conv)
+param Ti : Real = 30.0 s
+# .mo line 55: uMax(final min=0, final max=1, final unit="1") = 1
+param uMax : Real = 1
+# .mo line 62: uMin(final min=0, final max=1, final unit="1") = 0
+param uMin : Real = 0
+
+# .mo line 69: BooleanInput uFanSta
+in uFanSta : Boolean
+# .mo line 74: RealInput uFanFee, no unit and no quantity
+in uFanFee : Real
+# .mo line 78: RealInput TSup(final unit="K", final quantity="ThermodynamicTemperature")
+in TSup : Real @unit K @quantity ThermodynamicTemperature
+# .mo line 85: RealInput TSupSet(final unit="K", displayUnit="degC", final quantity=...)
+in TSupSet : Real @unit K @quantity ThermodynamicTemperature @displayUnit degC
+# .mo line 92: RealInput TOut(final unit="K", displayUnit="degC", final quantity=...)
+in TOut : Real @unit K @quantity ThermodynamicTemperature @displayUnit degC
+# .mo line 100: RealOutput yCooVal(final min=0, final max=1, final unit="1")
+out yCooVal : Real @unit 1 @min 0 @max 1
+
+# .mo line 107: PIDWithReset limPI(final reverseActing=reverseActing, final k=k, final Ti=Ti,
+# final yMax=1, final yMin=0, final y_reset=0)
+block limPI = CDL.Reals.PIDWithReset(
+  reverseActing = reverseActing,
+  k = k,
+  Ti = Ti,
+  yMax = 1,
+  yMin = 0,
+  y_reset = 0
+)
+# .mo line 117: Line higLim(final limitBelow=true, final limitAbove=true)
+block higLim = CDL.Reals.Line(limitBelow = true, limitAbove = true)
+# .mo line 124: Constant yCooValMin(final k=uMin)
+block yCooValMin = CDL.Reals.Sources.Constant(k = uMin)
+# .mo line 129: Constant yCooValMax(final k=uMax)
+block yCooValMax = CDL.Reals.Sources.Constant(k = uMax)
+# .mo line 134: Hysteresis TOutThr(final uLow = TOutCooCut - TOutDelta, final uHigh = TOutCooCut);
+# uLow = 283.15 - 256.4833333333333 in f64
+block TOutThr = CDL.Reals.Hysteresis(uLow = 26.666666666666686, uHigh = TOutCooCut)
+# .mo line 140: Hysteresis uFanFeeThr(final uLow=FanFeeCut - FanFeeDelta, final uHigh=FanFeeCut);
+# uLow = 0.15 - 0.1 in f64
+block uFanFeeThr = CDL.Reals.Hysteresis(uLow = 0.04999999999999999, uHigh = FanFeeCut)
+# .mo line 146: Constant TSupMin(final k=TSupHigLim)
+block TSupMin = CDL.Reals.Sources.Constant(k = TSupHigLim)
+# .mo line 151: Constant TSupMax(final k=TSupHighLim)
+block TSupMax = CDL.Reals.Sources.Constant(k = TSupHighLim)
+# .mo line 156: And andOutAirFanFee
+block andOutAirFanFee = CDL.Logical.And
+# .mo line 160: And andIntErr
+block andIntErr = CDL.Logical.And
+# .mo line 164: Min min
+block min = CDL.Reals.Min
+# .mo line 168: Change cha
+block cha = CDL.Logical.Change
+# .mo line 172: BooleanToReal booToRea
+block booToRea = CDL.Conversions.BooleanToReal
+# .mo line 175: Multiply pro
+block pro = CDL.Reals.Multiply
+
+# .mo line 179: connect(TOut, TOutThr.u)
+TOut -> TOutThr.u
+# .mo line 181: connect(TSup, higLim.u)
+TSup -> higLim.u
+# .mo line 183: connect(yCooVal, min.y)
+min.y -> yCooVal
+# .mo line 185: connect(TSupMax.y, higLim.x2)
+TSupMax.y -> higLim.x2
+# .mo line 188: connect(yCooValMax.y, higLim.f2)
+yCooValMax.y -> higLim.f2
+# .mo line 190: connect(higLim.y, min.u2)
+higLim.y -> min.u2
+# .mo line 192: connect(TSupSet, limPI.u_s)
+TSupSet -> limPI.u_s
+# .mo line 194: connect(TSup, limPI.u_m)
+TSup -> limPI.u_m
+# .mo line 196: connect(uFanFee, uFanFeeThr.u)
+uFanFee -> uFanFeeThr.u
+# .mo line 198: connect(andIntErr.y, cha.u)
+andIntErr.y -> cha.u
+# .mo line 200: connect(cha.y, limPI.trigger)
+cha.y -> limPI.trigger
+# .mo line 203: connect(TSupMin.y, higLim.x1)
+TSupMin.y -> higLim.x1
+# .mo line 205: connect(yCooValMin.y, higLim.f1)
+yCooValMin.y -> higLim.f1
+# .mo line 208: connect(andIntErr.y, booToRea.u)
+andIntErr.y -> booToRea.u
+# .mo line 210: connect(limPI.y, pro.u1)
+limPI.y -> pro.u1
+# .mo line 212: connect(booToRea.y, pro.u2)
+booToRea.y -> pro.u2
+# .mo line 214: connect(min.u1, pro.y)
+pro.y -> min.u1
+# .mo line 216: connect(TOutThr.y, andOutAirFanFee.u1)
+TOutThr.y -> andOutAirFanFee.u1
+# .mo line 218: connect(uFanFeeThr.y, andOutAirFanFee.u2)
+uFanFeeThr.y -> andOutAirFanFee.u2
+# .mo line 220: connect(andOutAirFanFee.y, andIntErr.u1)
+andOutAirFanFee.y -> andIntErr.u1
+# .mo line 222: connect(andIntErr.u2, uFanSta)
+uFanSta -> andIntErr.u2
