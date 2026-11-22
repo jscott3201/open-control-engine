@@ -44,7 +44,11 @@ fn an_outputs_directory_made_after_the_check_still_refuses_the_write_and_writes_
 
 /// `count` outputs' curves, each a real run's (the type cannot be built outside its crate).
 fn curves(count: usize) -> Vec<OutputCurves> {
-    let one = sample_curves();
+    thread_local! {
+        /// The real run's curves, made once per thread: the adversaries write thousands of times.
+        static ONE: OutputCurves = sample_curves();
+    }
+    let one = ONE.with(OutputCurves::clone);
     (0..count)
         .map(|k| {
             let mut copy = one.clone();
