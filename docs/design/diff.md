@@ -11,9 +11,10 @@ reopened. Decisions 9 to 16 were made while drafting and accepted by the archite
 **As landed.** The authoring diff, the rename pass and the two renderers are built as
 `crates/leverage/oce-diff` (issue #665, GitHub #692,
 [crate README](../../crates/leverage/oce-diff/README.md)), the CXF adapter as its
-`diff_topology` (issue #666, GitHub #715) and the blob comparison as its `compare_blobs` (issue
-#667, GitHub #723); the `oce diff` verb is #668. What building them showed is listed under
-[As landed](#as-landed).
+`diff_topology` (issue #666, GitHub #715), the blob comparison as its `compare_blobs` (issue
+#667, GitHub #723) and the `oce diff` verb in `oce-cli` (issue #668, GitHub #738,
+[`oce` README](../../crates/leverage/oce-cli/README.md#oce-diff)). What building them showed is
+listed under [As landed](#as-landed).
 
 The owner's work plan names the M3 deliverable as "a structural diff of two authoring models or CXF
 documents, used in receipts and bundle cards", with `oce diff` in the CLI. Its consumers are M3
@@ -157,10 +158,12 @@ section under `#` headers, in the text form's own syntax, with `+` added, `-` re
 writes a `Change | Subject | Was | Now` table for a bundle card. Both are golden-tested.
 
 **CLI.** `oce diff <base> <head> [--from text|wire|cxf] [--no-renames]
-[--format human|json|markdown]`. `.oce` and `.json` are authoring models, `.jsonld` is CXF; both
-sides must be the same kind. The JSON report is the CLI's closed envelope (`tool`, `schema`,
-`command`, `ok`) with the `Diff` as its result. Exit codes follow the **`oce` CLI rule for every
-subcommand** (decision 1): **0** yes (here, `equal`), **1** no (any difference), **2** error (usage,
+[--format json|markdown]`. `.oce` and `.json` are authoring models, `.jsonld` and `.cxf.json` are
+CXF; both sides must be the same kind. `--format` chooses the one document on stdout, the JSON
+report (the default) or `render_markdown`'s table; `render_text` goes to stderr under the CLI's
+`--render` (owner rulings of 2026-11-21, [As landed](#as-landed)). The JSON report is the CLI's
+closed envelope (`tool`, `schema`, `command`, `ok`) with the `Diff` as its result. Exit codes
+follow the **`oce` CLI rule for every subcommand** (decision 1): **0** yes (here, `equal`), **1** no (any difference), **2** error (usage,
 a parse refusal of either input, a CXF load refusal, I/O). Exit 1 never means a crash. The
 [authoring note's CLI section](authoring-layer.md#cli) follows the same rule.
 
@@ -825,6 +828,39 @@ What building the blob comparison (issue #667, GitHub #723) showed, under decisi
 - **`initial_state` aligns by position**, block id by block id: a reordering of one graph's
   blocks reads `unknown` or `different`, never `same`. A changed initial parameter also moves the
   content id, which covers bound parameters.
+
+What building the `oce diff` verb (issue #668, GitHub #738) showed. Ruled by the owner on
+2026-11-21, on the two readings issue #668 asked for, which amend the CLI line above:
+
+- **`--format json|markdown`, no `--format human`.** `oce` settled after this note that stdout
+  carries exactly one document and that a human rendering goes to stderr under the global
+  `--render`. So `--format` chooses the stdout document, the JSON report by default or
+  `render_markdown`'s table, and `render_text` is what `--render` writes to stderr, each line
+  escaped as every other rendering of the CLI is.
+- **`rule.cxf.json` is CXF.** A side's name is read by `id::form_by_name`, the function `oce id`
+  and the `-o` name guards call: CXF for `.jsonld` or `.cxf.json`, text for `.oce`, wire for any
+  other `.json`. `verify --subject` reads a name by the same rule through its own copy
+  (`verify_subject.rs`), which this verb leaves as it is. One file name means one form across
+  verbs; the in-repo mutants are named `.cxf.json` (vectors note, decision 34).
+
+Read by the implementer under the note's "closed envelope" sentence, following the other verbs
+(accepted by the coordinator on 2026-11-21); the [`oce` README](../../crates/leverage/oce-cli/README.md#oce-diff)
+states each in full:
+
+- **The envelope is `oce-report/1`, unchanged.** `input` is the base's path as given, beside the
+  verb's own keys `head` (the head's path), `form` and `diff`, which is exactly the data
+  `Diff::to_json` writes, so removing the envelope leaves `oce-diff`'s JSON byte for byte. A
+  refusal is exit 2 with the report and no `diff`; an error about one side carries `at`, `base`
+  or `head`. With `--format markdown` the table is stdout for exit 0 and 1 alike, as a `verify`
+  receipt is.
+- **Two refusals of the pair.** Names that read as two forms are `mixed-forms` (a diff across
+  levels is out of scope) and `-` on both sides is `stdin-twice`. A CXF side the engine refuses is
+  `not-loadable` with the engine's codes, as for `oce id`; a `DiffError` passes through under
+  its own code, and `oce vocab` lists all four under `diff_codes`.
+- **No `-o`.** The verb writes no file.
+- **Authored sides are parsed, never validated**, as decision 10 has it: a draft `oce validate`
+  refuses is diffed (exit 1). The two content ids reach `diff_topology_with_ids` as the hint
+  decision 8 allows, which changes no result.
 
 ## Review rulings
 

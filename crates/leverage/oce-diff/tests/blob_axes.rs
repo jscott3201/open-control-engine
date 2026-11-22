@@ -22,8 +22,9 @@ use oce_api::{BlobError, Engine};
 use oce_diff::{BlobComparison, ClassChange, Equality};
 
 use support::blobs::{
-    compare, compiled, golden_blob, golden_summary, summary, with_content_id_cleared,
-    with_initial_state_crc_flipped, with_signature_flipped,
+    compare, compiled, facade_fixture, golden_blob, golden_summary, summary,
+    with_content_id_cleared, with_initial_state_crc_flipped, with_signature_flipped,
+    with_unused_class,
 };
 use support::read;
 
@@ -404,4 +405,73 @@ fn a_blob_that_records_no_content_id_is_unknown_on_that_axis_alone() {
     let comparison = compare(&cleared, &base);
     assert_eq!(comparison.base.content_id, None);
     assert_eq!(comparison.head.content_id, summary(&base).content_id);
+}
+
+#[test]
+fn an_aligned_pair_whose_class_tables_differ_compares_each_block_by_its_class_path() {
+    // Issue #725: every aligned pair above shares one class table, so reading a block's class
+    // one place off within its table would still align them. Here head's table holds one class
+    // more, after every class base uses and used by no block: each position keeps its class
+    // path, while its index is read against two tables of different lengths.
+    let base = golden_blob(RICH);
+    let (path, hash) = signature_of("CDL.Routing.BooleanExtractSignal");
+    let head = with_unused_class(&base, path, hash);
+    let (base_summary, head_summary) = (summary(&base), summary(&head));
+    let classes = base_summary.classes.len();
+    assert_eq!(head_summary.classes.len(), classes + 1);
+    assert_eq!(
+        head_summary.decode_refusal,
+        Some(BlobError::UnusedClass {
+            class: u32::try_from(classes).expect("a class index")
+        })
+    );
+    // The blocks record the same indices, and the last class is one a block uses.
+    let indices = |summary: &oce_api::BlobSummary| -> Vec<u32> {
+        summary
+            .instances
+            .iter()
+            .map(|instance| instance.class)
+            .collect()
+    };
+    assert_eq!(indices(&base_summary), indices(&head_summary));
+    assert!(indices(&base_summary).contains(&u32::try_from(classes - 1).expect("an index")));
+
+    let forward = compare(&base, &head);
+    assert_eq!(forward.initial_state, Equality::Same);
+    assert_eq!(forward.content_id, Equality::Same);
+    assert!(!forward.same_bytes);
+    assert_eq!(
+        forward.classes,
+        [ClassChange::Added {
+            subject: path.to_owned(),
+            hash
+        }]
+    );
+    assert!(forward.base.accepted() && !forward.head.accepted());
+    let backward = compare(&head, &base);
+    assert_eq!(backward.initial_state, Equality::Same);
+    assert_eq!(
+        backward.classes,
+        [ClassChange::Removed {
+            subject: path.to_owned(),
+            hash
+        }]
+    );
+    assert!(!backward.base.accepted() && backward.head.accepted());
+}
+
+/// A class's signature hash as the facade's pinned table records it
+/// (`crates/oce-api/tests/fixtures/blob/class_signatures.tsv`, read in place).
+fn signature_of(class: &'static str) -> (&'static str, u64) {
+    let path = facade_fixture("blob/class_signatures.tsv");
+    let table = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+    let hash = table
+        .lines()
+        .find_map(|line| {
+            let (hash, listed) = line.split_once('\t')?;
+            (listed == class).then(|| u64::from_str_radix(hash, 16).expect("a hex hash"))
+        })
+        .unwrap_or_else(|| panic!("{class} is pinned"));
+    (class, hash)
 }

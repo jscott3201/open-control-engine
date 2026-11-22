@@ -255,7 +255,7 @@ it as a Real, and an Integer above 2^53 in magnitude on a Real parameter is refu
 
 M2's `oce` command-line tool
 (`crates/leverage/oce-cli`, the first binary above the facade) puts the authoring loop at a shell
-prompt: `emit`, `validate`, `fmt`, `catalog` and `vocab` (M3 adds `verify`, `id` and `import`, below), each
+prompt: `emit`, `validate`, `fmt`, `catalog` and `vocab` (M3 adds `verify`, `id`, `import` and `diff`, below), each
 with a documented JSON report on stdout for agents and the exit rule 0 yes / 1 no / 2 error
 ([report contract](crates/leverage/oce-cli/README.md)):
 
@@ -268,8 +268,9 @@ cargo run -p oce-cli -- catalog CDL.Reals.MultiSum --param nin=3
 cargo run -p oce-cli -- catalog CDL.Reals.PID           # what each port and parameter means
 ```
 
-The importer has no verb yet: it is the library API `oce_author::import_cxf` and
-`oce_author::import_graph_v0`, and an `oce import` verb is planned (#514).
+The importer's verb is `oce import` (M3, #514): it reads a flat CXF document into canonical text
+or the wire form over `oce_author::import_cxf`. The frozen prototype's v0 graph JSON stays the
+library API `oce_author::import_graph_v0`.
 
 Vocabulary v1 is the reference text behind `oce catalog`: `oce-vocab`
 (`crates/leverage/oce-vocab`, [README](crates/leverage/oce-vocab/README.md)) carries, for each of
@@ -346,7 +347,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | **M1a** Portable core: cleanup | Pure `Engine`, dead crates and ledgers removed, two CI lanes, native determinism and strict-bit matrices | Released as v0.3.0 |
 | **M1b** Portable core: `no_std` | Core four build `no_std + alloc`; math through `libm`; hash-free core; the **OCEB** compiled-schedule blob (encoder in `oce-api`, decoder in `oce-graph`, byte-stable across architectures); a `no_std` execution entry that never links `oce-cxf` or `oce-api`; a bare-metal gate cell with a size budget over `thumbv7em`, `riscv32imac` and `wasm32`; QEMU execution nightly | Released as v0.4.0 |
 | **M2** Authoring layer | `oce-author`: one typed authoring model with strict-JSON and text forms, a validator that runs before the engine sees anything, and a deterministic emitter to CXF | Released as v0.5.0: `oce-author`'s model, builder, wire form and pinned schema, two-stage validator, emitter, text form and importer; the `oce` CLI (`emit`, `validate`, `fmt`, `catalog`, `vocab`); vocabulary v1 (`oce-vocab`), served through `oce catalog` and read by the text form for time-unit suffixes. The agent-usable gate row moves to the milestone that lands the benchmark harness (owner decision, 2026-11-09) |
-| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in, shipped in v0.5.0; the `oce id` verb, which prints the content id of a file, the `oce import` verb, which turns a flat CXF document into the authoring form, and the first three parts of the structural diff (`oce-diff`: the authoring diff, the rename pass and the renderers, then the CXF adapter over two loaded documents, then the blob comparison) are in since. Of the tolerance mode, the envelope arithmetic is in on `development`: `oce_verify::funnel`, a port of LBNL funnel whose curves print as the pinned `pyfunnel==2.1.1`'s do, byte for byte, on funnel's own test set and a hostile set, and the `aligned-grid` envelope beside it. Of the commissioning verifier (OBC §12), the first of seven parts is in on `development`: `oce-verify` reads the test spec (`oce/commissioning-spec/v1`: OBC §12.7 Listing 12.1 as published, comments removed before the strict reader) and the point mapping, as typed values or typed refusals. The second part is in too: the closed unit table `units/v1` (`oce_verify::convert_unit`, device unit to CDL unit, absolute temperatures and temperature differences kept apart, every unlisted pair refused). So is the third: the trend sources (`oce_verify::TrendSources`), which read a reference's `csv` (OBC §12.7.3's padded examples as printed, a Boolean as `true`/`false`, `active`/`inactive` or `1`/`0`) and `combiTimeTable` trend files, convert every cell to its CDL unit and type, and merge the inputs on the union of their times for replay. The vector keys that ask for a tolerance and the rest of the commissioning verifier are next |
+| **M3** Verification product | Canonical content id, the vector format, an `oce-verify` replayer with receipts and a mutant score, a funnel-style tolerance mode, on the `oce-replay` historical replay crate | In progress: `oce-replay`, the canonical content id (`Engine::content_id`, `oce:canon1:` over the loaded graph), output types in slot order before the first frame (`FrameSlots::output_types()`), the vector format (`oce-verify`: `oce/vectors/v1` with a strict bounded reader, a canonical form with a `spec_id`, and a pinned JSON Schema), the replayer with its receipts (`run_vectors`, `oce/receipt/v1`), mutant mode with its catch score, the four work budgets on a run, and the `oce verify` verb with the in-repo replay gate are in, shipped in v0.5.0; the `oce id` verb, which prints the content id of a file, the `oce import` verb, which turns a flat CXF document into the authoring form, and the structural diff in all four parts (`oce-diff`: the authoring diff, the rename pass and the renderers, then the CXF adapter over two loaded documents, then the blob comparison; and the `oce diff` verb over them) are in since. Of the tolerance mode, the envelope arithmetic is in on `development`: `oce_verify::funnel`, a port of LBNL funnel whose curves print as the pinned `pyfunnel==2.1.1`'s do, byte for byte, on funnel's own test set and a hostile set, and the `aligned-grid` envelope beside it. Of the commissioning verifier (OBC §12), the first of seven parts is in on `development`: `oce-verify` reads the test spec (`oce/commissioning-spec/v1`: OBC §12.7 Listing 12.1 as published, comments removed before the strict reader) and the point mapping, as typed values or typed refusals. The second part is in too: the closed unit table `units/v1` (`oce_verify::convert_unit`, device unit to CDL unit, absolute temperatures and temperature differences kept apart, every unlisted pair refused). So is the third: the trend sources (`oce_verify::TrendSources`), which read a reference's `csv` (OBC §12.7.3's padded examples as printed, a Boolean as `true`/`false`, `active`/`inactive` or `1`/`0`) and `combiTimeTable` trend files, convert every cell to its CDL unit and type, and merge the inputs on the union of their times for replay. The vector keys that ask for a tolerance and the rest of the commissioning verifier are next |
 | **M4** WASM | `oce-wasm` over `oce-api`, a TypeScript package, a browser demo that replays vectors without a server, a tracked `.wasm` size budget | Planned, in parallel with M5 |
 | **M5** Python | `oce-py` wheels (PyO3, abi3) over the same surface; replay and receipts from a notebook | Planned, in parallel with M4 |
 | **M6** Reference host | `oce-host`: cadence, staleness limits, the non-finite policy, degraded mode and safe-state outputs as tested code; BOPTEST client and a Docker runtime | Planned, in parallel with M7 |
@@ -354,7 +355,7 @@ lists the order, the hard dependencies and the gate that closes it. The engine m
 | **M8** Semantics | `SemanticPoint` records (Brick, 223P, QUDT, Haystack) carried through import and export without the tick ever reading them; `oce-bind` matches a building graph to a sequence | Planned |
 | **M9** BACnet device image | One `no_std` image that is a BACnet device: compiled sequence inside, boundary points as objects, MS/TP or B/IP outside, over rusty-bacnet | Planned |
 
-M3's structural diff has its first three parts: `oce-diff` (`crates/leverage/oce-diff`,
+M3's structural diff is in, all four parts: `oce-diff` (`crates/leverage/oce-diff`,
 [README](crates/leverage/oce-diff/README.md)) compares two authoring models and returns what
 changed as sorted data (`oce-diff/1`), with authored block names as identity and a bounded rename
 pass for the blocks a revision renamed. Sequence parameters have a section of their own, so a site
@@ -368,7 +369,10 @@ emitted from two authoring models it agrees with the authoring diff of the model
 comparison, `compare_blobs`, says same or different for two compiled-schedule blobs read through
 `oce_api::inspect_blob`, by content id, class table and per-instance initial-state CRCs, and
 carries each side's verdict from this build, so "same" is never read as "runs here". The `oce diff`
-verb is next (#668).
+verb puts it at the shell: `oce diff base.oce head.oce` compares two authoring files (text or
+wire, never validated) or two CXF documents and prints the report with the diff, or its Markdown
+table with `--format markdown`, exiting 0 only when nothing differs, 1 for any difference and 2
+when a side cannot be read, parsed or loaded ([`oce` README](crates/leverage/oce-cli/README.md#oce-diff)).
 
 The three one-page design passes M3 waits on are written: the
 [historical replay API](docs/design/replay.md) (built as `crates/leverage/oce-replay`), the

@@ -1,0 +1,100 @@
+exit: 1
+--- stdout
+{
+  "command": "diff",
+  "diff": {
+    "base": {
+      "derived_from": null,
+      "sequence": "plant_enable"
+    },
+    "catalog": "catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892",
+    "graph": [
+      {
+        "class": "CDL.Logical.Andd",
+        "inputs": [
+          {
+            "port": "u1",
+            "source": "uPlaEna"
+          },
+          {
+            "port": "u2",
+            "source": "uReq"
+          }
+        ],
+        "kind": "added",
+        "params": [],
+        "subject": "ena"
+      },
+      {
+        "class": "CDL.Logical.And",
+        "inputs": [
+          {
+            "port": "u1",
+            "source": "uPlaEna"
+          },
+          {
+            "port": "u2",
+            "source": "uReq"
+          }
+        ],
+        "kind": "removed",
+        "params": [],
+        "subject": "ena"
+      },
+      {
+        "class": "CDL.Logical.Not",
+        "inputs": [],
+        "kind": "added",
+        "params": [],
+        "subject": "hold"
+      },
+      {
+        "kind": "reparameterized",
+        "new": null,
+        "old": {
+          "integer": 300
+        },
+        "subject": "hold.delayTime"
+      }
+    ],
+    "head": {
+      "derived_from": null,
+      "sequence": "plant_enable"
+    },
+    "interface": [],
+    "metadata": [
+      {
+        "kind": "comment-changed",
+        "new": " Plant enable, an agent's draft: it parses, and the validator refuses it.",
+        "old": " Plant enable, the reference the diff verb's tests compare against.",
+        "subject": "sequence"
+      }
+    ],
+    "notes": [],
+    "parameters": [],
+    "schema": "oce-diff/1",
+    "source": "authoring",
+    "summary": {
+      "blocks": {
+        "base_only": 1,
+        "by_name": 1,
+        "head_only": 2,
+        "renamed": 0
+      },
+      "equal": false,
+      "graph_equal": false,
+      "interface_equal": true,
+      "metadata_equal": false,
+      "parameters_equal": true
+    }
+  },
+  "errors": [],
+  "findings": [],
+  "form": "text",
+  "head": "tests/fixtures/inputs/diff/draft.oce",
+  "input": "tests/fixtures/inputs/diff/reference.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

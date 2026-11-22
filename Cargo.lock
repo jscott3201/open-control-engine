@@ -287,6 +287,7 @@ dependencies = [
  "oce-api",
  "oce-author",
  "oce-bless",
+ "oce-diff",
  "oce-verify",
  "oce-vocab",
  "serde_json",

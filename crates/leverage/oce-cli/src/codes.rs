@@ -7,8 +7,8 @@
 
 /// Reading stdin (`-`) without `--from`.
 pub(crate) const MISSING_FROM: &str = "missing-from";
-/// A file whose name gives no form (`.oce`, `.json`; for `id` also `.jsonld`, `.cxf.json`),
-/// without `--from`.
+/// A file whose name gives no form (`.oce`, `.json`; for `id` and `diff` also `.jsonld`,
+/// `.cxf.json`), without `--from`.
 pub(crate) const UNKNOWN_FORM: &str = "unknown-form";
 /// The input path does not exist.
 pub(crate) const NOT_FOUND: &str = "not-found";
@@ -49,8 +49,8 @@ pub(crate) const UNKNOWN_SUBJECT_FORM: &str = "unknown-subject-form";
 pub(crate) const MUTANT_OUTSIDE_DIRECTORY: &str = "mutant-outside-directory";
 /// `id --namespace` beside a CXF document, which is never emitted.
 pub(crate) const NAMESPACE_NEEDS_AUTHORED: &str = "namespace-needs-authored";
-/// The input of `id` does not load: the engine refused the document, or the authored sequence
-/// has an error finding and was not emitted.
+/// The input of `id`, or a CXF side of `diff`, does not load: the engine refused the document,
+/// or (`id`) the authored sequence has an error finding and was not emitted.
 pub(crate) const NOT_LOADABLE: &str = "not-loadable";
 /// The facade could not name a model it loaded (never expected).
 pub(crate) const NO_CONTENT_ID: &str = "no-content-id";
@@ -59,13 +59,17 @@ pub(crate) const NO_CONTENT_ID: &str = "no-content-id";
 pub(crate) const OUTPUT_FORM_MISMATCH: &str = "output-form-mismatch";
 /// `emit -o` or `import -o` names the input file itself.
 pub(crate) const OUTPUT_IS_INPUT: &str = "output-is-input";
+/// The two sides of `diff` have names that read as two forms, and `--from` was not given.
+pub(crate) const MIXED_FORMS: &str = "mixed-forms";
+/// Both sides of `diff` are stdin (`-`), which can be read once.
+pub(crate) const STDIN_TWICE: &str = "stdin-twice";
 
 /// The tool's own error codes and their meanings, as `vocab` prints them.
 pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     (MISSING_FROM, "stdin (-) was given without --from"),
     (
         UNKNOWN_FORM,
-        "the name ends in neither .oce nor .json (for id, nor .jsonld) and --from was not given",
+        "the name ends in neither .oce nor .json (for id and diff, nor .jsonld or .cxf.json) and --from was not given",
     ),
     (NOT_FOUND, "the input path does not exist"),
     (
@@ -123,7 +127,7 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     ),
     (
         NOT_LOADABLE,
-        "id: the engine refused the document, or the sequence has error findings; it has no content id",
+        "id or a CXF side of diff: the engine refused the document; id: or the sequence has error findings; there is no content id or diff",
     ),
     (NO_CONTENT_ID, "the facade could not name a model it loaded"),
     (
@@ -133,6 +137,14 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     (
         OUTPUT_IS_INPUT,
         "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; nothing is written",
+    ),
+    (
+        MIXED_FORMS,
+        "diff: the two names read as two forms (text, wire, CXF) and --from was not given; both sides are one form",
+    ),
+    (
+        STDIN_TWICE,
+        "diff: both sides are stdin (-), which is read once",
     ),
 ];
 
@@ -522,15 +534,15 @@ pub(crate) const TEXT_FORM_TAGS: &[&str] = &[
 pub(crate) const EXIT_MEANINGS: &[(u8, &str)] = &[
     (
         0,
-        "yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported",
+        "yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported, nothing differs",
     ),
     (
         1,
-        "no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict",
+        "no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict, any difference (diff)",
     ),
     (
         2,
-        "error: a usage, read, parse, size or I/O failure, a run with no verdict, an input with no content id (id), or a document the importer refuses or the output form cannot spell (import); the question was not answered",
+        "error: a usage, read, parse, size or I/O failure, a run with no verdict, an input with no content id (id), a document the importer refuses or the output form cannot spell (import), or a side that does not load or cannot be named (diff); the question was not answered",
     ),
 ];
 

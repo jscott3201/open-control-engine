@@ -8,6 +8,7 @@
 #![allow(dead_code)]
 
 pub mod cxf_edit;
+pub mod diff_inputs;
 
 use std::io::Write;
 use std::path::{Path, PathBuf};

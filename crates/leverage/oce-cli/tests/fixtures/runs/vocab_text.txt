@@ -135,7 +135,7 @@ import codes (import, exit 2):
 
 error codes (exit 2):
   missing-from              stdin (-) was given without --from
-  unknown-form              the name ends in neither .oce nor .json (for id, nor .jsonld) and --from was not given
+  unknown-form              the name ends in neither .oce nor .json (for id and diff, nor .jsonld or .cxf.json) and --from was not given
   not-found                 the input path does not exist
   not-a-file                the input path is a directory or another non-file
   read-failed               the input could not be read
@@ -154,10 +154,12 @@ error codes (exit 2):
   unknown-subject-form      a verify subject is not .jsonld, .cxf.json, .oce or .json and --subject-form was not given
   mutant-outside-directory  a mutant path resolves, through a link or a drive prefix, outside the vector file's directory
   namespace-needs-authored  id --namespace was given beside a CXF document; only a text or wire file is emitted
-  not-loadable              id: the engine refused the document, or the sequence has error findings; it has no content id
+  not-loadable              id or a CXF side of diff: the engine refused the document; id: or the sequence has error findings; there is no content id or diff
   no-content-id             the facade could not name a model it loaded
   output-form-mismatch      import -o or emit -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)
   output-is-input           emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; nothing is written
+  mixed-forms               diff: the two names read as two forms (text, wire, CXF) and --from was not given; both sides are one form
+  stdin-twice               diff: both sides are stdin (-), which is read once
 
 vector file codes (verify, exit 2):
   not-utf8                   the vector file is not UTF-8
@@ -228,10 +230,16 @@ bind and run codes (verify, exit 2):
   replay-failed            the replay stopped with an error (cause: trace-too-large, engine-setup, ...)
   window-uncovered         a window held no executed tick after a run with no refused frame
 
+diff codes (diff, exit 2):
+  outside-root        a CXF block or boundary is not named under its document's root (one the engine exported included); at names the side
+  unresolved-ports    the ports of a CXF block cannot be named from its class and ground parameters (never expected for a loaded document)
+  unreadable-blob     the facade reads no summary from a blob (the blob comparison; diff reads no blob)
+  unexpected-refusal  the facade refused a blob with an error that is not a blob refusal (never expected; diff reads no blob)
+
 exit codes:
-  0  yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported
-  1  no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict
-  2  error: a usage, read, parse, size or I/O failure, a run with no verdict, an input with no content id (id), or a document the importer refuses or the output form cannot spell (import); the question was not answered
+  0  yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported, nothing differs
+  1  no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict, any difference (diff)
+  2  error: a usage, read, parse, size or I/O failure, a run with no verdict, an input with no content id (id), a document the importer refuses or the output form cannot spell (import), or a side that does not load or cannot be named (diff); the question was not answered
 
 enumerations (Type.Member values; a constant package's members are Integers):
   CDL.Types.SimpleController (enumeration): P=1 PI=2 PD=3 PID=4
