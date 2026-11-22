@@ -591,6 +591,33 @@ fn trend_file_types_are_accepted_only_directly_inside_the_trend_directory() {
 }
 
 #[test]
+fn trend_tables_keep_upstream_crlf_line_ends() {
+    let base = corpus().expect("vendored corpus must be readable");
+    let tables: Vec<_> = base
+        .listing
+        .iter()
+        .filter(|file| file.path.starts_with(TREND_DATA_DIR) && file.path.ends_with(".mos"))
+        .collect();
+    assert_eq!(tables.len(), 6);
+    for table in tables {
+        let line_feeds = table.bytes.iter().filter(|&&b| b == b'\n').count();
+        let crlf = table
+            .bytes
+            .windows(2)
+            .filter(|pair| pair == b"\r\n")
+            .count();
+        assert!(
+            line_feeds > 0 && crlf == line_feeds,
+            "`{}`: {line_feeds} line feeds, {crlf} after a carriage return; upstream ends every \
+             line with CRLF, so a checkout normalised these bytes — keep the root \
+             .gitattributes rule `third_party/modelica-buildings-cdl/Buildings/Resources/Data/** \
+             -text`",
+            table.path
+        );
+    }
+}
+
+#[test]
 fn trend_file_additions_deletions_and_changes_are_caught() {
     let base = corpus().expect("vendored corpus must be readable");
     let trend = |file: &FileData| file.path.starts_with(TREND_DATA_DIR);

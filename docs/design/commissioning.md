@@ -1397,6 +1397,26 @@ showed:
 - **The worked spec's `cxf` path** names a `.json` file; the vendored translation, like the
   other 44, is `.jsonld`.
 
+**Ruled by the owner on 2026-11-21**, on what the refusal means for the worked example:
+
+1. **#661 lands alone**, the material verbatim and whole (decision 26 stands; about 11.68 MB
+   added is accepted), the refusal pinned as evidence so a later pin advance shows when the
+   document starts to load. The cause is issue #760 (M3 or later, P2): modelica-json's `master`
+   fixes the five values but writes `http://qudt.org/vocab/unit/PER-K`, which the closed unit
+   table does not map, and moves the QUDT namespaces, and advancing that pin regenerates the 44
+   G36 translations, CXF-Core and `oce-vocab`'s generated vocabulary.
+2. **The worked example (#755) runs in its own pull request from an in-repo `CoolingCoilValve`**
+   authored from the vendored `.mo` (the text form, then `oce emit`), labelled "authored from
+   the vendored model, not vendored". Its verdict is about that transcription, not upstream's
+   translation.
+3. **`uFanFee` is mapped with no unit on either side**, and the example says so: the raw percent
+   reaches the port. On this data (60.9 to 72.5 % all trend long) the 0.05/0.15 hysteresis is
+   true either way. No binder change.
+
+The finding above that `CoolingCoilValve` has no `TemperatureDifference` port confirms "As
+landed: the run, the comparison and the receipt": the quantity gap of #743 does not reach this
+example.
+
 ## Decisions
 
 Decisions 1 to 4 are the owner's; 5 to 10 are recommendations accepted by the orchestrator. Both are

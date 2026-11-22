@@ -1910,6 +1910,34 @@ so far, and no tag is cut by the bump.
 
 ### Verification
 
+- **The OBC §12.6 Building 33 commissioning material is vendored, verbatim and whole; its
+  sequence's translation does not load** (GitHub #PRNUM, issue #661).
+  `third_party/modelica-buildings-cdl/` gains the eight files of upstream's
+  `Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/`
+  (six `CombiTimeTable` trends of three days at 5 s from LBNL Building 33, their `README.md` and
+  `csv2mos.py`), the sequence `Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.mo`
+  and its modelica-json translation under `cxf/`: 11,678,397 bytes, taking the tree from about
+  4.15 MB to about 15.8 MB. Neither pin moved (Buildings `a131864`, modelica-json `85721b82`), and
+  the library's license covers the trends as it covers the `.mo` sources.
+  - **Fidelity:** every new upstream file's Git blob OID equals upstream's at the pin, and
+    `.agents/revendor-upstream.sh` now reads the two new upstream cones (186 blob OIDs). The six
+    trends end their lines with CRLF upstream, so the root `.gitattributes` exempts their
+    directory from line-end normalisation, and a test fails on a normalised checkout. The new
+    `scripts/vendored_cxf/regenerate.sh` regenerates all 45 translations byte for byte inside a
+    digest-pinned `node:26.5.0-bookworm-slim` container.
+  - **The load probe:** the translation is refused with ten `grounding-failed` errors, from one
+    cause: modelica-json at the pin writes the string `undefined` as the value of every
+    parameter whose binding has a parenthesised sub-expression (`TOutCooCut`, `TOutDelta`,
+    `TSupHighLim`, `TSupHigLim`, `Ti`), and five bindings read those. The file is not edited;
+    the refusal is pinned in `vendored_corpus_delta.rs`, and issue #760 tracks the cause. By
+    the owner's ruling, the Building 33 worked example (#755) runs in its own pull request from
+    an in-repo transcription of the sequence.
+  - **Guards re-blessed:** the hash manifest and its tree-SHA constant; the manifest
+    verifier's whitelist, which takes `.mos`, `csv2mos.py` and a nested `README.md` only
+    directly inside the trend directory, with negative tests; the vendored-corpus delta (45
+    documents, the 44 earlier lines unchanged), the unit-IRI census and the tracked-`.jsonld`
+    count (226). No golden under `tools/golden-gen/goldens` moved.
+
 - **A gate fixture no longer reports a correct result as a failure when `grep -q` finishes before
   `printf`** (GitHub #698, issue #693; #689 was the same defect).
   The fixture harnesses tested a checker's output with `printf '%s\n' "$output" | grep -q …` under
