@@ -432,6 +432,7 @@ dependencies = [
  "oce-replay",
  "schemars",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

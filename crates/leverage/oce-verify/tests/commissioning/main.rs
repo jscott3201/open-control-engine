@@ -11,6 +11,8 @@ mod support;
 
 mod building_33_day;
 mod building_33_openmodelica;
+mod building_33_openmodelica_frames;
+mod building_33_openmodelica_reenable;
 mod building_33_transcription;
 mod canonical_form;
 mod closed_objects;

@@ -202,8 +202,12 @@ Stating this plainly is more useful than a feature list.
   `CDL.Logical.Nand` has one exhaustive Boolean case, `CDL.Logical.Toggle` has one stateful Boolean
   event schedule, and `CDL.Reals.Line` has one finite matrix covering four limit modes and five
   input regions. One composed G36 Reliefs leaf has a seven-state exact-bit case at its declared
-  outputs. No complete G36 sequence or general numeric tolerance has been checked that way, and the
-  global Tier-3 report remains skipped —
+  outputs. Beside them, single OpenModelica runs check the event timing of five event-triggered
+  classes exactly (a trigger true at the start, and a later rising edge) and the resets of the
+  Building 33 valve sequence on synthetic frames; where a pulse is true on two consecutive frames
+  they found the engine applying one event and Modelica two (issue #800, open). No complete G36
+  sequence or general numeric tolerance has been checked that way, and the global Tier-3 report
+  remains skipped —
   [read the full accounting](docs/verification-evidence.md).
 - **`CDL.Logical.Pre` is a host-tick delay, not Modelica event iteration.** Under the fixed
   [HostTick v1 profile](docs/execution-profile.md), every successful `Engine::execute_frame` call advances
