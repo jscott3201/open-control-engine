@@ -10,14 +10,6 @@ use super::block_subject_of;
 use super::params_absent::absent_in;
 use super::params_element_names::is_canonical_index;
 
-pub(super) struct RealMatrixRule {
-    pub(super) base: &'static str,
-    pub(super) rows: &'static str,
-    pub(super) default_rows: i64,
-    pub(super) cols: &'static str,
-    pub(super) default_cols: i64,
-}
-
 pub(super) struct TimeTableRule {
     pub(super) base: &'static str,
     pub(super) values: TimeTableValues,
@@ -26,27 +18,19 @@ pub(super) struct TimeTableRule {
     pub(super) extrapolation: Option<&'static str>,
 }
 
+/// `MatrixGain.K` and any matrix whose shape its cells set (issue #773): each bound cell named
+/// `<base>_<row>_<col>` with positive indices and a numeric value, and together filling the
+/// rectangle their largest row and column span, at most [`MAX_RESOLVED_PORT_WIDTH`] cells. No
+/// bound cell is the class's default matrix. The absent cells of an incomplete matrix are one
+/// finding, found from the bound ones (issue #726).
 pub(super) fn check_real_matrix_elements(
     blk: &BlockInstance,
     diags: &mut DiagnosticList,
-    rule: RealMatrixRule,
+    base: &str,
 ) {
-    let (Some(n_row), Some(n_col)) = (
-        integer_param_or_default(&blk.params, rule.rows, rule.default_rows),
-        integer_param_or_default(&blk.params, rule.cols, rule.default_cols),
-    ) else {
-        return;
-    };
-    let (Ok(n_row), Ok(n_col)) = (usize::try_from(n_row), usize::try_from(n_col)) else {
-        return;
-    };
-    if n_row
-        .checked_mul(n_col)
-        .is_none_or(|width| width > MAX_RESOLVED_PORT_WIDTH)
-    {
-        return;
-    }
-    let prefix = format!("{}_", rule.base);
+    let prefix = format!("{base}_");
+    let mut cells = BTreeMap::<(usize, usize), &Value>::new();
+    let (mut n_row, mut n_col) = (0_usize, 0_usize);
     for (name, value) in &blk.params.values {
         let name = name.as_ref();
         let Some(suffix) = name.strip_prefix(&prefix) else {
@@ -57,20 +41,19 @@ pub(super) fn check_real_matrix_elements(
                 blk,
                 diags,
                 format!(
-                    "parameter `{name}` on block `{}` must use one-based `{}_row_col` \
+                    "parameter `{name}` on block `{}` must use one-based `{base}_row_col` \
                      matrix-element naming",
-                    blk.class_iri, rule.base
+                    blk.class_iri
                 ),
             );
             continue;
         };
-        if row == 0 || col == 0 || row > n_row || col > n_col {
+        if row == 0 || col == 0 {
             push_range_error(
                 blk,
                 diags,
                 format!(
-                    "parameter `{name}` on block `{}` is outside resolved matrix shape \
-                     {n_row}x{n_col}",
+                    "parameter `{name}` on block `{}` is outside its matrix: indexes start at 1",
                     blk.class_iri
                 ),
             );
@@ -86,6 +69,46 @@ pub(super) fn check_real_matrix_elements(
                 ),
             );
         }
+        n_row = n_row.max(row);
+        n_col = n_col.max(col);
+        cells.entry((row, col)).or_insert(value);
+    }
+    if cells.is_empty() {
+        return;
+    }
+    let Some(area) = n_row
+        .checked_mul(n_col)
+        .filter(|area| *area <= MAX_RESOLVED_PORT_WIDTH)
+    else {
+        push_range_error(
+            blk,
+            diags,
+            format!(
+                "matrix `{base}` on block `{}` spans {n_row}x{n_col} cells, more than the maximum \
+                 flattened cell count {MAX_RESOLVED_PORT_WIDTH}",
+                blk.class_iri
+            ),
+        );
+        return;
+    };
+    let linear = |(row, col): (usize, usize)| (row - 1) * n_col + col;
+    let absent = absent_in(cells.keys().map(|&cell| linear(cell)), 1, area);
+    let cell_name = |position: usize| {
+        let (row, col) = ((position - 1) / n_col + 1, (position - 1) % n_col + 1);
+        format!("{base}_{row}_{col}")
+    };
+    if absent.count > 0 {
+        push_range_error(
+            blk,
+            diags,
+            format!(
+                "matrix `{base}` on block `{}` sets its shape {n_row}x{n_col} by its cells and \
+                 leaves {} of them unbound: {}",
+                blk.class_iri,
+                absent.count,
+                absent.named(cell_name)
+            ),
+        );
     }
 }
 

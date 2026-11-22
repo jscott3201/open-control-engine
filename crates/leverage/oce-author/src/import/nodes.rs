@@ -2,7 +2,7 @@
 //! property is refused with, relation and attribute access, connector and parameter typing
 //! through the facade's named-type table, and the document's IRI scheme.
 
-use oce_api::{EnumerationClass, EnumerationKind, enumeration};
+use oce_api::{EnumerationClass, EnumerationKind, enumeration_by_iri};
 use serde_json::{Map, Value};
 
 use crate::identifier::check_identifier_syntax;
@@ -492,20 +492,19 @@ pub(super) fn declared_type<'a>(
     }
 }
 
-/// Resolve an `isOfDataType` IRI: an S231 scalar, or a class IRI whose fragment (after its last
-/// `#`) is `Buildings.Controls.OBC.<class path>` of a row the facade table holds. Anything else
-/// is [`Kind::UnknownDatatype`].
+/// Resolve an `isOfDataType` IRI: an S231 scalar, or an IRI whose fragment (after its last `#` or
+/// `/`, the compact `S231:` prefix included) is the canonical class path of a row the facade table
+/// holds, through the engine's own lookup ([`enumeration_by_iri`]; issues #637, #762). So the
+/// CXF-Core `EnumerationType` `S231:Buildings.Controls.OBC.CDL.Types.ZeroTime` and the emitter's
+/// class base both type a parameter, as they do in the engine. Anything else (a bare type name,
+/// another package, another case) is [`Kind::UnknownDatatype`].
 pub(super) fn data_type(id: &str, iri: &str) -> Result<DataType, ImportError> {
     let resolved = match iri {
         "S231:Real" => Some(DataType::Scalar(SignalType::Real)),
         "S231:Integer" => Some(DataType::Scalar(SignalType::Integer)),
         "S231:Boolean" => Some(DataType::Scalar(SignalType::Boolean)),
         "S231:String" => Some(DataType::String),
-        _ => iri
-            .rsplit_once('#')
-            .and_then(|(_, fragment)| fragment.strip_prefix(OBC_PACKAGE))
-            .and_then(enumeration)
-            .map(DataType::Named),
+        _ => enumeration_by_iri(iri.strip_prefix("S231:").unwrap_or(iri)).map(DataType::Named),
     };
     resolved.ok_or_else(|| refuse(id, Kind::UnknownDatatype))
 }

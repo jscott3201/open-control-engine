@@ -111,6 +111,20 @@ fn block_param<'a>(graph: &'a ModelGraph, instance_suffix: &str, name: &str) -> 
         .unwrap_or_else(|| panic!("missing param {name:?} on block {instance_suffix:?}"))
 }
 
+/// Whether the block whose instance IRI ends with `instance_suffix` binds `name` at all.
+fn binds(graph: &ModelGraph, instance_suffix: &str, name: &str) -> bool {
+    graph.blocks.iter().any(|block| {
+        block
+            .instance_iri
+            .as_deref()
+            .is_some_and(|iri| iri.ends_with(instance_suffix))
+            && block
+                .params
+                .values
+                .iter()
+                .any(|(param, _)| param.as_ref() == name)
+    })
+}
 #[test]
 fn source_verified_g36_multizone_vav_outdoor_airflow_sumzone_imports_fixed_group_matrix_variant() {
     let parsed: JsonValue =
@@ -196,8 +210,8 @@ fn source_verified_g36_multizone_vav_outdoor_airflow_sumzone_imports_fixed_group
     }
 
     for suffix in [".groFlo", ".groFlo1", ".groFlo2"] {
-        assert!(block_param(&graph, suffix, "nout").bit_eq(&Value::Integer(2)));
-        assert!(block_param(&graph, suffix, "nin").bit_eq(&Value::Integer(3)));
+        // `MatrixGain`'s counts are `K`'s shape (issue #773): the fixture binds neither.
+        assert!(!binds(&graph, suffix, "nout") && !binds(&graph, suffix, "nin"));
         assert!(
             block_param(&graph, suffix, "K_1_1").bit_eq(&Value::Real(1.0))
                 && block_param(&graph, suffix, "K_1_2").bit_eq(&Value::Real(1.0))
@@ -208,8 +222,8 @@ fn source_verified_g36_multizone_vav_outdoor_airflow_sumzone_imports_fixed_group
             "{suffix} must ground zonGroMat row-major"
         );
     }
-    assert!(block_param(&graph, ".groFlo3", "nout").bit_eq(&Value::Integer(3)));
-    assert!(block_param(&graph, ".groFlo3", "nin").bit_eq(&Value::Integer(2)));
+    // `MatrixGain`'s counts are `K`'s shape (issue #773): the fixture binds neither.
+    assert!(!binds(&graph, ".groFlo3", "nout") && !binds(&graph, ".groFlo3", "nin"));
     assert!(
         block_param(&graph, ".groFlo3", "K_1_1").bit_eq(&Value::Real(1.0))
             && block_param(&graph, ".groFlo3", "K_1_2").bit_eq(&Value::Real(0.0))

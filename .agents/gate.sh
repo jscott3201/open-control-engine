@@ -127,7 +127,7 @@ blob_matrix_artifact() {
   OCE_BLOB_OUT=target/blobs-gate.bin cargo nextest run -p oce-api --locked --profile ci \
     --no-tests=fail -E 'binary(blob_goldens)' &&
     test -s target/blobs-gate.bin &&
-    test "$(wc -c < target/blobs-gate.bin | tr -d ' ')" = 123329
+    test "$(wc -c < target/blobs-gate.bin | tr -d ' ')" = 123098
 }
 
 step_env() {
@@ -494,7 +494,7 @@ if [ "$MODE" = full ]; then
   # nextest cannot run doctests; this step is not optional.
   step 'doctests' cargo test --workspace --doc --locked
   # The determinism cells write the 46 compiled-schedule blobs to OCE_BLOB_OUT as a path relative
-  # to the workspace root, and the determinism-compare fan-in requires each file to be 123329 bytes
+  # to the workspace root, and the determinism-compare fan-in requires each file to be 123098 bytes
   # (the goldens' total). Write it the same way here, so a test that resolves the path wrongly fails
   # locally instead of first in CI (it did once, on the PR that added the blobs).
   step 'compiled-schedule blob matrix artifact' blob_matrix_artifact

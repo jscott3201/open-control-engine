@@ -24,7 +24,7 @@ use std::mem::size_of;
 use allocation_counter::measure;
 use blob_corpus::{FIXTURES, golden};
 use blob_image::{Image, Inst, Out};
-use blob_models::{chain, moving_mean, time_tables};
+use blob_models::{AT_BUDGET_SUMS, chain, moving_mean, sums_then_table, time_tables};
 use oce_api::{BlobError, InstanceField, OcError, inspect_blob};
 use oce_graph::blob::{Summary, SummaryClass, SummaryInstance, decode, inspect};
 use oce_graph::{MAX_CONSTRUCTED_WORDS, MAX_STATE_WORDS};
@@ -189,24 +189,28 @@ fn a_summary_of_a_blob_at_the_state_budget_holds_the_state_the_decoder_allocates
 
 #[test]
 fn a_summary_of_blobs_at_and_past_the_constructed_budget_holds_what_the_decoder_holds() {
-    // Blobs of a few hundred bytes whose blocks hold megabytes by one parameter name each
-    // (issue #700). The verdict is the decoder's, so the summary constructs the blocks, holds
-    // them to the budget and frees them: its peak is the decoder's, bounded by the budget.
+    // Blobs whose shape-valid blocks hold the budget (issue #700; issue #772 refuses the lone
+    // table corner cells that once sized megabytes from one parameter name, see the case below).
+    // The verdict is the decoder's, so the summary constructs the blocks, holds them to the
+    // budget and frees them: its peak is the decoder's, bounded by the budget.
     let budget = 8 * MAX_CONSTRUCTED_WORDS as u64;
-    let at_budget = time_tables(&["table_524287_2"; 4]).to_bytes();
-    assert_eq!(at_budget.len(), 403);
-    let past = time_tables(&["table_524288_2"; 64]).to_bytes();
-    assert_eq!(past.len(), 4_003);
+    let at_budget = sums_then_table(&AT_BUDGET_SUMS, false).to_bytes();
+    let past = sums_then_table(&AT_BUDGET_SUMS, true).to_bytes();
     for (what, bytes, verdict, lists_bytes) in [
-        ("at the constructed budget", &at_budget, None, 104),
+        (
+            "at the constructed budget",
+            &at_budget,
+            None,
+            LISTS_AT_BUDGET,
+        ),
         (
             "past the constructed budget",
             &past,
             Some(BlobError::ConstructedTooLarge {
-                block: 3,
-                requested: MAX_CONSTRUCTED_WORDS as u64 + 8,
+                block: 4,
+                requested: MAX_CONSTRUCTED_WORDS as u64 + 4,
             }),
-            1_304,
+            LISTS_PAST_BUDGET,
         ),
     ] {
         let (_, _, refusal) = core_cost_is_the_decoders_then_the_lists(bytes, what);
@@ -234,6 +238,34 @@ fn a_summary_of_blobs_at_and_past_the_constructed_budget_holds_what_the_decoder_
             "{what}: the facade's verdict"
         );
     }
+}
+
+/// The bytes the summary's lists hold for the at-budget sums (classes, instances, one input).
+const LISTS_AT_BUDGET: u64 = 120;
+/// The same with the crossing table, refused.
+const LISTS_PAST_BUDGET: u64 = 164;
+
+#[test]
+fn a_summary_of_lone_table_corners_is_refused_before_any_table_is_built() {
+    // The shape of issue #700: one parameter name per block sizing a megabyte table. Since issue
+    // #772 the decoder refuses the first such block before building it, and the summary with it.
+    let past = time_tables(&["table_524288_2"; 64]).to_bytes();
+    assert_eq!(past.len(), 4_003);
+    let refusal = BlobError::ElementOutsideShape {
+        block: 0,
+        parameter: 0,
+    };
+    let (_, _, verdict) = core_cost_is_the_decoders_then_the_lists(&past, "lone corners");
+    assert_eq!(verdict, Some(refusal));
+    let info = measure(|| {
+        let _ = inspect(&past);
+    });
+    assert!(
+        info.bytes_max <= 64 * past.len() as u64,
+        "peak {} bytes for a 4,003-byte blob",
+        info.bytes_max
+    );
+    assert_eq!(inspect_blob(&past).unwrap().decode_refusal, Some(refusal));
 }
 
 /// Zero allocations in the core reader and in the facade for `bytes`, which both refuse with

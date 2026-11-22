@@ -64,10 +64,11 @@ use crate::scope_chain::{IndexedEntries, ScopeFrame};
 use oce_diag::DiagnosticList;
 
 use super::composite_rules::{ARRAY_PARAMETER, DECLARATION_CYCLE, DUPLICATE_DECLARATION};
+use super::enumeration_parameters::validate_enumeration_parameter_value;
 use super::local_name;
 use super::parameter_attrs::CheckedParameters;
 use super::real_parameters::hold_in_declared_type;
-use super::specialize::{Specialization, validate_g36_parameter_value};
+use super::specialize::Specialization;
 
 /// Which import pass is invoking the shared own-declaration evaluation.
 ///
@@ -493,7 +494,7 @@ fn evaluate_one(
             grounded,
         };
         if let Pass::Lowering { diags, .. } = pass {
-            validate_g36_parameter_value(pnode, cxf_val, &scope, diags);
+            validate_enumeration_parameter_value(pnode, cxf_val, &scope, diags);
         }
         ground_param_value(cxf_val, &scope)
     };

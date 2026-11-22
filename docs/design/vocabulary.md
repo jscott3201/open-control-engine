@@ -70,8 +70,8 @@ CDL.Reals.Hysteresis  u    RealInput   "Input to be compared against hysteresis 
 Its known defects, each handled below: class nodes carry no one-line description; `discrete`
 connectors (`CalendarTime.year`, `.month`) lose their `@type` and drop out of `hasOutput`;
 enumeration parameters (`PID.controllerType`, `CalendarTime.zerTim`) lose theirs and drop out of
-`hasParameter`; protected parameters (`MatrixGain.nin`, `.nout`, which the catalog lists as derived)
-are absent; units become QUDT identifiers through a table that is one-to-one for the units this
+`hasParameter`; protected parameters (`MatrixGain.nin`, `.nout`) are absent, and since issue #773
+the catalog does not list them either (`MatrixGain`'s counts are `K`'s shape); units become QUDT identifiers through a table that is one-to-one for the units this
 cone declares but lossy for quantities (`PressureDifference` becomes `Pressure`), and an unmapped
 unit is written as `S231:1/s`. The file modelica-json ships at its own root is from a different
 Buildings commit and differs from the regeneration.
@@ -86,7 +86,7 @@ catalog's names (not CXF-Core's relation lists) over the regenerated CXF-Core:
 | Classes | 133 | 132 | `Logical.TrueHoldWithReset` (absent from current Buildings; its one-liner is engine-written) |
 | Named ports (105 named classes) | 265 | 262 | `TrueHoldWithReset.u`, `.clr`, `.y` |
 | Vector or positional connectors (28 classes) | 57 connectors | 57 | none; 42 are arrays |
-| Parameters (catalog names, templates by base name) | 189 | 186 | `TrueHoldWithReset.duration`, `MatrixGain.nin`, `.nout` |
+| Parameters (catalog names, templates by base name) | 187 | 186 | `TrueHoldWithReset.duration` (189 and `MatrixGain.nin`, `.nout` before issue #773) |
 | Declared units | — | 21 ports and 52 parameters in 39 classes | `s`, `rad`, `1`, `K`, `1/s`, `Hz`, `J/kg`, `Pa` |
 | Declared quantities | — | 11 ports, 41 parameters | `Time`, `Angle`, `ThermodynamicTemperature`, `Frequency`, `SpecificEnergy`, `Pressure` |
 | Buildings link | — | 132 | `TrueHoldWithReset` |

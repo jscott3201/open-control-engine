@@ -8,14 +8,14 @@
 //! `serde_json` reads it, an Integer on a Real connector with `as f64`. A bound is therefore bit
 //! for bit the engine's `InputDefinition` bound.
 
-use oce_api::{EnumerationClass, EnumerationKind, enumeration};
+use oce_api::{EnumerationClass, EnumerationKind, enumeration_by_path};
 use serde_json::{Map, Value};
 
 use crate::identifier::Identifier;
 use crate::model::{Assignment, Bound, Literal, MemberRef, ParamValue, ParameterType, SignalType};
 
 use super::error::{ImportError, ImportErrorKind as Kind};
-use super::nodes::{DataType, OBC_PACKAGE, data_type, declared_type, refuse};
+use super::nodes::{DataType, data_type, declared_type, refuse};
 
 /// The XML Schema datatypes a Real typed literal may carry.
 const REAL_TYPES: [&str; 3] = [
@@ -90,10 +90,12 @@ pub(super) fn literal(
     }
 }
 
-/// A full member path `Buildings.Controls.OBC.<class path>.<member>` resolved through the facade
-/// table: the authored [`MemberRef`] and its row. `Ok(None)` when `text` is no member path (does
-/// not start with `Buildings.`); [`Kind::UnknownMemberType`] when the table lacks its type. A
-/// member the row does not have is carried for the validator (`unknown-enum-literal`).
+/// A full member path `Buildings.Controls.OBC.<class path>.<member>` resolved through the facade's
+/// canonical lookup, [`enumeration_by_path`] (the engine's one identity, issue #762): the authored
+/// [`MemberRef`] and its row. `Ok(None)` when `text` is no member path (does not start with
+/// `Buildings.`); [`Kind::UnknownMemberType`] when the text before its last `.` is no row's
+/// canonical path. A member the row does not have is carried for the validator
+/// (`unknown-enum-literal`).
 pub(super) fn member_path(
     subject: &str,
     text: &str,
@@ -102,11 +104,8 @@ pub(super) fn member_path(
         return Ok(None);
     }
     let unknown = || refuse(subject, Kind::UnknownMemberType);
-    let (class_path, member) = text
-        .strip_prefix(OBC_PACKAGE)
-        .and_then(|path| path.rsplit_once('.'))
-        .ok_or_else(unknown)?;
-    let row = enumeration(class_path).ok_or_else(unknown)?;
+    let (class_path, member) = text.rsplit_once('.').ok_or_else(unknown)?;
+    let row = enumeration_by_path(class_path).ok_or_else(unknown)?;
     if member.is_empty() {
         return Err(unknown());
     }

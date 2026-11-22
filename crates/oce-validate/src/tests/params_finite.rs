@@ -88,8 +88,6 @@ fn every_non_finite_array_element_is_refused_in_declaration_order_with_a_pinned_
         &[ValueType::Real, ValueType::Real],
         &[ValueType::Real, ValueType::Real],
         vec![
-            (Arc::from("nout"), Value::Integer(2)),
-            (Arc::from("nin"), Value::Integer(2)),
             rp("K_1_1", 1.0),
             rp("K_1_2", 0.0),
             rp("K_2_1", f64::NEG_INFINITY),

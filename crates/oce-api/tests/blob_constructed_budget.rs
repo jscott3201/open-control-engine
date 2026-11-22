@@ -17,26 +17,26 @@ use crate::blob_models;
 use crate::blob_summary_facts;
 
 use blob_image::{Image, Val};
-use blob_models::{class, moving_mean, time_table_words, time_tables};
+use blob_models::{
+    AT_BUDGET_SUMS, REAL_MULTI_SUM, class, moving_mean, multi_sum_words, sums_then_table,
+    time_table_words,
+};
 use blob_summary_facts::{Facts, summarise_with_refusal};
 use oce_api::{BlobError, InstanceField, OcError, inspect_blob};
 use oce_graph::blob::{ConnectorFault, Executable, MalformedFault, decode};
 use oce_graph::{MAX_CONSTRUCTED_WORDS, MAX_STATE_WORDS};
 
-/// A table of 524,287 rows reports 1,048,576 words: four of them are exactly the budget.
-const QUARTER_BUDGET: &str = "table_524287_2";
-/// The smallest table: four words.
-const SMALLEST: &str = "table_1_2";
-
-/// Four quarter-budget tables and a fifth, smallest one that crosses the budget at block 4.
+/// Four `MultiSum` blocks holding exactly the budget (`AT_BUDGET_SUMS`) and a fifth block, a
+/// complete one-row table of four words, that crosses it at block 4. Every block is shape-valid:
+/// since issue #772 the decoder refuses a lone table corner cell before it builds the block, so
+/// the budget is reached by blocks a valid blob can hold (built here, never a tracked file).
 fn one_block_past_the_budget() -> Image {
-    time_tables(&[
-        QUARTER_BUDGET,
-        QUARTER_BUDGET,
-        QUARTER_BUDGET,
-        QUARTER_BUDGET,
-        SMALLEST,
-    ])
+    sums_then_table(&AT_BUDGET_SUMS, true)
+}
+
+/// The same five blocks, each sum one input wide: the faults below in a blob within the budget.
+fn within_the_budget() -> Image {
+    sums_then_table(&[1, 1, 1, 1], true)
 }
 
 /// The refusal of [`one_block_past_the_budget`].
@@ -54,13 +54,13 @@ type Fault<'a> = &'a dyn Fn(&mut Image);
 
 #[test]
 fn the_fixture_is_one_block_past_a_blob_that_decodes() {
-    assert_eq!(4 * time_table_words(524_287), MAX_CONSTRUCTED_WORDS as u64);
+    let held: u64 = AT_BUDGET_SUMS
+        .iter()
+        .map(|&width| multi_sum_words(u64::from(width)))
+        .sum();
+    assert_eq!(held, MAX_CONSTRUCTED_WORDS as u64);
     assert_eq!(time_table_words(1), 4);
-    let mut at_budget = one_block_past_the_budget();
-    at_budget.instances.pop();
-    at_budget.schedule.pop();
-    at_budget.connectors = 4;
-    assert_eq!(refusal(&at_budget), None);
+    assert_eq!(refusal(&sums_then_table(&AT_BUDGET_SUMS, false)), None);
     assert_eq!(
         refusal(&one_block_past_the_budget()),
         Some(CROSSED_AT_BLOCK_4)
@@ -78,13 +78,14 @@ fn the_constructed_refusal_wins_over_every_fault_of_the_crossing_block_checked_a
             image.instances[4].state_crc = 1;
         }),
         ("an input it does not have", &|image| {
-            image.instances[4].inputs = vec![4];
-            image.instances[4].outputs = vec![5];
-            image.connectors = 6;
+            let next = image.connectors;
+            image.instances[4].inputs = vec![next];
+            image.instances[4].outputs = vec![next + 1];
+            image.connectors = next + 2;
         }),
         ("no outputs", &|image| image.instances[4].outputs.clear()),
         ("a connector out of range", &|image| {
-            image.instances[4].outputs = vec![99];
+            image.instances[4].outputs = vec![image.connectors + 99];
         }),
         ("a connector another block claimed", &|image| {
             image.instances[4].outputs = vec![0];
@@ -96,7 +97,7 @@ fn the_constructed_refusal_wins_over_every_fault_of_the_crossing_block_checked_a
         assert_eq!(refusal(&image), Some(CROSSED_AT_BLOCK_4), "{what}");
 
         // The same fault in a blob within the budget is the refusal that fault names.
-        let mut within = time_tables(&[SMALLEST; 5]);
+        let mut within = within_the_budget();
         fault(&mut within);
         let named = refusal(&within).unwrap_or_else(|| panic!("{what}: decodes"));
         assert!(
@@ -111,6 +112,9 @@ fn the_constructed_refusal_wins_over_every_fault_of_the_crossing_block_checked_a
 
 #[test]
 fn the_constructed_refusal_wins_over_every_later_block_and_step() {
+    // The connector ids a fault names are past the image's own count, whichever image it is.
+    let past = |image: &Image, by: u32| image.connectors + by;
+    let within_connectors = within_the_budget().connectors;
     let faults: [(&str, Fault<'_>, BlobError); 7] = [
         (
             "a later block with the wrong arity",
@@ -128,7 +132,7 @@ fn the_constructed_refusal_wins_over_every_later_block_and_step() {
             &|image| {
                 image.classes.insert(0, class("CDL.Reals.Abs"));
                 for instance in &mut image.instances {
-                    instance.class = 1;
+                    instance.class += 1;
                 }
             },
             BlobError::UnusedClass { class: 0 },
@@ -137,13 +141,13 @@ fn the_constructed_refusal_wins_over_every_later_block_and_step() {
             "a connector no block claims",
             &|image| image.connectors += 1,
             BlobError::InvalidConnector {
-                connector: 5,
+                connector: within_connectors,
                 fault: ConnectorFault::Missing,
             },
         ),
         (
             "a boundary output read from a connector that does not exist",
-            &|image| image.outputs = vec![blob_models::out("urn:test:y", 77)],
+            &|image| image.outputs = vec![blob_models::out("urn:test:y", past(image, 77))],
             BlobError::InvalidOutput {
                 output: 0,
                 fault: oce_graph::blob::OutputFault::SourceOutOfRange,
@@ -151,7 +155,7 @@ fn the_constructed_refusal_wins_over_every_later_block_and_step() {
         ),
         (
             "a connection between connectors that do not exist",
-            &|image| image.connections = vec![(70, 71)],
+            &|image| image.connections = vec![(past(image, 70), past(image, 71))],
             BlobError::InvalidConnection {
                 connection: 0,
                 fault: oce_graph::blob::ConnectionFault::OutOfRange,
@@ -180,26 +184,36 @@ fn the_constructed_refusal_wins_over_every_later_block_and_step() {
         assert_eq!(refusal(&image), Some(CROSSED_AT_BLOCK_4), "{what}");
 
         // The same fault in a blob within the budget is the refusal that fault names.
-        let mut within = time_tables(&[SMALLEST; 5]);
+        let mut within = within_the_budget();
         fault(&mut within);
         assert_eq!(refusal(&within), Some(named), "{what}");
     }
 }
 
-/// `tables` beside one moving mean (block 0) whose window is one word past the state budget.
-fn tables_after_a_state_region_past_its_budget(tables: &[&str]) -> Image {
+/// `blocks` behind one moving mean (block 0) whose window is one word past the state budget: the
+/// mean takes connectors 0 to 2, so every connector of `blocks` moves up by three.
+fn blocks_after_a_state_region_past_its_budget(mut image: Image) -> Image {
     let window = i64::try_from(MAX_STATE_WORDS).unwrap() - 3;
     let mean = moving_mean(window);
-    let mut image = time_tables(tables);
-    image.classes = vec![mean.classes[0].clone(), image.classes[0].clone()];
+    // The class table is in canonical (path) order: the moving mean's `CDL.Discrete…` first.
+    image.classes.insert(0, mean.classes[0].clone());
     for instance in &mut image.instances {
-        instance.class = 1;
-        instance.outputs[0] += 3;
+        instance.class += 1;
+        for connector in instance.inputs.iter_mut().chain(&mut instance.outputs) {
+            *connector += 3;
+        }
     }
-    image.instances.insert(0, mean.instances[0].clone());
+    for input in &mut image.inputs {
+        for target in &mut input.targets {
+            *target += 3;
+        }
+    }
+    let mut first = mean.instances[0].clone();
+    first.class = 0;
+    image.instances.insert(0, first);
     image.connectors += 3;
     image.schedule = (0..u32::try_from(image.instances.len()).unwrap()).collect();
-    image.inputs = mean.inputs;
+    image.inputs.extend(mean.inputs);
     image
 }
 
@@ -211,16 +225,10 @@ fn the_constructed_refusal_wins_over_the_state_budget_even_for_an_earlier_block(
         block: 0,
         requested: MAX_STATE_WORDS as u64 + 1,
     };
-    let within = tables_after_a_state_region_past_its_budget(&[SMALLEST; 5]);
+    let within = blocks_after_a_state_region_past_its_budget(within_the_budget());
     assert_eq!(refusal(&within), Some(state_refusal));
 
-    let past = tables_after_a_state_region_past_its_budget(&[
-        QUARTER_BUDGET,
-        QUARTER_BUDGET,
-        QUARTER_BUDGET,
-        QUARTER_BUDGET,
-        SMALLEST,
-    ]);
+    let past = blocks_after_a_state_region_past_its_budget(one_block_past_the_budget());
     assert_eq!(
         refusal(&past),
         Some(BlobError::ConstructedTooLarge {
@@ -232,7 +240,7 @@ fn the_constructed_refusal_wins_over_the_state_budget_even_for_an_earlier_block(
 
 #[test]
 fn a_fault_met_before_the_crossing_block_is_constructed_wins_over_the_constructed_refusal() {
-    let faults: [(&str, Fault<'_>, BlobError); 8] = [
+    let faults: [(&str, Fault<'_>, BlobError); 9] = [
         (
             "reserved flags",
             &|image| image.flags = 1,
@@ -243,8 +251,8 @@ fn a_fault_met_before_the_crossing_block_is_constructed_wins_over_the_constructe
             &|image| image.classes[0].1 ^= 1,
             BlobError::ClassSignatureMismatch {
                 class: 0,
-                expected: class(blob_models::REAL_TIME_TABLE).1,
-                found: class(blob_models::REAL_TIME_TABLE).1 ^ 1,
+                expected: class(REAL_MULTI_SUM).1,
+                found: class(REAL_MULTI_SUM).1 ^ 1,
             },
         ),
         (
@@ -273,7 +281,19 @@ fn a_fault_met_before_the_crossing_block_is_constructed_wins_over_the_constructe
             },
             BlobError::DuplicateParameter {
                 block: 4,
-                parameter: 1,
+                parameter: 2,
+            },
+        ),
+        (
+            "a table cell outside the crossing block's shape (issue #772)",
+            &|image| {
+                image.instances[4]
+                    .params
+                    .push((b"table_2_2".to_vec(), Val::real(9.0)));
+            },
+            BlobError::ElementOutsideShape {
+                block: 4,
+                parameter: 2,
             },
         ),
         (
@@ -356,7 +376,7 @@ fn every_reader_of_a_blob_reports_the_decoders_constructed_refusal() {
     );
 
     // At the budget every reader accepts.
-    let at_budget = time_tables(&[QUARTER_BUDGET; 4]).to_bytes();
+    let at_budget = sums_then_table(&AT_BUDGET_SUMS, false).to_bytes();
     assert_eq!(summarise_with_refusal(&at_budget).unwrap().1, None);
     assert_eq!(inspect_blob(&at_budget).unwrap().decode_refusal, None);
     let executable = Executable::from_blob(&at_budget).expect("decodes at the budget");

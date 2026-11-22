@@ -38,6 +38,7 @@ mod render;
 // `resolve_unread_qudt_has_unit`).
 mod unit_documents;
 
+mod canonical_enumeration_paths;
 mod export_cascade_naming;
 mod export_declared_output_attrs;
 mod export_deferral;

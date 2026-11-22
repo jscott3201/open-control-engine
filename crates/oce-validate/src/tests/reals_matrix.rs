@@ -8,14 +8,15 @@ fn reals_matrix_gain_resolved_signature_accepts_matrix_dimensions() {
         "CDL.Reals.MatrixGain",
         &[ValueType::Real, ValueType::Real, ValueType::Real],
         &[ValueType::Real, ValueType::Real],
-        vec![
-            (Arc::from("nout"), Value::Integer(2)),
-            (Arc::from("nin"), Value::Integer(3)),
-        ],
+        // `K`'s cells set its shape (issue #773): 2 rows, 3 columns.
+        (1..=2)
+            .flat_map(|row| (1..=3).map(move |col| (row, col)))
+            .map(|(row, col)| (Arc::from(format!("K_{row}_{col}")), Value::Real(1.0)))
+            .collect(),
     );
     assert!(
         validate(&m)
-            .expect("MatrixGain nout=2,nin=3 resolves 3 inputs and 2 outputs")
+            .expect("MatrixGain with a 2x3 K resolves 3 inputs and 2 outputs")
             .is_empty()
     );
 }
@@ -82,10 +83,14 @@ fn reals_matrix_gain_rejects_bad_defaulted_and_malformed_cells() {
         "CDL.Reals.MatrixGain",
         &[ValueType::Real, ValueType::Real],
         &[ValueType::Real, ValueType::Real],
-        vec![(Arc::from("K_1_2"), Value::Boolean(true))],
+        vec![
+            (Arc::from("K_1_1"), Value::Real(1.0)),
+            (Arc::from("K_1_2"), Value::Boolean(true)),
+            (Arc::from("K_2_1"), Value::Real(0.0)),
+            (Arc::from("K_2_2"), Value::Real(1.0)),
+        ],
     );
-    let err =
-        validate(&bad_default_cell).expect_err("default 2x2 MatrixGain still validates K cells");
+    let err = validate(&bad_default_cell).expect_err("a 2x2 MatrixGain validates its K cells");
     assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
     assert!(err.diagnostics[0].message.contains("`K_1_2`"));
 
@@ -94,34 +99,33 @@ fn reals_matrix_gain_rejects_bad_defaulted_and_malformed_cells() {
         &[ValueType::Real, ValueType::Real],
         &[ValueType::Real, ValueType::Real],
         vec![
-            (Arc::from("nout"), Value::Integer(2)),
-            (Arc::from("nin"), Value::Integer(2)),
+            (Arc::from("K_1_1"), Value::Real(1.0)),
+            (Arc::from("K_1_2"), Value::Real(0.0)),
+            (Arc::from("K_2_1"), Value::Real(0.0)),
+            (Arc::from("K_2_2"), Value::Real(1.0)),
             (Arc::from("K_1"), Value::Real(1.0)),
             (Arc::from("K_1_2_3"), Value::Real(1.0)),
             (Arc::from("K_0_1"), Value::Real(1.0)),
-            (Arc::from("K_3_1"), Value::Real(1.0)),
         ],
     );
-    let err = validate(&malformed_cells).expect_err("malformed and out-of-shape K names must fail");
+    let err = validate(&malformed_cells).expect_err("malformed and index-0 K names must fail");
     assert_eq!(
         codes(&err.diagnostics),
         vec![
             DiagCode::ParameterOutOfRange,
             DiagCode::ParameterOutOfRange,
             DiagCode::ParameterOutOfRange,
-            DiagCode::ParameterOutOfRange,
         ]
     );
-    assert!(
-        err.diagnostics
-            .iter()
-            .any(|diag| diag.message.contains("`K_1`"))
-    );
-    assert!(
-        err.diagnostics
-            .iter()
-            .any(|diag| diag.message.contains("`K_3_1`"))
-    );
+    for name in ["`K_1`", "`K_1_2_3`", "`K_0_1`"] {
+        assert!(
+            err.diagnostics
+                .iter()
+                .any(|diag| diag.message.contains(name)),
+            "{name}: {:?}",
+            err.diagnostics
+        );
+    }
 }
 
 #[test]

@@ -195,5 +195,6 @@ fn no_class_chains_more_than_two_parameters_through_its_rules() {
         at_longest.contains(&"CDL.Reals.Hysteresis"),
         "{at_longest:?}"
     );
-    assert_eq!(at_longest.len(), 14, "{at_longest:?}");
+    // 13 since issue #773: `MatrixGain`'s `nout * nin` bound went with its `nin`/`nout`.
+    assert_eq!(at_longest.len(), 13, "{at_longest:?}");
 }

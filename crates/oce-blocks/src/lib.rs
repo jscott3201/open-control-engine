@@ -51,6 +51,7 @@ mod class_metadata;
 mod class_signature;
 mod constructed;
 mod declared_parameters;
+mod element_extents;
 pub use catalog_rules::ParamRuleProjection;
 pub use class_signature::{class_is_target_bound, class_signature_hash};
 pub use constructed::MAX_CONSTRUCTION_PEAK_BYTES;
@@ -99,6 +100,7 @@ pub use declared_parameters::{
     MAX_COMPARED_NAME_BYTES, MAX_SUGGESTION_DISTANCE, declares_parameter,
     nearest_declared_parameter, spells_array_element,
 };
+pub use element_extents::{BoundCells, bound_cells, element_outside_extent};
 pub use param_kinds::{
     MAX_EXACT_INTEGER_AS_REAL, ParameterKindFault, admits_parameter_value, exact_real,
     parameter_kind_fault, parameter_kind_is_ruled,
@@ -596,21 +598,20 @@ pub enum ParamRule {
         /// Integer parameter carrying the resolved array length.
         len: &'static str,
     },
-    /// Present members of a flattened two-dimensional Real matrix parameter must be numeric values.
+    /// A flattened two-dimensional Real matrix parameter whose shape its cells set
+    /// (`MatrixGain.K[:, :]`, with `nout = size(K, 1)` and `nin = size(K, 2)` protected upstream;
+    /// issue #773): the bound cells must fill the rectangle their largest row and column span,
+    /// each a numeric value, at most [`MAX_RESOLVED_PORT_WIDTH`] cells. A matrix with no bound
+    /// cell is the class's default, `default_rows × default_cols`.
     ///
     /// Flattened CXF names use one-based row-major keys such as `K_1_1`, `K_1_2`, `K_2_1`, ...
-    /// Sparse matrices are allowed only where the source block defines defaults for omitted
-    /// members. Supplied members accept CDL integer-to-real promotion.
+    /// Supplied members accept CDL integer-to-real promotion.
     RealMatrixElements {
         /// Flattened matrix base name, for example `"K"` matching `K_1_1`, ...
         base: &'static str,
-        /// Integer parameter carrying the resolved row count.
-        rows: &'static str,
-        /// Source default row count when `rows` is omitted.
+        /// The default matrix's row count, when no cell is bound.
         default_rows: i64,
-        /// Integer parameter carrying the resolved column count.
-        cols: &'static str,
-        /// Source default column count when `cols` is omitted.
+        /// The default matrix's column count, when no cell is bound.
         default_cols: i64,
     },
     /// Flattened source `TimeTable` matrix elements must form a complete rectangular table.

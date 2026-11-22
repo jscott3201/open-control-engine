@@ -1,8 +1,6 @@
 blocks: 15
   B0 decl=0 class=CDL.Reals.MatrixGain instance_iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo")
     inputs=[0, 1, 2] outputs=[3, 4]
-    param nout=Integer(2)
-    param nin=Integer(3)
     param K_1_1=Real(0x3ff0000000000000)
     param K_1_2=Real(0x3ff0000000000000)
     param K_1_3=Real(0x0000000000000000)
@@ -11,8 +9,6 @@ blocks: 15
     param K_2_3=Real(0x3ff0000000000000)
   B1 decl=1 class=CDL.Reals.MatrixGain instance_iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1")
     inputs=[5, 6, 7] outputs=[8, 9]
-    param nout=Integer(2)
-    param nin=Integer(3)
     param K_1_1=Real(0x3ff0000000000000)
     param K_1_2=Real(0x3ff0000000000000)
     param K_1_3=Real(0x0000000000000000)

@@ -1,8 +1,6 @@
 blocks: 226
   B0 decl=0 class=CDL.Reals.MatrixGain instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel")
     inputs=[0, 1] outputs=[2, 3, 4, 5]
-    param nout=Integer(4)
-    param nin=Integer(2)
     param K_1_1=Real(0x3ff0000000000000)
     param K_1_2=Real(0x0000000000000000)
     param K_2_1=Real(0x3ff0000000000000)

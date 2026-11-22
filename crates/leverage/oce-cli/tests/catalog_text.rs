@@ -203,9 +203,10 @@ fn the_text_of_every_class_is_exactly_what_its_json_says() {
     // the `TimeTable` sources' `timeScale` and `period`).
     assert_eq!(port_units, (21, 11));
     assert_eq!(parameter_units, (47, 39));
-    // 96 of the 101 parameters with a range, all 13 notes, and the four classes without links
-    // (the three reserved identities and `TrueHoldWithReset`).
-    assert_eq!((ranges, notes, unlinked), (96, 13, 4));
+    // 94 of the 99 parameters with a range (96 of 101 before issue #773 removed `MatrixGain`'s
+    // ranged `nin` and `nout`), all 13 notes, and the four classes without links (the three
+    // reserved identities and `TrueHoldWithReset`).
+    assert_eq!((ranges, notes, unlinked), (94, 13, 4));
 }
 
 #[test]

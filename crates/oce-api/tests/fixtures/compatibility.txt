@@ -1,6 +1,6 @@
 oce-compatibility:1
 catalog-schema:1
-catalog:catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892
+catalog:catalog:1:fnv1a128:792b6a02de93b1fce53441d22c1aafab
 io-schema:1
 value-schema:1
 parameter-schema:1

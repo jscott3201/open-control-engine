@@ -207,25 +207,98 @@ pub(crate) fn time_tables(cells: &[&str]) -> Image {
     image
 }
 
-/// One `CDL.Reals.MatrixGain` of `nin` by `nout` with no `K` cell bound (the identity), every
-/// input a target of one boundary input.
-pub(crate) fn dense_matrix_gain(nin: u32, nout: u32) -> Image {
+/// One `CDL.Reals.MatrixGain` whose only `K` cell is the corner `K_<rows>_<cols>`, its `rows`
+/// outputs and `cols` inputs listed: before issue #772 the corner alone sized a `rows x cols`
+/// matrix of identity gains from one record; it is now refused before the block is built.
+pub(crate) fn lone_gain_corner(rows: u32, cols: u32) -> Image {
     let mut image = Image::new();
     image.classes = vec![class("CDL.Reals.MatrixGain")];
-    image.connectors = nin + nout;
+    image.connectors = cols + rows;
     image.instances = vec![Inst {
         class: 0,
         kind: 0,
         state_len: 0,
         state_crc: 0,
-        inputs: (0..nin).collect(),
-        outputs: (nin..nin + nout).collect(),
-        params: vec![
-            (b"nout".to_vec(), Val::Integer(i64::from(nout))),
-            (b"nin".to_vec(), Val::Integer(i64::from(nin))),
-        ],
+        inputs: (0..cols).collect(),
+        outputs: (cols..cols + rows).collect(),
+        params: vec![(format!("K_{rows}_{cols}").into_bytes(), Val::real(1.0))],
     }];
     image.schedule = vec![0];
-    image.inputs = vec![input("urn:t:u", VType::Real, &(0..nin).collect::<Vec<_>>())];
+    image.inputs = vec![input(
+        "urn:t:u",
+        VType::Real,
+        &(0..cols).collect::<Vec<_>>(),
+    )];
     image
 }
+
+/// The class whose blocks hold most words per connector among the classes a scalar parameter
+/// sizes: `nin` gains and `nin` input kinds behind `nin + 1` connectors.
+pub(crate) const REAL_MULTI_SUM: &str = "CDL.Reals.MultiSum";
+
+/// What a `CDL.Reals.MultiSum` of `nin` inputs reports as constructed words: its `nin` gains and
+/// its `nin` input kinds, eight to a word.
+pub(crate) fn multi_sum_words(nin: u64) -> u64 {
+    nin + nin.div_ceil(8)
+}
+
+/// The widest `MultiSum` (`nin = 2^20`, `MAX_RESOLVED_PORT_WIDTH`): 1,179,648 words.
+pub(crate) const WIDEST_SUM: u32 = 1 << 20;
+
+/// A `MultiSum` width that tops three [`WIDEST_SUM`] blocks up to exactly the constructed budget:
+/// `3 x 1,179,648 + 655,360 = 2^22` words.
+pub(crate) const BUDGET_TOP_UP_SUM: u32 = 582_542;
+
+/// Blocks that are shape-valid, as every blob the engine writes is (issue #772: the decoder
+/// refuses an element outside its class's shape before it builds the block, so a lone table
+/// corner cell no longer sizes a block). One `CDL.Reals.MultiSum` per entry of `widths`, `nin` set
+/// to it and every input a target of the one Real boundary input, then one complete one-row
+/// `CDL.Reals.Sources.TimeTable` (`table_1_1`, `table_1_2`: four words) when `table` is set; every
+/// block scheduled in id order. The connectors are numbered block by block: each sum's inputs then
+/// its output, then the table's output. Built in the test, never a tracked file.
+pub(crate) fn sums_then_table(widths: &[u32], table: bool) -> Image {
+    let mut image = Image::new();
+    image.classes = vec![class(REAL_MULTI_SUM)];
+    let mut next = 0u32;
+    let mut targets = Vec::new();
+    for &width in widths {
+        let inputs: Vec<u32> = (next..next + width).collect();
+        targets.extend_from_slice(&inputs);
+        image.instances.push(Inst {
+            class: 0,
+            kind: 0,
+            state_len: 0,
+            state_crc: 0,
+            inputs,
+            outputs: vec![next + width],
+            params: vec![(b"nin".to_vec(), Val::Integer(i64::from(width)))],
+        });
+        next += width + 1;
+    }
+    if table {
+        image.classes.push(class(REAL_TIME_TABLE));
+        image.instances.push(Inst {
+            class: 1,
+            kind: 0,
+            state_len: 0,
+            state_crc: 0,
+            inputs: Vec::new(),
+            outputs: vec![next],
+            params: vec![
+                (b"table_1_1".to_vec(), Val::real(0.0)),
+                (b"table_1_2".to_vec(), Val::real(0.0)),
+            ],
+        });
+        next += 1;
+    }
+    image.connectors = next;
+    image.schedule = (0..u32::try_from(image.instances.len()).unwrap()).collect();
+    if !targets.is_empty() {
+        image.inputs = vec![input("urn:t:u", VType::Real, &targets)];
+    }
+    image
+}
+
+/// Three [`WIDEST_SUM`] blocks and one [`BUDGET_TOP_UP_SUM`] block: exactly the constructed
+/// budget, 2^22 words, behind 3,728,274 connectors.
+pub(crate) const AT_BUDGET_SUMS: [u32; 4] = [WIDEST_SUM, WIDEST_SUM, WIDEST_SUM, BUDGET_TOP_UP_SUM];

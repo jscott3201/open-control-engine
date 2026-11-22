@@ -19,7 +19,9 @@ pub(super) fn term_of(iri: &str) -> &str {
     iri.rsplit([':', '#', '/']).next().unwrap_or(iri)
 }
 
-/// Map an `isOfDataType` IRI to its executable value type.
+/// Map an `isOfDataType` IRI to its executable value type. An enumeration or constant package is
+/// recognised by its canonical class path only (`oce_model::enumeration_class_by_iri`, issues
+/// #637 and #762).
 fn value_type_of_datatype(iri: &str) -> Option<ValueType> {
     match term_of(iri) {
         "Real" => Some(ValueType::Real),
@@ -50,8 +52,17 @@ pub(super) fn derive_value_type(node: &Node, diags: &mut DiagnosticList) -> Valu
 pub(super) fn try_derive_value_type(node: &Node, diags: &mut DiagnosticList) -> Option<ValueType> {
     if let Some(datatype) = &node.is_of_data_type {
         return value_type_of_datatype(&datatype.id).or_else(|| {
+            // An enumeration named by another path than its canonical one (issue #762) keeps
+            // this refusal and names the canonical path in it.
+            let message = match oce_model::enumeration_spelling_hint(&datatype.id) {
+                Some(row) => format!(
+                    "unresolved isOfDataType; an enumeration type is written `{}`",
+                    row.qualified_path
+                ),
+                None => "unresolved isOfDataType".to_owned(),
+            };
             diags.push(
-                Diagnostic::error(DiagCode::UnresolvedReference, "unresolved isOfDataType")
+                Diagnostic::error(DiagCode::UnresolvedReference, message)
                     .with_subject(datatype.id.clone()),
             );
             None

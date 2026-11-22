@@ -129,6 +129,8 @@ mod eval_array_tests;
 mod eval_comprehension;
 #[cfg(test)]
 mod eval_comprehension_tests;
+#[cfg(test)]
+mod eval_enumeration_tests;
 mod eval_strict;
 #[cfg(test)]
 mod eval_strict_tests;
@@ -457,6 +459,16 @@ pub enum Shape {
     },
 }
 
+/// The member a [`ExprError::NonCanonicalEnumeration`] names as the spelling expected: `member`
+/// itself when the enumeration at `canonical` has a member of exactly that name, else the
+/// placeholder `<member>`.
+#[must_use]
+pub fn expected_member<'a>(canonical: &str, member: &'a str) -> &'a str {
+    let known = oce_model::enumeration_class_by_path(canonical)
+        .is_some_and(|row| row.member_value(member).is_some());
+    if known { member } else { "<member>" }
+}
+
 /// Resolves identifiers to ground values during evaluation. Implemented over the in-scope
 /// parameter/constant table that the `oce-cxf` resolver supplies. Pure and total: never reads
 /// attributes, connectors, or time (R11).
@@ -470,7 +482,8 @@ pub trait Scope {
     /// Look up a parameter/constant by name, borrowing its already-evaluated value.
     fn lookup(&self, name: &str) -> Option<&EvalResult>;
 
-    /// Resolve a qualified enumeration class name (e.g. `CDL.Types.SimpleController`) to its id.
+    /// Resolve an enumeration class written by its canonical class path
+    /// (`Buildings.Controls.OBC.CDL.Types.SimpleController`) to its id; any other spelling is `None`.
     fn enum_class(&self, _qualified: &str) -> Option<EnumClassId> {
         None
     }
@@ -517,6 +530,21 @@ pub enum ExprError {
     /// A referenced identifier was not in scope.
     #[error("unknown identifier: {0}")]
     UnknownIdent(String),
+    /// An enumeration reference names a known enumeration or constant package by a path other
+    /// than its canonical class path (`Foo.SimpleController.PD`, `SimpleController.PD`; issue
+    /// #762). The reference is refused, never read by its last segment.
+    #[error(
+        "enumeration `{written}` is not a canonical class path; write `{canonical}.{}`",
+        expected_member(canonical, member)
+    )]
+    NonCanonicalEnumeration {
+        /// The class path as written, before the member.
+        written: String,
+        /// The canonical class path of the enumeration the last segment names.
+        canonical: &'static str,
+        /// The member as written after the class path.
+        member: String,
+    },
     /// A domain violation, e.g. `sqrt` of a negative value (R10.4) or integer overflow.
     #[error("domain error: {0}")]
     DomainError(&'static str),

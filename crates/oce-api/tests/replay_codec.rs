@@ -217,7 +217,7 @@ fn malformed_descriptor_fields_refuse_instead_of_becoming_ignored_extensions() {
         DESCRIPTOR.replace("compatibility:1", "compatibility:01"),
         DESCRIPTOR.replace("catalog-schema:1", "catalog-schema:0"),
         DESCRIPTOR.replace("io-schema:1", "io-schema:4294967296"),
-        DESCRIPTOR.replace("96724061", "9672406A"),
+        DESCRIPTOR.replace("792b6a02", "792B6A02"),
         DESCRIPTOR.replace("HostTick-v1", "arbitrary"),
         DESCRIPTOR.replace("0.6.0", "06.6.0"),
         DESCRIPTOR.replace("0.6.0", "0.6.0-01"),
@@ -277,8 +277,8 @@ fn every_public_fact_has_an_ordered_typed_eligibility_refusal() {
             CompatibilityMismatch::CatalogSchema,
         ),
         (
-            "96724061",
-            "06724061",
+            "792b6a02",
+            "092b6a02",
             CompatibilityMismatch::CatalogContent,
         ),
         (

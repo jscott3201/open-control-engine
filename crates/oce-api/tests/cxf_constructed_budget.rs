@@ -1,17 +1,25 @@
-//! The model-wide constructed budget through the full `Engine::load_cxf` pipeline (issue #700).
+//! The model-wide constructed budget through the full `Engine::load_cxf` pipeline (issue #700),
+//! and why no valid document reaches it any more (issues #772, #773).
 //!
-//! A `CDL.Reals.MatrixGain` with no `K` cell bound holds `nin x nout` identity gains: a valid
-//! document whose blocks hold megabytes behind a few thousand ports. The load constructs every
-//! block against `oce_graph::MAX_CONSTRUCTED_WORDS` and refuses the first block past it with a
-//! typed `BuildError::ConstructedTooLarge`, as the blob decoder does for the same model. These
-//! tests pin the budget at its boundary (exactly the budget loads, one word more refuses), the
-//! receipt record, the refusal's place among the load's other refusals, and the peak held.
+//! Issue #700 reached `oce_graph::MAX_CONSTRUCTED_WORDS` (2^22 words) from a document of a few
+//! thousand ports: a `CDL.Reals.MatrixGain` with `nin = nout = 1024` and no `K` held a dense
+//! identity of 2^20 gains. Since issue #773 the counts are `K`'s own shape, so a dense matrix
+//! writes its cells, and the document limits bound what cells cost: at most
+//! `oce_api::MAX_CXF_BYTES` (8 MiB) of document and 2^20 array elements in all (that limit is
+//! pinned at its boundary by `hostile_load_bounds.rs`,
+//! `document_array_budget_admits_exactly_its_limit_and_refuses_one_element_more`). The largest
+//! construction a valid document reaches is bounded here from those limits and two measured
+//! costs, a dense `K`'s words per cell and a port's bytes per word: under half the budget. A
+//! table sized by a lone corner cell is refused by the load gate (issue #772). The budget is
+//! defence in depth for blobs and for hosts that build graphs directly: its refusal, the
+//! receipt record and its place among the load's refusals are pinned on hand-built graphs in
+//! `crates/oce-api/src/engine_constructed_budget_tests.rs`, and on blobs in
+//! `blob_constructed_budget.rs`.
 //!
 //! Peaks are `allocation_counter`'s `bytes_max`, never wall-clock time.
 
 use allocation_counter::{AllocationInfo, measure};
-use oce_api::{DiagnosticStage, DiagnosticSubject, Engine, OcError, RunMode, Value};
-use oce_graph::BuildError;
+use oce_api::{DiagCode, Engine, MAX_CXF_BYTES, OcError};
 
 /// `oce_graph::MAX_CONSTRUCTED_WORDS`, restated so this test fails if the published budget moves
 /// without review.
@@ -19,10 +27,15 @@ const MAX_CONSTRUCTED_WORDS: u64 = 1 << 22;
 
 const ROOT: &str = "http://example.org#M";
 
-/// What a dense `MatrixGain` of `nin` by `nout` reports: its gains and its two port-kind
-/// buffers, each rounded up to whole words.
-fn gain_words(nin: u64, nout: u64) -> u64 {
-    nin * nout + nin.div_ceil(8) + nout.div_ceil(8)
+/// What a `MatrixGain` of `rows` by `cols` reports: its gains and its two port-kind buffers, each
+/// rounded up to whole words.
+fn gain_words(rows: u64, cols: u64) -> u64 {
+    rows * cols + rows.div_ceil(8) + cols.div_ceil(8)
+}
+
+/// What a `MultiSum` of `nin` inputs reports: its gains and its input kinds.
+fn sum_words(nin: u64) -> u64 {
+    nin + nin.div_ceil(8)
 }
 
 fn real(id: &str, kind: &str, target: Option<&str>) -> String {
@@ -55,19 +68,41 @@ struct Leaf {
     boolean_inputs: Vec<String>,
 }
 
-/// One `MatrixGain` leaf `name` with no `K`: its two size parameters and one connector per
-/// port, every input driven by the root's Real boundary input.
-fn gain(name: &'static str, nin: u64, nout: u64) -> Leaf {
+/// One `MatrixGain` leaf `name` whose `K` is written whole, `rows x cols` zeros as one preserved
+/// array (the cheapest spelling: two bytes a cell), every input driven by the root's boundary
+/// input.
+fn gain(name: &'static str, rows: u64, cols: u64) -> Leaf {
+    let id = format!("{ROOT}.{name}");
+    let zeros = vec!["0"; usize::try_from(rows * cols).unwrap()].join(",");
+    let mut nodes = vec![format!(
+        r#"{{"@id":"{id}","@type":"http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain","S231:hasParameter":[{{"@id":"{id}.K"}}],"S231:hasInput":[{}],"S231:hasOutput":[{}]}}"#,
+        refs((1..=cols).map(|i| format!("{id}.u{i}"))),
+        refs((1..=rows).map(|i| format!("{id}.y{i}"))),
+    )];
+    nodes.push(format!(
+        r#"{{"@id":"{id}.K","@type":"S231:Parameter","S231:isArray":true,"S231:numberDimensions":2,"S231:sizeOfDimensions":"({rows}, {cols})","S231:value":[{zeros}]}}"#
+    ));
+    nodes.extend((1..=cols).map(|i| real(&format!("{id}.u{i}"), "Input", None)));
+    nodes.extend((1..=rows).map(|i| real(&format!("{id}.y{i}"), "Output", None)));
+    Leaf {
+        name,
+        nodes,
+        real_inputs: (1..=cols).map(|i| format!("{id}.u{i}")).collect(),
+        boolean_inputs: Vec::new(),
+    }
+}
+
+/// One `MultiSum` leaf of `nin` inputs, each driven by the root's boundary input: the class whose
+/// words a scalar sets, paid for by one port node per input.
+fn sum(name: &'static str, nin: u64) -> Leaf {
     let id = format!("{ROOT}.{name}");
     let mut nodes = vec![format!(
-        r#"{{"@id":"{id}","@type":"http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain","S231:hasParameter":[{{"@id":"{id}.nout"}},{{"@id":"{id}.nin"}}],"S231:hasInput":[{}],"S231:hasOutput":[{}]}}"#,
+        r#"{{"@id":"{id}","@type":"http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiSum","S231:hasParameter":{{"@id":"{id}.nin"}},"S231:hasInput":[{}],"S231:hasOutput":{{"@id":"{id}.y"}}}}"#,
         refs((1..=nin).map(|i| format!("{id}.u{i}"))),
-        refs((1..=nout).map(|i| format!("{id}.y{i}"))),
     )];
-    nodes.push(integer(&format!("{id}.nout"), i64::try_from(nout).unwrap()));
     nodes.push(integer(&format!("{id}.nin"), i64::try_from(nin).unwrap()));
     nodes.extend((1..=nin).map(|i| real(&format!("{id}.u{i}"), "Input", None)));
-    nodes.extend((1..=nout).map(|i| real(&format!("{id}.y{i}"), "Output", None)));
+    nodes.push(real(&format!("{id}.y"), "Output", None));
     Leaf {
         name,
         nodes,
@@ -76,61 +111,22 @@ fn gain(name: &'static str, nin: u64, nout: u64) -> Leaf {
     }
 }
 
-/// `from.y1` drives `to.u1` instead of the root's boundary input.
-fn feed_first_input(from: &mut Leaf, to: &mut Leaf) {
-    let source = format!("{ROOT}.{}.y1", from.name);
-    let target = format!("{ROOT}.{}.u1", to.name);
-    let unwired = real(&source, "Output", None);
-    let position = from
-        .nodes
-        .iter()
-        .position(|node| *node == unwired)
-        .expect("the gain's first output");
-    from.nodes[position] = real(&source, "Output", Some(&target));
-    to.real_inputs.retain(|input| *input != target);
-}
-
-/// One `CDL.Logical.MultiAnd` leaf of one input: a block that holds exactly one word.
-fn one_word_block(name: &'static str) -> Leaf {
+/// One `Reals.Sources.TimeTable` leaf whose only table cell is the flattened corner `cell`.
+fn lone_corner_table(name: &'static str, cell: &str) -> Leaf {
     let id = format!("{ROOT}.{name}");
-    let boolean = |port: &str, kind: &str| {
-        format!(
-            r#"{{"@id":"{id}.{port}","@type":"S231:Boolean{kind}","S231:isOfDataType":{{"@id":"S231:Boolean"}}}}"#
-        )
-    };
     Leaf {
         name,
         nodes: vec![
             format!(
-                r#"{{"@id":"{id}","@type":"http://example.org#Buildings.Controls.OBC.CDL.Logical.MultiAnd","S231:hasParameter":{{"@id":"{id}.nin"}},"S231:hasInput":{{"@id":"{id}.u1"}},"S231:hasOutput":{{"@id":"{id}.y"}}}}"#
+                r#"{{"@id":"{id}","@type":"http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.TimeTable","S231:hasParameter":{{"@id":"{id}.{cell}"}},"S231:hasOutput":{{"@id":"{id}.y1"}}}}"#
             ),
-            integer(&format!("{id}.nin"), 1),
-            boolean("u1", "Input"),
-            boolean("y", "Output"),
+            format!(
+                r#"{{"@id":"{id}.{cell}","@type":"S231:Parameter","S231:isOfDataType":{{"@id":"S231:Real"}},"S231:value":0.0}}"#
+            ),
+            real(&format!("{id}.y1"), "Output", None),
         ],
         real_inputs: Vec::new(),
-        boolean_inputs: vec![format!("{id}.u1")],
-    }
-}
-
-/// One `CDL.Discrete.TriggeredMovingMean` leaf with window `n`: `4 + n` state words.
-fn moving_mean(name: &'static str, n: i64) -> Leaf {
-    let id = format!("{ROOT}.{name}");
-    Leaf {
-        name,
-        nodes: vec![
-            format!(
-                r#"{{"@id":"{id}","@type":"http://example.org#Buildings.Controls.OBC.CDL.Discrete.TriggeredMovingMean","S231:hasParameter":{{"@id":"{id}.n"}},"S231:hasInput":[{{"@id":"{id}.u"}},{{"@id":"{id}.trigger"}}],"S231:hasOutput":{{"@id":"{id}.y"}}}}"#
-            ),
-            integer(&format!("{id}.n"), n),
-            real(&format!("{id}.u"), "Input", None),
-            format!(
-                r#"{{"@id":"{id}.trigger","@type":"S231:BooleanInput","S231:isOfDataType":{{"@id":"S231:Boolean"}}}}"#
-            ),
-            real(&format!("{id}.y"), "Output", None),
-        ],
-        real_inputs: vec![format!("{id}.u")],
-        boolean_inputs: vec![format!("{id}.trigger")],
+        boolean_inputs: Vec::new(),
     }
 }
 
@@ -174,20 +170,6 @@ fn document(leaves: &[Leaf]) -> Vec<u8> {
     .into_bytes()
 }
 
-/// Three dense 1024 x 1024 gains and one of 1024 x 1023: exactly the budget.
-fn gains_at_the_budget() -> Vec<Leaf> {
-    assert_eq!(
-        3 * gain_words(1024, 1024) + gain_words(1024, 1023),
-        MAX_CONSTRUCTED_WORDS
-    );
-    vec![
-        gain("g0", 1024, 1024),
-        gain("g1", 1024, 1024),
-        gain("g2", 1024, 1024),
-        gain("g3", 1024, 1023),
-    ]
-}
-
 fn load(bytes: &[u8]) -> (Engine, Result<oce_api::LoadReport, OcError>, AllocationInfo) {
     let mut engine = Engine::new();
     let mut result = None;
@@ -195,212 +177,68 @@ fn load(bytes: &[u8]) -> (Engine, Result<oce_api::LoadReport, OcError>, Allocati
     (engine, result.unwrap().map(|(report, _)| report), info)
 }
 
-fn constructed_refusal(result: Result<oce_api::LoadReport, OcError>) -> (String, u64, usize) {
-    match result.expect_err("past the constructed budget") {
-        OcError::Build(BuildError::ConstructedTooLarge {
-            block,
-            requested,
-            limit,
-        }) => (block.0, requested, limit),
-        other => panic!("expected ConstructedTooLarge, got {other:?}"),
-    }
-}
+/// The document limit on array elements (`hostile_load_bounds.rs` pins it), restated.
+const MAX_DOCUMENT_ARRAY_ELEMENTS: u64 = 1 << 20;
 
 #[test]
-fn blocks_holding_exactly_the_constructed_budget_load_and_one_word_more_is_refused() {
-    let mut leaves = gains_at_the_budget();
-    let (mut engine, accepted, info) = load(&document(&leaves));
-    let report = accepted.expect("a model holding exactly MAX_CONSTRUCTED_WORDS loads");
-    assert_eq!(report.block_count, 4);
+fn the_largest_construction_a_valid_document_reaches_is_far_below_the_budget() {
+    // A dense `K` written whole loads, holding one word per cell and its port kinds.
+    let dense = document(&[gain("g0", 256, 256)]);
+    let (_, loaded, info) = load(&dense);
+    assert_eq!(loaded.expect("a 256 x 256 K loads").block_count, 1);
+    assert!(info.bytes_max < 1 << 28, "load peak {}", info.bytes_max);
+    // The most cells a document holds are the array limit's; the shape that holds the most words
+    // for them is one row (the most port kinds): 1,179,649 words.
+    let cells_bound = gain_words(1, MAX_DOCUMENT_ARRAY_ELEMENTS)
+        .max(gain_words(MAX_DOCUMENT_ARRAY_ELEMENTS, 1))
+        .max(gain_words(1024, 1024));
+    assert_eq!(cells_bound, 1_179_649);
+
+    // What the document's bytes buy as ports: a `MultiSum` costs one port node and two
+    // references per input, well over 100 bytes a word, so 8 MiB buys tens of thousands of words.
+    let with_sum = document(&[gain("g0", 256, 256), sum("s", 16_384)]);
+    let per_input = (with_sum.len() - dense.len()) as u64 / 16_384;
+    assert!(per_input >= 100, "{per_input} bytes per input");
+    let (_, loaded, _) = load(&with_sum);
+    assert_eq!(loaded.expect("the gain and the sum load").block_count, 2);
+    let ports_bound = sum_words(MAX_CXF_BYTES as u64 / per_input + 1);
+    let bound = cells_bound + ports_bound;
     assert!(
-        info.bytes_max >= 8 * MAX_CONSTRUCTED_WORDS,
-        "the gains are held: {info:?}"
-    );
-
-    // The loaded model re-instantiates under the same budget: a halt and resume keeps it.
-    engine.halt().unwrap();
-    engine
-        .set_param(&format!("{ROOT}.g0.nin"), Value::Integer(8))
-        .expect_err("a structural parameter is not editable at rest");
-    engine.resume().expect("a model at the budget resumes");
-    assert_eq!(engine.mode(), RunMode::Running);
-    drop(engine);
-
-    // One more block that holds a single word crosses the budget, and is the block named.
-    leaves.push(one_word_block("and"));
-    let (_, refused, _) = load(&document(&leaves));
-    assert_eq!(
-        constructed_refusal(refused),
-        (
-            format!("{ROOT}.and"),
-            MAX_CONSTRUCTED_WORDS + 1,
-            MAX_CONSTRUCTED_WORDS as usize
-        )
-    );
-
-    // The budget is model-wide and counted in declaration order: with the small block first,
-    // the gain that crosses is the one named.
-    leaves.rotate_right(1);
-    let (_, refused, _) = load(&document(&leaves));
-    assert_eq!(
-        constructed_refusal(refused),
-        (
-            format!("{ROOT}.g3"),
-            MAX_CONSTRUCTED_WORDS + 1,
-            MAX_CONSTRUCTED_WORDS as usize
-        )
+        2 * bound < MAX_CONSTRUCTED_WORDS,
+        "a maximal valid document holds at most {bound} words, under half the budget"
     );
 }
 
 #[test]
-fn dense_gains_past_the_budget_are_a_typed_refusal_holding_the_budget_and_one_block() {
-    // Six dense gains would hold 48 MiB; before the budget nothing summed them.
-    let leaves: Vec<Leaf> = ["g0", "g1", "g2", "g3", "g4", "g5"]
+fn tables_sized_by_lone_corner_cells_are_refused_by_the_load_gate_before_any_is_built() {
+    // Issue #700's shape in a document: four tables of 524,287 rows named by one corner cell each
+    // would hold exactly the budget. Their cells do not fill their rectangles, so the load gate
+    // refuses them (issue #772's shape rules), and no table is built.
+    let leaves: Vec<Leaf> = ["t0", "t1", "t2", "t3"]
         .into_iter()
-        .map(|name| gain(name, 1024, 1024))
+        .map(|name| lone_corner_table(name, "table_524287_2"))
         .collect();
     let bytes = document(&leaves);
     let (_, refused, info) = load(&bytes);
-    assert_eq!(
-        constructed_refusal(refused),
-        (
-            format!("{ROOT}.g3"),
-            4 * gain_words(1024, 1024),
-            MAX_CONSTRUCTED_WORDS as usize
-        )
-    );
-    // Three gains kept and the fourth constructed, beside what the load holds for the document
-    // itself. That linear part is measured on a twin: the same document with every gain
-    // replaced by a `RealVectorFilter` of the same 1024 inputs and outputs, which holds 1,280
-    // words instead of 1,048,832 and loads.
-    let twin: Vec<Leaf> = leaves
-        .iter()
-        .map(|leaf| {
-            let mut twin = leaf.clone();
-            twin.nodes[0] =
-                twin.nodes[0].replace("CDL.Reals.MatrixGain", "CDL.Routing.RealVectorFilter");
-            twin
-        })
-        .collect();
-    let twin = document(&twin);
-    let (_, accepted, linear) = load(&twin);
-    assert_eq!(accepted.expect("the twin loads").block_count, 6);
+    let error = refused.expect_err("lone corner cells are refused");
     assert!(
-        twin.len().abs_diff(bytes.len()) < 100,
-        "the twin is the same size"
+        error
+            .all_diagnostics()
+            .any(|d| d.code == DiagCode::ParameterOutOfRange),
+        "{error:?}"
     );
-    let bound = linear.bytes_max
-        + 8 * MAX_CONSTRUCTED_WORDS
-        + oce_blocks::MAX_CONSTRUCTION_PEAK_BYTES as u64;
+    assert!(!matches!(error, OcError::Build(_)), "{error:?}");
+    // The reader sizes one block at a time to read its ports (one construction's peak, freed
+    // before the next); the four tables are never held together, let alone instantiated.
     assert!(
-        info.bytes_max <= bound,
-        "refused holding {} bytes for a {}-byte document, over {bound}",
+        info.bytes_max < oce_blocks::MAX_CONSTRUCTION_PEAK_BYTES as u64 + (1 << 20),
+        "at most one table is sized at a time: peak {} for {} bytes",
         info.bytes_max,
         bytes.len()
     );
-}
-
-#[test]
-fn the_receipt_records_the_refusal_as_a_resource_limit_at_instantiation() {
-    let mut leaves = gains_at_the_budget();
-    leaves.push(one_word_block("and"));
-    let mut engine = Engine::new();
-    let failure = engine
-        .load_cxf_with_receipt(&document(&leaves))
-        .expect_err("one word past the budget refuses");
-    assert_eq!(failure.stage(), DiagnosticStage::Instantiation);
-    assert!(matches!(
-        failure.error(),
-        OcError::Build(BuildError::ConstructedTooLarge { .. })
-    ));
-    let records = failure.diagnostics().records();
-    let limits: Vec<_> = records
-        .iter()
-        .filter(|record| record.key().code() == "resource-limit-exceeded")
-        .collect();
-    assert_eq!(limits.len(), 1, "{records:?}");
-    let record = limits[0];
-    assert_eq!(record.key().stage(), DiagnosticStage::Instantiation);
-    assert_eq!(
-        record.key().subject(),
-        &DiagnosticSubject::Opaque(format!("{ROOT}.and"))
-    );
-    assert_eq!(
-        record.message(),
-        "constructed blocks too large: 4194305 word(s) held by the blocks through this block \
-         exceed the supported maximum (4194304 words). Remedy: reduce table, matrix or vector \
-         sizes, or split the model."
-    );
-    assert_eq!(
-        failure.error().to_string(),
-        format!(
-            "model build/schedule error: constructed blocks too large: 4194305 word(s) held by the blocks through block \
-             {ROOT}.and exceed the supported maximum (4194304 words)"
-        )
-    );
-    // A refused load leaves the engine without a model.
-    assert!(engine.state_words().is_empty());
-    assert!(engine.compile_blob().is_err());
-}
-
-#[test]
-fn the_constructed_refusal_comes_after_validation_and_before_the_schedule_and_the_state() {
-    // Two gains that feed each other's first input: an algebraic loop, reported as one while
-    // the blocks fit the budget.
-    let looped = |extra: &[&'static str]| -> Vec<Leaf> {
-        let (mut a, mut b) = (gain("a", 1024, 1024), gain("b", 1024, 1024));
-        feed_first_input(&mut a, &mut b);
-        feed_first_input(&mut b, &mut a);
-        let mut leaves = vec![a, b];
-        leaves.extend(extra.iter().map(|name| gain(name, 1024, 1024)));
-        leaves
-    };
-    let (_, within, _) = load(&document(&looped(&[])));
     assert!(
-        matches!(
-            within,
-            Err(OcError::Build(BuildError::AlgebraicLoop { .. }))
-        ),
-        "{within:?}"
-    );
-    // Past the budget the same loop is never scheduled: the blocks are refused first.
-    let (_, past, _) = load(&document(&looped(&["c", "d"])));
-    assert_eq!(constructed_refusal(past).0, format!("{ROOT}.d"));
-
-    // A window one word past the state budget, declared first, is reported only when the
-    // constructed blocks fit: state is allocated after every block is constructed.
-    let window = (1i64 << 22) - 3;
-    let mut leaves = vec![moving_mean("mean", window)];
-    let (_, state, _) = load(&document(&leaves));
-    assert!(
-        matches!(state, Err(OcError::Build(BuildError::StateTooLarge { .. }))),
-        "{state:?}"
-    );
-    leaves.extend(gains_at_the_budget());
-    leaves.push(one_word_block("and"));
-    let (_, both, _) = load(&document(&leaves));
-    assert_eq!(
-        constructed_refusal(both),
-        (
-            format!("{ROOT}.and"),
-            MAX_CONSTRUCTED_WORDS + 1,
-            MAX_CONSTRUCTED_WORDS as usize
-        )
-    );
-
-    // A document the validator refuses never reaches the budget: a gain whose port list does
-    // not match its size is refused before any block is kept, however large the others are.
-    let mut leaves: Vec<Leaf> = ["g0", "g1", "g2", "g3", "g4"]
-        .into_iter()
-        .map(|name| gain(name, 1024, 1024))
-        .collect();
-    let mut mismatched = gain("bad", 4, 4);
-    mismatched.nodes[1] = integer(&format!("{ROOT}.bad.nout"), 5);
-    leaves.insert(0, mismatched);
-    let (_, invalid, _) = load(&document(&leaves));
-    let error = invalid.expect_err("a port list that does not match the size refuses");
-    assert!(
-        !matches!(error, OcError::Build(_)),
-        "validation refuses before any build step: {error:?}"
+        info.bytes_max < 2 * 8 * 1_048_576,
+        "peak {}",
+        info.bytes_max
     );
 }

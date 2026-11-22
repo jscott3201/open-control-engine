@@ -40,7 +40,7 @@ This is the existing pinned source identity, not a new numeric catalog revision.
 
 | Delegated source | SHA-256 (exact input bytes) |
 | --- | --- |
-| catalog-registry | <code>c52b1c5807e78aaf930f09402717ab7b5f1d98d173452d0cd22bbd6cb0b16336</code> |
+| catalog-registry | <code>7375453e4fe3d099391542778dbac2e92398f5e231c24f4049925f08cff5c5fc</code> |
 | catalog-source | <code>561c634fa52c3ec3006fa990befd7d5d846619fbd3a2b3214839a27173f9b9d4</code> |
 
 ## Native expected observations

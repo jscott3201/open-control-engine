@@ -281,6 +281,32 @@ engine reads the term alone and its export writes every term back as a bare stri
 lost between import and export. Both readers now refuse it, on every role (owner ruling of
 2026-11-12), and the DTO still round-trips it.
 
+### Enumeration spellings
+
+*Added 2026-11-22 (issues #762, #637; the owner's ruling of 2026-11-22).* Both readers name an
+enumeration or constant package by its canonical class path and nothing else, through one lookup:
+the engine's `oce_model::enumeration_class_by_path` (`enumeration_class_by_iri` for a typing IRI),
+which the importer reads through the facade as `oce_api::enumeration_by_path` and
+`oce_api::enumeration_by_iri`. The review of GitHub #754 found 20 of 150 probe documents that
+loaded in the engine and were refused here; `crates/leverage/oce-cli/tests/canonical_enumeration_agreement.rs`
+holds the two readers to one verdict over the generated set (block values, typed root values and
+declared types, crossed with ten spellings of the path).
+
+| Input | Engine | Importer |
+| --- | --- | --- |
+| a member under its canonical path (`Buildings.Controls.OBC.CDL.Types.SimpleController.PD`) | loads | loads |
+| a member under any other path (`SimpleController.PD`, `Foo.…`, `CDL.Types.…`, the G36 or the Modelica Standard Library package, another case) | `unknown-enum-type`, naming the canonical path | refused: `expression-value` (a path not under `Buildings.`) or `unknown-member-type` |
+| a declared type under any other path (`…#SimpleController`, `…#Buildings.Controls.OBC.CDL.Typos.ZeroTime`) | `unknown-enum-type`, naming the canonical path | `unknown-datatype` |
+| a declared type in the S231 namespace (`S231:Buildings.Controls.OBC.CDL.Types.ZeroTime`, CXF-Core's `EnumerationType`) | loads | loads (**same** since issue #762; before, `unknown-datatype`) |
+| a typed root parameter holding no member of its type (an ordinal, another enumeration's member) | `parameter-kind-mismatch` on the declaration | `datatype-mismatch` |
+
+Two differences remain, neither about enumerations, and both general:
+
+| Input | Engine | Importer |
+| --- | --- | --- |
+| a root parameter with no `isOfDataType`, of any kind | loads, the value as written | `missing-key` (filed as #778) |
+| whitespace around a canonical path in a block parameter's value | loads: a value is an expression, and the whitespace is the expression's | `expression-value`: the importer refuses every expression on a block parameter |
+
 ### Unit spellings
 
 The importer reads a unit and a display unit under the spellings the engine reads

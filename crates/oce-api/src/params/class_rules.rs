@@ -347,18 +347,15 @@ fn int_param_value(value: &Value) -> Option<i64> {
     }
 }
 
+/// Whether `value` is a member of an enumeration whose members are `members`: an enumeration
+/// value only (`Value::Enum`; the edit's class is already the parameter's, checked by
+/// `set_param`). An ordinal or a string is never one (ruling R2; issue #762 removed the reading of
+/// a string by its last segment).
 fn enum_param_value(value: &Value, members: &[&str]) -> bool {
     match value {
         Value::Enum { ordinal, .. } => {
             usize::try_from(*ordinal).is_ok_and(|ordinal| (1..=members.len()).contains(&ordinal))
         }
-        Value::Integer(v) => {
-            usize::try_from(*v).is_ok_and(|ordinal| (1..=members.len()).contains(&ordinal))
-        }
-        Value::String(s) => s
-            .rsplit('.')
-            .next()
-            .is_some_and(|member| members.contains(&member)),
         _ => false,
     }
 }

@@ -241,7 +241,8 @@ fn every_class_carries_the_vocabularys_text_and_the_catalogs_ranges() {
     }
     // Volume pins: a join that silently found nothing must not leave this green.
     assert_eq!(vocabulary().classes().count(), 133);
-    assert_eq!((linked, notes, parameters, ranged), (132, 13, 189, 101));
+    // 187 parameters and 99 ranged since issue #773 removed `MatrixGain`'s `nin` and `nout`.
+    assert_eq!((linked, notes, parameters, ranged), (132, 13, 187, 99));
     assert!(ports > 500, "only {ports} ports were compared");
 }
 

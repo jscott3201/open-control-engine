@@ -119,6 +119,7 @@ fn assert_further_on(summary: Reached, decoder: BlobError, what: &str) {
         | BlobError::UndeclaredParameter { block, .. }
         | BlobError::NonFiniteParameter { block, .. }
         | BlobError::ParameterKindMismatch { block, .. }
+        | BlobError::ElementOutsideShape { block, .. }
         | BlobError::InstanceMismatch { block, .. } => {
             assert!(summary > Reached::Block(block), "{what}: {decoder:?}");
         }

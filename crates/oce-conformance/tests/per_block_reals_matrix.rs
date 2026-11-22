@@ -30,15 +30,8 @@ const MATRIX_GAIN_OUTPUTS: &[Port] = &[
         kind: R,
     },
 ];
+// `K`'s six cells set the 2x3 shape (issue #773: `nin`/`nout` are protected upstream).
 const MATRIX_GAIN_PARAMS: &[Param] = &[
-    Param {
-        name: "nout",
-        value: ParamValue::Integer("2"),
-    },
-    Param {
-        name: "nin",
-        value: ParamValue::Integer("3"),
-    },
     Param {
         name: "K_1_1",
         value: ParamValue::Real("0.5"),

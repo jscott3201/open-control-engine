@@ -243,17 +243,9 @@ fn clean_models() -> Vec<Sequence> {
         a.suffix = (i % 2 == 0).then(|| "kg/m.s2".to_owned());
         sum.assignments.push(a);
     }
+    // A 2 x 40 `K`: its cells set the counts (issue #773), so the gain binds them alone.
     let gain = &mut arrays.blocks[2];
-    gain.assignments = ["nin", "nout"]
-        .into_iter()
-        .zip([40, 2])
-        .map(|(name, n)| {
-            oce_author::Assignment::new(
-                Identifier::unchecked(name),
-                ParamValue::Literal(Literal::Integer(n)),
-            )
-        })
-        .collect();
+    gain.assignments.clear();
     for r in 1..=2 {
         for c in 1..=40 {
             gain.assignments.push(oce_author::Assignment::new(

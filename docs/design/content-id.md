@@ -182,6 +182,24 @@ fixtures, no vendored translation that loads and no `open-control-library` rule 
 fixtures were corrected to parameters their classes declare. No version bump is owed (standing
 rule 10: no release since 0.6.0).
 
+*Amended 2026-11-22 (issues #762, #637, #772, #773, inside 0.6.0).* An enumeration value, guard
+literal, G36 Integer constant or typing IRI names its class by the canonical path only
+(`Buildings.Controls.OBC.CDL.Types.SimpleController`); another prefix that loaded before
+(`SimpleController.PD`, `Foo.SimpleController.PD`, a CDL type under the G36 package, the Modelica
+Standard Library's) is refused (`unknown-enum-type`), so no two spellings share an id any more. No
+content id of a document that loads both before and after moves: every value it holds is the same
+member of the same class. `MatrixGain` declares `K` alone, so its class signature hash moved: every
+document holding a `MatrixGain` moves id (the hash enters the canonical bytes), and one that bound
+`nin`/`nout` is refused. Measured over every tracked document, the vendored translations and the
+`open-control-library` documents: 280 load before and after with byte-identical ids and blobs; the
+five that hold a `MatrixGain` move (three G36 test fixtures and one authoring fixture rewritten
+without `nin`/`nout`, one authoring fixture unchanged in source); none goes from loading to
+refused. No loadable document in those corpora writes another spelling; a translation can, since
+modelica-json copies a source's relative path as written (`CDL.Types.Smoothness.LinearSegments`,
+as `cxf-core/CXF-Core.jsonld` holds for `TimeTable`'s defaults), and such a document is refused
+naming the full canonical member (the owner's ruling of 2026-11-22). No version bump is owed
+(standing rule 10).
+
 Sorting is sound only if no class reads two entries as the same parameter, and today one can.
 Duplicate detection is by exact name, but `TimeTable` walks `params.values` in table order and
 parses `table_<r>_<c>` and `offset_<i>` with `usize::parse` (`source_timetable.rs`

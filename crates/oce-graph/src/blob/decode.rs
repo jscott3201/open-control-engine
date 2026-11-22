@@ -49,7 +49,9 @@ use crate::{ConstructedBudget, MAX_STATE_WORDS, Schedule, allocate_state, build_
 ///    `oce_blocks::declares_parameter`, issue #748), a finite Real or a known enum class and
 ///    ordinal and then a value its class's catalog type admits
 ///    ([`BlobError::ParameterKindMismatch`]: the load gate's own predicate,
-///    `oce_blocks::admits_parameter_value`, issue #734), then the constructed budget
+///    `oce_blocks::admits_parameter_value`, issue #734), then every element inside its class's
+///    shape ([`BlobError::ElementOutsideShape`]: `oce_blocks::element_outside_extent`, the load
+///    gate's extent rules, issue #772), then the constructed budget
 ///    ([`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS), charged the moment the block is
 ///    constructed: [`BlobError::ConstructedTooLarge`]), then the constructed block's kind, state
 ///    length and arity, and each of its connector ids in range and not already claimed); then
@@ -241,6 +243,16 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
             params.push((Arc::from(name), value));
         }
         let params = ParamTable { values: params };
+        // An element outside its class's shape would be dropped or would reshape the block
+        // (issue #772); the load gate refuses such a document by its extent rules, so no encoder
+        // writes one. Judged once every name and value is read (an extent can come from another
+        // parameter), before the block is built from them.
+        if let Some(position) = oce_blocks::element_outside_extent(&class_path, &params) {
+            return Err(BlobError::ElementOutsideShape {
+                block,
+                parameter: index_u32(position),
+            });
+        }
 
         let instance = (entry.make)(&params);
         // Charged before anything about the block is compared: past the budget it is dropped

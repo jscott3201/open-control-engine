@@ -430,7 +430,6 @@ fn the_catalog_type_of_a_bound_name_is_the_parameters_own_not_its_neighbours() {
         ("CDL.Integers.Sources.Constant", "k", Integer),
         ("CDL.Reals.Sources.Constant", "k", Real),
         ("CDL.Reals.MatrixGain", "K_2_1", Real),
-        ("CDL.Reals.MatrixGain", "nout", Integer),
         ("CDL.Integers.Sources.TimeTable", "table_1_2", Real),
         ("CDL.Integers.Sources.Pulse", "amplitude", Integer),
         ("CDL.Integers.Sources.Pulse", "period", Real),
@@ -445,6 +444,13 @@ fn the_catalog_type_of_a_bound_name_is_the_parameters_own_not_its_neighbours() {
             parameter_value_type(class_path, name),
             Some(expected),
             "{class_path} {name}"
+        );
+    } // `MatrixGain`'s counts are `K`'s shape, protected upstream: no catalog type (issue #773).
+    for name in ["nin", "nout"] {
+        assert_eq!(
+            parameter_value_type("CDL.Reals.MatrixGain", name),
+            None,
+            "{name}"
         );
     }
 }

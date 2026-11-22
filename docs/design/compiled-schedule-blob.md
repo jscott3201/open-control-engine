@@ -481,6 +481,11 @@ The decoder refuses in this order:
    - duplicate parameter names within one instance (`DuplicateParameter`);
    - *(amended 2026-11-22, issue #748)* a parameter name the instance's class does not declare
      (`UndeclaredParameter`), before the parameter's value is read;
+   - *(amended 2026-11-22, issue #772)* once every parameter of the instance is read and before the
+     block is built, an element outside its class's shape (`ElementOutsideShape`): past its
+     vector's resolved length, an index too large for any width, an offset past its table's
+     outputs, or a cell that leaves its matrix's rectangle unfilled, the load gate's own shape
+     rules (`oce_blocks::element_outside_extent`), completeness as well as extent;
    - an Enum value whose class path is unknown (`UnknownEnumClass`), or whose ordinal is outside
      `1..=members` (`EnumOrdinalOutOfRange`);
    - the model-wide constructed budget, charged the moment the block is constructed
@@ -627,10 +632,11 @@ are placeholders.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Smallest: `…ashrae_fixed_18` (and two siblings) | 1 | 1 | 0 | 1 | 0 / 1 | 1 | 306 |
 | Worked example | 1 | 2 | 0 | 1 | 1 (1) / 1 | 1 | 418 |
-| Most blocks: `multizone_vav_relief_fan_group` | 226 | 621 | 328 | 104 | 11 (37) / 9 | 32 | 16,438 |
+| Most blocks: `multizone_vav_relief_fan_group` | 226 | 621 | 328 | 102 | 11 (37) / 9 | 32 | 16,405 |
 | Largest blob: `cooling_only_controller` | 213 | 521 | 268 | 167 | 14 (43) / 10 | 39 | 17,001 |
 
-Across the corpus, the blobs total 123,329 bytes and the median is 1,657. A block instance averages
+Across the corpus, the blobs total 123,098 bytes and the median is 1,587 (123,329 and 1,657 until
+`MatrixGain` lost `nin` and `nout`, issue #773). A block instance averages
 about 53 bytes with its ports and parameters. An I/O point averages 97 bytes, about three quarters
 of it IRI text.
 

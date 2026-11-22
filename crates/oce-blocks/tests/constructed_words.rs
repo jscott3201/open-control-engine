@@ -209,15 +209,16 @@ fn widest_shapes() -> Vec<(&'static str, ParamTable, usize)> {
         ("CDL.Reals.MultiSum", integers(&[("nin", w)]), kinds + W),
         ("CDL.Integers.MultiSum", integers(&[("nin", w)]), kinds + W),
         // A dense square matrix: 1024 inputs, 1024 outputs, 2^20 gains.
+        // `K`'s corner cell sets its shape (issue #773).
         (
             "CDL.Reals.MatrixGain",
-            integers(&[("nin", 1024), ("nout", 1024)]),
+            integers(&[("K_1024_1024", 0)]),
             2 * 128 + W,
         ),
         // The widest: one row of 2^20 gains.
         (
             "CDL.Reals.MatrixGain",
-            integers(&[("nin", w), ("nout", 1)]),
+            integers(&[(format!("K_1_{w}").leak(), 0)]),
             kinds + 1 + W,
         ),
         (
@@ -337,13 +338,10 @@ fn a_shape_past_the_port_width_holds_nothing_instead_of_more() {
             "CDL.Reals.Sources.TimeTable",
             integers(&[("table_1048577_1048577", 0)]),
         ),
+        ("CDL.Reals.MatrixGain", integers(&[("K_1025_1024", 0)])),
         (
             "CDL.Reals.MatrixGain",
-            integers(&[("nin", 1024), ("nout", 1025)]),
-        ),
-        (
-            "CDL.Reals.MatrixGain",
-            integers(&[("nin", i64::MAX), ("nout", i64::MAX)]),
+            integers(&[(format!("K_{}_{}", usize::MAX, usize::MAX).leak(), 0)]),
         ),
         (
             "CDL.Reals.MatrixMax",

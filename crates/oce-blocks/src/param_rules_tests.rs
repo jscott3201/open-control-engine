@@ -148,32 +148,12 @@ fn registry_exposes_block_param_rules() {
     );
     assert_eq!(
         lookup("CDL.Reals.MatrixGain").unwrap().param_rules(),
-        &[
-            ParamRule::Structural { name: "nout" },
-            ParamRule::Structural { name: "nin" },
-            ParamRule::IntegerGreaterOrEqual { name: "nout", min: 0 },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nout",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-            ParamRule::IntegerGreaterOrEqual { name: "nin", min: 0 },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nin",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-            ParamRule::IntegerProductLessOrEqualConstant {
-                left: "nout",
-                right: "nin",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-            ParamRule::RealMatrixElements {
-                base: "K",
-                rows: "nout",
-                default_rows: 2,
-                cols: "nin",
-                default_cols: 2,
-            },
-        ]
+        // `K` alone: the counts are its shape, `nin`/`nout` protected upstream (issue #773).
+        &[ParamRule::RealMatrixElements {
+            base: "K",
+            default_rows: 2,
+            default_cols: 2,
+        }]
     );
     assert_eq!(
         lookup("CDL.Reals.Sort").unwrap().param_rules(),

@@ -7,7 +7,7 @@ exit: 1
       "derived_from": null,
       "sequence": "chw_plant_reset"
     },
-    "catalog": "catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892",
+    "catalog": "catalog:1:fnv1a128:792b6a02de93b1fce53441d22c1aafab",
     "graph": [
       {
         "class": "CDL.Reals.Sources.Constant",

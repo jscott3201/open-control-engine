@@ -26,11 +26,7 @@ out yDam_1 : Real
 out yDam_2 : Real
 out yDam_3 : Real
 out yDam_4 : Real
-block enaRel = CDL.Reals.MatrixGain(
-  nout = 4,
-  nin = 2,
-  K = [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]]
-)
+block enaRel = CDL.Reals.MatrixGain(K = [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]])
 block booToRea_1 = CDL.Conversions.BooleanToReal
 block booToRea_2 = CDL.Conversions.BooleanToReal
 block gai_1 = CDL.Reals.MultiplyByParameter(k = 2.0)

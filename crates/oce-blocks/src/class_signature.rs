@@ -121,13 +121,15 @@ pub(crate) fn with_entry_record<R>(
 
 /// The port naming policy and the `width_driven` flag of one registry entry, as the catalog
 /// publishes them: a class with declared names is [`PortNaming::Named`]; otherwise a class with a
-/// structural rule is [`PortNaming::WidthDriven`], and any other class is
-/// [`PortNaming::Positional`].
+/// structural rule, or a matrix whose cells set its shape (`MatrixGain.K`, issue #773), is
+/// [`PortNaming::WidthDriven`], and any other class is [`PortNaming::Positional`].
 pub(crate) fn naming_policy(entry: &RegistryEntry) -> (PortNaming, bool) {
     let width_driven = entry.param_rules().iter().any(|rule| {
         matches!(
             rule,
-            ParamRule::Structural { .. } | ParamRule::StructuralArrayElements { .. }
+            ParamRule::Structural { .. }
+                | ParamRule::StructuralArrayElements { .. }
+                | ParamRule::RealMatrixElements { .. }
         )
     });
     let naming = if port_names::port_names(entry.class_path).is_some() {
@@ -317,16 +319,12 @@ fn param_rule(h: &mut Fnv64, rule: &ParamRule) {
         }
         ParamRule::RealMatrixElements {
             base,
-            rows,
             default_rows,
-            cols,
             default_cols,
         } => {
             h.u8(13);
             h.str(base);
-            h.str(rows);
             h.i64(default_rows);
-            h.str(cols);
             h.i64(default_cols);
         }
         ParamRule::TimeTableMatrix {

@@ -198,6 +198,22 @@ fn an_accepted_pair_with_a_wide_curated_class_joins_inside_the_indexed_bound() {
     class.connectors.splice(outputs..outputs, added);
     let subjects = class.connectors.len() + class.parameters.len();
 
+    // A width-driven class curated afresh (`MatrixGain` has had no curated text since issue #773
+    // removed its `nin` and `nout`), in its catalog place after `Divide`.
+    if !curated
+        .classes
+        .iter()
+        .any(|class| class.class_path == CLASS)
+    {
+        curated.classes.insert(
+            2,
+            CuratedClass {
+                class_path: CLASS.to_owned(),
+                descriptions: Vec::new(),
+                notes: Vec::new(),
+            },
+        );
+    }
     let curated_class = curated
         .classes
         .iter_mut()
@@ -248,15 +264,19 @@ fn an_accepted_pair_with_a_wide_curated_class_joins_inside_the_indexed_bound() {
         assert_eq!((found.description.to_owned(), found.origin), expected);
     }
     assert!(added.next().is_none());
-    // The class's own curated descriptions are still the ones served.
-    for parameter in ["nout", "nin"] {
-        let found = view
-            .parameters
+    // The class's own parameter keeps its generated text; `nin`/`nout` are no parameters of it
+    // (issue #773).
+    let k = view
+        .parameters
+        .iter()
+        .find(|found| found.name == "K")
+        .expect("the parameter");
+    assert_eq!(k.origin, TextOrigin::Generated);
+    assert!(
+        view.parameters
             .iter()
-            .find(|found| found.name == parameter)
-            .expect("the parameter");
-        assert_eq!(found.origin, TextOrigin::Curated, "{parameter}");
-    }
+            .all(|p| p.name != "nin" && p.name != "nout")
+    );
 }
 
 #[test]

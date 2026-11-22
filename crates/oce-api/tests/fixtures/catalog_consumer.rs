@@ -73,11 +73,9 @@ fn rule(rule: &CatalogRule) -> (&'static str, Vec<(&'static str, Field)>) {
             ("base", Field::Text((*base).into())),
             ("len", Field::Text((*len).into())),
         ]),
-        CatalogRule::RealMatrixElements { base, rows, default_rows, cols, default_cols } => ("RealMatrixElements", vec![
+        CatalogRule::RealMatrixElements { base, default_rows, default_cols } => ("RealMatrixElements", vec![
             ("base", Field::Text((*base).into())),
-            ("rows", Field::Text((*rows).into())),
             ("default_rows", Field::Integer(*default_rows)),
-            ("cols", Field::Text((*cols).into())),
             ("default_cols", Field::Integer(*default_cols)),
         ]),
         CatalogRule::TimeTableMatrix { base, values, time_scale, period, extrapolation } => ("TimeTableMatrix", vec![

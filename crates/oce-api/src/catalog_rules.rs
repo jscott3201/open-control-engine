@@ -122,21 +122,16 @@ pub enum CatalogRule {
         /// Integer parameter carrying the resolved array length.
         len: &'static str,
     },
-    /// Present members of a flattened two-dimensional Real matrix parameter must be numeric values.
-    ///
-    /// Flattened CXF names use one-based row-major keys such as `K_1_1`, `K_1_2`, `K_2_1`, ...
-    /// Sparse matrices are allowed only where the source block defines defaults for omitted
-    /// members. Supplied members accept CDL integer-to-real promotion.
+    /// A flattened two-dimensional Real matrix parameter whose shape its cells set
+    /// (`MatrixGain.K`; issue #773): the bound cells fill the rectangle their largest row and
+    /// column span, each numeric. No bound cell is the default `default_rows × default_cols`
+    /// matrix. Flattened CXF names use one-based row-major keys such as `K_1_1`, `K_1_2`, ...
     RealMatrixElements {
         /// Flattened matrix base name, for example `"K"` matching `K_1_1`, ...
         base: &'static str,
-        /// Integer parameter carrying the resolved row count.
-        rows: &'static str,
-        /// Source default row count when `rows` is omitted.
+        /// The default matrix's row count, when no cell is bound.
         default_rows: i64,
-        /// Integer parameter carrying the resolved column count.
-        cols: &'static str,
-        /// Source default column count when `cols` is omitted.
+        /// The default matrix's column count, when no cell is bound.
         default_cols: i64,
     },
     /// Flattened source `TimeTable` matrix elements must form a complete rectangular table.

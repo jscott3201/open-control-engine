@@ -613,7 +613,12 @@ constant package types by their full path (the
 `S231:Buildings.Controls.OBC.CDL.Types.ZeroTime` is read and `S231:ZeroTime` is refused. A term a
 newer CXF-Core adds is refused until the engine's table holds it. A class in another namespace (a
 leaf's `http://example.org#Buildings.Controls.OBC.CDL.Reals.Add`, a composite's own class) is not
-judged by this rule: a leaf's must still be a registered class (`class-not-found`).
+judged by this rule: a leaf's must still be a registered class (`class-not-found`). An enumeration
+type is matched by its full path in every namespace (issues #637, #762): `…#ZeroTime`,
+`…#Buildings.Controls.OBC.CDL.Typos.ZeroTime` or `…#Modelica.Blocks.Types.ZeroTime` is
+`unknown-enum-type` naming `Buildings.Controls.OBC.CDL.Types.ZeroTime`, and so is an enumeration
+value or guard literal written under any path but the canonical one (`SimpleController.PD`,
+`Foo.SimpleController.PD`).
 
 A `@type` value or an `isOfDataType` reference in any namespace that carries a Unicode format or
 control character (general category `Cf` or `Cc`: a zero-width space, a byte-order mark, a soft

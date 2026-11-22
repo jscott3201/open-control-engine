@@ -206,9 +206,18 @@ fn eval_enum_ref(name: &str, scope: &dyn Scope) -> Result<Value, ExprError> {
     let (class_name, literal) = name
         .rsplit_once('.')
         .ok_or_else(|| ExprError::UnknownIdent(name.to_owned()))?;
-    let class = scope
-        .enum_class(class_name)
-        .ok_or_else(|| ExprError::UnknownIdent(class_name.to_owned()))?;
+    let class = scope.enum_class(class_name).ok_or_else(|| {
+        // The class is resolved by its canonical path alone (issue #762); a path whose last
+        // segment names a known enumeration is refused naming the spelling expected.
+        match oce_model::enumeration_spelling_hint(class_name) {
+            Some(row) => ExprError::NonCanonicalEnumeration {
+                written: class_name.to_owned(),
+                canonical: row.qualified_path,
+                member: literal.to_owned(),
+            },
+            None => ExprError::UnknownIdent(class_name.to_owned()),
+        }
+    })?;
     let ordinal = scope
         .enum_ordinal(class, literal)
         .ok_or_else(|| ExprError::UnknownIdent(name.to_owned()))?;

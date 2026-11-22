@@ -54,13 +54,15 @@ impl EnumClassId {
 
 pub use enumerations::{
     EnumerationClass, EnumerationKind, MemberValue, OBC_PACKAGE, enumeration_class,
-    enumeration_class_by_id, enumeration_class_path, enumeration_classes, enumeration_member_value,
+    enumeration_class_by_id, enumeration_class_by_iri, enumeration_class_by_path,
+    enumeration_class_path, enumeration_classes, enumeration_member_value,
+    enumeration_spelling_hint,
 };
 pub use types::{
     EnumDescriptor, SimpleController, ZeroTime, enum_class_id, enum_descriptor,
-    enum_descriptor_by_path, enum_member_ordinal, g36_enum_class_id, g36_enum_literals,
-    g36_integer_constant, g36_integer_constant_in_package, is_g36_integer_constant_package,
-    is_g36_type_path,
+    enum_descriptor_by_path, enum_member_ordinal, enumeration_member, g36_enum_class_id,
+    g36_enum_literals, g36_integer_constant, g36_integer_constant_in_package,
+    is_g36_integer_constant_package, is_g36_type_path,
 };
 
 /// A scalar CDL value (CDL §7.4.1). The payload **only** — attributes live in [`Attrs`] and

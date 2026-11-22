@@ -97,9 +97,11 @@ fn every_parameter_edit_moves_the_id_and_setting_it_back_restores_it() {
             }
         }
     }
-    // Every bound parameter of the corpus but the 37 structural widths (`nin`, `nout`, which
+    // Every bound parameter of the corpus but the 23 structural widths (`nin`, `nout`, which
     // `set_param` refuses) is edited, 120 of them from `+0.0` to `-0.0`; the counts pin the reach.
-    assert_eq!((edited, zero_signs, structural), (837, 120, 37));
+    // (37 before issue #773: the seven `MatrixGain` blocks of the three G36 matrix fixtures bound
+    // `nin` and `nout`, which their class no longer declares.)
+    assert_eq!((edited, zero_signs, structural), (837, 120, 23));
 }
 
 /// The `@id`s of a reference or reference list.
@@ -389,9 +391,11 @@ fn every_name_wiring_class_and_boundary_change_moves_the_id() {
     }
     // Each change applies wherever the document has what it changes: 7 fixed-limit fixtures have
     // no boundary input, 2 more have no Real one, and a rewire, a listed class swap or a
-    // removable (not required) binding needs a block that offers one. The reach is pinned.
+    // removable (not required) binding needs a block that offers one. The reach is pinned. (The
+    // two SumZone fixtures' only removable bindings were `MatrixGain`'s `nin`/`nout`, which their
+    // class no longer declares, issue #773: 30 documents, 32 before.)
     let expected: BTreeMap<&str, usize> = [
-        ("binding removed", 32),
+        ("binding removed", 30),
         ("block renamed", 47),
         ("boundary displayUnit changed", 38),
         ("boundary quantity changed", 38),

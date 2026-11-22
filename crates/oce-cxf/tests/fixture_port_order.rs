@@ -361,19 +361,12 @@ fn every_fixture_lists_ports_in_upstream_declaration_order() {
 ///
 /// Compared by base name (`k` for the catalog's `k_<i>`), class by class, over the 132 vendored
 /// classes. Upstream declares no `final` parameter in its public section and no `extends` clause
-/// (a base class could carry parameters), and both are pinned. The one difference is listed:
-/// `Reals.MatrixGain` declares `nin` and `nout` as protected `size(K, …)` parameters, which the
-/// catalog lists as settable. Nothing holds them to `K`'s shape: `nout = 7` on a 2x2 `K` loads
-/// with seven outputs, five of them `0.0`. Whether to refuse them or require `K`'s shape is
-/// issue #773's decision.
+/// (a base class could carry parameters), and both are pinned. There is no exception:
+/// `Reals.MatrixGain`'s protected `nin = size(K, 2)` and `nout = size(K, 1)` are not catalog
+/// parameters, and its counts come from `K` (issue #773, owner ruling of 2026-11-22).
 #[test]
 fn every_upstream_public_parameter_is_a_catalog_parameter_and_no_other() {
     use std::collections::BTreeSet;
-    // The catalog names upstream declares as protected parameters.
-    const PROTECTED_IN_CATALOG: &[(&str, &str)] = &[
-        ("CDL.Reals.MatrixGain", "nin"),
-        ("CDL.Reals.MatrixGain", "nout"),
-    ];
     let table = load_table();
     let mut failures = Vec::new();
     let (mut public, mut compared) = (0usize, 0usize);
@@ -392,12 +385,9 @@ fn every_upstream_public_parameter_is_a_catalog_parameter_and_no_other() {
             if *is_final && !*protected {
                 failures.push(format!("{class}: public final parameter `{name}`"));
             }
-            let listed = PROTECTED_IN_CATALOG
-                .iter()
-                .any(|(c, n)| c == class && n == name);
-            if !*protected || listed {
+            if !*protected {
                 upstream.insert(name.as_str());
-                public += usize::from(!*protected);
+                public += 1;
             }
         }
         if upstream != catalog {

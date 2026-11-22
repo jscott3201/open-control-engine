@@ -46,12 +46,10 @@ pub(super) fn rule_json(rule: &CatalogRule) -> Value {
         }
         CatalogRule::RealMatrixElements {
             base,
-            rows,
             default_rows,
-            cols,
             default_cols,
         } => {
-            json!({"rule": "RealMatrixElements", "base": base, "rows": rows, "default_rows": default_rows, "cols": cols, "default_cols": default_cols})
+            json!({"rule": "RealMatrixElements", "base": base, "default_rows": default_rows, "default_cols": default_cols})
         }
         CatalogRule::TimeTableMatrix {
             base,

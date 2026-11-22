@@ -111,6 +111,20 @@ fn block_param<'a>(graph: &'a ModelGraph, instance_suffix: &str, name: &str) -> 
         .unwrap_or_else(|| panic!("missing param {name:?} on block {instance_suffix:?}"))
 }
 
+/// Whether the block whose instance IRI ends with `instance_suffix` binds `name` at all.
+fn binds(graph: &ModelGraph, instance_suffix: &str, name: &str) -> bool {
+    graph.blocks.iter().any(|block| {
+        block
+            .instance_iri
+            .as_deref()
+            .is_some_and(|iri| iri.ends_with(instance_suffix))
+            && block
+                .params
+                .values
+                .iter()
+                .any(|(param, _)| param.as_ref() == name)
+    })
+}
 #[test]
 fn source_transcribed_g36_multizone_vav_relief_fan_group_imports_source_default_variant() {
     let parsed: JsonValue = serde_json::from_str(G36_RELIEF_FAN_GROUP).expect("G36 fixture JSON");
@@ -179,8 +193,8 @@ fn source_transcribed_g36_multizone_vav_relief_fan_group_imports_source_default_
         );
     }
 
-    assert!(block_param(&graph, ".enaRel", "nout").bit_eq(&Value::Integer(4)));
-    assert!(block_param(&graph, ".enaRel", "nin").bit_eq(&Value::Integer(2)));
+    // `MatrixGain`'s counts are `K`'s shape (issue #773): the fixture binds neither.
+    assert!(!binds(&graph, ".enaRel", "nout") && !binds(&graph, ".enaRel", "nin"));
     assert!(
         block_param(&graph, ".enaRel", "K_1_1").bit_eq(&Value::Real(1.0))
             && block_param(&graph, ".enaRel", "K_1_2").bit_eq(&Value::Real(0.0))

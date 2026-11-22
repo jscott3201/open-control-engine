@@ -102,8 +102,9 @@ drives the walk; the document only supplies text.
 
 Curation is **additive** in v1:
 
-- a **description** may exist only where the generated one is `""` (six today: the four of
-  `TrueHoldWithReset`, and `MatrixGain`'s `nout` and `nin`, which upstream declares `protected`).
+- a **description** may exist only where the generated one is `""` (four today, those of
+  `TrueHoldWithReset`; `MatrixGain`'s `nout` and `nin`, which upstream declares `protected`, were
+  the other two until issue #773 removed them from the catalog).
   A curated description for a subject that already has generated text is refused
   (`VocabError::CuratedReplacesGenerated`); an override with a required reason is v2;
 - a **note** names its class (`subject` `""`), a connector or a parameter, and has a `kind`;

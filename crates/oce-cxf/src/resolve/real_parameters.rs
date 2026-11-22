@@ -90,7 +90,8 @@ pub(crate) fn hold_in_catalog_type(
 pub(super) enum DeclaredTypeFault {
     /// An Integer above 2^53 in magnitude on a parameter declared Real.
     InexactInteger(i64),
-    /// A value of another kind than the declared Real, Integer or Boolean.
+    /// A value of another kind than the declared Real, Integer or Boolean, or a value that is no
+    /// member of the declared CDL enumeration.
     WrongKind {
         /// The declared type.
         declared: ValueType,
@@ -108,6 +109,17 @@ impl DeclaredTypeFault {
                      Integer above 2^53 in magnitude is not exact as a Real"
                 ),
             ),
+            Self::WrongKind {
+                declared: ValueType::Enum(class),
+            } => (
+                DiagCode::ParameterKindMismatch,
+                format!(
+                    "parameter `{name}` is declared the enumeration `{}` and binds a value that \
+                     is not one of its members; write `{}.<member>`",
+                    enumeration_path(*class),
+                    enumeration_path(*class)
+                ),
+            ),
             Self::WrongKind { declared } => (
                 DiagCode::ParameterKindMismatch,
                 format!(
@@ -120,12 +132,19 @@ impl DeclaredTypeFault {
     }
 }
 
+/// The canonical class path of the enumeration `class` (engine text), for a refusal.
+fn enumeration_path(class: oce_model::EnumClassId) -> &'static str {
+    oce_model::enumeration_class_by_id(class).map_or("?", |row| row.qualified_path)
+}
+
 /// `value`, bound to the composite parameter `node`, held in the type its `S231:isOfDataType`
 /// declares: the Real of an Integer on a declared Real. `Err` names the fault for a value of
-/// another kind than the declared Real, Integer or Boolean, or an Integer a declared Real cannot
-/// hold exactly; the caller reports it (or not, in the specialize pass) and keeps `value`. A
-/// parameter with no declared type, or one declared an enumeration, is returned untouched: its
-/// value is what the document wrote. Total; never panics.
+/// another kind than the declared Real, Integer or Boolean, an Integer a declared Real cannot
+/// hold exactly, or a value that is no member of the declared CDL enumeration (issue #762: an
+/// ordinal, a string, another enumeration's member); the caller reports it (or not, in the
+/// specialize pass) and keeps `value`. A parameter with no declared type, or one declared a G36
+/// enumeration (judged before grounding by `enumeration_parameters`), is returned untouched.
+/// Total; never panics.
 pub(super) fn hold_in_declared_type(
     node: &Node,
     value: Value,
@@ -141,7 +160,10 @@ pub(super) fn hold_in_declared_type(
         (ValueType::Real, Value::Real(_))
         | (ValueType::Integer, Value::Integer(_))
         | (ValueType::Boolean, Value::Boolean(_))
-        | (ValueType::Enum(_) | ValueType::String, _) => Ok(value),
+        | (ValueType::String, _) => Ok(value),
+        (ValueType::Enum(class), Value::Enum { class: bound, .. }) if *bound == class => Ok(value),
+        (ValueType::Enum(class), _) if oce_model::g36_enum_literals(class).is_some() => Ok(value),
+        (ValueType::Enum(_), _) => Err((DeclaredTypeFault::WrongKind { declared }, value)),
         (ValueType::Real | ValueType::Integer | ValueType::Boolean, _) => {
             Err((DeclaredTypeFault::WrongKind { declared }, value))
         }

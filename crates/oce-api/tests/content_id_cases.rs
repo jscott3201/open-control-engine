@@ -257,6 +257,6 @@ fn the_largest_corpus_encoding_is_pinned() {
         .unwrap();
     assert_eq!(
         (size, name.as_str()),
-        (64_491, "multizone_vav_relief_fan_group")
+        (64_458, "multizone_vav_relief_fan_group")
     );
 }

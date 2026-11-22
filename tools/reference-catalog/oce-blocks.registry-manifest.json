@@ -515,22 +515,13 @@
     "outputs": ["Real", "Real"],
     "width_driven": true,
     "param_rules": [
-      { "rule": "Structural", "name": "nout" },
-      { "rule": "Structural", "name": "nin" },
-      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
-      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
-      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
-      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
-      { "rule": "IntegerProductLessOrEqualConstant", "left": "nout", "right": "nin", "max": 1048576 },
-      { "rule": "RealMatrixElements", "base": "K", "rows": "nout", "default_rows": 2, "cols": "nin", "default_cols": 2 }
+      { "rule": "RealMatrixElements", "base": "K", "default_rows": 2, "default_cols": 2 }
     ],
     "port_naming": "width_driven",
     "stateful": false,
     "reserved": false,
     "param_defaults": [
-      { "name": "nout", "kind": "literal", "integer": 2 },
-      { "name": "nin", "kind": "literal", "integer": 2 },
-      { "name": "K_<row>_<col>", "kind": "derived", "formula": "1.0 if row == col else 0.0" }
+      { "name": "K_<row>_<col>", "kind": "derived", "formula": "[1, 0; 0, 1] when no cell is bound; nout = size(K, 1), nin = size(K, 2)" }
     ]
   },
   {
