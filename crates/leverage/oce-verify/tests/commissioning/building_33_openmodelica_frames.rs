@@ -199,6 +199,10 @@ fn the_run_saw_the_oracle_s_frames_held_and_its_record_binds_them() {
         field("signal_sha256"),
         sha256(&example_file("openmodelica/yCooVal_frames.csv"))
     );
+    assert_eq!(
+        field("raw_sha256"),
+        sha256(&example_file("openmodelica/CoolingCoilValveFrames.raw.csv"))
+    );
     assert_eq!(record["rows"], 78);
 }
 

@@ -182,6 +182,12 @@ fn the_probe_run_is_recorded_and_the_divergence_registered() {
     assert_eq!(field("probe_wrapper_sha256"), sha256(&wrapper));
     let signal = example_file("openmodelica/yCooVal_reenable_probe.csv");
     assert_eq!(field("probe_signal_sha256"), sha256(&signal));
+    assert_eq!(
+        field("probe_raw_sha256"),
+        sha256(&example_file(
+            "openmodelica/CoolingCoilValveReenableProbe.raw.csv"
+        ))
+    );
     // The probe's table is the oracle's with the supply air at 290 K from 382 s.
     let text = String::from_utf8(wrapper).expect("UTF-8");
     for row in probe_rows() {

@@ -45,7 +45,7 @@
       "reviewed_on": "2026-11-22",
       "reviewed_commit": "a87c1d53b5d37ab57468d9f873044b89dd2b8b4a",
       "state": "open",
-      "disposition": "Owner decision pending in issue #800 (https://github.com/jscott3201/open-control-engine/issues/800): whether HostTick v1 should count each pulse of a Boolean held true on consecutive frames as an event, as Modelica does, or keep one rising edge; no engine behaviour changed with this entry.",
+      "disposition": "Owner decision pending in issue #800 (https://github.com/jscott3201/open-control-engine/issues/800): whether HostTick v1 should count each pulse of a Boolean held true on consecutive frames as an event, as Modelica does, or keep one rising edge; no engine behaviour changed with this entry. Its test is in oce-verify, which the leverage lane runs on every pull request.",
       "upstream_issue": {
         "status": "not_applicable",
         "url": null
@@ -97,7 +97,7 @@
       "reviewed_on": "2026-11-22",
       "reviewed_commit": "a87c1d53b5d37ab57468d9f873044b89dd2b8b4a",
       "state": "open",
-      "disposition": "Owner decision pending in issue #800 (https://github.com/jscott3201/open-control-engine/issues/800): whether HostTick v1 should count each pulse of a Boolean held true on consecutive frames as an event, as Modelica does, or keep one rising edge; no engine behaviour changed with this entry.",
+      "disposition": "Owner decision pending in issue #800 (https://github.com/jscott3201/open-control-engine/issues/800): whether HostTick v1 should count each pulse of a Boolean held true on consecutive frames as an event, as Modelica does, or keep one rising edge; no engine behaviour changed with this entry. Its test is in oce-conformance's conformance binary, which no per-PR job runs (nightly release-gate.yml and gate.sh full only): a change that closes it would merge on CI OK and fail first in the nightly run.",
       "upstream_issue": {
         "status": "not_applicable",
         "url": null

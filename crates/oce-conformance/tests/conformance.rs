@@ -130,6 +130,7 @@ mod per_block_routing_reals;
 mod per_block_routing_typed;
 mod per_block_source_timetable;
 mod per_block_utilities_assert;
+mod sample_trigger_event_inputs;
 mod tiers;
 
 /// The test binaries a workflow, a gate step or a recorded command selects by name. Each stays a

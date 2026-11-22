@@ -19,6 +19,8 @@ probe makes the PI's error at 382 s differ from that at 377 s, so a reset at 382
 valve signal (issue #800).
 """
 
+import sys
+
 PROBE_FROM = 382.0
 PROBE_SUPPLY = 290.0
 
@@ -38,7 +40,6 @@ def frames(oracle, probe):
         raise SystemExit("no rows in {}".format(oracle))
     return rows
 
-import sys
 
 
 def main(oracle, probe=False):
@@ -48,9 +49,10 @@ def main(oracle, probe=False):
         rows.append("{}, {}, {}, {}, {}, {}".format(*cells[:5], fan_sta))
     table = ";\n      ".join(rows)
     name = "CoolingCoilValveReenableProbe" if probe else "CoolingCoilValveFrames"
-    what = "with TSup at 290 K from 382 s" if probe else "each input held"
+    what = ("with TSup at 290 K from 382 s (issue #800)" if probe
+            else "each input held (issue #787)")
     print("""model {name}
-  "Upstream's CoolingCoilValve on the {n} frames of valve_oracle.txt, {what} (issue #787)"
+  "Upstream's CoolingCoilValve on the {n} frames of valve_oracle.txt, {what}"
   Modelica.Blocks.Sources.CombiTimeTable frames(
     table=[
       {table}],

@@ -66,13 +66,22 @@ run_pilot() {
   docker run --rm --pull=never --network none --memory 4g --cpus 4 \
     --user "$(id -u):$(id -g)" -e HOME=/work \
     -v "$BUILDINGS":/libs/buildings:ro -v "$MODELICA":/libs/msl:ro -v "$HERE":/scripts:ro \
-    -v "$work":/work -w /work "$IMAGE" omc /work/run.mos > "$out/${prefix}run.log" 2>&1
+    -v "$work":/work -w /work "$IMAGE" omc /work/run.mos > "$work/omc.log" 2>&1
+  # omc reports its compile and simulation times; they vary run to run, so the committed log
+  # drops them and a regenerated log is byte-identical.
+  grep -v '^    time[A-Za-z]* = ' "$work/omc.log" > "$out/${prefix}run.log"
   grep -q 'The simulation finished successfully' "$out/${prefix}run.log" \
     || { cat "$out/${prefix}run.log" >&2; exit 1; }
   cp "$work/${pilot}_res.csv" "$out/$raw.raw.csv"
   rm -rf "$work"
   python3 -I "$HERE/canonicalize.py" "$pilot" "$out/$raw.raw.csv" "$out"
   tables=''
+  also=''
+  if [ -n "${ALSO:-}" ]; then
+    also="
+  \"also_source\": \"$ALSO\",
+  \"also_source_sha256\": \"$(sha "$BUILDINGS/$ALSO")\","
+  fi
   for stem in "$@"; do
     tables="$tables
   \"${stem}_sha256\": \"$(sha "$out/$stem.canonical.csv")\","
@@ -91,7 +100,7 @@ run_pilot() {
   "msl_commit": "$MODELICA_COMMIT",
   "msl_tree": "$MODELICA_TREE",
   "class_source": "$source",
-  "class_source_sha256": "$(sha "$BUILDINGS/$source")",
+  "class_source_sha256": "$(sha "$BUILDINGS/$source")",$also
   "settings": "$SETTINGS",
   "projection": "$PROJECTION",
   "command": "$COMMAND",
@@ -106,7 +115,10 @@ CDL='Buildings/Controls/OBC/CDL'
 TWO='initially_true rising_after_start'
 # shellcheck disable=SC2086
 run_pilot OnCounterPilot integers_on_counter on_counter CDL.Integers.OnCounter "$CDL/Integers/OnCounter.mo" '' $TWO
+# The pulse pilot's result depends on Change too: its record binds that source as well.
+ALSO="$CDL/Logical/Change.mo"
 run_pilot OnCounterChangePilot integers_on_counter change_pulses CDL.Integers.OnCounter "$CDL/Integers/OnCounter.mo" change_pulses. change_pulses
+ALSO=''
 # shellcheck disable=SC2086
 run_pilot TriggeredSamplerPilot discrete_triggered_sampler triggered_sampler CDL.Discrete.TriggeredSampler "$CDL/Discrete/TriggeredSampler.mo" '' $TWO
 # shellcheck disable=SC2086

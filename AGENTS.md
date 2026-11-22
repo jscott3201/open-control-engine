@@ -92,9 +92,13 @@ cells, debug and release codegen on both architectures, with the debug-against-r
 comparisons, on every determinism-lane PR, so the `determinism` row issue #545 introduced is
 gone. `bash .agents/gate.sh determinism` remains as a mode, to reproduce a red release cell on
 one host. The last row is for what only the workspace suite or `full` mode itself
-checks: for a pin advance, `oce-conformance`'s `conformance` binary, three of whose modules read the vendored tree and
-the reference catalog, that crate's `clean_room` unit tests and `open_modelica_nand` binary, which
-pin the vendored `Nand.mo` by path, line and equation, and the doctests (the pin-guard tests themselves run per PR); and the
+checks: for a pin advance, `oce-conformance`'s `conformance` binary, six of whose modules read
+vendored files (`g36_freeze_protection_heating_coil_continuous_time`,
+`g36_reference_frame_rate_labels` and `g36_reference_provenance_labels`, which also reads the
+reference catalog; `open_modelica_event_triggers`, and `open_modelica_event_pulses` and
+`open_modelica_integrator_ramp` through its `vendored_source`), that crate's `clean_room` unit tests
+and `open_modelica_nand` binary, which pin the vendored `Nand.mo` by path, line and equation, and
+the doctests (the pin-guard tests themselves run per PR); and the
 script's own `full`-only steps, with the two files only they exercise. `full` is also
 what CI executes nightly. **A pin advance, or a change to `.agents/gate.sh`, `.config/nextest.toml`
 or `scripts/ci/install-wasmtime.sh`, still owes the `full` row on the PR itself; no other PR owes

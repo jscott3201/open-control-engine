@@ -16,8 +16,9 @@
 # host user, with 4 CPUs and 4 GB, both libraries read-only, and simulate_frames.mos with @MODEL@
 # replaced by the wrapper's name. The model is upstream's CoolingCoilValve as it is at the pin, fed
 # by one CombiTimeTable with constant segments (each frame's inputs held until the next frame,
-# as the engine holds them), under cvode at tolerance 1e-6. The script writes the two signals and
-# provenance_frames.json beside itself; no test runs it, and the tests read those files. Docker
+# as the engine holds them), under cvode at tolerance 1e-6. The script writes each run's result as
+# OpenModelica wrote it (<model>.raw.csv), the two signals and provenance_frames.json beside
+# itself; no test runs it, and the tests read those files. Docker
 # images and libraries are left as they are.
 set -eu
 
@@ -61,7 +62,8 @@ run() {
     -v "$WORK/$model":/work -w /work "$IMAGE" omc /work/run.mos > "$WORK/$model/omc.log" 2>&1
   grep -q 'The simulation finished successfully' "$WORK/$model/omc.log" \
     || { cat "$WORK/$model/omc.log" >&2; exit 1; }
-  python3 -I "$HERE/extract_frames.py" "$WORK/$model/${model}_res.csv" \
+  cp "$WORK/$model/${model}_res.csv" "$HERE/$model.raw.csv"
+  python3 -I "$HERE/extract_frames.py" "$HERE/$model.raw.csv" \
     "$HERE/../valve_oracle.txt" "$HERE/$signal" "$@"
 }
 run CoolingCoilValveFrames yCooVal_frames.csv
@@ -85,10 +87,14 @@ cat > "$HERE/provenance_frames.json" <<JSON
   "simulate_template_sha256": "$(sha "$HERE/simulate_frames.mos")",
   "wrapper": "CoolingCoilValveFrames.mo",
   "wrapper_sha256": "$(sha "$HERE/CoolingCoilValveFrames.mo")",
+  "raw": "CoolingCoilValveFrames.raw.csv",
+  "raw_sha256": "$(sha "$HERE/CoolingCoilValveFrames.raw.csv")",
   "signal": "yCooVal_frames.csv",
   "signal_sha256": "$(sha "$HERE/yCooVal_frames.csv")",
   "probe_wrapper": "CoolingCoilValveReenableProbe.mo",
   "probe_wrapper_sha256": "$(sha "$HERE/CoolingCoilValveReenableProbe.mo")",
+  "probe_raw": "CoolingCoilValveReenableProbe.raw.csv",
+  "probe_raw_sha256": "$(sha "$HERE/CoolingCoilValveReenableProbe.raw.csv")",
   "probe_signal": "yCooVal_reenable_probe.csv",
   "probe_signal_sha256": "$(sha "$HERE/yCooVal_reenable_probe.csv")",
   "settings": "cvode, tolerance 1e-6, 0 to 393 s, output every 1 s, inputs held (constant segments)",

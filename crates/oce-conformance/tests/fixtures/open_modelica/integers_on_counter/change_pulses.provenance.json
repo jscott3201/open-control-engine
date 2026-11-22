@@ -12,6 +12,8 @@
   "msl_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
   "class_source": "Buildings/Controls/OBC/CDL/Integers/OnCounter.mo",
   "class_source_sha256": "9a7bdbc0e6e915868d045b1c90aab336577dbe676dbef19d072a9fec1ca1bf45",
+  "also_source": "Buildings/Controls/OBC/CDL/Logical/Change.mo",
+  "also_source_sha256": "87ddbe1b35598b6aee12e0310fa204da12bd2ef4aa7a3d5185388d8165a520a4",
   "settings": "cvode, tolerance 1e-6, 0 to 10 s, output every 1 s",
   "projection": "at each frame instant 0 to 9 s, the last row within 1e-6 s of it",
   "command": "docker run --rm --pull=never --network none --memory 4g --cpus 4 --user <host-uid>:<host-gid> -e HOME=/work -v <buildings>:/libs/buildings:ro -v <msl>:/libs/msl:ro -v tools/openmodelica-event-reference/events:/scripts:ro -v <run directory>:/work -w /work <image> omc /work/run.mos",

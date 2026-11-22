@@ -54,10 +54,13 @@ fn reset_event(inputs: &[Value], region: &[u64]) -> bool {
 ///   reset is its next false-to-true transition.
 /// - OpenModelica 1.25.1 agrees exactly at every frame with `u = 0`, with the trigger true from
 ///   frame 0 and with it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`,
-///   issue #670). With a nonzero `u` this block trails it by exactly one frame of the input held
-///   at the last reset or at the start, and equals it at each reset frame; the reset frame's
-///   skipped step is what keeps that lag the same after a reset as after the start
-///   (`open_modelica_integrator_ramp.rs`).
+///   issue #670). With a nonzero `u`, at a uniform frame step with inputs held between frames,
+///   this block trails it by exactly one frame of the input held at the last reset or at the
+///   start, and equals it at each reset frame; the reset frame's skipped step is what keeps that
+///   lag the same after a reset as after the start (`open_modelica_integrator_ramp.rs`). At
+///   uneven steps the difference after the reset (or start) at frame `r` is
+///   `k * [sum over j of u(j) * (dt(j) - dt(j+1)) - u(r) * dt(r+1)]`, the sum over
+///   the frames after `r`.
 #[derive(Clone, Copy, Debug)]
 pub struct IntegratorWithReset {
     pub(crate) k: f64,

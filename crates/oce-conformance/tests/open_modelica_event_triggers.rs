@@ -579,6 +579,11 @@ pub(crate) fn assert_run_record(
 /// modules: this module is the one place the `conformance` binary's event evidence reads the
 /// vendored tree.
 pub(crate) fn vendored_source(class: &str) -> &'static [u8] {
+    if class == "CDL.Logical.Change" {
+        return include_bytes!(
+            "../../../third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/Logical/Change.mo"
+        );
+    }
     classes()
         .into_iter()
         .find(|evidence| evidence.case.class_path == class)

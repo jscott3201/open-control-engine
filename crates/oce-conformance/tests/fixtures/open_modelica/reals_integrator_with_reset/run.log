@@ -15,12 +15,5 @@ record SimulationResult
     messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
 LOG_SUCCESS       | info    | The simulation finished successfully.
 ",
-    timeFrontend = 0.42736712499999996,
-    timeBackend = 0.006840042,
-    timeSimCode = 0.005966042,
-    timeTemplates = 0.007146334000000001,
-    timeCompile = 0.397390834,
-    timeSimulation = 0.010181834,
-    timeTotal = 0.8551071259999999
 end SimulationResult;
 ""

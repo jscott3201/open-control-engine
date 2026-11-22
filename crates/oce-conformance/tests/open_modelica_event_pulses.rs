@@ -15,6 +15,9 @@
 //! engine's against `change_pulses.engine.csv` (the register's engine evidence) and
 //! OpenModelica's against its run, so an engine change that removes or moves the divergence fails
 //! here and must update the register, the execution profile and the verification-evidence page.
+//! This test is in the `conformance` binary, which no per-PR job runs (it runs nightly in
+//! `release-gate.yml` and in `gate.sh full`): an `OnCounter` or `Change` change that closes the
+//! divergence would merge on `CI OK` and fail first in the nightly run.
 
 use oce_api::{Engine, Value};
 
@@ -169,6 +172,15 @@ fn the_pulse_run_s_provenance_binds_its_pilot_table_and_raw_result() {
     assert_eq!(
         record["change_pulses_sha256"].as_str(),
         Some(sha256(CANONICAL.as_bytes()).as_str())
+    );
+    // The divergence depends on `Change` as much as on `OnCounter`: its source is bound too.
+    assert_eq!(
+        record["also_source"].as_str(),
+        Some("Buildings/Controls/OBC/CDL/Logical/Change.mo")
+    );
+    assert_eq!(
+        record["also_source_sha256"].as_str(),
+        Some(sha256(vendored_source("CDL.Logical.Change")).as_str())
     );
     let pilot = std::str::from_utf8(PILOT).expect("UTF-8");
     assert!(pilot.contains("Buildings.Controls.OBC.CDL.Logical.Change consecutivePulsesChange"));

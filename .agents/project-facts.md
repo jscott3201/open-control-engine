@@ -207,9 +207,12 @@ Pin-advance PRs â€” any change under `third_party/**` or to the pin constants â€
 run per PR, `oce-cxf`'s `g36_catalog_tests` in the `crate tests` job and `oce-blocks`'s
 `registry::catalog_tests` in the determinism subset. What a pin advance gets only from `full`, or
 from the nightly after it has landed, is
-`oce-conformance`'s `conformance` binary, four of whose modules read the vendored tree and
-the reference catalog, that crate's `clean_room` unit tests and `open_modelica_nand` binary, which
-pin the vendored `Nand.mo` by path, line and equation, and the doctests.
+`oce-conformance`'s `conformance` binary, six of whose modules read vendored files
+(`g36_freeze_protection_heating_coil_continuous_time`, `g36_reference_frame_rate_labels` and
+`g36_reference_provenance_labels`, which also reads the reference catalog;
+`open_modelica_event_triggers`, and `open_modelica_event_pulses` and `open_modelica_integrator_ramp`
+through its `vendored_source`), that crate's `clean_room` unit tests and `open_modelica_nand`
+binary, which pin the vendored `Nand.mo` by path, line and equation, and the doctests.
 
 **Confirm the checks ran.** GitHub Actions runs the whole per-PR gate on every PR, drafts
 included, and `CI OK` is the one status that summarizes it. A PR with no checks is easy to

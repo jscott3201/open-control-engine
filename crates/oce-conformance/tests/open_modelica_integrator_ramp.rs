@@ -10,9 +10,11 @@
 //! The engine's discretisation, written out: a frame emits the state before its own step, and
 //! that step integrates the frame's own `u` over the interval before the frame (forward Euler
 //! on the tick convention); a reset frame emits `y_reset_in` and takes no step. With held inputs
-//! the two shifts cancel except for one step: at every frame after the start or a reset the
-//! engine trails OpenModelica by exactly `k * u * dt`, `u` the input held at that start or reset,
-//! and equals it at frame 0 and at each reset frame. The step of `u` at 5 s does not change the
+//! at a uniform frame step the two shifts cancel except for one step: at every frame after the
+//! start or a reset the engine trails OpenModelica by exactly `k * u * dt`, `u` the input held at
+//! that start or reset, and equals it at frame 0 and at each reset frame. (At uneven steps the
+//! difference after the reset or start at frame `r` is
+//! `k * [sum over j > r of u(j) * (dt(j) - dt(j+1)) - u(r) * dt(r+1)]`; these frames are uniform.) The step of `u` at 5 s does not change the
 //! offset. A reset frame that took its step (the reading decision 4 of
 //! `docs/design/reset-timing.md` rejects) would leave no offset after a reset while keeping it
 //! after the start: the native-frame test fails it at 4, 5, 6, 8 and 9 s. That is what

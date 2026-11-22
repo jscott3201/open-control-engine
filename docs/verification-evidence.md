@@ -399,27 +399,38 @@ readings the rule replaced, an event at frame 0 and an event shown one frame lat
 from it in every class, and a reference rewritten under either fails the facade comparison at the
 first frame it changes.
 
-A seventh pilot integrates a nonzero, stepped input through `IntegratorWithReset` with two resets
-(`open_modelica_integrator_ramp.rs`). The engine trails OpenModelica by exactly one frame of the
-input held at the last reset or at the start (0.5, then 2, per 1 s frame), equals it at each reset
-frame, and on 1/16, 1/32 and 1/64 s frames the offset halves with the step. That one-frame lag is
-the same after a reset as after the start because the reset frame takes no Euler step (decision 4
-of the [reset timing note](design/reset-timing.md)); a reset frame that took its step fails the
-test. OpenModelica shows the lag is uniform; it does not show the convention is the only right
-one.
+A sixth pilot integrates a nonzero, stepped input through `IntegratorWithReset` with two resets
+(`open_modelica_integrator_ramp.rs`). At its uniform 1 s frames, with inputs held between them, the
+engine trails OpenModelica by exactly one frame of the input held at the last reset or at the start
+(0.5, then 2), equals it at each reset frame, and on 1/16, 1/32 and 1/64 s frames the offset halves
+with the step. That one-frame lag is the same after a reset as after the start because the reset
+frame takes no Euler step (decision 4 of the [reset timing note](design/reset-timing.md)); a reset
+frame that took its step fails the test. OpenModelica shows the lag is uniform at a uniform step; it
+does not show the convention is the only right one. At uneven steps the difference after the reset
+(or start) at frame `r` is `k * [sum over j of u(j) * (dt(j) - dt(j+1)) - u(r) * dt(r+1)]`, the sum
+over the frames after `r`, not one frame of a single input.
 
-An eighth pilot counts, with `OnCounter`, the `Change` pulses of a signal that changes on
+A seventh pilot counts, with `OnCounter`, the `Change` pulses of a signal that changes on
 consecutive frames (`open_modelica_event_pulses.rs`). **The engine and OpenModelica disagree**:
 OpenModelica counts each change (the count reaches 9), the engine one per run of consecutive
 changes, because `Change` holds `true` for a frame and two consecutive pulses are one rising edge
 (the count reaches 6); they part at the second of two consecutive changes. This is `DVG-000002` in
-the known-divergence register (`crates/oce-conformance/tests/fixtures/known_divergence/register.json`)
-and the projection limit the [execution profile](execution-profile.md#conformance-boundary)
-states; issue #800 waits on the owner. **What these runs do not show:** `PIDWithReset`'s
-integration (the Building 33 frames below compare it), `PIDWithReset` with a derivative, other
-parameters, another tool or tool version, and repeat-identical or cross-architecture runs: each
-pilot ran once, on `linux/arm64`, and none of the four cases' OCI, projection-mutation or two-run
-checks apply.
+the known-divergence register
+(`crates/oce-conformance/tests/fixtures/known_divergence/register.json`) and the projection limit
+the [execution profile](execution-profile.md#conformance-boundary) states; issue #800 waits on the
+owner. **Its test runs nightly, not per PR:** it is in `oce-conformance`'s `conformance` binary,
+which no per-PR job runs, so a change to `OnCounter` or `Change` that closes the divergence would
+merge on `CI OK` and fail first in the nightly run (the Building 33 divergence, `DVG-000001`, is
+tested in `oce-verify`, per PR). The same limit is widest for `Logical.Sources.SampleTrigger` at a
+period at or below the frame step, which is `true` on every frame, so an event input it feeds never
+fires after frame 0; an engine-only test pins that (`sample_trigger_event_inputs.rs`), with no tool
+run behind it and no register entry.
+
+**What these runs do not show:** `PIDWithReset`'s integration (the Building 33 frames below
+compare it), `PIDWithReset` with a derivative, other parameters, another tool or tool version, and
+repeat-identical or cross-architecture runs: each pilot ran once, on `linux/arm64`, and none of
+the four cases' OCI, projection-mutation or two-run checks apply. Two regenerations wrote
+byte-identical raw results, tables, logs (omc's timing lines are dropped) and records.
 
 ### Commissioning on recorded data: the Building 33 day
 

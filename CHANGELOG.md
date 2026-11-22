@@ -2651,14 +2651,21 @@ so far, and no tag is cut by the bump.
   no event at frame 0 for a trigger already true, each event at its own frame, taking that frame's
   inputs. Both readings the rule of GitHub #789 replaced, an event at frame 0 and an event shown
   one frame late, differ from OpenModelica in every class. A ramp pilot shows
-  `IntegratorWithReset` trailing OpenModelica by exactly one frame of the input held at the last
-  reset or the start, the same after a reset as after the start, halving on finer frames
+  `IntegratorWithReset`, at a uniform frame step with held inputs, trailing OpenModelica by
+  exactly one frame of the input held at the last reset or the start, the same after a reset as
+  after the start, halving on finer frames (at uneven steps the difference is a sum over the
+  frames' step changes)
   (`open_modelica_integrator_ramp.rs`); a reset frame that took its Euler step fails it. A
   `Change` -> `OnCounter` pilot whose input changes on consecutive frames counts every change in
   OpenModelica (to 9) and one per run of consecutive changes in the engine (to 6): `Change` holds
   `true` for a frame under HostTick v1, so two consecutive pulses are one rising edge. That is
-  registered as known divergence `DVG-000002` and pinned (`open_modelica_event_pulses.rs`); issue
-  #800 waits on the owner. Each pilot ran once, on `linux/arm64`; these are not repeat-run or
+  registered as known divergence `DVG-000002` and pinned (`open_modelica_event_pulses.rs`; that
+  test runs nightly, not per PR); issue #800 waits on the owner. The same limit is widest for
+  `CDL.Logical.Sources.SampleTrigger` at a period at or below the frame step: it is `true` on every
+  frame, so a `TriggeredSampler` it feeds never samples after frame 0 (at a 2 s period on 1 s frames
+  it samples each instant). An engine-only test pins that (`sample_trigger_event_inputs.rs`), and
+  `docs/execution-profile.md` and `SampleTrigger`'s rustdoc state it; no tool run backs it, so it
+  has no register entry. Each pilot ran once, on `linux/arm64`; these are not repeat-run or
   cross-architecture cases like the four scoped Tier-3 ones. No block behaviour changed; the
   classes' rustdoc says what OpenModelica gives.
 

@@ -1,5 +1,5 @@
 model CoolingCoilValveReenableProbe
-  "Upstream's CoolingCoilValve on the 78 frames of valve_oracle.txt, with TSup at 290 K from 382 s (issue #787)"
+  "Upstream's CoolingCoilValve on the 78 frames of valve_oracle.txt, with TSup at 290 K from 382 s (issue #800)"
   Modelica.Blocks.Sources.CombiTimeTable frames(
     table=[
       0.0, 288.0, 285.0, 280.0, 0.6, 1;
