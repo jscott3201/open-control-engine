@@ -223,3 +223,4 @@ third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/T
 third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/Types/VentilationStandard.jsonld err 9ad4aeacb8836ea2d6cee2dce1a8d81c336232f3dac44d02f07de1b83934a221
 third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE62_1/Setpoints.jsonld err 3437b5905afab964cd114fcf956b9b8d0e7a8bf7333bceb42b52d0ce5c68d0ef
 third_party/modelica-buildings-cdl/cxf/Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/Title24/Setpoints.jsonld err 707b964f7c4b237bed36a3c4604c3d2fbd82a56e6e781a7c2026e27d8d7c612e
+third_party/modelica-buildings-cdl/cxf/Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.jsonld err eb01db25dc11224f1a8b4b4c2db827ea3058cc3a83f86fd007094400e9410ffb

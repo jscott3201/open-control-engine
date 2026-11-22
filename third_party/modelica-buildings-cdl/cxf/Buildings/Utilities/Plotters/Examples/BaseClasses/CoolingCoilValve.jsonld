@@ -1,0 +1,852 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "q": "http://qudt.org/vocab/quantitykind#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andIntErr"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andOutAirFanFee"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.booToRea"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.cha"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.min"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.pro"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMax"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMin"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMax"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMin"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-120,-120},{120,120}},preserveAspectRatio=false),graphics={Rectangle(extent={{-10,120},{120,-120}},lineColor={217,217,217},fillColor={217,217,217},fillPattern=FillPattern.Solid),Text(textString=\"Limiter for\nlow TSup\",textColor={0,0,127},extent={{80,-102},{120,-110}}),Rectangle(extent={{-120,0},{-12,-120}},lineColor={217,217,217},fillColor={217,217,217},fillPattern=FillPattern.Solid),Text(textString=\"Enbale/Disable\",textColor={0,0,127},extent={{-48,-106},{-20,-112}}),Rectangle(extent={{-120,120},{-12,2}},lineColor={217,217,217},fillColor={217,217,217},fillPattern=FillPattern.Solid),Text(textString=\"Controller\",textColor={0,0,127},extent={{-112,12},{-92,6}})}",
+      "S231:documentation": "info=<html>\n<p>\nControl sequence that outputs the cooling coil valve position. The implementation is according to\nthe ALC EIKON control sequence implementation in one of LBNL buildings.\n</p>\n</html>,revisions=<html>\n<ul>\n<li>\nAugust 29, 2023, by Hongxiang Fu:<br/>\nBecause of the removal of <code>Logical.And3</code> based on ASHRAE 231P,\nreplaced it with a stack of two <code>Logical.And</code> blocks.\nThis is for\n<a href=\\https://github.com/lbl-srg/modelica-buildings/issues/2465\\>#2465</a>.\n</li>\n<li>\nApril 09, 2018, by Milica Grahovac:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOut"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSup"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupSet"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFee"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanSta"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooVal"
+      },
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.alc_int_k"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.alc_k_unit_conv"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.alc_prop_k"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.FanFeeCut"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.FanFeeDelta"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.interval"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.k"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.reverseActing"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.Ti"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutCooCut"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutDelta"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupHighLim"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupHigLim"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uMax"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uMin"
+        }
+      ],
+      "S231:icon": "graphics={Rectangle(extent={{-100,-100},{100,100}},lineColor={0,0,127},fillColor={255,255,255},fillPattern=FillPattern.Solid),Line(color={28,108,200},points={{20,58}}),Text(textString=\"%name\",textColor={0,0,127},extent={{-108,138},{102,110}}),Text(textString=\"Cooling coil valve\",textColor={0,0,127},extent={{-64,-132},{60,-18}})}",
+      "S231:label": "CoolingCoilValve"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.alc_int_k",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Recorded integral controller gain",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "alc_int_k",
+      "S231:value": "0.5/100",
+      "qudt:hasUnit": {
+        "@id": "http://data.ashrae.org/S231#1/F"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.alc_k_unit_conv",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Unit converter for controller gains from the ALC control logic",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "alc_k_unit_conv",
+      "S231:value": "9/5"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.alc_prop_k",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Recorded proportional controller gain",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "alc_prop_k",
+      "S231:value": "1/100",
+      "qudt:hasUnit": {
+        "@id": "http://data.ashrae.org/S231#1/F"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andIntErr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Outputs controller enable signal",
+      "S231:graphics": "Placement(transformation(extent={{-76,-70},{-56,-50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andIntErr.u1"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andIntErr.u2"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andIntErr.y"
+        }
+      ],
+      "S231:label": "andIntErr"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andIntErr.u2",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanSta"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andIntErr.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.booToRea.u"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.cha.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andOutAirFanFee",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Outdoor air temperature below and fan feedback above respective thresholds",
+      "S231:graphics": "Placement(transformation(extent={{-76,-30},{-56,-10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andOutAirFanFee.u1"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andOutAirFanFee.u2"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andOutAirFanFee.y"
+        }
+      ],
+      "S231:label": "andOutAirFanFee"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andOutAirFanFee.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andIntErr.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.booToRea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:accessSpecifier": "protected",
+      "S231:graphics": "Placement(transformation(extent={{-40,-30},{-20,-10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.booToRea.u"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.booToRea.y"
+        }
+      ],
+      "S231:label": "booToRea"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.booToRea.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.pro.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.cha",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Change",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Detect signal change",
+      "S231:graphics": "Placement(transformation(extent={{-40,-70},{-20,-50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.cha.u"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.cha.y"
+        }
+      ],
+      "S231:label": "cha"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.cha.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.trigger"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.FanFeeCut",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Recorded fan feedback threshold",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "FanFeeCut",
+      "S231:value": "15/100"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.FanFeeDelta",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Recorded fan feedback threshold hysteresis delta",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "FanFeeDelta",
+      "S231:value": "10/100"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Defines lower limit of the cooling valve signal at low range SATs",
+      "S231:graphics": "Placement(transformation(extent={{80,-30},{100,-10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.f1"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.f2"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.limitAbove"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.limitBelow"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.u"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.x1"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.x2"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.y"
+        }
+      ],
+      "S231:label": "higLim"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.limitAbove",
+      "S231:isFinal": true,
+      "S231:value": true
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.limitBelow",
+      "S231:isFinal": true,
+      "S231:value": true
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.min.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.interval",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Recorded interval at which integration part of the output gets updated",
+      "S231:label": "interval",
+      "S231:min": 1,
+      "S231:value": 15
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.k",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Proportional controller gain",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "k",
+      "S231:value": "alc_prop_k*alc_k_unit_conv",
+      "qudt:hasUnit": {
+        "@id": "http://data.ashrae.org/S231#1/K"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Custom PI controller",
+      "S231:graphics": "Placement(transformation(extent={{-40,80},{-20,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.k"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.reverseActing"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.Ti"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.trigger"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.u_m"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.u_s"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.y"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.y_reset"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.yMax"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.yMin"
+        }
+      ],
+      "S231:label": "limPI"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.k",
+      "S231:isFinal": true,
+      "S231:value": "k"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.reverseActing",
+      "S231:isFinal": true,
+      "S231:value": "reverseActing"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.Ti",
+      "S231:isFinal": true,
+      "S231:value": "Ti"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.pro.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.y_reset",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.yMax",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.yMin",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.min",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Min",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Switches the signal between controller and low range limiter signals",
+      "S231:graphics": "Placement(transformation(extent={{80,20},{100,40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.min.u1"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.min.u2"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.min.y"
+        }
+      ],
+      "S231:label": "min"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.min.u1",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.pro.y"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.pro",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "protected",
+      "S231:graphics": "Placement(transformation(extent={{40,74},{60,94}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.pro.u1"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.pro.u2"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.pro.y"
+        }
+      ],
+      "S231:label": "pro"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Controller reverse action",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "reverseActing",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.Ti",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Integral controller gain",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "Ti",
+      "S231:value": "undefined",
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOut",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured outdoor air temperature",
+      "S231:graphics": "Placement(transformation(extent={{-160,-40},{-120,0}})),iconTransformation(extent={{-120,-10},{-100,10}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:DEG_C"
+      },
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr.u"
+      },
+      "S231:label": "TOut",
+      "qudt:hasQuantityKind": {
+        "@id": "q:ThermodynamicTemperature"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:K"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutCooCut",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Recorded outdoor air temperature cooling threshold",
+      "S231:label": "TOutCooCut",
+      "S231:value": "undefined"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutDelta",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Recorded outdoor air temperature cooling threshold hysteresis delta",
+      "S231:label": "TOutDelta",
+      "S231:value": "undefined"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Determines whether the outdoor air temperature is below a treashold",
+      "S231:graphics": "Placement(transformation(extent={{-110,-30},{-90,-10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr.uHigh"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr.uLow"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr.y"
+        }
+      ],
+      "S231:label": "TOutThr"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr.uHigh",
+      "S231:isFinal": true,
+      "S231:value": "TOutCooCut"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr.uLow",
+      "S231:isFinal": true,
+      "S231:value": "TOutCooCut -TOutDelta"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TOutThr.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andOutAirFanFee.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSup",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured supply air temperature (SAT)",
+      "S231:graphics": "Placement(transformation(extent={{-160,20},{-120,60}})),iconTransformation(extent={{-120,70},{-100,90}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.u"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.u_m"
+        }
+      ],
+      "S231:label": "TSup",
+      "qudt:hasQuantityKind": {
+        "@id": "q:ThermodynamicTemperature"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:K"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupHighLim",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Recorded minimum supply air temperature for defining the upper limit of the valve position",
+      "S231:label": "TSupHighLim",
+      "S231:value": "undefined"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupHigLim",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Recorded maximum supply air temperature for defining the upper limit of the valve position",
+      "S231:label": "TSupHigLim",
+      "S231:value": "undefined"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMax",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Low range supply air temperature high limit",
+      "S231:graphics": "Placement(transformation(extent={{40,-60},{60,-40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMax.k"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMax.y"
+        }
+      ],
+      "S231:label": "TSupMax"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMax.k",
+      "S231:isFinal": true,
+      "S231:value": "TSupHighLim"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMax.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.x2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMin",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Low range supply air temperature low limit",
+      "S231:graphics": "Placement(transformation(extent={{0,-60},{20,-40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMin.k"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMin.y"
+        }
+      ],
+      "S231:label": "TSupMin"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMin.k",
+      "S231:isFinal": true,
+      "S231:value": "TSupHigLim"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupMin.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.x1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.TSupSet",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Supply air temperature setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-160,70},{-120,110}})),iconTransformation(extent={{-120,30},{-100,50}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:DEG_C"
+      },
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.limPI.u_s"
+      },
+      "S231:label": "TSupSet",
+      "qudt:hasQuantityKind": {
+        "@id": "q:ThermodynamicTemperature"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:K"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFee",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Supply fan feedback",
+      "S231:graphics": "Placement(transformation(extent={{-160,-80},{-120,-40}})),iconTransformation(extent={{-120,-50},{-100,-30}})))",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr.u"
+      },
+      "S231:label": "uFanFee"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Checks if the fan status is above a threshold",
+      "S231:graphics": "Placement(transformation(extent={{-110,-70},{-90,-50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr.uHigh"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr.uLow"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr.y"
+        }
+      ],
+      "S231:label": "uFanFeeThr"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr.uHigh",
+      "S231:isFinal": true,
+      "S231:value": "FanFeeCut"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr.uLow",
+      "S231:isFinal": true,
+      "S231:value": "FanFeeCut -FanFeeDelta"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanFeeThr.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.andOutAirFanFee.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uFanSta",
+      "@type": "S231:BooleanInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Optional additional status signal",
+      "S231:graphics": "Placement(transformation(extent={{-160,-120},{-120,-80}})),iconTransformation(extent={{-120,-90},{-100,-70}})))",
+      "S231:label": "uFanSta"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uMax",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Maximum controller signal",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "uMax",
+      "S231:max": 1,
+      "S231:min": 0,
+      "S231:value": 1,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.uMin",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Minimum controller signal",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "uMin",
+      "S231:max": 1,
+      "S231:min": 0,
+      "S231:value": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooVal",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Cooling valve control signal",
+      "S231:graphics": "Placement(transformation(extent={{120,-10},{140,10}})),iconTransformation(extent={{100,-10},{120,10}})))",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.min.y"
+      },
+      "S231:label": "yCooVal",
+      "S231:max": 1,
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMax",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Minimal control loop signal limit when supply air temperature is at a defined low limit",
+      "S231:graphics": "Placement(transformation(extent={{40,-100},{60,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMax.k"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMax.y"
+        }
+      ],
+      "S231:label": "yCooValMax"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMax.k",
+      "S231:isFinal": true,
+      "S231:value": "uMax"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMax.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.f2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMin",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Minimal control loop signal limit when supply air temperature is at a defined high limit",
+      "S231:graphics": "Placement(transformation(extent={{0,-100},{20,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMin.k"
+        },
+        {
+          "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMin.y"
+        }
+      ],
+      "S231:label": "yCooValMin"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMin.k",
+      "S231:isFinal": true,
+      "S231:value": "uMin"
+    },
+    {
+      "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.yCooValMin.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve.higLim.f1"
+      }
+    }
+  ]
+}

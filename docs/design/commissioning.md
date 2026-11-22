@@ -1358,6 +1358,45 @@ discrete time step", "a proprietary algorithm for the anti-windup"), and the eng
 integration is a third difference from Dymola's continuous solver. The first run records whatever
 verdict results; a failure is a finding to adjudicate, never a reason to widen the tolerance.
 
+### As landed: the Building 33 material
+
+*(GitHub #N, issue #661.)* The eight files of the trend directory, the sequence's `.mo` and its
+translation are under `third_party/modelica-buildings-cdl/`, verbatim at the pins the tree
+already records; neither pin moved. Each upstream file's Git blob OID equals upstream's at
+`a131864` (`.agents/revendor-upstream.sh`, whose fidelity leg now reads the two new upstream
+cones), and `scripts/vendored_cxf/regenerate.sh` regenerates the translation, and the 44 G36
+documents with it, byte for byte inside a Node container pinned by digest. What the material
+showed:
+
+- **The translation does not load.** modelica-json at `85721b82` writes the string `undefined`
+  as the value of every parameter whose binding holds a parenthesised sub-expression:
+  `TOutCooCut`, `TOutDelta`, `TSupHighLim`, `TSupHigLim` and `Ti`. "Building 33 data" above
+  says `k = 0.018` and `Ti = 30` s "are derived inside the CXF"; `k` is written as
+  `alc_prop_k*alc_k_unit_conv`, but `Ti` is not written at all. The engine refuses the document
+  with ten `grounding-failed` errors, those five and the five bindings that read them, pinned
+  by `crates/oce-cxf/tests/vendored_corpus_delta.rs`. The file is kept as generated (issue
+  #760). modelica-json's `master` fixes the five values, but its output is refused for a unit
+  IRI the closed table does not map, so a modelica-json pin advance would not by itself make the
+  document load.
+- **The trend files end their lines with CRLF** upstream. The repository normalises text to LF,
+  so the root `.gitattributes` exempts the trend directory; the hash manifest and the blob OIDs
+  pin the bytes with their carriage returns.
+- **Row counts.** `Clg_Coil_Valve.mos`, `OA_Temp.mos` and `SA_Clg_Stpt.mos` hold 75,564 rows,
+  `Supply_Air_Temp.mos` 75,563 and `VFD_Fan_Feedback.mos` 75,578; the receipt sketch's 75,563
+  for the valve and the setpoint was not a prediction. The first day, `[0, 86400]`, holds 17,281
+  rows of each 5 s trend and two of the fan enable (at 0 s and 0.02 s).
+- **No temperature-difference port.** `CoolingCoilValve`'s ports are `TSup`, `TSupSet` and
+  `TOut` (`ThermodynamicTemperature`, `K`), `uFanFee` (no unit, no quantity), `uFanSta`
+  (Boolean) and `yCooVal` (`1`), so the quantity gap of #743 changes nothing here. Its parameter
+  `TOutDelta` is a difference written as an absolute temperature upstream (2 °F converted with
+  the offset, 256.48 K), which makes the hysteresis's `uLow` about 26.67 K.
+- **`uFanFee` declares no unit.** The upstream example model scales the fan feedback trend by
+  0.01 before it reaches the port. Under "`cdl.unit` must be the port's unit" a mapping cannot
+  write `percent` → `1` for it, and a one-sided unit is refused, so the worked spec's sketch
+  (`VFD Fan Feedback`, `percent` to `1`) cannot bind as written.
+- **The worked spec's `cxf` path** names a `.json` file; the vendored translation, like the
+  other 44, is `.jsonld`.
+
 ## Decisions
 
 Decisions 1 to 4 are the owner's; 5 to 10 are recommendations accepted by the orchestrator. Both are

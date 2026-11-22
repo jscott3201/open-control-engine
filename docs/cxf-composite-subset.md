@@ -613,8 +613,8 @@ To check a document your tool produced:
 The corpus completeness tests fail on any unindexed or unpinned fixture, so a fixture cannot
 land half-wired.
 
-The 44 vendored modelica-json translations under `third_party/modelica-buildings-cdl/cxf/` are
-additionally held to a per-document characterization capture
+The 45 vendored modelica-json translations under `third_party/modelica-buildings-cdl/cxf/` (the
+44 G36 documents and, from issue #661, the Building 33 sequence) are additionally held to a per-document characterization capture
 (`crates/oce-cxf/tests/vendored_corpus_delta.rs`): per-`DiagCode` counts, severities, and
 duplicate diagnostic triples, re-blessed only deliberately. The `hasInstance` interface
 derivation moved that capture in both directions, every increase declared: 904 arity

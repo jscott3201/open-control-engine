@@ -6,7 +6,7 @@
 //! `(code, subject, message)` triple.
 
 /// Exactly how many vendored documents the recursive walk must find.
-pub(crate) const VENDORED_DOCUMENT_COUNT: usize = 44;
+pub(crate) const VENDORED_DOCUMENT_COUNT: usize = 45;
 
 /// One document's pinned diagnostic surface.
 pub(crate) struct DocExpectation {
@@ -331,6 +331,11 @@ pub(crate) const EXPECTED: &[DocExpectation] = &[
         ],
         duplicate_triples: 10,
     },
+    DocExpectation {
+        rel: "Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.jsonld",
+        counts: &[("grounding-failed", "error", 10)],
+        duplicate_triples: 0,
+    },
 ];
 
 pub(crate) const AGGREGATE: CorpusAggregate = CorpusAggregate {
@@ -338,7 +343,7 @@ pub(crate) const AGGREGATE: CorpusAggregate = CorpusAggregate {
         ("class-not-found", "error", 18),
         ("conditional-guard-unknown-parameter", "error", 426),
         ("conditional-guard-unsupported", "error", 1),
-        ("grounding-failed", "error", 204),
+        ("grounding-failed", "error", 214),
         ("inactive-conditional-node", "error", 44),
         ("malformed-document", "error", 10),
         ("non-subset-construct", "error", 111),

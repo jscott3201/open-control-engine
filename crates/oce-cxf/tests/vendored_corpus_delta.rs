@@ -1,7 +1,7 @@
 //! Vendored-corpus characterization capture — the `_spec/19` §5 delta pin.
 //!
-//! The 44 vendored modelica-json translations under
-//! `third_party/modelica-buildings-cdl/cxf/` (pin `85721b82`) cannot load while the
+//! The 45 vendored modelica-json translations under
+//! `third_party/modelica-buildings-cdl/cxf/` (pin `85721b82`) cannot all load while the
 //! cross-document class library and the upstream guard corruption stay open, so no load pin is
 //! possible; what this harness pins instead is the exact per-document diagnostic surface of the
 //! production `import_cxf` path — per-`DiagCode` counts split by severity, plus the number of
@@ -11,7 +11,7 @@
 //! this corpus into a declared delta instead of a silent drift.
 //!
 //! Discovery is a recursive walk (the documents sit ~7 directories deep) and the harness
-//! asserts it found **exactly 44** documents before comparing anything — an empty or partial
+//! asserts it found **exactly 45** documents before comparing anything — an empty or partial
 //! capture is a red, never a vacuous green. Deterministic and offline: files are read from the
 //! vendored tree, never fetched.
 //!
@@ -29,13 +29,22 @@
 //!   inputs, plus 18 multiply-driven declared boundary outputs — the `_spec/18` R19-16
 //!   migration off the wrong `unresolved-reference` code, `refuse_multiply_driven` assessing
 //!   this dialect for the first time;
-//! - `grounding-failed` 62 → 204 (declared INCREASE): member values and member connector
+//! - `grounding-failed` 62 → 204 (declared INCREASE; 214 with the 45th document below): member values and member connector
 //!   bounds ground for the first time, so the class-translation corpus's valueless-parameter
 //!   references, its upstream-corrupt `undefined` value strings, and its out-of-subset value
 //!   expressions now fail loudly at the member level instead of never being read;
 //! - `undriven-boundary-output` warnings 131 → 27: derived interfaces supply the drivers;
 //! - `inactive-conditional-node` stays 44 (the R19-15 traversal's own movement, taken at the
 //!   traversal-only capture) and `class-not-found` / `conditional-guard-*` stay put.
+//!
+//! The 45th document, `Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.jsonld`
+//! (issue #661, the Building 33 commissioning example), was added with no resolver change and
+//! moved no line of the 44 before it. It is refused with ten `grounding-failed` errors, all from
+//! one upstream cause: modelica-json at the pin writes the string `undefined` as the value of
+//! each parameter whose binding holds a parenthesised sub-expression (`TOutCooCut`,
+//! `TOutDelta`, `TSupHighLim`, `TSupHigLim`, `Ti`), and five bindings refer to those five.
+//! [`building_33_translation_is_refused_by_the_undefined_parameter_values`] pins the subjects;
+//! issue #760 tracks the cause.
 //!
 //! Regenerate the expectation table after an intentional resolver change (the writer emits
 //! mechanical layout, so follow it with `cargo fmt --all`):
@@ -363,4 +372,61 @@ fn vendored_corpus_diagnostic_surface_matches_the_pinned_capture() {
         agg.duplicates_total, AGGREGATE.duplicates_total,
         "corpus-wide duplicate-triple total moved"
     );
+}
+
+/// The load probe of issue #661: the Building 33 sequence's translation is refused, and only by
+/// the five parameters modelica-json wrote as `undefined` and the five bindings that read them.
+#[test]
+fn building_33_translation_is_refused_by_the_undefined_parameter_values() {
+    const ROOT: &str = "http://example.org#Buildings.Utilities.Plotters.Examples.BaseClasses.\
+                        CoolingCoilValve.";
+    let path = corpus_root()
+        .join("Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.jsonld");
+    let bytes = std::fs::read(&path).expect("vendored Building 33 translation is readable");
+    let Err(CxfError::Validation(diags)) = import_cxf(&bytes, &ResolveOptions::default()) else {
+        panic!("the vendored CoolingCoilValve translation is refused until issue #760 is closed");
+    };
+    let mut seen: Vec<(String, String)> = diags
+        .iter()
+        .map(|d| {
+            assert_eq!(d.code.as_str(), "grounding-failed", "{d:?}");
+            assert_eq!(d.severity.as_str(), "error", "{d:?}");
+            let subject = d
+                .subject
+                .as_deref()
+                .expect("a grounding failure names its subject");
+            let local = subject
+                .strip_prefix(ROOT)
+                .expect("subject under the root")
+                .to_owned();
+            let identifier = d
+                .message
+                .strip_prefix("expression binding did not ground: unknown identifier: ")
+                .expect("an unknown-identifier grounding failure")
+                .to_owned();
+            (local, identifier)
+        })
+        .collect();
+    seen.sort();
+    let expected: Vec<(String, String)> = [
+        ("TOutCooCut", "undefined"),
+        ("TOutDelta", "undefined"),
+        ("TOutThr.uHigh", "TOutCooCut"),
+        ("TOutThr.uLow", "TOutCooCut"),
+        ("TSupHigLim", "undefined"),
+        ("TSupHighLim", "undefined"),
+        ("TSupMax.k", "TSupHighLim"),
+        ("TSupMin.k", "TSupHigLim"),
+        ("Ti", "undefined"),
+        ("limPI.Ti", "Ti"),
+    ]
+    .iter()
+    .map(|(a, b)| ((*a).to_owned(), (*b).to_owned()))
+    .collect();
+    assert_eq!(seen, expected);
+
+    // The cause is in the document's bytes, not in the resolver: the five values are the
+    // literal string `undefined`, and every other parameter value is an expression.
+    let text = std::str::from_utf8(&bytes).expect("UTF-8 translation");
+    assert_eq!(text.matches("\"S231:value\": \"undefined\"").count(), 5);
 }

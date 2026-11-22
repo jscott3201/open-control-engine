@@ -2,12 +2,12 @@
   "schema": "open-control/modelica-buildings-cdl-hash-manifest/v1",
   "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "modelica_json_commit": "85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb",
-  "subtree_tree_sha": "c943691a48fe4e6d511884634b27b193252339bf",
+  "subtree_tree_sha": "529d30979054acc59c772682d5c5ca8eefa0ed4b",
   "bucket_counts": {
-    "generated-cxf": 44,
+    "generated-cxf": 45,
     "generated-cxf-core": 1,
     "repo-authored": 1,
-    "upstream-buildings": 177
+    "upstream-buildings": 186
   },
   "entries": [
     {
@@ -1243,6 +1243,69 @@
       "sha256": "0cb48ec0231686e6f0e205adae1b6a322f83e1257ce1284e4f4f60908eb8e20e"
     },
     {
+      "path": "Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/Clg_Coil_Valve.mos",
+      "origin": "upstream-buildings",
+      "size_bytes": 2241940,
+      "git_blob_oid": "cd896e36342ed4f0b1530d419a8a8ec4fb2f4c44",
+      "sha256": "66864324f33f834657ad5b1c376f25785912af5e537a5b38dfd049d35ff95d8b"
+    },
+    {
+      "path": "Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/OA_Temp.mos",
+      "origin": "upstream-buildings",
+      "size_bytes": 2640854,
+      "git_blob_oid": "1e293a450656c180aed7fe32317206811a858e0a",
+      "sha256": "11d9c47305285f705a4c8e68bf14b14d94c93fadd8eae64ebeebaf98c4c1fde9"
+    },
+    {
+      "path": "Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/README.md",
+      "origin": "upstream-buildings",
+      "size_bytes": 170,
+      "git_blob_oid": "2d1db035ffedc804b84ccc091e5b3a4a1c67d43e",
+      "sha256": "549d20de7480ebb4f84f1675cfbdd6a271bc30d64e8e1f619d3cbc88269052c7"
+    },
+    {
+      "path": "Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/SA_Clg_Stpt.mos",
+      "origin": "upstream-buildings",
+      "size_bytes": 2248480,
+      "git_blob_oid": "3adb44596ecdb95e15facb208c6e2a5a473e6b52",
+      "sha256": "8d900460dd0c09aa9b0d1a8511ac529868978371e643d5fdb93e5cba4f422e7d"
+    },
+    {
+      "path": "Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/Supply_Air_Temp.mos",
+      "origin": "upstream-buildings",
+      "size_bytes": 2244798,
+      "git_blob_oid": "307053a210e398f5b863b41df621d92411f1c3cc",
+      "sha256": "e746421176f8aafede7c19f9478b029273e1ca6a301b3ca6a9498561e4e0de35"
+    },
+    {
+      "path": "Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/VFD_Fan_Enable.mos",
+      "origin": "upstream-buildings",
+      "size_bytes": 377,
+      "git_blob_oid": "ec4b4538d5baeb6e70b351ba130726b6004b1d7e",
+      "sha256": "35b91f83b024bc5b9ec52402d4f7951224163167c87e5370ce7bbf601a2faef7"
+    },
+    {
+      "path": "Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/VFD_Fan_Feedback.mos",
+      "origin": "upstream-buildings",
+      "size_bytes": 2245250,
+      "git_blob_oid": "d64dd8062f6eb1d643475fd92bb09cc5a15bb389",
+      "sha256": "6d928790e7d84057b779b087173f75f3795aaff94f502e24c09b6688b792b253"
+    },
+    {
+      "path": "Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/csv2mos.py",
+      "origin": "upstream-buildings",
+      "size_bytes": 9631,
+      "git_blob_oid": "6d6867da9cf9c07c117e933326c9b2168ef0af25",
+      "sha256": "1b8bc093d4d84ca4b5985174101198b37d95e3bbd973ceb6b68f853a573ee3a1"
+    },
+    {
+      "path": "Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.mo",
+      "origin": "upstream-buildings",
+      "size_bytes": 12267,
+      "git_blob_oid": "e3b02fa188e27078cde1891bdf8021cc26a3c4d3",
+      "sha256": "cc2ca542cb7269d172e725abc7ed8efd36f0e4f1d1a05d535edd198f475f0bea"
+    },
+    {
       "path": "Buildings/legal.html",
       "origin": "upstream-buildings",
       "size_bytes": 3429,
@@ -1252,9 +1315,9 @@
     {
       "path": "README.md",
       "origin": "repo-authored",
-      "size_bytes": 11915,
-      "git_blob_oid": "ecadf22d5b4325a8fce6e2a132492d2511d0a7c3",
-      "sha256": "dbaf5197c1ab24613c4e1f46ce3460ebb4cd46bc2b62ca53598a1635a7e5a835"
+      "size_bytes": 16357,
+      "git_blob_oid": "4a9a6ba291f4257871788288fef67c98087ead0c",
+      "sha256": "2366915d7b27b8e35ab5d4d83bdacf4be4d66955ca4bcd7f6f8da19145941cd8"
     },
     {
       "path": "cxf-core/CXF-Core.jsonld",
@@ -1570,6 +1633,13 @@
       "size_bytes": 77039,
       "git_blob_oid": "745ca38a31d62d7f162c121cc3776633fab7d1cc",
       "sha256": "ca68c0776b093fe889b559349c3a682aee80a4805b8f4c81c91c2c4d8d227e42"
+    },
+    {
+      "path": "cxf/Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.jsonld",
+      "origin": "generated-cxf",
+      "size_bytes": 34630,
+      "git_blob_oid": "f96b6d453267ca5901b94c20c98dda93259e599a",
+      "sha256": "ab844b4567a1a08808f638249fb569eade00d9ef9f955c244be0d2f6e73b02c7"
     }
   ]
 }

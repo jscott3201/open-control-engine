@@ -36,7 +36,7 @@ visible of them proves nothing about correctness at all.
 | Tier-2 determinism goldens | `crates/oce-conformance/tests/fixtures/golden/g36_traces/` | 46 traces + 46 `.prov.json` | **No** — engine self-output, by construction |
 | Tier-A source references | `tools/golden-gen/goldens/` | 400 provenance records, 398 signal goldens | Yes — CI-enforced code-dependency firewall |
 | Tier-A HostTick profile references | `tools/golden-gen/goldens/G36/`, `tools/golden-gen/goldens/CDL/Logical/Pre/` | 22 signal goldens: 20 G36, 2 standalone `Pre` | Independent implementation of the engine profile; not a Modelica oracle |
-| Structural oracle | `third_party/modelica-buildings-cdl/cxf/` | 44 vendored translations; 31 comparable fixtures | Yes — an independent translation of the same upstream source |
+| Structural oracle | `third_party/modelica-buildings-cdl/cxf/` | 45 vendored translations (44 G36 and the Building 33 sequence); 31 comparable fixtures | Yes — an independent translation of the same upstream source |
 | Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 16 suites; 285 CDL signal goldens: 264 existing exact plus 21 exact on qualified Linux, unchanged 1e-12 aligned band on unqualified targets; [bounded receipt](strict-bit-evidence.md) | Yes — Tier-A generator is outside the engine workspace |
 | Scoped Tier-3 cross-implementation differentials | `crates/oce-conformance/tests/fixtures/open_modelica/` | 4 named cases: 2 Boolean, 1 finite Real matrix, and 1 composed G36 leaf; global report skipped | Yes — pinned OpenModelica and Buildings execution |
 

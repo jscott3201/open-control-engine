@@ -2,6 +2,9 @@
 set -euo pipefail
 
 # P1 read-only, event-driven upstream reporter. Run from inside the repo checkout.
+# Fidelity covers three upstream cones: Buildings/Controls/OBC (with legal.html), and the
+# Building 33 example's Buildings/Utilities/Plotters and Buildings/Resources/Data/Utilities/
+# Plotters (issue #661).
 # It never regenerates or updates any pinned artifact.
 # BUILDINGS_COMMIT: git -C /tmp/modelica-buildings rev-parse HEAD
 # MODELICA_JSON_COMMIT: git -C /tmp/modelica-json rev-parse HEAD
@@ -92,6 +95,44 @@ else
   mark_missing pin_cone pin_controls OBC
 fi
 
+# walk_path MODE NAME PARENT COMPONENT... : follow one tree entry per COMPONENT from the tree
+# already fetched as PARENT, fetching each step as NAME_1, NAME_2, ... and the last as NAME,
+# recursively when MODE is `recursive` and as one level when it is `flat`. A step whose parent
+# answered 200 without the entry is marked MISSING; a step whose parent was not fetched is left
+# unfetched, so the leg reports it as unavailable.
+walk_path() {
+  walk_mode=$1
+  walk_name=$2
+  walk_previous=$3
+  shift 3
+  walk_index=0
+  walk_total=$#
+  for walk_component in "$@"; do
+    walk_index=$((walk_index + 1))
+    if [ "$walk_index" -eq "$walk_total" ]; then
+      walk_step=$walk_name
+      walk_query=""
+      [ "$walk_mode" = recursive ] && walk_query="?recursive=1"
+    else
+      walk_step="${walk_name}_$walk_index"
+      walk_query=""
+    fi
+    walk_sha=$(extract_sha "$scratch_dir/$walk_previous.body" "$walk_component" || echo "")
+    if [ -z "$walk_sha" ]; then
+      mark_missing "$walk_step" "$walk_previous" "$walk_component"
+      return 0
+    fi
+    fetch "$walk_step" \
+      "$api_base/repos/lbl-srg/modelica-buildings/git/trees/$walk_sha$walk_query"
+    walk_previous=$walk_step
+  done
+}
+
+# The Building 33 commissioning example (issue #661): the sequence's class under
+# Buildings/Utilities/Plotters and its recorded trends under Buildings/Resources/Data.
+walk_path recursive pin_plotters pin_buildings Utilities Plotters
+walk_path recursive pin_trends pin_buildings Resources Data Utilities Plotters
+
 fetch master_root "$api_base/repos/lbl-srg/modelica-buildings/git/trees/master"
 master_buildings=$(extract_sha "$scratch_dir/master_root.body" Buildings || echo "")
 if [ -n "$master_buildings" ]; then
@@ -105,6 +146,9 @@ if [ -n "$master_controls" ]; then
 else
   mark_missing master_controls master_buildings Controls
 fi
+# At master only the two Plotters subtree SHAs are compared, so the walk stops at their parents.
+walk_path flat master_plotters master_buildings Utilities
+walk_path flat master_trends master_buildings Resources Data Utilities
 fetch modelica_master "$api_base/repos/lbl-srg/modelica-json/commits/master"
 
 python3 - "$repo_root" "$vendor_root" "$manifest_file" "$rust_file" "$scratch_dir" \
@@ -310,7 +354,10 @@ def response(name, side):
 
 pin = {}
 problems = []
-for name in ("pin_root", "pin_buildings", "pin_controls", "pin_cone"):
+PIN_STEPS = ("pin_root", "pin_buildings", "pin_controls", "pin_cone",
+             "pin_plotters_1", "pin_plotters",
+             "pin_trends_1", "pin_trends_2", "pin_trends_3", "pin_trends")
+for name in PIN_STEPS:
     value, detail, kind = response(name, "pin")
     pin[name] = value
     if kind:
@@ -327,8 +374,14 @@ else:
     fidelity = []
     buildings_items = {x.get("path"): x for x in pin["pin_buildings"].get("tree", [])}
     cone = pin["pin_cone"]
-    if cone.get("truncated") is True:
-        fidelity.append("recursive OBC cone response has truncated=true")
+    # Each recursive cone, with the repository path its entries are relative to.
+    cones = (("OBC", cone, "Buildings/Controls/OBC/"),
+             ("Utilities/Plotters", pin["pin_plotters"], "Buildings/Utilities/Plotters/"),
+             ("Resources/Data/Utilities/Plotters", pin["pin_trends"],
+              "Buildings/Resources/Data/Utilities/Plotters/"))
+    for label, tree, _ in cones:
+        if tree.get("truncated") is True:
+            fidelity.append(f"recursive {label} cone response has truncated=true")
     expected = {x["path"]: x for x in entries.values()
                 if x.get("origin") == "upstream-buildings"}
     declared = (manifest or {}).get("bucket_counts", {}).get("upstream-buildings")
@@ -338,9 +391,10 @@ else:
     actual = {}
     if "legal.html" in buildings_items:
         actual["Buildings/legal.html"] = buildings_items["legal.html"].get("sha")
-    for item in cone.get("tree", []):
-        if item.get("type") == "blob" and isinstance(item.get("path"), str):
-            actual["Buildings/Controls/OBC/" + item["path"]] = item.get("sha")
+    for _, tree, prefix in cones:
+        for item in tree.get("tree", []):
+            if item.get("type") == "blob" and isinstance(item.get("path"), str):
+                actual[prefix + item["path"]] = item.get("sha")
     # Fidelity is manifest-driven and one-directional: every vendored entry must exist
     # upstream with a matching blob OID. The upstream cone is a SUPERSET of the vendored
     # set by design (Validation/, package.mo, non-CDL subtrees are deliberately not
@@ -360,7 +414,8 @@ else:
 
 master = {}
 problems = []
-for name in ("master_root", "master_buildings", "master_controls"):
+for name in ("master_root", "master_buildings", "master_controls", "master_plotters",
+             "master_trends_1", "master_trends_2", "master_trends"):
     value, detail, kind = response(name, "master")
     master[name] = value
     if kind:
@@ -377,24 +432,34 @@ else:
                               master["master_buildings"].get("tree", [])}
     master_controls_items = {x.get("path"): x for x in
                              master["master_controls"].get("tree", [])}
-    pin_obc = pin_controls_items.get("OBC", {}).get("sha")
-    master_obc = master_controls_items.get("OBC", {}).get("sha")
-    pin_legal = pin_buildings_items.get("legal.html", {}).get("sha")
-    master_legal = master_buildings_items.get("legal.html", {}).get("sha")
-    if not pin_obc or not pin_legal:
+    def plotters(tree):
+        return {x.get("path"): x for x in (tree or {}).get("tree", [])}.get(
+            "Plotters", {}).get("sha")
+    compared = (
+        ("OBC", pin_controls_items.get("OBC", {}).get("sha"),
+         master_controls_items.get("OBC", {}).get("sha")),
+        ("legal.html", pin_buildings_items.get("legal.html", {}).get("sha"),
+         master_buildings_items.get("legal.html", {}).get("sha")),
+        ("Utilities/Plotters", plotters(pin.get("pin_plotters_1")),
+         plotters(master["master_plotters"])),
+        ("Resources/Data/Utilities/Plotters", plotters(pin.get("pin_trends_3")),
+         plotters(master["master_trends"])),
+    )
+    if not all(pinned for _, pinned, _ in compared):
         incomplete = True
         emit(4, "drift-trigger", "UNAVAILABLE", "pinned comparison objects unavailable")
-    elif master_obc != pin_obc or master_legal != pin_legal:
+    elif any(pinned != current for _, pinned, current in compared):
         trigger = True
+        moved = "; ".join(f"{label} {pinned} -> {current}"
+                          for label, pinned, current in compared)
         emit(4, "drift-trigger", "RED",
-             f"TRIGGER: subtree SHA divergence (OBC {pin_obc} -> {master_obc}; "
-             f"legal.html {pin_legal} -> {master_legal}); policy triggers: needed class "
+             f"TRIGGER: subtree SHA divergence ({moved}); policy triggers: needed class "
              "absent, upstream subtree SHA divergence, or intended CDL specification "
              "revision; any pin-advance PR runs the full gate first-hand — see the "
              "vendored README's Pin-advance policy section")
     else:
         emit(4, "drift-trigger", "OK",
-             f"no trigger: OBC tree={pin_obc} and legal.html blob={pin_legal}")
+             "no trigger: " + "; ".join(f"{label}={pinned}" for label, pinned, _ in compared))
 
 modelica, detail, kind = response("modelica_master", "master")
 def lines(filename):

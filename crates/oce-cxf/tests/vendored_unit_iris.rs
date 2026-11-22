@@ -1,7 +1,7 @@
 //! Every unit and display-unit IRI the vendored upstream documents write is one the closed unit
 //! table maps (issue #631; design note `docs/design/unit-spellings.md`, "Measurements").
 //!
-//! The corpus is the 44 modelica-json translations under
+//! The corpus is the 45 modelica-json translations under
 //! `third_party/modelica-buildings-cdl/cxf/` and `cxf-core/CXF-Core.jsonld`, read as data. The
 //! walk visits every JSON object at any depth, so it sees CXF-Core's class declarations and the
 //! translations' parameters as well as the connectors a load reads. A key is matched the way the
@@ -165,28 +165,30 @@ fn counted(entries: &[(&str, usize)]) -> BTreeMap<String, usize> {
 }
 
 #[test]
-fn every_unit_iri_of_the_44_translations_maps() {
+fn every_unit_iri_of_the_45_translations_maps() {
     let files = documents(&vendored_root().join("cxf"));
     let expected = Census {
-        documents: 44,
-        // 34 carry a `qudt:hasUnit`; every document with a display unit is among them.
-        carrying: 34,
-        unit_keys: counted(&[("qudt:hasUnit", 411)]),
-        display_unit_keys: counted(&[("S231:hasDisplayUnit", 62)]),
-        // `UNITLESS` 180, `M3-PER-SEC` 76, `SEC` 58, `K` 56, `PA` 29, `J-PER-KiloGM` 9, and the
-        // S231 fallback `s/K` 2 and `1/K` 1.
+        documents: 45,
+        // 35 carry a `qudt:hasUnit`; every document with a display unit is among them.
+        carrying: 35,
+        unit_keys: counted(&[("qudt:hasUnit", 421)]),
+        display_unit_keys: counted(&[("S231:hasDisplayUnit", 64)]),
+        // `UNITLESS` 183, `M3-PER-SEC` 76, `SEC` 59, `K` 59, `PA` 29, `J-PER-KiloGM` 9, and the
+        // S231 fallback `s/K` 2, `1/K` 2 and `1/F` 2. `CoolingCoilValve` (issue #661) brings
+        // `1/F` and the second `1/K`: the recorded ALC gains and the derived gain `k`.
         units: counted(&[
-            ("1", 180),
+            ("1", 183),
             ("m3/s", 76),
-            ("s", 58),
-            ("K", 56),
+            ("s", 59),
+            ("K", 59),
             ("Pa", 29),
             ("J/kg", 9),
             ("s/K", 2),
-            ("1/K", 1),
+            ("1/K", 2),
+            ("1/F", 2),
         ]),
-        // `DEG_C` 39, `PA` 14, `K` 6, `M3-PER-SEC` 3.
-        display_units: counted(&[("degC", 39), ("Pa", 14), ("K", 6), ("m3/s", 3)]),
+        // `DEG_C` 41, `PA` 14, `K` 6, `M3-PER-SEC` 3.
+        display_units: counted(&[("degC", 41), ("Pa", 14), ("K", 6), ("m3/s", 3)]),
     };
     assert_eq!(census(&files), expected);
 }
