@@ -77,17 +77,22 @@ impl DamperState {
         let normalized_measurement = input.discharge_airflow / DESIGN_COOLING_MAXIMUM_FLOW;
         let error = normalized_setpoint - normalized_measurement;
         let proportional = 0.5 * error;
+        // `when trigger then reinit(I.y, y_reset - P)` with y_reset = 0.01 at the instant the fan
+        // status rises, never at the first row (initialisation); the reset row emits from the
+        // reinitialised integrator and skips its Euler step (it covers the interval before).
+        let reset = self.previous_time.is_some() && input.supply_fan_status && !self.previous_fan;
+        if reset {
+            self.integrator = 0.01 - proportional;
+        }
         let unlimited = proportional + self.integrator;
         let pid_output = clamp(unlimited, 0.0, 1.0);
         let dt = self
             .previous_time
             .map_or(0.0, |previous| (t - previous).max(0.0));
-        self.integrator = if input.supply_fan_status && !self.previous_fan {
-            0.01 - proportional
-        } else {
+        if !reset {
             let anti_windup = (unlimited - pid_output) / (0.5 * 0.9);
-            self.integrator + (0.5 / 300.0) * (error - anti_windup) * dt
-        };
+            self.integrator += (0.5 / 300.0) * (error - anti_windup) * dt;
+        }
         self.previous_time = Some(t);
         self.previous_fan = input.supply_fan_status;
 

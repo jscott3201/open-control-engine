@@ -45,7 +45,7 @@ compile_error!(
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::fmt;
 
-use oce_blocks::Block;
+use oce_blocks::{Block, EventInputRole};
 use oce_model::{BlockId, ConnectorId, Model, Value};
 
 pub mod blob;
@@ -60,6 +60,45 @@ pub use constructed::charge_instance;
 pub use oce_blocks::{ConstructedBudget, MAX_CONSTRUCTED_WORDS};
 pub use tick::{EvalContext, allocate_state, eval_tick, run_tick};
 pub use topo::topo_sort;
+
+/// The remedy for an algebraic loop that enters a block through an event input with `role`: a
+/// fixed sentence, shared by [`BuildError::AlgebraicLoop`]'s message and the per-member load
+/// diagnostic `oce-api` records.
+///
+/// The delay makes the model load and moves that input's events (or values) one frame later. It
+/// does not reproduce the output of an engine that applied such events one frame late
+/// internally: the integrating blocks take the reset value from the frame the delayed event fires
+/// at and skip the integration step across it (`docs/execution-profile.md`).
+#[must_use]
+pub fn event_input_remedy(role: EventInputRole) -> &'static str {
+    match role {
+        EventInputRole::Condition => {
+            "This input is an event input: its block applies the event at the frame where it \
+             rises, so feedback into it is a loop. Remedy: insert CDL.Logical.Pre on the path into \
+             it, which delays its events by one frame (it does not reproduce the output of an \
+             engine that applied the event one frame late)."
+        }
+        EventInputRole::ResetValue => {
+            "This input is the value a reset event assigns at the frame of the event, so feedback \
+             into it is a loop. Remedy: insert CDL.Discrete.UnitDelay on the path into it; it \
+             delays the value by one frame when its samplePeriod equals the host frame period \
+             and frames land on its sample grid."
+        }
+    }
+}
+
+/// Display adaptor for [`BuildError::AlgebraicLoop`]'s event-input remedies: nothing when the
+/// cycle passes through no event input, otherwise one ` <path>: <remedy>` clause per member.
+struct EventInputHints<'a>(&'a [(ConnectorPath, EventInputRole)]);
+
+impl fmt::Display for EventInputHints<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (path, role) in self.0 {
+            write!(f, " {path}: {}", event_input_remedy(*role))?;
+        }
+        Ok(())
+    }
+}
 
 /// The frozen per-tick evaluation order, computed once in BUILD and reused every tick (`01` §6.2).
 #[derive(Clone, Debug, Default)]
@@ -140,16 +179,26 @@ pub enum BuildError {
     /// algebraic loops. Carries the dotted connector paths of one concrete cycle (a single
     /// back-edge path from a deterministic DFS over the residual subgraph) for actionable
     /// diagnostics.
+    ///
+    /// When the cycle enters a block through an input that the block reads at the frame of a
+    /// `when` event (a reset `trigger`, a counter's `reset`, an integrator's `y_reset_in`:
+    /// [`oce_blocks::Block::event_input_role`]), `event_inputs` names those members with their
+    /// role and the message adds the delay that breaks the loop there
+    /// ([`event_input_remedy`]).
     #[error(
         "algebraic loop detected: {} connector(s) form a cycle not broken by a state-holding \
          block. CDL §7.16 forbids algebraic loops. Remedy: insert a delay block (CDL.Logical.Pre, \
          CDL.Discrete.UnitDelay) or an integrator into the loop, since their outputs do not depend \
-         directly on the current input. Cycle members: {members:?}",
-        .members.len()
+         directly on the current input.{} Cycle members: {members:?}",
+        .members.len(),
+        EventInputHints(.event_inputs)
     )]
     AlgebraicLoop {
         /// The dotted connector paths participating in one concrete cycle.
         members: Vec<ConnectorPath>,
+        /// The members of `members` that are event inputs of their block, in cycle order, with
+        /// their role. Empty when the cycle passes through none.
+        event_inputs: Vec<(ConnectorPath, EventInputRole)>,
     },
 
     /// The connector feedthrough graph is acyclic, but **atomic block firing** (one `emit` call

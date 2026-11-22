@@ -186,6 +186,21 @@ pub enum BlockKind {
     Stateful,
 }
 
+/// The part an input plays in a `when` event that its block applies at the frame of the event
+/// (HostTick v1, `docs/execution-profile.md`). Such an input feeds through to the block's output,
+/// so feedback into it from that output is an algebraic loop; the role names the delay that breaks
+/// it. Reported by [`Block::event_input_role`] and used only to word load diagnostics.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum EventInputRole {
+    /// A Boolean input whose false-to-true transition is the event (`trigger`, `reset`). A
+    /// `CDL.Logical.Pre` on the path into it delays its events by one frame.
+    Condition,
+    /// A `Real` value the event assigns (`IntegratorWithReset.y_reset_in`). A
+    /// `CDL.Discrete.UnitDelay` on the path into it delays the value by one frame when its
+    /// `samplePeriod` equals the host frame period and frames land on its sample grid.
+    ResetValue,
+}
+
 /// The kind of value a port carries on the hot path (Real/Integer/Boolean only; §7.8 admits no
 /// String connector, and enumerations are parameters not signals).
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -377,6 +392,14 @@ pub trait Block: Send + Sync {
     /// same-tick) depends on input `in_idx`. This is what cuts the DAG for loop-breakers
     /// (`01` §4.2; `03` §3). Loop-breaker `[S]` blocks return `false` for the state-bearing path.
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool;
+
+    /// The role input `in_idx` plays in a `when` event this resolved block applies at the frame of
+    /// the event, or `None` when it plays none. Every input with a role also feeds through
+    /// ([`Block::feeds_through`]); the role only words the remedy of an algebraic loop through it.
+    /// The default is `None`. Never panics.
+    fn event_input_role(&self, _in_idx: usize) -> Option<EventInputRole> {
+        None
+    }
 
     /// Word count of this block's `[S]` state region within `RunState.words` (0 for `[A]`). Fixed
     /// at BUILD; the tick never resizes it (`01` §7 req 1).
@@ -876,6 +899,9 @@ mod integers_edge_tests;
 
 #[cfg(test)]
 mod integers_stage_tests;
+
+#[cfg(test)]
+mod pid_reset_tests;
 
 #[cfg(test)]
 mod pid_tests;

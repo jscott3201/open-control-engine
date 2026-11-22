@@ -44,7 +44,7 @@ const fn row(cooling_setpoint: f64, zone_temperature: f64, heating_setpoint: f64
 const ROWS: [Row; 54] = [
     // Quiescent initialization: the zone lies between setpoints, so neither loop is enabled.
     row(297.15, 295.15, 293.15), // 0
-    // CL1-CL3: cooling only; the direct-acting edge emits high, then reset is visible next tick.
+    // CL1-CL3: cooling only; the enable rises after its delay and the reset shows at that row.
     row(297.15, 317.15, 293.15), // 1
     row(297.15, 317.15, 293.15), // 2
     // CL2: constant positive direct-acting error produces a monotonic cooling ramp.
@@ -98,7 +98,8 @@ const ROWS: [Row; 54] = [
     row(320.00, 283.15, 293.15), // 45
     row(320.00, 283.15, 293.15), // 46
     row(320.00, 283.15, 293.15), // 47
-    // CL3 plus drop-before-expiry: disable for one tick, then re-enable before TrueDelay emits.
+    // CL3: disable for one tick, then re-enable; the reset shows at the re-enable row (y_reset),
+    // inside the near-zero band once the delay has expired, and the enabled loop is not gated.
     row(320.00, 310.00, 293.15), // 48
     row(320.00, 283.15, 293.15), // 49
     row(320.00, 283.15, 293.15), // 50
@@ -172,7 +173,14 @@ pub(super) fn goldens() -> Vec<Golden> {
             .all(|pair| pair[0] < pair[1])
     );
     assert!(trace.heating_near_zero[48] && !trace.heating_delay[48]);
-    assert!(!trace.heating_near_zero[49] && !trace.heating_delay[49]);
+    // Row 49 re-enables heating: the reset applies at that row, so it emits y_reset = 0 (inside
+    // the near-zero band) and the 30 s delay has expired, yet the enabled loop is not gated.
+    assert!(trace.heating_near_zero[49] && trace.heating_delay[49] && trace.heating_enable[49]);
+    assert_eq!(trace.heating_raw[49].to_bits(), Y_RESET.to_bits());
+    assert_eq!(
+        trace.heating_output[49].to_bits(),
+        trace.heating_raw[49].to_bits()
+    );
 
     let inputs = inputs();
     vec![
@@ -258,17 +266,22 @@ fn cooling_pid_direct(time: &[f64], enable: &[bool]) -> Vec<f64> {
     for ((&t, row), &trigger) in time.iter().zip(ROWS.iter()).zip(enable) {
         let error = row.zone_temperature - row.cooling_setpoint;
         let proportional = K * error;
+        // `when trigger then reinit(I.y, y_reset - P)` at the instant the enable rises, never at
+        // the first row (initialisation): the reset row emits from the reinitialised integrator.
+        let reset = previous_time.is_some() && trigger && !previous_trigger;
+        if reset {
+            integrator = Y_RESET - proportional;
+        }
         let unlimited = proportional + integrator;
         let limited = clamp(unlimited, Y_MIN, Y_MAX);
         outputs.push(limited);
 
         let dt = previous_time.map_or(0.0, |previous| (t - previous).max(0.0));
-        integrator = if trigger && !previous_trigger {
-            Y_RESET - proportional
-        } else {
+        // The reset row's Euler step covers the interval before the event and is not taken.
+        if !reset {
             let anti_windup_gain = (unlimited - limited) / (K * NI);
-            integrator + (K / TI) * (error - anti_windup_gain) * dt
-        };
+            integrator += (K / TI) * (error - anti_windup_gain) * dt;
+        }
         previous_time = Some(t);
         previous_trigger = trigger;
     }
@@ -285,17 +298,22 @@ fn heating_pid_reverse(time: &[f64], enable: &[bool]) -> Vec<f64> {
     for ((&t, row), &trigger) in time.iter().zip(ROWS.iter()).zip(enable) {
         let error = row.heating_setpoint - row.zone_temperature;
         let proportional = K * error;
+        // `when trigger then reinit(I.y, y_reset - P)` at the instant the enable rises, never at
+        // the first row (initialisation): the reset row emits from the reinitialised integrator.
+        let reset = previous_time.is_some() && trigger && !previous_trigger;
+        if reset {
+            integrator = Y_RESET - proportional;
+        }
         let unlimited = proportional + integrator;
         let limited = clamp(unlimited, Y_MIN, Y_MAX);
         outputs.push(limited);
 
         let dt = previous_time.map_or(0.0, |previous| (t - previous).max(0.0));
-        integrator = if trigger && !previous_trigger {
-            Y_RESET - proportional
-        } else {
+        // The reset row's Euler step covers the interval before the event and is not taken.
+        if !reset {
             let anti_windup_gain = (unlimited - limited) / (K * NI);
-            integrator + (K / TI) * (error - anti_windup_gain) * dt
-        };
+            integrator += (K / TI) * (error - anti_windup_gain) * dt;
+        }
         previous_time = Some(t);
         previous_trigger = trigger;
     }

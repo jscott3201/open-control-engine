@@ -15,7 +15,7 @@
     { "name": "reset", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 0.0, 0.0] }
   ],
   "input": "scenario=trigger_initially_true, y_start=2; trigger starts true at t0, then falls and rises again",
-  "reference_rule": "No when event fires for trigger already true at the initial tick; the later false->true transition increments by one; Buildings Integers/OnCounter.mo",
+  "reference_rule": "No when event fires for trigger already true at the initial tick (initialization); the later false->true transition increments by one at its own row; Buildings Integers/OnCounter.mo",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

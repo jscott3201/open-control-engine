@@ -15,7 +15,7 @@
     { "name": "trigger", "value_kind": "Boolean", "values": [1.0, 1.0, 0.0, 1.0] }
   ],
   "input": "scenario=trigger_initially_true; y_start=-7.0; u=[9,10,11,12]; trigger=[true,true,false,true]",
-  "reference_rule": "pre(trigger) is false at initialization, so trigger=true at t=0 samples current u; held true does not resample until trigger falls and rises",
+  "reference_rule": "initial equation y=y_start at the first row whatever trigger is (the when-clause is inactive at initialization, Modelica 3.6 section 8.6); that row's trigger becomes pre(trigger), so held true at t=1 does not sample; the first sample is the false->true edge at t=3",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

@@ -109,17 +109,22 @@ struct LoopPiState {
 impl LoopPiState {
     fn output(&mut self, t: f64, error: f64, trigger: bool) -> f64 {
         let proportional = CONTROL_GAIN * error;
+        // `when trigger then reinit(I.y, y_reset - P)` with y_reset = 0, at the instant the
+        // trigger rises and never at the first row (initialisation); the reset row emits from the
+        // reinitialised integrator and skips its Euler step (it covers the interval before).
+        let reset = self.previous_time.is_some() && trigger && !self.previous_trigger;
+        if reset {
+            self.integrator = -proportional;
+        }
         let unlimited = proportional + self.integrator;
         let limited = clamp(unlimited, 0.0, 1.0);
         let dt = self
             .previous_time
             .map_or(0.0, |previous| (t - previous).max(0.0));
-        self.integrator = if trigger && !self.previous_trigger {
-            -proportional
-        } else {
+        if !reset {
             let anti_windup = (unlimited - limited) / (CONTROL_GAIN * ANTI_WINDUP_NI);
-            self.integrator + (CONTROL_GAIN / CONTROL_INTEGRAL_TIME) * (error - anti_windup) * dt
-        };
+            self.integrator += (CONTROL_GAIN / CONTROL_INTEGRAL_TIME) * (error - anti_windup) * dt;
+        }
         self.previous_time = Some(t);
         self.previous_trigger = trigger;
         limited

@@ -342,7 +342,9 @@ pub(super) fn frame_rate_dependence(sequence: &str, signal: &str) -> Option<&'st
             "frame-rate dependent: this signal is driven by the Controller.mo damLim minimum-OA \
              PI loop (k=1, Ti=TiMinOA=0.5 s), integrated by forward Euler at the 60 s frame \
              step, applied after each frame's output: xI += (k/Ti)*(e-(yU-y)/(k*Ni))*dt with \
-             dt=60 s, reset to y_reset-k*e (y_reset=0) on a rising supply-fan status. Because k*dt/Ti=120 \
+             dt=60 s, reset to y_reset-k*e (y_reset=0) at the frame where the supply-fan status \
+             rises after the first frame, which then emits from the reset integrator and skips \
+             its step. Because k*dt/Ti=120 \
              the integrator saturates every frame and the loop output alternates between its \
              limits, which outdoor_damper_min_limit carries into the outdoor and return damper \
              commands. The engine uses the same forward-Euler recurrence, so this column checks \

@@ -223,6 +223,7 @@ of them, and the implementation PR follows them until then.
    whose input starts true for no reset-timing gain. Differential runs against OpenModelica compare
    frame 0 with the initialisation row.
 7. **`TriggeredSampler` marks "no frame yet" with a third value of its trigger word**
+   (replaced in the review round by seeding `pre(trigger) = true`; see [As landed](#as-landed))
    (orchestrator's call). `state_len` does not change; the initial-state CRC of 2 blobs moves. The
    validator accepts the marker only in a state no frame has touched. The implementation must
    confirm that capture cannot see such a state (`TriggeredMax`'s `has_history == 1` check,
@@ -238,3 +239,95 @@ of them, and the implementation PR follows them until then.
    derivations, `derive_valve.py` and golden-gen.
 10. **`PIDWithReset` keeps `trigger` non-feedthrough in P mode** (orchestrator's call). The
     mixed-feedthrough census stays at twelve, and the P-mode refusal stays `block-algebraic-loop`.
+
+## As landed
+
+GitHub #789 (issue #768) implements the rule of section 2 and decisions 1 to 10 for the five
+classes in one PR. Where the implementation found the note wrong, read it more narrowly or had
+to decide something the note left open, the record is here; the decided text above is unchanged.
+
+- **The delay does not reproduce today's output** (orchestrator's call of 2026-11-22). Section 2
+  says a `Logical.Pre` or `UnitDelay` on the feedback path "reproduces today's one-frame delay
+  explicitly", and decision 3 that it "restores today's one-frame delay". It does not, for the
+  integrating blocks: with the delay, the event genuinely happens one frame later, while the
+  previous engine applied an event at the earlier frame and showed it one frame late. The exact
+  property, pinned by `crates/oce-api/tests/event_input_feedback.rs` against vectors recorded from
+  the engine at 84db2d76 and re-derived by hand: with every event input of the block delayed and
+  none true at frame 0, `OnCounter` matches the previous engine count for count; `PIDWithReset`
+  and `IntegratorWithReset` match it in the frame of each reset (and, under steady inputs, in
+  every output up to that frame) but differ in the reset value, taken from the inputs of the
+  frame the delayed event fires at, and by the integration step across the event, which the
+  reset frame does not take. An event input true at frame 0 is the exception: the previous engine
+  ignored it, and behind a `Pre` (`pre_u_start = false`) it is an event at frame 1. The
+  execution profile, `docs/cdl-coverage.md`, the CHANGELOG and the load diagnostic say "delays
+  the input's events by one frame", not "restores".
+- **`UnitDelay` is a one-frame delay only on its grid.** It is a sampled block: it delays by one
+  frame only when its `samplePeriod` equals the host frame period and frames land on its sample
+  grid. CDL has no other Real one-frame delay; the remedy for `y_reset_in` says so.
+- **The diagnostic.** `Block::event_input_role` (default `None`) names the role of an input in
+  an event the block applies at its frame (`EventInputRole::Condition` for `trigger` and
+  `reset`, `ResetValue` for `y_reset_in`); only the three classes whose inputs newly feed through
+  declare one (`TriggeredSampler` and `TriggeredMax` keep the generic loop message, which already
+  names `Pre`). `BuildError::AlgebraicLoop` carries the cycle's event-input members, and the
+  `algebraic-loop` record of each such member appends `oce_graph::event_input_remedy`.
+- **Decision 7 replaced: `TriggeredSampler` seeds `pre(trigger) = true`** (orchestrator's call
+  of 2026-11-22, in the review round of GitHub #789). The third word value decision 7 chose is
+  behaviourally identical to seeding the previous-trigger bit `true`: the block reads the word
+  only to decide "trigger true now and false before", and both a marker and `true` answer "no
+  event" for either frame-0 trigger; the frame-0 update overwrites the word either way; the block
+  has no `prev_t`. Every path that reads the word before the first update reads exactly the
+  `init_state` output: the frame-0 emit, a restore of a snapshot taken before any frame (restore
+  compares such a snapshot with `init_state`), `resume` after `set_param` (it re-allocates every
+  state region from `init_state` and clears `prev_t`), and a blob load (the initial-state CRC is
+  of `init_state`). A mutant that removed the marker check survived for that reason. With
+  `true`, the word stays in the state contract's Boolean domain in every state, so the validator
+  needs no special case. The note had also suggested capture cannot see an untouched state; it
+  can (a snapshot after load and before any frame is valid), which no longer matters. Blobs
+  compiled before this change that hold `TriggeredSampler` are refused with
+  `BlobError::InitialStateMismatch`.
+- **Building 33: four frames appended** (orchestrator's call of 2026-11-22). With the reset at
+  the event, the mutant that triggers the reset from the enable's level instead of its change
+  survived both behavioural checks: every disable in the 74-frame scenario lasted at least two
+  frames, so both variants reset at the re-enable, which now emits the reset value either way.
+  `derive_valve.py` appends a one-frame disable and its re-enable, where `Change` is still true
+  at the re-enable, after the original 74 frames: 78 frames, 19 labelled stretches. Of the
+  original 74 rows, 4 move (25, 237, 272 and 307 s, to 0) and 70 are byte-identical; the engine
+  matches all 78 bit for bit, and the derivation catches all eleven mutants again.
+- **golden-gen: nine files, not seven.** The rule is re-derived in `reals_pid.rs`,
+  `reals_integrator.rs`, `discrete_sources.rs`, `integers_conversions.rs` (the `OnCounter`
+  rule) and nine sequence files: `cdl_recurrences.rs` (`TriggeredSampler`), `control_loops.rs`,
+  `cooling_only_controller_airflow.rs`, `cooling_only_controller_conditioning.rs`,
+  `cooling_only_dampers.rs`, `economizer_controller.rs`, `economizer_limits_common.rs`,
+  `supply_fan.rs` and `supply_signals.rs`, plus a provenance text. `control_loops.rs`'s scenario
+  self-check at row 49 (heating re-enabled after a one-tick disable) now asserts that the
+  re-enable row emits `y_reset = 0` inside the near-zero band, ungated because the loop is
+  enabled; it asserted the pre-reset value before.
+- **`set_param` and the mode switch** (orchestrator's call of 2026-11-22, review round).
+  Decision 10 makes `PIDWithReset.controllerType` decide whether `trigger` feeds through, and
+  `resume` does not reschedule, so a halted engine could switch a PD controller to PI and run a
+  schedule built for PD. A `Structural` registry rule was rejected: it would move the reference
+  catalog (a `full`-row path) and break the invariant that a parameter name is structural in
+  every class that declares it or in none (`CDL.Reals.PID` declares `controllerType` too).
+  Instead `Engine::set_param` instantiates the edited block with every pending edit applied and
+  refuses with `ParamStructural` when its schedule shape (port counts, feedthrough, inputs read
+  at emit, event roles) differs from the scheduled instance's. A registry sweep finds no other
+  value-dependent shape.
+- **Blast radius as measured.** As section 4 predicted, with these exact counts: 7 of 46 G36
+  traces and their 7 `.prov.json`; golden-gen's 7 CDL scenarios (21 files) and 22 files in the 7
+  G36 directories (`MANIFEST.txt` does not move: it lists paths); 3 `.oceb` blobs, byte total
+  unchanged at 123,098, with 2 `blob_summary/*.json` (`thermal_zones_control_loops`'s summary
+  carries no schedule, so it does not move); 7 run digests in `blob_frame_digests.tsv` (the seven
+  fixtures holding `PIDWithReset`); `valve_oracle.txt` as above. The pre-change
+  `thermal_zones_control_loops` blob is kept as
+  `crates/oce-api/tests/fixtures/blob_trigger_scheduled_after_its_reader.oceb` and refused with
+  `InvalidSchedule { position: 0, fault: EmitBefore }`, and the pre-change
+  `generic_time_suppression` blob as `blob_triggered_sampler_pre_trigger_false.oceb`, refused with
+  `InitialStateMismatch`. Section 4 missed two artefacts, found in review: `oce-replay`'s
+  `controller_minute_day.trace` and `controller_grid_hold.trace`, which run
+  `cooling_only_controller`, and the authority-claims projection (`docs/authority-claims.md`),
+  which hashes the golden corpora. The minute day carries both changes: `VSet_flow` moves at rows
+  1 to 55 (the supply-fan status is true at frame 0, and the frame-0 reset the previous engine
+  fired showed from row 1, as in the G36 trace); `yDam` moves by 1 ulp at rows 200, 203 and 204
+  and from 1.0 to 0.01 at row 314 (the reset shown at its own frame); `yZonPreResReq`, downstream,
+  moves at rows 314 and 315 (3 to 0). The 5 s grid run moves `VSet_flow` only, 660 rows from
+  row 1.

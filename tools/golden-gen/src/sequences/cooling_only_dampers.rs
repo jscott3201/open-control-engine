@@ -4,8 +4,9 @@
 //! path applies the clamped `Line`, supply/zone `Greater` hysteresis, cooling-state gate, and exact
 //! override ladder before normalizing the post-override setpoint. The damper path carries a local
 //! forward-Euler PI-with-reset recurrence with limiter back-calculation (`Ni=0.9`). A rising
-//! `u1Fan` resets `xI := y_reset - yP` during the state update, so the target is observable on the
-//! next emit when the error is held. A false fan signal neither holds nor zeroes the controller:
+//! `u1Fan` (after the first row, which is initialisation) resets `xI := y_reset - yP` from that
+//! row's error at the instant of the event, so the reset row emits the target and skips its Euler
+//! step (Modelica `when trigger then reinit`). A false fan signal neither holds nor zeroes the controller:
 //! `Dampers.mo` wires `u1Fan` only to `conPID.trigger` and has no fan-gating output switch.
 
 use crate::oracle::{Golden, InputSeries, ValueKind};
@@ -66,9 +67,9 @@ const fn row(
 const ROWS: [Row; 34] = [
     // Quiescent initialization and the exact uCoo=0 Line knot; fan false does not reset at t=0.
     row(290.0, 0.0, 2, 0, false, 0.012, 0),
-    // D3: first false -> true fan transition at t=60 resets the PI integrator after this emit.
+    // D3: first false -> true fan transition at t=60 resets the PI integrator and emits y_reset.
     row(290.0, 0.0, 2, 0, true, 0.012, 0),
-    // D3: held error exposes y_reset=0.01 on the next emit; a held-high fan does not reset again.
+    // D3: held error emits y_reset=0.01 again; a held-high fan does not reset again.
     row(290.0, 0.0, 2, 0, true, 0.012, 0),
     // D5 and exact uCoo=1 knot: deadband state forces active minimum despite full cooling loop.
     row(290.0, 1.0, 2, 0, true, 0.012, 0),
@@ -110,9 +111,9 @@ const ROWS: [Row; 34] = [
     row(290.0, 0.0, 3, 0, false, 0.000, 0),
     // D3: fan remains false while a changed error moves the live controller instead of zeroing it.
     row(290.0, 0.0, 3, 0, false, 0.090, 0),
-    // D3: second false -> true edge resets the integrator after this emit.
+    // D3: second false -> true edge resets the integrator and emits y_reset=0.01 at this row.
     row(290.0, 0.0, 3, 0, true, 0.090, 0),
-    // D3: held error exposes the second y_reset=0.01 discontinuity on the next emit.
+    // D3: held error emits the second y_reset=0.01 again before integrating.
     row(290.0, 0.0, 3, 0, true, 0.090, 0),
     // PID saturation/anti-windup: sustained maximum setpoint and zero measurement begin clipping.
     row(290.0, 0.4, 3, 2, true, 0.000, 0),
@@ -228,19 +229,22 @@ fn pi_with_reset_outputs(time: &[f64], airflow_setpoint: &[f64]) -> Vec<f64> {
         let normalized_measurement = row.discharge_airflow / V_COO_MAX_FLOW;
         let error = normalized_setpoint - normalized_measurement;
         let proportional = K_DAM * error;
+        // Reset at the event, never at the first row (initialisation).
+        let rising_reset = previous_time.is_some() && row.supply_fan_status && !previous_trigger;
+        if rising_reset {
+            integrator = INI_DAM - proportional;
+        }
         let unlimited = proportional + integrator;
         let limited = clamp(unlimited, Y_MIN, Y_MAX);
         outputs.push(limited);
 
         let dt = previous_time.map_or(0.0, |previous| (t - previous).max(0.0));
-        let rising_reset = row.supply_fan_status && !previous_trigger;
-        integrator = if rising_reset {
-            INI_DAM - proportional
-        } else {
+        // The reset row's Euler step covers the interval before the event and is not taken.
+        if !rising_reset {
             let anti_windup_gain = (unlimited - limited) / (K_DAM * NI);
             let corrected_error = error - anti_windup_gain;
-            integrator + (K_DAM / TI_DAM) * corrected_error * dt
-        };
+            integrator += (K_DAM / TI_DAM) * corrected_error * dt;
+        }
         previous_time = Some(t);
         previous_trigger = row.supply_fan_status;
     }

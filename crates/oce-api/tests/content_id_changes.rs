@@ -31,12 +31,17 @@ fn edits(value: &Value) -> Vec<Value> {
         }
         Value::Integer(n) => vec![Value::Integer(n + 1), Value::Integer(n - 1)],
         Value::Boolean(b) => vec![Value::Boolean(!b)],
+        // Every other member, starting at the next one: a value that changes the block's schedule
+        // shape is refused (`PIDWithReset.controllerType` PI -> PD, issue #768), so the edit
+        // moves on to the next member (PID).
         Value::Enum { class, ordinal } => {
             let members = oce_model::enum_descriptor(*class).unwrap().members.len() as u32;
-            vec![Value::Enum {
-                class: *class,
-                ordinal: ordinal % members + 1,
-            }]
+            (1..members)
+                .map(|step| Value::Enum {
+                    class: *class,
+                    ordinal: (ordinal - 1 + step) % members + 1,
+                })
+                .collect()
         }
         Value::String(text) => vec![Value::String(format!("{text}x").into())],
     }

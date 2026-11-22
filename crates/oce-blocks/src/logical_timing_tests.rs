@@ -563,9 +563,22 @@ fn timing_latch_feedthrough_perturbations_pin_current_input_surface() {
         0.0,
         &[Value::Boolean(true), Value::Boolean(false)],
     );
+    // After a frame (has_history = 1), a rising trigger is counted in the same frame's y: the
+    // trigger feeds through.
+    assert!(no_trigger[0].bit_eq(&Value::Integer(5)));
     assert!(
-        no_trigger[0].bit_eq(&trigger[0]),
-        "OnCounter trigger must not feed through to same-tick y"
+        trigger[0].bit_eq(&Value::Integer(6)),
+        "OnCounter trigger must feed through to same-frame y"
+    );
+    let reset = emit_at(
+        &counter,
+        &[7i64.cast_unsigned(), 0, 0, 1],
+        0.0,
+        &[Value::Boolean(false), Value::Boolean(true)],
+    );
+    assert!(
+        reset[0].bit_eq(&Value::Integer(5)),
+        "OnCounter reset must feed through to same-frame y"
     );
 }
 

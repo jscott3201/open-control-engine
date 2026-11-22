@@ -398,10 +398,11 @@ the spec writes it; only its `content_id` identifies the transcription that ran.
 - *Structure*: every parameter value, connector (type, unit, quantity, display unit, bounds),
   block class, modifier and the 21 connections of the emitted CXF and the loaded engine equal
   what a script read from the `.mo` with its own parser.
-- *Behaviour*: over 74 synthetic frames that take every branch the valve signal can show (PI
+- *Behaviour*: over 78 synthetic frames that take every branch the valve signal can show (PI
   active, its upper saturation under the supply-air high limit and its lower saturation with the
   anti-windup acting, the line clamped below, the outdoor-air and fan-feedback hysteresis, the
-  fan status, each reset), the engine's valve signal equals a derivation written from the `.mo`
+  fan status, each reset, and a one-frame disable where `Change` is still true at the
+  re-enable), the engine's valve signal equals a derivation written from the `.mo`
   and the vendored CDL block sources, bit for bit, under the engine's discrete-time convention.
   One modifier cannot show in the valve signal for any input, the line's upper clamp
   (`limitAbove`), because the PI's output never exceeds `yMax = 1`, the line's `f2`; only the

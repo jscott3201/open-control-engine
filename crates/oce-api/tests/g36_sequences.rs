@@ -520,7 +520,9 @@ fn multizone_vav_supply_signals_loads_simulates_and_is_deterministic() {
     assert_real_bounds(&metrics_a, cooling, 0.0, 1.0);
     assert_real_bounds(&metrics_a, heating, 0.0, 1.0);
     assert_eq!(real_at(&metrics_a, signal, 0).to_bits(), 0.0f64.to_bits());
-    assert_eq!(real_at(&metrics_a, signal, 1).to_bits(), 0.25f64.to_bits());
+    // The fan rises at t = 1, so the PI resets at that frame: P + (y_reset - P) = 0. The reset
+    // frame takes no integration step, so the held fan at t = 2 emits 0 again.
+    assert_eq!(real_at(&metrics_a, signal, 1).to_bits(), 0.0f64.to_bits());
     assert_eq!(real_at(&metrics_a, signal, 2).to_bits(), 0.0f64.to_bits());
     assert!(
         real_at(&metrics_a, heating, 3) > 0.0,
@@ -533,10 +535,9 @@ fn multizone_vav_supply_signals_loads_simulates_and_is_deterministic() {
     assert_eq!(real_at(&metrics_a, cooling, 5).to_bits(), 1.0f64.to_bits());
     assert_eq!(real_at(&metrics_a, heating, 6).to_bits(), 1.0f64.to_bits());
     assert_eq!(real_at(&metrics_a, signal, 7).to_bits(), 0.0f64.to_bits());
-    assert_eq!(
-        real_at(&metrics_a, signal, 8).to_bits(),
-        (-1.0f64).to_bits()
-    );
+    // The fan re-rises at t = 8: the PI resets at that frame, P + (y_reset - P) = 0, instead of
+    // emitting the saturated -1 it held before the event; t = 9 holds the reset (no step at 8).
+    assert_eq!(real_at(&metrics_a, signal, 8).to_bits(), 0.0f64.to_bits());
     assert_eq!(real_at(&metrics_a, signal, 9).to_bits(), 0.0f64.to_bits());
 }
 

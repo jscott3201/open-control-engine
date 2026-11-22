@@ -1459,11 +1459,13 @@ OpenModelica run fails over the same stretch. In full:
 1. the transcription is checked from outside it four ways: its parameters, connectors, blocks
    and 21 connections against what `derive_declarations.py` reads from the `.mo`; its valve
    signal bit for bit against `derive_valve.py`'s derivation from the `.mo` and the CDL block
-   sources over 74 frames that take every branch the valve signal can show, in the engine's
-   discrete time (a reset shows at the next frame), the lower saturation and its anti-windup
-   included; eleven mutants, every one caught by that derivation; and OpenModelica. The line's
-   upper clamp (`limitAbove`) cannot show in the valve signal for any input, because the PI's
-   output never exceeds `yMax = 1`, the line's `f2`: only the structural check sees it;
+   sources over 78 frames that take every branch the valve signal can show, in the engine's
+   discrete time (a reset applies at the frame of its event since issue #768; before it, a reset
+   showed at the next frame and the derivation had 74 frames), the lower saturation and its
+   anti-windup included; eleven mutants, every one caught by that derivation; and
+   OpenModelica. The line's upper clamp (`limitAbove`) cannot show in the valve signal for any
+   input, because the PI's output never exceeds `yMax = 1`, the line's `f2`: only the structural
+   check sees it;
 2. OpenModelica 1.25.1 (the digest-pinned image of the other OpenModelica evidence) simulates
    upstream's own `ControlsVerification_CoolingCoilValve` over the day, and the engine stays
    within 0.0034 of it at every instant (largest at 67,375 s);

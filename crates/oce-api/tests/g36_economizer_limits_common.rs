@@ -106,6 +106,12 @@ fn expected_trace() -> ExpectedTrace {
     {
         let error = setpoint - measured;
         let proportional = K * error;
+        // The PI resets at the frame where the fan status rises (never at frame 0): that frame
+        // emits from y_reset - P and skips its integration step.
+        let reset = previous_time.is_some() && fan_on && !previous_trigger;
+        if reset {
+            integral = RESET - proportional;
+        }
         let unlimited = proportional + integral;
         let loop_signal = unlimited.clamp(Y_MIN, Y_MAX);
 
@@ -142,9 +148,7 @@ fn expected_trace() -> ExpectedTrace {
         trace.minimum_outdoor_air_loop_enabled.push(enabled);
 
         let dt = previous_time.map_or(0.0, |previous| (t - previous).max(0.0));
-        if fan_on && !previous_trigger {
-            integral = RESET - proportional;
-        } else {
+        if !reset {
             let anti_windup_gain = (unlimited - loop_signal) / (K * NI);
             let corrected_error = error - anti_windup_gain;
             integral += (K / TI) * corrected_error * dt;

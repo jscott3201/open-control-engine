@@ -19,6 +19,7 @@ use crate::engine::{Engine, instantiate_blocks};
 use crate::error::OcError;
 
 mod class_rules;
+mod schedule_shape;
 
 /// The engine's coarse lifecycle gate for tuning (`08` §4). `Running` is the post-load default;
 /// `set_param` is permitted only in `Halted` (CDL §7.4.2 — params never change while advancing).
@@ -183,9 +184,19 @@ impl Engine {
     ///
     /// # Errors
     /// [`OcError::ParamWhileRunning`] if not `Halted`; [`OcError::UnknownPoint`] for an unknown path;
-    /// [`OcError::ParamType`] on a type mismatch; [`OcError::ParamStructural`] for a conditional-
-    /// instance param (not yet tracked); [`OcError::ParamRange`] for a non-finite Real value or a
-    /// value rejected by declared bounds or registry parameter rules. Never panics (R-ERR-1).
+    /// [`OcError::ParamType`] on a type mismatch; [`OcError::ParamStructural`] for a structural
+    /// parameter (one whose every edit changes the resolved block structure, such as `nin`) and
+    /// for a value that, with the block's other pending edits, changes what the frozen schedule
+    /// was derived from: the block's port counts, feedthrough, the inputs it reads when it fires,
+    /// or an input's event role (for example `PIDWithReset.controllerType` between the modes with
+    /// an integrator, PI and PID, and those without, P and PD; also between P and PD, which is
+    /// refused even on a model where it would be harmless, so one rule matches a fresh load). The
+    /// check costs, per edit: a scan of the model's parameter entries for the block's pending
+    /// edits, a lookup in the block's parameter table per pending entry, one constructor call
+    /// (`O(table size)` for a class with settable table elements) and an `O(inputs × outputs)`
+    /// comparison; the trial instance is no larger than the live one. [`OcError::ParamRange`]
+    /// for a non-finite Real value or a value rejected by declared bounds or registry parameter
+    /// rules. Never panics (R-ERR-1).
     pub fn set_param(&mut self, path: &str, value: Value) -> Result<(), OcError> {
         if self.mode != RunMode::Halted {
             return Err(OcError::ParamWhileRunning {
@@ -238,6 +249,14 @@ impl Engine {
         }
         if self.class_param_rules_reject(idx, &value) {
             return Err(OcError::ParamRange {
+                path: path.to_string(),
+            });
+        }
+        // A value that, with the block's other pending edits, changes what the frozen schedule
+        // was derived from (feedthrough, reads at emit, event roles) needs a reload: `resume`
+        // does not reschedule (issue #768; `PIDWithReset.controllerType` across P/PD and PI/PID).
+        if self.edit_changes_schedule_shape(idx, &value) {
+            return Err(OcError::ParamStructural {
                 path: path.to_string(),
             });
         }

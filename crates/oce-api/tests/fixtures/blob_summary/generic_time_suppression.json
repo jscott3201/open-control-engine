@@ -28,7 +28,7 @@
     {"block": 1, "class": 0, "stateful": true, "state_words": 4, "initial_state_crc": "e381191d"},
     {"block": 2, "class": 2, "stateful": true, "state_words": 5, "initial_state_crc": "304f986a"},
     {"block": 3, "class": 10, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
-    {"block": 4, "class": 1, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 4, "class": 1, "stateful": true, "state_words": 2, "initial_state_crc": "0b4ce7cd"},
     {"block": 5, "class": 3, "stateful": true, "state_words": 1, "initial_state_crc": "8c28b28a"},
     {"block": 6, "class": 4, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
     {"block": 7, "class": 4, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
@@ -44,7 +44,7 @@
     {"block": 17, "class": 7, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
     {"block": 18, "class": 11, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
     {"block": 19, "class": 16, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
-    {"block": 20, "class": 1, "stateful": true, "state_words": 2, "initial_state_crc": "42709aea"},
+    {"block": 20, "class": 1, "stateful": true, "state_words": 2, "initial_state_crc": "0b4ce7cd"},
     {"block": 21, "class": 10, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"},
     {"block": 22, "class": 9, "stateful": true, "state_words": 4, "initial_state_crc": "b2af8c7a"},
     {"block": 23, "class": 6, "stateful": false, "state_words": 0, "initial_state_crc": "00000000"}
