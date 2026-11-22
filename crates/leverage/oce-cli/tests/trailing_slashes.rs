@@ -88,14 +88,18 @@ fn an_output_named_with_a_trailing_slash_is_never_written() {
     let dir = scratch("slash_output");
     let source = fs::read(crate_dir().join(author_fixture("text/econ_enable.oce"))).expect("text");
     fs::write(dir.join("e.oce"), &source).expect("e.oce");
-    // Absent: nothing to be a directory, nothing created.
+    // Absent: nothing to be a directory, nothing created. The rename onto `out.cxf.json/` is
+    // refused as the system words it: "not found" on macOS, "not a directory" on Linux.
     let run = oce_in(&dir, &["emit", "e.oce", "-o", "out.cxf.json/"], b"");
-    assert_eq!(
-        refusal(&run),
-        (
-            "write-failed".to_owned(),
-            "the output could not be written: entity not found".to_owned()
-        )
+    let (code, detail) = refusal(&run);
+    assert_eq!(code, "write-failed");
+    assert!(
+        [
+            "the output could not be written: entity not found",
+            "the output could not be written: not a directory"
+        ]
+        .contains(&detail.as_str()),
+        "{detail}"
     );
     assert_eq!(listing(&dir), [("e.oce".to_owned(), source.clone())]);
     // A regular file: not a directory, and left as it was.
