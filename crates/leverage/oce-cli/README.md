@@ -129,9 +129,10 @@ note](../../../docs/design/vectors.md), "CLI"; the owner's rulings in "Part 4's 
   ruled by the owner on 2026-11-22; **breaking in place**: until then a link there was written
   through to its target, a named pipe there was replaced, and a vector set or subject there was
   replaced by its own receipt):
-  - before anything is read, a `DIR/receipt.json` that is a symbolic link, dangling or not, a
-    directory, a named pipe, a socket or a device is `output-not-a-file`
-    ([below](#writing-a-file));
+  - before anything is read, an empty `DIR` is `write-failed` (a missing directory, as
+    `--commission` refuses it), and a `DIR/receipt.json` that is a symbolic link, dangling or
+    not, a directory, a named pipe, a socket or a device is `output-not-a-file`, whose detail
+    says to remove or replace that entry ([below](#writing-a-file));
   - after the reads and before the run, a `DIR/receipt.json` that is the vector file, the subject
     or a mutant, by path, through a link the input is named by, or (on Unix) as a hard link, is
     `output-is-input`, naming the input as given.
@@ -221,9 +222,10 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   stretch a missing sample left uncovered) is `nan`; every compared instant of an output failed by
   a non-finite engine sample is `inf`. A CSV file holds numbers under a fixed header and no name,
   and is named by index, so no name a spec, mapping or CXF writes reaches a file name or a cell.
-  Before anything is read, a `DIR/receipt.json` that is a symbolic link, dangling or not, a
-  directory, a named pipe, a socket or a device is `output-not-a-file`, the rule of every verb
-  that writes ([below](#writing-a-file); issue #758, ruled by the owner on 2026-11-22; until then
+  Before anything is read, an empty `DIR` is `write-failed` (a missing directory), and a
+  `DIR/receipt.json` that is a symbolic link, dangling or not, a directory, a named pipe, a socket
+  or a device is `output-not-a-file`, the rule of every verb that writes, whose detail says to
+  remove or replace that entry ([below](#writing-a-file); issue #758, ruled by the owner on 2026-11-22; until then
   these were `write-failed`, and the orchestrator's call on issue #758 moved them so one cause has
   one code). After the reads and **before the run**: `DIR` must be an existing directory (it is
   never created) and `DIR/outputs` must not exist (`write-failed`: the curves of two runs are
@@ -232,7 +234,9 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   at `DIR/receipt.json` is `write-failed`, so a receipt this run did not write never stands beside
   its curves (the orchestrator's call in the review of GitHub #757). A refusal leaves nothing
   written. Each file goes through the atomic writer, which never follows a link at its name (a
-  link planted after the check is replaced, its target untouched), and is created owner-only
+  link planted after the check is replaced, its target untouched); the directories `outputs/`
+  and `outputs/<k>/` are reached by path, so whoever can change `DIR` during the run can redirect
+  the curve files below them (issue #771). Each file is created owner-only
   (`0600` on Unix; the directories `outputs/` and `outputs/<k>/` take the process's default
   mode). A write that fails
   part-way is `write-failed` naming the file; the files already written stay (without
@@ -673,20 +677,29 @@ target became a regular file.
 
 - **The target must be absent or a regular file.** A symbolic link, dangling or not, a
   directory, a named pipe, a socket or a device is `output-not-a-file`, exit `2`, decided before
-  anything is read, so nothing is read or written. The detail names the path as given and what
-  it is. `oce` never writes through a link: whoever controls the directory cannot carry a write
-  elsewhere by planting one. **A caller whose output is a link gives the path of the file it
-  names** (`oce emit rule.oce -o "$(realpath out.cxf.json)"`, `oce fmt --write
-  "$(realpath link.oce)"`). `-o -` is stdout, so `/dev/stdout` (a link) is never needed; `-o
-  /dev/null` (a device) is refused, where until then the temporary file could not be created
-  beside it and the write failed. A directory the caller's path passes through (`-o lnk/x`,
-  `--out lnk`) is followed: the caller named it.
+  anything is read, so nothing is read or written. The detail names the path as given, what it
+  is and the way out. The target's own entry is never written through: a link planted there is
+  refused, or, planted after the check, replaced (below). **A caller whose output is a link gives
+  the path of the file it names** (`oce emit rule.oce -o "$(realpath out.cxf.json)"`, `oce fmt
+  --write "$(realpath link.oce)"`); `DIR/receipt.json` is a name `oce` chooses, so whatever is
+  there is the caller's to remove or replace. `-o -` is stdout, so `/dev/stdout` (a link) is
+  never needed; `-o /dev/null` (a device) is refused, where until then the temporary file could
+  not be created beside it and the write failed. An empty `--out` is refused by both forms of
+  `verify` as a missing directory (`write-failed`, before anything is read; the vector form
+  wrote `./receipt.json` until issue #758's review).
+- **Directories on the way are reached by path.** One the caller's path passes through (`-o
+  lnk/x`, `--out lnk`) is followed: the caller named it. So are `DIR/outputs` and
+  `DIR/outputs/<k>`, which `verify --commission --out` creates and then reaches again by path:
+  whoever can change `DIR` while the run writes can swap one for a link and carry the curve files
+  outside `DIR` (the report still lists them under `DIR`). Writing them through directory
+  handles is issue #771.
 - **The write** goes to a uniquely named temporary file beside the target
   (`.NAME.<pid>.<counter>.oce-tmp`), opened with `create_new` so it never follows a link or
   truncates a file already there, synced, given an existing regular target's permissions (Unix
-  mode bits) and renamed over the target's own directory entry; on any failure the temporary
-  file is removed and the target is untouched. A link planted between the check and the write is
-  replaced, its target untouched. On Unix the temporary file is created no more permissive than
+  mode bits) and renamed over the target's own directory entry; on a failure the target is
+  untouched and the temporary file is removed by its path, so if the parent directory was
+  swapped since it was created one `.oce-tmp` can be left behind (issue #771). A link planted
+  between the check and the write is replaced, its target untouched. On Unix the temporary file is created no more permissive than
   the target, and a new file (no target yet) is created with mode `0600` whatever the umask
   allows. The replace is atomic, but the directory itself is not fsynced. **The file is replaced,
   not rewritten in place: a hard link to the old inode keeps the old bytes.** `fmt --write`
@@ -714,10 +727,16 @@ ruled by the owner on 2026-11-22): the directory by its canonical path, which mu
 device and inode it had when resolved; each directory below it with `openat` from its parent's
 handle and `O_DIRECTORY | O_NOFOLLOW`; the last entry's own metadata, read from its directory's
 handle without following a link, must be a regular file (`not-a-file`), and it is opened with
-`O_NOFOLLOW | O_NONBLOCK` and must be the entry checked. A link met on the way, or a directory
-that is no longer one, was swapped in after the canonicalization and is `read-failed`. The opens
-use the workspace's `rustix`, the crate's third-party edge after `clap` (ruled by the owner on
-2026-11-22); the crate stays `forbid(unsafe_code)`.
+`O_NOFOLLOW | O_NONBLOCK` and must be the entry checked, and the handle the caller reads is then
+cleared of `O_NONBLOCK`. A link met on the way, or a directory that is no longer one (a named
+pipe swapped in for a directory is refused by `O_DIRECTORY` before it is opened), was swapped in
+after the canonicalization and is `read-failed`. A document reached through a directory that is
+a link (`bundle -> real`, `oce verify --commission bundle/spec.json`) reads the files of the
+directory the link names. The opens use the workspace's `rustix`, a third-party dependency beside
+`clap` and `serde_json` (ruled by the owner on 2026-11-22); the crate stays
+`forbid(unsafe_code)`. What this does not cover: the document itself is read by path before its
+directory is resolved, so a folder exchanged in between can pair a document with another
+folder's files (issue #771).
 
 Each handle pins what it names, so a rename in the directory cannot redirect a later step. Issue
 #758's harness swapped an intermediate directory for a link to a directory outside, atomically
@@ -733,11 +752,15 @@ the reader's calls (an adversary that acts between any two of them):
 Through the built binary on macOS, 3,000 `oce verify --commission` runs against the same swap
 read outside 141 times with GitHub #757's checks and never with these opens.
 `src/commands/contained_tests.rs` is the adversary (the path-based checks are its control and
-must be beaten) and `tests/read_containment_race.rs` the race through the binary. **Windows**
-keeps the path-based checks: the canonical path's own entry must be a regular file, it is opened
-by path and the handle must be the file checked, so an intermediate directory swapped for a link
-after the canonicalization is still followed there (std has no `openat`; untested). A hard link
-inside the directory to a file outside it is read on every platform: it has no other path.
+must be beaten) and `tests/read_containment_race.rs` the race through the binary. Both need an
+atomic exchange (Linux, macOS); on a file system that refuses it they skip with a note, and the
+rule is then untested there (CI's Linux runners and APFS support it). **Windows** has less, and
+none of it is tested there: the canonical path's own entry must be a regular file, it is opened
+by path, and the handle must be a regular file. Nothing ties the handle to the entry checked,
+since std has no stable file index there (a file's identity is its canonical path), so a link
+swapped in for an intermediate directory or the last entry after the check is followed (std has
+no `openat`). A hard link inside the directory to a file outside it is read on every platform:
+it has no other path.
 
 ## Tests and goldens
 

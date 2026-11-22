@@ -33,11 +33,14 @@
 //! leaves nothing behind. **The writes** ([`write()`]): `outputs/` is made with a plain create,
 //! which fails on anything already there, a directory a racing writer made included
 //! (`write-failed`); each file goes through `write_atomically` (a fresh temporary file, created
-//! owner-only, `0600` on Unix, synced, renamed over the entry), which never follows a link, so a
-//! link planted at `receipt.json` between the check and the write is replaced, its target
-//! untouched. A write that fails part-way is `write-failed` naming the file; the files already
-//! written stay, and the refusal lists them as the report's `curves`: without `receipt.json` they
-//! are not a run's output.
+//! owner-only, `0600` on Unix, synced, renamed over the entry), which never follows a link at the
+//! entry, so a link planted at `receipt.json` between the check and the write is replaced, its
+//! target untouched. `outputs/` and `outputs/<k>/` are made here and then reached again **by
+//! path**, so whoever can change `DIR` while the curves are written can swap one for a link and
+//! carry them outside `DIR`; writing through directory handles is issue #771. A write that fails
+//! part-way is `write-failed` naming the file; the files already written stay, and the refusal
+//! lists them as the report's `curves`: without `receipt.json` they are not a run's output. An
+//! empty `DIR` ([`empty_dir`]) is refused as a missing one before anything is read.
 
 use std::ffi::OsStr;
 use std::fs;
