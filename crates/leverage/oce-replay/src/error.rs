@@ -267,6 +267,15 @@ pub enum SourceError {
         /// The delimiter given.
         delimiter: u8,
     },
+    /// A CSV missing token whose first or last byte is a space or a tab. Every cell is compared
+    /// with the tokens after its padding is trimmed, so such a token could never match: a
+    /// sentinel the caller meant as missing would read as a value. Refused at construction,
+    /// never trimmed (trimming it would turn an unpadded cell it did not name into a missing
+    /// one).
+    PaddedMissingToken {
+        /// The token as given.
+        token: String,
+    },
     /// The underlying reader failed (other than the byte cap).
     Read {
         /// The reader's message.
@@ -304,6 +313,12 @@ impl fmt::Display for SourceError {
             Self::BadInstant { row } => write!(f, "row {row} instant is not RFC 3339 subset"),
             Self::BadDelimiter { delimiter } => {
                 write!(f, "delimiter byte {delimiter:#04x} is invalid")
+            }
+            Self::PaddedMissingToken { token } => {
+                write!(
+                    f,
+                    "missing token {token:?} begins or ends with a space or a tab"
+                )
             }
             Self::Read { message } => write!(f, "source read failed: {message}"),
         }

@@ -757,7 +757,7 @@ sources call them and add the file, row and column to a refusal:
 | --- | --- |
 | `float` → `float` | the number as read, then the unit table |
 | `float` or `int` → `int` | integral and within `i32`, both ends included; else `not-integral` (a fraction, a NaN, an infinity) or `outside-int32` |
-| `float`, `int` or `bool` → `bool` | a number exactly `0` (`-0.0` included) is false and exactly `1` true; a text cell `true`/`false`, `active`/`inactive` or `1`/`0`, byte for byte; else `not-boolean` or `not-boolean-text`. No threshold: `0.5` is refused (decision 19). A `csv` cell reaches the rules typed, through replay's reader, so `active` and `inactive` are refused there for now (the owner's ruling of 2026-11-21) |
+| `float`, `int` or `bool` → `bool` | a number exactly `0` (`-0.0` included) is false and exactly `1` true; a text cell `true`/`false`, `active`/`inactive` or `1`/`0`, byte for byte; else `not-boolean` or `not-boolean-text`. No threshold: `0.5` is refused (decision 19). A `csv` file's `bool` device column reaches the rules as text, through replay's reader with its padding trimmed (issues #728 and #733) |
 | `bool` → `int` | the Boolean, then `false` 0 and `true` 1 |
 | `int` → `float` | a whole number within `i32`, widened exactly; else `not-integral` or `outside-int32` |
 | `bool` → `float` | not in the note's table: `type-pair-refused` |
@@ -801,13 +801,15 @@ let source = read.inputs.into_source(&map, &oce_replay::ReplayLimits::default())
   Modelica exports (none is vendored); after a matrix's last value a number is `size-mismatch`
   and other text `table-syntax`. A `combiTimeTable` addresses columns by position from 1, a `csv` by header name.
   A `controllerOutput` with no `expected` is read as OBC §12.7.3's csv: the first header is the
-  time in seconds, every other a mapped device point. Replay's reader trims no cell, so OBC
-  §12.7.3's printed examples, padded with spaces (`time, uHea`), are refused until #733.
+  time in seconds, every other a mapped device point. Replay's reader trims the spaces and tabs
+  around each unquoted cell and header name (issue #733), so OBC §12.7.3's printed examples,
+  padded with spaces (`time, uHea`), read as printed.
 - **Time.** Model seconds from `time.origin`: a column of seconds, or of RFC 3339 instants in
   `csv`, fixed by the first row; never decreasing within a file; equal times kept; `-0` read as
   `0`.
 - **Cells.** Each converted exactly once: an infinity refused, then the point's type rule, then
-  for a Real the unit table. A missing `csv` cell (empty, `NA`, `NaN`) is missing: NaN or a
+  for a Real the unit table. A missing `csv` cell (empty once its padding is trimmed, `NA`,
+  `NaN`) is missing: NaN or a
   cleared validity flag in the merged inputs, no sample in a series.
 - **The merge.** The input sources on the union of their times; at an instant where a source has
   `k` rows its `i`-th row fills the `i`-th frame there, and the frames there are as many as the
