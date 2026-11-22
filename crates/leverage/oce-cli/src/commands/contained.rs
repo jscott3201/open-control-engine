@@ -122,9 +122,22 @@ impl Root {
         };
         let directory = directory.to_path_buf();
         step();
-        let handle = Directory::open(&directory).map_err(io_refusal)?;
+        let handle = Directory::open(&directory).map_err(|error| {
+            match directory::unlistable(&directory, &error) {
+                Some(why) => (
+                    codes::READ_FAILED,
+                    format!("{why}; oce reads a document only through its directory"),
+                ),
+                None => io_refusal(error),
+            }
+        })?;
         step();
         let canonical = std::fs::canonicalize(&directory).map_err(io_refusal)?;
+        // The handle must be the directory the canonicalization resolved: a folder exchanged
+        // between the two is refused here (`read-failed`). This keeps the outside refusal
+        // consistent (the canonical path a named file is held to is the handle's); it is not
+        // what containment rests on: every named file is walked from the handle with no link
+        // followed, so no read leaves the handle without this check (`contained_tests.rs`).
         #[cfg(unix)]
         {
             let resolved = std::fs::metadata(&canonical).map_err(io_refusal)?;

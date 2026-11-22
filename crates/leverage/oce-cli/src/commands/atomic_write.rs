@@ -42,7 +42,7 @@ use std::io::{self, ErrorKind, Write};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use super::directory::{Directory, Entry, Kind, split};
+use super::directory::{Directory, Entry, Kind, cause, split, unlistable};
 use super::steps::step;
 use crate::codes;
 
@@ -181,7 +181,16 @@ pub(crate) fn write_atomically(path: &Path, bytes: &[u8]) -> Result<(), (&'stati
     let Some((parent, name)) = split(path) else {
         return Err(failed(ErrorKind::InvalidInput.into()));
     };
-    let directory = Directory::open(parent).map_err(failed)?;
+    let directory = Directory::open(parent).map_err(|error| match unlistable(parent, &error) {
+        Some(why) => (
+            codes::WRITE_FAILED,
+            format!(
+                "the output could not be written: {why}; oce writes a file only through its \
+                 directory"
+            ),
+        ),
+        None => failed(error),
+    })?;
     write_in(&directory, &name, bytes, &Plan::PLAIN)
 }
 
@@ -413,7 +422,7 @@ fn remove(directory: &Directory, temporary: &OsStr) {
 fn failed(error: io::Error) -> (&'static str, String) {
     (
         codes::WRITE_FAILED,
-        format!("the output could not be written: {}", error.kind()),
+        format!("the output could not be written: {}", cause(&error)),
     )
 }
 

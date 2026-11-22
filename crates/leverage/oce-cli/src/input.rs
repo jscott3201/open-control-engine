@@ -156,7 +156,13 @@ pub(crate) fn io_refusal(error: std::io::Error) -> (&'static str, String) {
             codes::NOT_A_FILE,
             "the path is not a regular file".to_owned(),
         ),
-        kind => (codes::READ_FAILED, format!("the read failed: {kind}")),
+        _ => (
+            codes::READ_FAILED,
+            format!(
+                "the read failed: {}",
+                crate::commands::directory_cause(&error)
+            ),
+        ),
     }
 }
 

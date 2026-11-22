@@ -108,13 +108,7 @@ mod schedules {
                     if [Errno::INVAL, Errno::NOTSUP, Errno::OPNOTSUPP, Errno::NOSYS]
                         .contains(&error) =>
                 {
-                    #[allow(
-                        clippy::print_stderr,
-                        reason = "an explicit skip note in the test output"
-                    )]
-                    {
-                        eprintln!("skipped: no atomic exchange on this file system ({error:?})");
-                    }
+                    crate::commands::steps::skip_without_exchange(error);
                     false
                 }
                 Err(error) => panic!("the exchange failed: {error:?}"),
@@ -333,6 +327,30 @@ mod schedules {
             !results.contains(&Gave::Refused(codes::NOT_A_FILE)),
             "{results:?}"
         );
+    }
+
+    #[test]
+    fn a_folder_exchanged_between_the_directory_open_and_its_canonicalization_is_read_failed() {
+        // The one schedule the directory's identity check exists for: the handle is opened on
+        // `root`, then `root` is exchanged for the link out before the canonicalization. The
+        // canonical path is then `outside`'s, which is not the handle's directory: refused, so
+        // the outside refusal never judges against a directory the reads do not come from.
+        let layout = Layout::make("identity", "sub/file.csv", "");
+        if !layout.swappable() {
+            return;
+        }
+        let (name, link) = (layout.name.clone(), layout.link.clone());
+        let mut index = 0;
+        with_adversary(Some(Box::new(move || {
+            if index == 1 {
+                Layout::swap(&name, &link);
+            }
+            index += 1;
+        })));
+        let result = Root::read_document(&layout.document(), 64).map(|_| ());
+        with_adversary(None);
+        layout.reset();
+        assert_eq!(result.map_err(|(code, _)| code), Err(codes::READ_FAILED));
     }
 
     /// What one schedule of the document read and one named read gave: the two texts, or the

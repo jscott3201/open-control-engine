@@ -94,13 +94,7 @@ fn a_directory_swapped_for_a_link_never_carries_a_read_out_of_the_spec_directory
         Err(error)
             if [Errno::INVAL, Errno::NOTSUP, Errno::OPNOTSUPP, Errno::NOSYS].contains(&error) =>
         {
-            #[allow(
-                clippy::print_stderr,
-                reason = "an explicit skip note in the test output"
-            )]
-            {
-                eprintln!("skipped: no atomic exchange on this file system ({error:?})");
-            }
+            support::skip_without_exchange(error);
             return;
         }
         Err(error) => panic!("the exchange failed: {error:?}"),

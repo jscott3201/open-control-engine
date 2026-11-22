@@ -36,6 +36,7 @@ use crate::report::Report;
 use crate::{Exit, Streams, input};
 
 pub(crate) use atomic_write::{Named, target_accepted, write_atomically};
+pub(crate) use directory::cause as directory_cause;
 pub(crate) use file_identity::{input_at, same_file, stdin_is_file};
 
 /// What one command produced.

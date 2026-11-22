@@ -57,7 +57,7 @@ use std::path::Path;
 use oce_verify::{Curve, OutputCurves};
 
 use super::atomic_write::{Plan, not_a_target, write_in};
-use super::directory::{Directory, Kind, MakeError};
+use super::directory::{Directory, Kind, MakeError, cause};
 use super::file_identity::Identity;
 use super::{Named, input_at, target_accepted};
 use crate::{codes, input};
@@ -260,7 +260,7 @@ fn unreadable(dir: &OsStr, error: &std::io::Error) -> Refused {
     failed(
         dir,
         ".",
-        format!("the output directory cannot be read: {}", error.kind()),
+        format!("the output directory cannot be read: {}", cause(error)),
     )
 }
 
@@ -280,7 +280,12 @@ fn make(dir: &OsStr, parent: &Directory, name: &str, at: &str) -> Result<Directo
         MakeError::Io(error) => failed(
             dir,
             at,
-            format!("it could not be created: {}", error.kind()),
+            format!("it could not be created: {}", cause(&error)),
+        ),
+        MakeError::Unopened(cause) => failed(
+            dir,
+            at,
+            format!("it was made but could not be opened ({cause}), and is removed; nothing is written there"),
         ),
         MakeError::NotFresh => failed(
             dir,
@@ -360,3 +365,7 @@ fn with_written(mut refused: Refused, mut written: Vec<Written>) -> Refused {
 #[cfg(test)]
 #[path = "commission_out_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "commission_out_adversary_tests.rs"]
+mod adversary_tests;

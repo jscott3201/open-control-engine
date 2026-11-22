@@ -20,6 +20,34 @@ pub(crate) fn step() {}
 )]
 pub(crate) use adversary::{step, with_adversary};
 
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
+/// The environment variable that lets a test needing an atomic exchange skip, with a note, on a
+/// file system that refuses one; unset, such a test fails instead, so a missing exchange never
+/// passes for a race that ran (issue #771's review). CI's Linux runners (ext4) and macOS (APFS)
+/// support the exchange; set it to `1` only where the file system under the temporary and target
+/// directories cannot, knowing the rules are then untested there.
+pub(crate) const ALLOW_NO_EXCHANGE: &str = "OCE_TESTS_ALLOW_NO_EXCHANGE";
+
+/// The answer of a test whose atomic exchange was refused with `error`: a skip note when
+/// [`ALLOW_NO_EXCHANGE`] is `1`, a failure otherwise.
+#[cfg(all(test, any(target_os = "linux", target_os = "macos")))]
+pub(crate) fn skip_without_exchange(error: rustix::io::Errno) {
+    if std::env::var_os(ALLOW_NO_EXCHANGE).is_some_and(|value| value == "1") {
+        #[allow(
+            clippy::print_stderr,
+            reason = "an explicit skip note in the test output"
+        )]
+        {
+            eprintln!("skipped: no atomic exchange on this file system ({error:?})");
+        }
+        return;
+    }
+    panic!(
+        "no atomic exchange on this file system ({error:?}): the race cannot run; set \
+         {ALLOW_NO_EXCHANGE}=1 to skip it, knowing the rule is then untested here"
+    );
+}
+
 #[cfg(test)]
 mod adversary {
     use std::cell::RefCell;

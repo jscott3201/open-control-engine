@@ -88,6 +88,10 @@ pub(crate) enum MakeError {
     Exists,
     /// The operating system's failure.
     Io(io::Error),
+    /// The directory was made and could not be opened, for the cause given in words
+    /// ([`cause`]); it was removed again when it could be (it is empty: nothing was written).
+    #[cfg_attr(not(unix), allow(dead_code, reason = "no handle to open off Unix"))]
+    Unopened(String),
     /// What was opened under the name is not an empty directory: it changed after it was made
     /// (Unix: the directory is reached by path elsewhere).
     #[cfg_attr(not(unix), allow(dead_code, reason = "no handle to check off Unix"))]
@@ -296,7 +300,12 @@ impl Directory {
     pub(crate) fn owner(&self) -> io::Result<Option<u32>> {
         #[cfg(unix)]
         {
-            Ok(Some(rustix::fs::fstat(&self.fd)?.st_uid))
+            let stat = rustix::fs::fstat(&self.fd)?;
+            #[cfg(test)]
+            if foreign::is_foreign(&entry_of(&stat)) {
+                return Ok(Some(stat.st_uid.wrapping_add(1)));
+            }
+            Ok(Some(stat.st_uid))
         }
         #[cfg(not(unix))]
         {
@@ -370,6 +379,13 @@ impl Directory {
                 }
             })?;
             step();
+            // Made and not opened (a umask that leaves it unreadable, no descriptor left): it is
+            // empty, so it is removed again, best effort (`unlinkat` removes only an empty
+            // directory), and the refusal says it was made.
+            let unopened = |error: io::Error| {
+                let _ = rustix::fs::unlinkat(&self.fd, name, rustix::fs::AtFlags::REMOVEDIR);
+                MakeError::Unopened(cause(&error))
+            };
             let fd = openat(
                 &self.fd,
                 name,
@@ -380,13 +396,17 @@ impl Directory {
                 if [Errno::LOOP, Errno::NOTDIR, Errno::NOENT].contains(&error) {
                     MakeError::NotFresh
                 } else {
-                    MakeError::Io(error.into())
+                    unopened(error.into())
                 }
             })?;
-            if !handle::is_empty(&fd).map_err(MakeError::Io)? {
-                return Err(MakeError::NotFresh);
+            match handle::is_empty(&fd) {
+                Ok(true) => Ok(Self { fd }),
+                Ok(false) => Err(MakeError::NotFresh),
+                Err(error) => {
+                    drop(fd);
+                    Err(unopened(error))
+                }
             }
-            Ok(Self { fd })
         }
         #[cfg(not(unix))]
         {
@@ -406,6 +426,63 @@ impl Directory {
     #[cfg(not(unix))]
     pub(crate) fn join(&self, name: &OsStr) -> PathBuf {
         self.path.join(name)
+    }
+}
+
+/// An I/O failure in words for a refusal: its kind, except for the descriptor limits, which std
+/// files under "uncategorized error" and which are named here ("too many open files").
+pub(crate) fn cause(error: &io::Error) -> String {
+    #[cfg(unix)]
+    {
+        use rustix::io::Errno;
+        if let Some(errno) = Errno::from_io_error(error)
+            && (errno == Errno::MFILE || errno == Errno::NFILE)
+        {
+            return "too many open files".to_owned();
+        }
+    }
+    error.kind().to_string()
+}
+
+/// Why a directory the caller named could not be opened, when it exists and only cannot be
+/// listed (mode `--x` or `-wx`: the handles are read-only, module header): "the directory `D`
+/// cannot be listed (permission denied)", `D` as the caller's path gives it. `None` for any other
+/// failure, which keeps its own words.
+pub(crate) fn unlistable(directory: &Path, error: &io::Error) -> Option<String> {
+    (error.kind() == io::ErrorKind::PermissionDenied && std::fs::metadata(directory).is_ok()).then(
+        || {
+            format!(
+                "the directory `{}` cannot be listed (permission denied)",
+                directory.to_string_lossy()
+            )
+        },
+    )
+}
+
+/// Directories the unit tests declare owned by someone else, by identity: [`Directory::owner`]
+/// answers another user for them, which no test can arrange with a real `chown`.
+#[cfg(all(test, unix))]
+pub(crate) mod foreign {
+    use std::cell::RefCell;
+
+    use super::Entry;
+
+    thread_local! {
+        static FOREIGN: RefCell<Vec<Option<(u64, u64)>>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Declare the directory `entry` describes owned by someone else, on this thread.
+    pub(crate) fn declare(entry: &Entry) {
+        FOREIGN.with(|foreign| foreign.borrow_mut().push(entry.identity));
+    }
+
+    /// Forget every declaration on this thread.
+    pub(crate) fn clear() {
+        FOREIGN.with(|foreign| foreign.borrow_mut().clear());
+    }
+
+    pub(super) fn is_foreign(entry: &Entry) -> bool {
+        FOREIGN.with(|foreign| foreign.borrow().contains(&entry.identity))
     }
 }
 

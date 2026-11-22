@@ -483,13 +483,7 @@ mod schedules {
                     Some(layout)
                 }
                 Err(error) => {
-                    #[allow(
-                        clippy::print_stderr,
-                        reason = "an explicit skip note in the test output"
-                    )]
-                    {
-                        eprintln!("skipped: no atomic exchange on this file system ({error:?})");
-                    }
+                    crate::commands::steps::skip_without_exchange(error);
                     None
                 }
             }

@@ -149,7 +149,16 @@ impl Rewrite {
             // No last name (`/`, `..`): a directory, which the first check already refused.
             return Err(not_a_target(Kind::Directory, shown, Named::Caller));
         };
-        let directory = Directory::open(parent).map_err(io_refusal)?;
+        let directory =
+            Directory::open(parent).map_err(|error| {
+                match super::directory::unlistable(parent, &error) {
+                    Some(why) => (
+                        codes::READ_FAILED,
+                        format!("{why}; oce rewrites a file only through its directory"),
+                    ),
+                    None => io_refusal(error),
+                }
+            })?;
         let (file, read) = directory.read(&name, false).map_err(|error| match error {
             ReadError::Io(error) => io_refusal(error),
             ReadError::Link => not_a_target(Kind::Link, shown, Named::Caller),
