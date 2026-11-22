@@ -65,9 +65,13 @@ pub(crate) const FILE_OUTSIDE_DIRECTORY: &str = "file-outside-directory";
 
 /// `import -o` names a file `oce` would read in another form than the one written.
 pub(crate) const OUTPUT_FORM_MISMATCH: &str = "output-form-mismatch";
-/// `emit -o` or `import -o` names the input file itself, or `verify --commission --out DIR` would
-/// write `DIR/receipt.json` over a file the run reads.
+/// `emit -o` or `import -o` names the input file itself, or `verify --out DIR` (of a vector set or
+/// a commissioning spec) would write `DIR/receipt.json` over a file the run reads.
 pub(crate) const OUTPUT_IS_INPUT: &str = "output-is-input";
+/// The path a verb would write (`emit -o`, `import -o`, the file `fmt --write` rewrites,
+/// `DIR/receipt.json` of `verify --out`) is a symbolic link, dangling or not, a directory or
+/// another non-file; nothing is read or written (issue #758, ruled by the owner on 2026-11-22).
+pub(crate) const OUTPUT_NOT_A_FILE: &str = "output-not-a-file";
 /// The two sides of `diff` have names that read as two forms, and `--from` was not given.
 pub(crate) const MIXED_FORMS: &str = "mixed-forms";
 /// Both sides of `diff` are stdin (`-`), which can be read once.
@@ -100,7 +104,7 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     ),
     (
         WRITE_FAILED,
-        "the output could not be written or renamed into place, or (verify --out) DIR is not an existing directory, or (verify --commission --out) DIR/outputs already exists",
+        "the output could not be written or renamed into place, or (verify --out) DIR is not an existing directory, or (verify --commission --out) DIR/outputs or a regular DIR/receipt.json already exists",
     ),
     (WRITE_NEEDS_FILE, "--write or -o cannot rewrite stdin"),
     (
@@ -153,7 +157,11 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     ),
     (
         OUTPUT_IS_INPUT,
-        "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; or verify --commission --out DIR would write DIR/receipt.json over a file the run reads; nothing is written",
+        "emit -o or import -o is the input file itself (another spelling of its path, the file an input link names, or on Unix a hard link to it), or, on Unix, the regular file standard input reads; or verify --out DIR (vector or --commission) would write DIR/receipt.json over a file the run reads, by path, through a link or as a hard link; nothing is written",
+    ),
+    (
+        OUTPUT_NOT_A_FILE,
+        "the path a verb would write (emit -o, import -o, fmt --write's file, verify --out's DIR/receipt.json) is a symbolic link, dangling or not, a directory, a named pipe, a socket or a device; oce never writes through a link (give the path of the file it names); nothing is read or written",
     ),
     (
         MIXED_FORMS,

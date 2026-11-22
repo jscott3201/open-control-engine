@@ -2,9 +2,11 @@
 //! write fails (commissioning note, "CLI" "Output", decision 37; issue #664 and the review of
 //! GitHub #757):
 //!
-//! - any entry already at `DIR/receipt.json`, a file, a link to a file outside `DIR` or inside it,
-//!   or a dangling link, is `write-failed` before the run, and nothing anywhere is written: a link
-//!   never carries the receipt out of `DIR`, and a stale receipt never stands beside new curves;
+//! - a regular file already at `DIR/receipt.json` is `write-failed` before the run, so a stale
+//!   receipt never stands beside new curves; a link there, to a file outside `DIR` or inside it,
+//!   or dangling, is `output-not-a-file` before anything is read (issue #758, ruled by the owner
+//!   on 2026-11-22), and nothing anywhere is written: a link never carries the receipt out of
+//!   `DIR`;
 //! - a dangling link at `DIR/outputs`, and a `DIR` that is a file, are refused before the run;
 //! - a curve that cannot be written fails the run (exit 2, no receipt), and the report's `curves`
 //!   lists exactly the files that were written;
@@ -67,7 +69,8 @@ fn a_receipt_already_in_dir_is_refused_before_the_run_and_nothing_is_written() {
 fn a_link_at_receipt_json_is_refused_and_its_target_is_never_written() {
     use std::os::unix::fs::symlink;
     // A link to a file outside DIR, a link to a file of the bundle the run does not read, and a
-    // dangling link: each refused before the run, each target untouched or never created.
+    // dangling link: each refused before anything is read, each target untouched or never
+    // created.
     for (name, target, exists) in [
         ("outside", "../victimdir/victim.txt", true),
         ("unread", "../spec2.json", true),
@@ -83,8 +86,16 @@ fn a_link_at_receipt_json_is_refused_and_its_target_is_never_written() {
         let run = commission(&dir, &["--out", "out"]);
         assert_eq!(
             refusal(&run),
-            ("write-failed".to_owned(), "receipt.json".to_owned()),
+            ("output-not-a-file".to_owned(), "receipt.json".to_owned()),
             "{name}"
+        );
+        assert!(
+            run.report()["errors"][0]["detail"]
+                .as_str()
+                .expect("detail")
+                .starts_with("`out/receipt.json` is a symbolic link"),
+            "{name}: {}",
+            run.transcript()
         );
         assert_eq!(tree(&dir), before, "{name}: nothing written anywhere");
         assert_eq!(dir.join("out").join(target).exists(), exists, "{name}");
@@ -163,8 +174,38 @@ fn exists_in(dir: &Path, path: &str) -> bool {
         .success()
 }
 
+/// The top directories of the long paths a sweep made under `dir`, removed when it ends, an
+/// assertion failing included: a path past the platform's limit left under `target/` keeps
+/// `git worktree remove` from removing the worktree ("File name too long"). `remove_dir_all`
+/// walks below each top directory from handles, so the depth below it is no obstacle.
+struct Sweep<'d> {
+    dir: &'d Path,
+    made: Vec<String>,
+}
+
+impl Sweep<'_> {
+    /// Remove every top directory made, and name those that could not be removed.
+    fn clear(&mut self) -> Vec<String> {
+        let mut left = Vec::new();
+        for top in self.made.drain(..) {
+            match fs::remove_dir_all(self.dir.join(&top)) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => left.push(format!("{top}: {error}")),
+            }
+        }
+        left
+    }
+}
+
+impl Drop for Sweep<'_> {
+    fn drop(&mut self) {
+        let _ = self.clear();
+    }
+}
+
 /// A relative directory path of exactly `len` bytes, unique for `tag`, every component at most
-/// 200 bytes.
+/// 200 bytes; its top directory is `s<tag>`.
 fn long_relative(len: usize, tag: usize) -> String {
     let mut path = format!("s{tag:03}");
     while path.len() < len {
@@ -194,9 +235,14 @@ fn a_curve_that_cannot_be_written_fails_the_run_and_the_report_lists_only_what_e
         4096
     };
     let dir = run_layout("commission_guard_long", "pass");
+    let mut sweep = Sweep {
+        dir: &dir,
+        made: Vec::new(),
+    };
     let (mut curve_failure, mut partial, mut passed) = (false, false, false);
     for slack in 12..=64 {
         let out = long_relative(limit - slack, slack);
+        sweep.made.push(format!("s{slack:03}"));
         let made = Command::new("mkdir")
             .args(["-p", &out])
             .current_dir(&dir)
@@ -241,4 +287,15 @@ fn a_curve_that_cannot_be_written_fails_the_run_and_the_report_lists_only_what_e
     assert!(curve_failure, "some run failed at a curve");
     assert!(partial, "some run failed at a curve after writing others");
     assert!(passed, "some run passed");
+    assert_eq!(
+        sweep.clear(),
+        Vec::<String>::new(),
+        "every long path removed"
+    );
+    for slack in 12..=64 {
+        assert!(
+            !dir.join(format!("s{slack:03}")).exists(),
+            "s{slack:03} left"
+        );
+    }
 }

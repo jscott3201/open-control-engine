@@ -17,7 +17,7 @@
 //!
 //! Every refusal names the mutant (`mutants[i]` and its listed path), never a host path.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use oce_verify::{VectorSet, VerifyLimits};
 
@@ -26,8 +26,15 @@ use super::file_identity::Identity;
 use crate::codes;
 use crate::input::{read_bounded, too_large};
 
-/// One mutant as read: its listed path and its bytes.
-pub(crate) type Read = (String, Vec<u8>);
+/// One mutant as read.
+pub(crate) struct Read {
+    /// The path as the set lists it.
+    pub(crate) path: String,
+    /// The bytes.
+    pub(crate) bytes: Vec<u8>,
+    /// The canonical path it was opened at, for the `--out` guard (`output-is-input`).
+    pub(crate) canonical: PathBuf,
+}
 
 /// A refusal of one mutant: the place, the code and a detail naming the listing.
 pub(crate) struct Refused {
@@ -71,7 +78,12 @@ pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused
         let opened = root
             .open(path, codes::MUTANT_OUTSIDE_DIRECTORY, "the vector file's")
             .map_err(|refusal| refuse(index, path, refusal))?;
-        let (file, metadata, this) = (opened.file, opened.metadata, opened.identity);
+        let (file, metadata, this, canonical) = (
+            opened.file,
+            opened.metadata,
+            opened.identity,
+            opened.canonical,
+        );
         if let Some((_, first)) = seen.iter().find(|(other, _)| *other == this) {
             return Err(refuse(
                 index,
@@ -110,7 +122,11 @@ pub(crate) fn read(set: &VectorSet, vectors: &Path) -> Result<Vec<Read>, Refused
         let bound = usize::try_from(room).unwrap_or(usize::MAX);
         let bytes = read_bounded(file, bound).map_err(|refusal| refuse(index, path, refusal))?;
         total = total.saturating_add(u64::try_from(bytes.len()).unwrap_or(u64::MAX));
-        read.push((path.to_owned(), bytes));
+        read.push(Read {
+            path: path.to_owned(),
+            bytes,
+            canonical,
+        });
     }
     Ok(read)
 }

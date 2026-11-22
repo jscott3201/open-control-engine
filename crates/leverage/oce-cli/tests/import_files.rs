@@ -172,12 +172,23 @@ fn a_refused_import_writes_no_file_and_leaves_an_existing_one_alone() {
 
 #[test]
 fn a_failed_write_reports_neither_output_nor_bytes_and_keeps_the_lists() {
+    // A missing directory: the target check reads no entry there, so the write is what fails,
+    // after the importer accepted the document.
     let dir = scratch("import_failed_write");
     fs::write(dir.join("in.cxf.json"), bytes_of(LIMITS)).expect("copy");
-    fs::create_dir(dir.join("taken")).expect("mkdir");
-    let run = oce_in(&dir, &["import", "in.cxf.json", "-o", "taken"], b"");
+    let run = oce_in(&dir, &["import", "in.cxf.json", "-o", "missing/taken"], b"");
     assert_eq!(refusal(&run)["code"], "write-failed");
     assert_eq!(run.report()["dropped"].as_array().map(Vec::len), Some(10));
+    assert!(!dir.join("missing").exists());
+    // A directory at the output is refused before anything is read: no lists.
+    fs::create_dir(dir.join("taken")).expect("mkdir");
+    let run = oce_in(&dir, &["import", "in.cxf.json", "-o", "taken"], b"");
+    assert_eq!(refusal(&run)["code"], "output-not-a-file");
+    assert!(
+        run.report().get("dropped").is_none(),
+        "{}",
+        run.transcript()
+    );
     assert!(dir.join("taken").is_dir());
 }
 

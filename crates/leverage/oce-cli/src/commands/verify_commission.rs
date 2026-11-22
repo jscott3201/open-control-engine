@@ -4,6 +4,9 @@
 //! Order, the first refusal winning, every refusal exit `2` with the `oce-report/1` report and
 //! no receipt:
 //!
+//! 0. with `--out DIR`, before anything is read, a `DIR/receipt.json` that is a symbolic link,
+//!    dangling or not, a directory or another non-file is `output-not-a-file`
+//!    ([`super::commission_out::target`]; issue #758, ruled by the owner on 2026-11-22);
 //! 1. the spec, bounded at `SpecLimits::MAX.max_bytes` (4 MiB) from its metadata, then read by
 //!    `oce_verify::CommissioningSpec::from_json_bytes` (a refusal under the spec reader's own
 //!    code, at its line and column);
@@ -55,6 +58,17 @@ use crate::{CommissionArgs, DataLabel, Exit, codes, input};
 pub(crate) fn run(args: &CommissionArgs) -> Outcome {
     let started = Instant::now();
     let mut report = Report::new("verify", Some(input::display_name(&args.spec)));
+    if let Some(dir) = &args.out
+        && let Err(refusal) = commission_out::target(dir)
+    {
+        report.error_at(
+            refusal.code,
+            refusal.detail,
+            None,
+            &Facts::about(&refusal.at),
+        );
+        return refused(report, "the output was refused before anything was read");
+    }
     let spec_path = Path::new(&args.spec);
     let bound = usize::try_from(SpecLimits::MAX.max_bytes).unwrap_or(usize::MAX);
     let bytes = match input::read_file(spec_path, bound) {

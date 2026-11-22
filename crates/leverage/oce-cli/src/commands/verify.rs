@@ -14,9 +14,17 @@
 //! `0` when every scenario passed, `1` when one failed or the set checked nothing. Every refusal
 //! is exit `2` with the `oce-report/1` report and no receipt. With `--out DIR` the receipt is
 //! written atomically to `DIR/receipt.json` (`atomic_write`: a fresh temporary file beside it,
-//! synced, then renamed over it, so no reader ever sees part of a receipt) and stdout is the
-//! report, with `passed`, `status`, `receipt_id` and `output`; on exit `2` nothing is written.
-//! `DIR` must exist: it is never created.
+//! synced, then renamed over its directory entry, so no reader ever sees part of a receipt and no
+//! link there is written through) and stdout is the report, with `passed`, `status`, `receipt_id`
+//! and `output`; on exit `2` nothing is written. `DIR` must exist: it is never created. Two
+//! guards hold the output (issue #758, ruled by the owner on 2026-11-22):
+//!
+//! - before anything is read, a `DIR/receipt.json` that is a symbolic link, dangling or not, a
+//!   directory or another non-file is `output-not-a-file` (`atomic_write::target_accepted`); a
+//!   regular file there is replaced;
+//! - after the reads and before the run, a `DIR/receipt.json` that is the vector file, the
+//!   subject or a mutant, by path, through a link or (on Unix) as a hard link, is
+//!   `output-is-input` (`file_identity::input_at`), so a run never replaces what it read.
 //!
 //! The two exit-only flags change the exit status and never a receipt byte (decisions 12 and 30):
 //! `--require-mutants-caught` makes exit `1` when a mutant survived or the set lists none (owner
@@ -29,7 +37,8 @@
 //! `compare_ms` stays `0`, because comparing cannot be timed apart from running outside
 //! `oce-verify`, which measures nothing.
 
-use std::path::Path;
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use oce_verify::{
@@ -38,15 +47,24 @@ use oce_verify::{
 };
 use serde_json::Value;
 
-use super::{Outcome, verify_mutants, verify_subject, write_atomically};
+use super::{Outcome, input_at, target_accepted, verify_mutants, verify_subject, write_atomically};
 use crate::report::{Facts, Report};
-use crate::{Exit, VectorArgs, input};
+use crate::{Exit, VectorArgs, codes, input};
+
+/// The file the receipt is written to, inside `DIR`.
+const RECEIPT: &str = "receipt.json";
 
 /// Run `verify` over a vector set.
 pub(crate) fn run(args: &VectorArgs) -> Outcome {
     let started = Instant::now();
     let mut report = Report::new("verify", Some(input::display_name(&args.vectors)));
     report.set("subject", Value::from(input::display_name(&args.subject)));
+    if let Some(dir) = &args.out
+        && let Err((code, detail)) = target_accepted(&receipt_path(dir), &shown(dir))
+    {
+        report.error_at(code, detail, None, &Facts::about(RECEIPT));
+        return refused(report, "the output was refused before anything was read");
+    }
     let limits = VerifyLimits::default();
     let vectors = Path::new(&args.vectors);
     let bound = usize::try_from(limits.max_bytes).unwrap_or(usize::MAX);
@@ -79,9 +97,34 @@ pub(crate) fn run(args: &VectorArgs) -> Outcome {
             return refused(report, "a mutant could not be read");
         }
     };
+    if let Some(dir) = &args.out {
+        let mut read: Vec<(String, PathBuf)> = vec![
+            (
+                input::display_name(&args.vectors),
+                PathBuf::from(&args.vectors),
+            ),
+            (
+                input::display_name(&args.subject),
+                PathBuf::from(&args.subject),
+            ),
+        ];
+        read.extend(
+            mutants
+                .iter()
+                .map(|mutant| (mutant.path.clone(), mutant.canonical.clone())),
+        );
+        if let Some(name) = input_at(&receipt_path(dir), &read) {
+            let detail = format!(
+                "`{}` is `{name}`, which the run reads; nothing is written",
+                shown(dir)
+            );
+            report.error_at(codes::OUTPUT_IS_INPUT, detail, None, &Facts::about(RECEIPT));
+            return refused(report, "the output is a file the run reads");
+        }
+    }
     let pairs: Vec<(&str, &[u8])> = mutants
         .iter()
-        .map(|(path, bytes)| (path.as_str(), bytes.as_slice()))
+        .map(|mutant| (mutant.path.as_str(), mutant.bytes.as_slice()))
         .collect();
     let loaded = started.elapsed();
     let running = Instant::now();
@@ -116,13 +159,8 @@ fn answer(args: &VectorArgs, receipt: &Receipt, mut report: Report) -> Outcome {
         report.verdict(format!("{status}; the receipt is on stdout"));
         return Outcome::verdict(exit, report, document);
     };
-    // The report names the file as `DIR/receipt.json` with a `/` on every platform, so a
-    // transcript is one text everywhere; the write itself uses the platform's join.
-    let shown = format!(
-        "{}/receipt.json",
-        input::display_name(dir).trim_end_matches('/')
-    );
-    match write_atomically(&Path::new(dir).join("receipt.json"), &document) {
+    let shown = shown(dir);
+    match write_atomically(&receipt_path(dir), &document) {
         Ok(()) => {
             report.set("passed", Value::Bool(receipt.header.passed));
             report.set("status", Value::from(status));
@@ -136,6 +174,20 @@ fn answer(args: &VectorArgs, receipt: &Receipt, mut report: Report) -> Outcome {
             refused(report, "the receipt could not be written")
         }
     }
+}
+
+/// `DIR/receipt.json`, joined the platform's way.
+fn receipt_path(dir: &OsStr) -> PathBuf {
+    Path::new(dir).join(RECEIPT)
+}
+
+/// `DIR/receipt.json` as the report names it: `DIR` as given, then `/receipt.json` on every
+/// platform, so a transcript is one text everywhere.
+fn shown(dir: &OsStr) -> String {
+    format!(
+        "{}/{RECEIPT}",
+        input::display_name(dir).trim_end_matches('/')
+    )
 }
 
 /// The set's status and the exit status, the exit-only flags applied.

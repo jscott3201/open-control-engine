@@ -26,7 +26,7 @@ Options:
           Print a report instead of the text; exit 1 when the input is not canonical
 
       --write
-          Rewrite the text file (a temporary file, then a rename; a hard link keeps the old bytes)
+          Rewrite the text file, which must be a regular file, never a link (a temporary file, then a rename; a hard link keeps the old bytes)
 
   -h, --help
           Print help (see a summary with '-h')

@@ -43,5 +43,13 @@ oce-diff = { path = "../oce-diff" }
 clap = { version = "=4.6.7", default-features = false, features = ["std", "derive", "help", "usage", "error-context", "suggestions"] }
 serde_json = { workspace = true }
 
+# The crate's third-party edge after clap, ruled by the owner on 2026-11-22 (issue #758): the
+# workspace's `rustix` (already in the lock through `oce-cxf`'s tests), whose safe `openat` with
+# `O_DIRECTORY | O_NOFOLLOW` opens each component of a file a document names from its parent's
+# handle (`src/commands/contained.rs`), so no directory swapped for a link can carry a read out
+# of the document's directory. Unix only; Windows keeps the path-based checks.
+[target.'cfg(unix)'.dependencies]
+rustix = { workspace = true }
+
 [dev-dependencies]
 oce-bless = { workspace = true }

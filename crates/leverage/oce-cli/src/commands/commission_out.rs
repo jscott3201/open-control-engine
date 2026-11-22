@@ -21,17 +21,20 @@
 //! header and no name, and a file is named by the output's index, never by its path: nothing a
 //! spec, a mapping or a CXF document writes can reach a file name or a cell.
 //!
-//! **Before the run** ([`check()`]): `DIR` must be an existing directory (it is never created);
-//! `DIR/outputs` must not exist (`write-failed`), so the curves of two runs are never mixed; a
-//! `DIR/receipt.json` that is the spec or any file the run read is `output-is-input`; and any
-//! other entry at `DIR/receipt.json`, a file, a directory or a symbolic link, dangling or not, is
-//! `write-failed` (issue #664's review). So `DIR` holds neither name when the run starts, a
+//! **Before anything is read** ([`target()`]): a `DIR/receipt.json` that is a symbolic link,
+//! dangling or not, a directory or another non-file is `output-not-a-file`, the rule of every
+//! verb that writes (issue #758, ruled by the owner on 2026-11-22). **Before the run**
+//! ([`check()`]): `DIR` must be an existing directory (it is never created); `DIR/outputs` must
+//! not exist (`write-failed`), so the curves of two runs are never mixed; a `DIR/receipt.json`
+//! that is the spec or any file the run read is `output-is-input`; and a regular file at
+//! `DIR/receipt.json` is `write-failed` (issue #664's review: a stale receipt), as is anything
+//! that appeared there since the first check. So `DIR` holds neither name when the run starts, a
 //! `receipt.json` beside the curves is always this run's, and a refusal before the first write
 //! leaves nothing behind. **The writes** ([`write()`]): `outputs/` is made with a plain create,
 //! which fails on anything already there, a directory a racing writer made included
-//! (`write-failed`); each file goes through `write_atomically_no_follow` (a fresh temporary file,
-//! created owner-only, `0600` on Unix, synced, renamed over the entry), which never follows a link,
-//! so a link planted at `receipt.json` between the check and the write is replaced, its target
+//! (`write-failed`); each file goes through `write_atomically` (a fresh temporary file, created
+//! owner-only, `0600` on Unix, synced, renamed over the entry), which never follows a link, so a
+//! link planted at `receipt.json` between the check and the write is replaced, its target
 //! untouched. A write that fails part-way is `write-failed` naming the file; the files already
 //! written stay, and the refusal lists them as the report's `curves`: without `receipt.json` they
 //! are not a run's output.
@@ -43,7 +46,7 @@ use std::path::{Path, PathBuf};
 
 use oce_verify::{Curve, OutputCurves};
 
-use super::{same_file, write_atomically_no_follow};
+use super::{input_at, target_accepted, write_atomically};
 use crate::{codes, input};
 
 /// The file the receipt is written to, inside `DIR`.
@@ -102,13 +105,30 @@ pub(crate) struct Written {
     pub(crate) files: Vec<String>,
 }
 
+/// The check made before anything is read (module header): `DIR/receipt.json` must be absent or
+/// a regular file.
+///
+/// # Errors
+/// `output-not-a-file` for a link, dangling or not, a directory or another non-file there.
+pub(crate) fn target(dir: &OsStr) -> Result<(), Refused> {
+    target_accepted(&Path::new(dir).join(RECEIPT), &shown(dir, RECEIPT)).map_err(
+        |(code, detail)| Refused {
+            at: RECEIPT.to_owned(),
+            code,
+            detail,
+            written: Vec::new(),
+        },
+    )
+}
+
 /// The checks made before the run (module header). `inputs` pairs each file the run read with
 /// how the report names it: the spec as given, every other file by its path as the spec writes it.
 ///
 /// # Errors
-/// `write-failed` for a `DIR` that is not an existing directory, or a `DIR/outputs` or a
-/// `DIR/receipt.json` that exists (a link included); `output-is-input`, first, for a
-/// `DIR/receipt.json` that is one of `inputs`.
+/// `write-failed` for a `DIR` that is not an existing directory, a `DIR/outputs` that exists (a
+/// link included) or a regular `DIR/receipt.json`; `output-is-input`, before that last, for a
+/// `DIR/receipt.json` that is one of `inputs`; `output-not-a-file` for a non-file that appeared
+/// at `DIR/receipt.json` since [`target()`].
 pub(crate) fn check(dir: &OsStr, inputs: &[(String, PathBuf)]) -> Result<(), Refused> {
     let root = Path::new(dir);
     match fs::metadata(root) {
@@ -141,7 +161,7 @@ pub(crate) fn check(dir: &OsStr, inputs: &[(String, PathBuf)]) -> Result<(), Ref
         }
     }
     let receipt = root.join(RECEIPT);
-    if let Some((name, _)) = inputs.iter().find(|(_, read)| same_file(&receipt, read)) {
+    if let Some(name) = input_at(&receipt, inputs) {
         return Err(Refused {
             at: RECEIPT.to_owned(),
             code: codes::OUTPUT_IS_INPUT,
@@ -152,8 +172,9 @@ pub(crate) fn check(dir: &OsStr, inputs: &[(String, PathBuf)]) -> Result<(), Ref
             written: Vec::new(),
         });
     }
-    // Anything else there, a link included, dangling or not: a receipt this run did not write
-    // must never stand beside its curves, and a link must never carry the write out of `DIR`.
+    // A non-file that appeared since the first check is refused as that check refuses it; a
+    // regular file is a receipt this run did not write, which must never stand beside its curves.
+    target(dir)?;
     match fs::symlink_metadata(&receipt) {
         Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
         Ok(_) => Err(failed(
@@ -228,7 +249,7 @@ pub(crate) fn write(
         for (name, curve) in files {
             let at = format!("{folder}/{name}");
             let path = root.join(OUTPUTS).join(k.to_string()).join(name);
-            if let Err((_, why)) = write_atomically_no_follow(&path, curve.to_csv().as_bytes()) {
+            if let Err((_, why)) = write_atomically(&path, curve.to_csv().as_bytes()) {
                 return Err(with_written(failed(dir, &at, why), written));
             }
             if let Some(entry) = written.last_mut() {
@@ -236,7 +257,7 @@ pub(crate) fn write(
             }
         }
     }
-    if let Err((_, why)) = write_atomically_no_follow(&root.join(RECEIPT), receipt) {
+    if let Err((_, why)) = write_atomically(&root.join(RECEIPT), receipt) {
         return Err(with_written(failed(dir, RECEIPT, why), written));
     }
     Ok(written)
@@ -395,6 +416,37 @@ mod tests {
         let entry = fs::symlink_metadata(out.join(RECEIPT)).expect("the receipt");
         assert!(entry.file_type().is_file());
         assert_eq!(fs::read(out.join(RECEIPT)).expect("receipt"), b"{}\n");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_non_file_that_appears_after_the_first_check_is_refused_by_the_second() {
+        // `target()` runs before anything is read and `check()` after the reads; a link planted
+        // between them is refused as the first check refuses it, and a regular file stays the
+        // stale receipt `write-failed` names.
+        let dir = scratch("late_link");
+        let out = dir.join("out");
+        fs::create_dir(&out).expect("out");
+        assert!(target(out.as_os_str()).is_ok());
+        std::os::unix::fs::symlink(dir.join("victim.txt"), out.join(RECEIPT)).expect("a link");
+        let refused = check(out.as_os_str(), &[]).expect_err("a link");
+        assert_eq!(
+            (refused.code, refused.at.as_str()),
+            (codes::OUTPUT_NOT_A_FILE, RECEIPT)
+        );
+        assert_eq!(
+            target(out.as_os_str()).expect_err("a link").code,
+            codes::OUTPUT_NOT_A_FILE
+        );
+        fs::remove_file(out.join(RECEIPT)).expect("unlink");
+        fs::write(out.join(RECEIPT), b"{}\n").expect("a stale receipt");
+        assert!(
+            target(out.as_os_str()).is_ok(),
+            "a regular file passes the first check"
+        );
+        let refused = check(out.as_os_str(), &[]).expect_err("a stale receipt");
+        assert_eq!(refused.code, codes::WRITE_FAILED);
         let _ = fs::remove_dir_all(&dir);
     }
 

@@ -336,15 +336,17 @@ fn nothing_is_written_on_a_refusal_before_the_first_write() {
 
 #[cfg(unix)]
 #[test]
-fn a_receipt_that_is_an_input_by_link_is_output_is_input_and_nothing_is_written() {
-    for (name, link) in [
+fn a_receipt_that_is_an_input_or_a_link_to_one_is_refused_and_nothing_is_written() {
+    // A hard link to an input is that input (`output-is-input`, naming it); a symbolic link is
+    // refused for being a link, before anything is read, whatever it names (issue #758).
+    for (name, hard) in [
         ("commission_out_hard_link", true),
         ("commission_out_symbolic_link", false),
     ] {
         let dir = run_layout(name, "pass");
         fs::create_dir(dir.join("out")).expect("out");
         let receipt = dir.join("out/receipt.json");
-        if link {
+        if hard {
             fs::hard_link(dir.join("inputs.csv"), &receipt).expect("a hard link");
         } else {
             std::os::unix::fs::symlink(dir.join("points.json"), &receipt).expect("a link");
@@ -356,13 +358,14 @@ fn a_receipt_that_is_an_input_by_link_is_output_is_input_and_nothing_is_written(
         let run = commission(&dir, &["--out", "out"]);
         assert_eq!(run.code, 2, "{name}: {}", run.transcript());
         let error = &run.report()["errors"][0];
-        assert_eq!(error["code"], "output-is-input", "{name}");
-        let read = if link { "inputs.csv" } else { "points.json" };
+        let (code, named) = if hard {
+            ("output-is-input", "`inputs.csv`")
+        } else {
+            ("output-not-a-file", "`out/receipt.json` is a symbolic link")
+        };
+        assert_eq!(error["code"], code, "{name}");
         assert!(
-            error["detail"]
-                .as_str()
-                .expect("detail")
-                .contains(&format!("`{read}`")),
+            error["detail"].as_str().expect("detail").contains(named),
             "{name}: {error}"
         );
         let after = (
