@@ -1,0 +1,32 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 1800 },
+  "scenarios": [
+    {
+      "name": "one_tick_late",
+      "description": "ahu.T steps one tick after the expected signal, and the window allows no time.",
+      "inputs": {
+        "ahu.T": [ { "t": 0, "value": 20.0 }, { "t": 660, "value": 22.0 } ],
+        "zone.T": 2.0, "n": 3, "b": true, "lim": 5.0
+      },
+      "expect": [
+        { "output": "ahu.y", "from_s": 0, "to_s": 1800,
+          "within": { "atoly": 0.25 },
+          "of": [ { "t": 0, "value": 20.0 }, { "t": 600, "value": 22.0 } ] }
+      ]
+    },
+    {
+      "name": "not_a_number",
+      "description": "ratio is 0 / 0 from 1200 s: a NaN fails its instant and every other tick is judged.",
+      "inputs": {
+        "ahu.T": [ { "t": 0, "value": 2.0 }, { "t": 1200, "value": 0.0 } ],
+        "zone.T": [ { "t": 0, "value": 1.0 }, { "t": 1200, "value": 0.0 } ],
+        "n": 3, "b": true, "lim": 5.0
+      },
+      "expect": [
+        { "output": "ratio", "from_s": 0, "to_s": 1800,
+          "within": { "atoly": 0.01 }, "of": 0.5 }
+      ]
+    }
+  ]
+}

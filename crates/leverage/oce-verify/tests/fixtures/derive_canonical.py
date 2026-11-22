@@ -2,12 +2,17 @@
 """Derive a canonical golden and its spec id for an oce/vectors/v1 document.
 
     python3 -I derive_canonical.py <vectors.json> <canonical-out.json>
+    python3 -I derive_canonical.py --receipt <receipt.json>
 
 This is the independent side of tests/canonical_form.rs: a second implementation of the
 canonical form (docs/design/vectors.md, "Canonical form") and of FNV-1a-128 that shares no code
 with the crate. It writes the canonical bytes to the output path and prints the spec id. No test
 runs it and nothing blesses its output: run it by hand when the format changes in place, review
 the diff, and update the id literals in the test.
+
+With --receipt it reads a golden receipt instead, removes the header's receipt_id and timings,
+writes the rest in the same canonical form and prints the receipt id, receipt:fnv1a128:<32 hex>
+(docs/design/vectors.md, "The receipt"); it also checks that the golden is itself canonical.
 
 It trusts its input: it does not check the format's rules, a repeated key or a bound. The Rust
 reader does; give it only documents that load.
@@ -105,7 +110,27 @@ def fnv1a128(data):
     return digest
 
 
+def canonical(document):
+    out = []
+    write(document, 0, out)
+    return ("".join(out) + "\n").encode("ascii")
+
+
+def receipt_id(source):
+    with open(source, "rb") as handle:
+        written = handle.read()
+    document = json.loads(written.decode("utf-8"), parse_int=Integer, parse_float=Real)
+    if canonical(document) != written:
+        sys.exit("%s is not in the canonical form" % source)
+    del document["receipt_id"]
+    del document["timings"]
+    print("receipt:fnv1a128:%032x" % fnv1a128(canonical(document)))
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == "--receipt":
+        receipt_id(sys.argv[2])
+        return
     if len(sys.argv) != 3:
         sys.exit(__doc__)
     source, target = sys.argv[1], sys.argv[2]

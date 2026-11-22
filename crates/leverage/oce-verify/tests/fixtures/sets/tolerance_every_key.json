@@ -1,0 +1,12 @@
+{"scenarios": [{"expect": [
+    {"when": ["occupied", "fan.on"], "of": [{"value": 0, "t": 300}, {"t": 330.0, "value": 0.25}, {"value": -0.0, "t": 1.8e3}],
+     "within": {"rtoly": 1e-4, "atolx": 60, "ltolx": 1, "atoly": 0.005, "rtolx": -0, "ltoly": 0.00001},
+     "to_s": 1800, "from_s": 300, "output": "VDis_flow"},
+    {"of": 2.5e1, "within": {"atoly": 0}, "to_s": 60, "from_s": 60.0, "output": "yé"},
+    {"equals": false, "when": ["☃"], "output": "yDam", "from_s": 0, "to_s": 240}
+  ],
+  "inputs": {"occupied": [{"t": 0, "value": false}, {"t": 300, "value": true}], "VDis_flow_set": 0.25},
+  "name": "airflow_tracks_setpoint"}],
+ "clock": {"horizon_s": 1800, "step_s": 30},
+ "envelope": "aligned-grid",
+ "schema": "oce/vectors/v1"}

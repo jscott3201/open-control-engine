@@ -41,6 +41,12 @@ fn goldens() -> Vec<Golden> {
             canonical: "canonical/every_field.json",
             spec_id: "spec:fnv1a128:ee654a0cb554fd824490e4a43fe5afd7",
         },
+        Golden {
+            name: "tolerance_every_key",
+            source: fixture_bytes("sets/tolerance_every_key.json"),
+            canonical: "canonical/tolerance_every_key.json",
+            spec_id: "spec:fnv1a128:6b34538f9328050534f4a6ab07dd6e30",
+        },
     ]
 }
 

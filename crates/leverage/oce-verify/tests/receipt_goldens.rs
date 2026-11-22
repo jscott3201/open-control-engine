@@ -2,7 +2,9 @@
 //! receipts, read in place from the facade's fixtures, a fail receipt (AHU-0016's `both_open` with
 //! its first window ending at 900 s, where the delay fires) and a `no_data` receipt (a scenario
 //! whose `expect` is empty), and AHU-0016's set with its three mutants (`tests/fixtures/AHU-0016/`:
-//! two caught, one survivor), each compared byte for byte. They regenerate only through the crate's
+//! two caught, one survivor), and four receipts of tolerance windows against the `signals` subject
+//! (a pass, a failure, a masked window under `aligned-grid` and an all-masked `no_data`
+//! scenario), each compared byte for byte. They regenerate only through the crate's
 //! bless switch (`OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify`); every receipt embeds the
 //! engine version, so a bump of the workspace version's major, minor or patch re-blesses them (a
 //! change of its pre-release suffix alone does not), and so does #517 when it re-vendors the two
@@ -82,7 +84,28 @@ fn goldens() -> Vec<Golden> {
             mutants: ahu_mutants(),
             receipt: "receipts/AHU-0016.mutants.receipt.json",
         },
+        tolerance("tolerance_pass"),
+        tolerance("tolerance_fail"),
+        tolerance("tolerance_masked"),
+        tolerance("tolerance_no_data"),
     ]
+}
+
+/// A tolerance golden: `receipts/<name>.vectors.json` against the `signals` subject, its receipt
+/// `receipts/<name>.receipt.json`.
+fn tolerance(name: &'static str) -> Golden {
+    Golden {
+        name,
+        set: fixture_bytes(&format!("receipts/{name}.vectors.json")),
+        subject: support::subject("signals"),
+        mutants: Vec::new(),
+        receipt: match name {
+            "tolerance_pass" => "receipts/tolerance_pass.receipt.json",
+            "tolerance_fail" => "receipts/tolerance_fail.receipt.json",
+            "tolerance_masked" => "receipts/tolerance_masked.receipt.json",
+            _ => "receipts/tolerance_no_data.receipt.json",
+        },
+    }
 }
 
 fn set_of(golden: &Golden) -> VectorSet {
@@ -234,7 +257,27 @@ fn the_header_names_the_subject_as_loaded_the_set_and_the_engine() {
         let header = &receipt.header;
         assert_eq!(header.schema, "oce/receipt/v1");
         assert_eq!(header.kind.as_str(), "vectors");
-        assert_eq!(header.comparison.mode.as_str(), "exact");
+        // Decision 42: `tolerance` exactly when a window of the set uses `within`, with the set's
+        // envelope and its version; otherwise `exact` with no envelope.
+        let set = set_of(&golden);
+        if set.uses_tolerance() {
+            assert_eq!(
+                header.comparison.mode.as_str(),
+                "tolerance",
+                "{}",
+                golden.name
+            );
+            assert_eq!(header.comparison.envelope, Some(set.envelope()));
+            assert_eq!(
+                header.comparison.envelope_version(),
+                Some(set.envelope().version())
+            );
+            assert_eq!(body(&receipt).funnel_reference, Some("expectation"));
+        } else {
+            assert_eq!(header.comparison.mode.as_str(), "exact", "{}", golden.name);
+            assert_eq!(header.comparison.envelope, None);
+            assert_eq!(body(&receipt).funnel_reference, None);
+        }
         assert_eq!(
             header.content_id,
             engine.content_id().expect("an id").to_string()
@@ -463,4 +506,32 @@ fn kept_traces_are_one_per_scenario_in_file_order_and_change_no_receipt_byte() {
         .is_empty()
     );
     assert_eq!(kept.receipt.to_canonical_json(), plain.to_canonical_json());
+}
+
+#[test]
+fn each_tolerance_receipt_id_is_the_one_derived_outside_the_crate() {
+    // `python3 -I tests/fixtures/derive_canonical.py --receipt <golden>`: a second canonical
+    // writer and FNV-1a-128 in Python, sharing no code with the crate. The ids move with the
+    // engine version and the `signals` subject, as the goldens do; re-derive them then.
+    for (name, id) in [
+        (
+            "tolerance_pass",
+            "receipt:fnv1a128:293a39304b97c92ef7fd6f2e191a9057",
+        ),
+        (
+            "tolerance_fail",
+            "receipt:fnv1a128:af28bc60a8fe6315d1dc82c8b44011c6",
+        ),
+        (
+            "tolerance_masked",
+            "receipt:fnv1a128:225c1766dd0e294229abe97fc5ebd0d0",
+        ),
+        (
+            "tolerance_no_data",
+            "receipt:fnv1a128:df210f09b8f60335b1073de497c24fec",
+        ),
+    ] {
+        let receipt = run(&tolerance(name), &VerifyOptions::default());
+        assert_eq!(receipt.header.receipt_id, id, "{name}");
+    }
 }

@@ -1,0 +1,22 @@
+{
+  "schema": "oce/vectors/v1",
+  "envelope": "aligned-grid",
+  "clock": { "step_s": 60, "horizon_s": 1800 },
+  "scenarios": [
+    {
+      "name": "counted_when_enabled",
+      "description": "ahu.T is off its expected signal until b turns true at 600 s; those ticks are masked.",
+      "inputs": {
+        "ahu.T": [ { "t": 0, "value": 35.0 }, { "t": 600, "value": 21.0 } ],
+        "zone.T": 2.0, "n": 3,
+        "b": [ { "t": 0, "value": false }, { "t": 600, "value": true } ],
+        "lim": [ { "t": 0, "value": 9.0 }, { "t": 600, "value": 5.0 } ]
+      },
+      "expect": [
+        { "output": "ahu.y", "from_s": 0, "to_s": 1800,
+          "within": { "atoly": 0.5, "rtolx": 0.01 }, "of": 21.0, "when": [ "b" ] },
+        { "output": "limOut", "from_s": 0, "to_s": 1800, "equals": 5.0, "when": [ "bOut" ] }
+      ]
+    }
+  ]
+}

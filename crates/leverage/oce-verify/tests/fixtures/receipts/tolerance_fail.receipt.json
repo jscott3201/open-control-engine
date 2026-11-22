@@ -1,0 +1,206 @@
+{
+  "body": {
+    "clock": {
+      "horizon_s": 1800,
+      "step_s": 60
+    },
+    "funnel_reference": "expectation",
+    "load_warnings": [
+      "unused-boundary-input"
+    ],
+    "load_warnings_total": 1,
+    "scenarios": [
+      {
+        "expectations": 1,
+        "failures": [
+          {
+            "actual": 20.0,
+            "code": "tolerance-exceeded",
+            "exceedance": 1.7499999999966676,
+            "expectation": 0,
+            "expected": 22.0,
+            "output": "urn:verify:signals#top.ahu.y",
+            "t": 600.0
+          }
+        ],
+        "failures_total": 1,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 31,
+          "failed": 1,
+          "masked": 0,
+          "passed": 30
+        },
+        "name": "one_tick_late",
+        "params": [],
+        "status": "fail",
+        "warnings": [],
+        "warnings_total": 0
+      },
+      {
+        "expectations": 1,
+        "failures": [
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1200.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1260.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1320.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1380.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1440.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1500.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1560.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1620.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1680.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1740.0
+          },
+          {
+            "actual": "0x7ff8000000000000",
+            "code": "tolerance-exceeded",
+            "exceedance": "0x7ff0000000000000",
+            "expectation": 0,
+            "expected": 0.5,
+            "output": "urn:verify:signals#top.ratio",
+            "t": 1800.0
+          }
+        ],
+        "failures_total": 11,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 31,
+          "failed": 11,
+          "masked": 0,
+          "passed": 20
+        },
+        "name": "not_a_number",
+        "params": [],
+        "status": "fail",
+        "warnings": [],
+        "warnings_total": 0
+      }
+    ],
+    "status": "fail",
+    "totals": {
+      "failures": 12,
+      "frames": {
+        "executed": 62,
+        "refused": 0,
+        "substituted": 0
+      },
+      "instants": {
+        "checked": 62,
+        "failed": 12,
+        "masked": 0,
+        "passed": 50
+      },
+      "scenarios": {
+        "fail": 2,
+        "no_data": 0,
+        "pass": 0,
+        "total": 2
+      },
+      "warnings": 0
+    }
+  },
+  "comparison": {
+    "envelope": "funnel",
+    "envelope_version": "funnel@a12fa96",
+    "mode": "tolerance"
+  },
+  "content_id": "oce:canon1:5b61075c708fb6a68e8abc35f5d6952874fdabd3cf7817eac0559e8a2b5cd9d0",
+  "engine_version": "0.6.0",
+  "kind": "vectors",
+  "passed": false,
+  "receipt_id": "receipt:fnv1a128:af28bc60a8fe6315d1dc82c8b44011c6",
+  "schema": "oce/receipt/v1",
+  "spec_id": "spec:fnv1a128:37b5941d7223d93bbe57ebc653883e12",
+  "timings": {
+    "compare_ms": 0,
+    "load_ms": 0,
+    "run_ms": 0
+  }
+}
