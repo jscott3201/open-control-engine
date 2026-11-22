@@ -679,7 +679,7 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
-- **A value many owners read is grounded once for the document** (GitHub #PRNUM, issue #749). A
+- **A value many owners read is grounded once for the document** (GitHub #797, issue #749). A
   parameter node that many leaves list was grounded again by each leaf in resolver Step 7, and a
   declaration many composites list again by each composite in lowering and in the guard scope of
   each composite with a conditional child, where it was also parsed again for the declarations'
@@ -719,7 +719,7 @@ so far, and no tag is cut by the bump.
     leaves sharing one allocation.
 
 - **A boundary output's attributes are read once for all the pass-through pairs wired to it**
-  (GitHub #PRNUM, issue #750). A root boundary output wired from many boundary inputs gets one
+  (GitHub #797, issue #750). A root boundary output wired from many boundary inputs gets one
   pass-through block a pair, and each block's output connector read the output's §7.4.1
   attributes again, copying a long `quantity`, `unit` or `displayUnit` once a pair: 1,024 inputs
   onto a 64 KiB `quantity`, a 232 KB document, peaked at 74 MB before the output was refused as
@@ -734,7 +734,7 @@ so far, and no tag is cut by the bump.
   attribute set of its own type).
 
 - **A node's second spellings of a property are looked up in its keys sorted once** (GitHub
-  #PRNUM, issue #751). Each alias of a node (a key `s<i>:min` through a `@context` term bound to
+  #797, issue #751). Each alias of a node (a key `s<i>:min` through a `@context` term bound to
   the S231 namespace) asked whether the node was also written with its compact key by scanning
   every key the node authored, so `A` aliases on a node of `K` keys cost `A × K` comparisons, each
   alias costing the document about 55 bytes: 100,010,000 comparisons for 10,000 aliases. The keys
@@ -744,7 +744,7 @@ so far, and no tag is cut by the bump.
   count of comparisons in `oce-cxf` `property_keys_cost_tests.rs`, allocations being blind to it.
 
 - **An export's diagnostic list is held to 8 MiB of text, its deferral warnings included**
-  (GitHub #PRNUM, issue #753). **Breaking, in place** for a hand-built graph whose export findings
+  (GitHub #797, issue #753). **Breaking, in place** for a hand-built graph whose export findings
   or warnings pass 8 MiB of message and subject text: its list now ends with the closing
   `resource-limit-exceeded` error, and an export whose only overflow was warnings is refused
   where it returned `Ok` with every warning. No loaded model comes near it. The exporter raised
