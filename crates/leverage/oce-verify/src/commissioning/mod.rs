@@ -37,19 +37,37 @@
 //! `combiTimeTable` through `combi_time_table`), converts every cell once, and merges the input
 //! sources on the union of their times (`trend_merge`), under [`TrendLimits`], every refusal a
 //! [`SourceError`].
+//!
+//! And the run (issues #662 and #663): [`run_commissioning()`] binds a reference to its sequence
+//! (`bind_ports`, `bind_reference`), runs one replay over its merged inputs (`drive`), prepares
+//! each compared output's two series on their comparison instants (`prepare`), masks them by
+//! their indicators and the refused stretches (`indicator_mask`), compares them under the
+//! reference's envelope or exactly (`compare_output`), and issues the receipt (`report`,
+//! `report_json`), every refusal a [`crate::VerifyError`].
 
+mod bind_ports;
+mod bind_reference;
 mod canonical;
 mod choices;
 mod combi_time_table;
 mod comments;
+mod compare_output;
 mod decode;
 mod decode_sources;
+mod drive;
 mod error;
 mod fields;
 mod glob;
+mod indicator_mask;
 mod limits;
 mod mapping;
 mod model;
+mod prepare;
+mod report;
+mod report_json;
+mod run_bounds;
+mod run_commissioning;
+mod run_options;
 mod selection;
 mod source_error;
 mod spec;
@@ -80,6 +98,19 @@ pub use trend_types::{
     TrendFrameSource, TrendInputs, TrendSeries, TrendSources, UnitColumn,
 };
 pub use units::{UNIT_ERROR_CODES, UNITS_TABLE, UnitError, UnitSide, convert_unit};
+
+pub use bind_reference::MAX_INDICATORS;
+pub use report::{
+    CommissioningBody, CommissioningParam, Exceedance, FindingRecord, MAX_COMPARED_OUTPUTS,
+    MAX_FINDINGS, MAX_MASKED_EXCEEDANCE, MAX_MASKED_INTERVALS, MAX_RUN_POINTS, MAX_RUN_WARNINGS,
+    MAX_UNIT_COLUMNS, MAX_UNVERIFIED_OUTPUTS, MaskedInterval, OutputReport, OutputStatus,
+    OutputType, SpecNumber, TimeRecord, TrendData,
+};
+pub(crate) use report_json::receipt_body_json;
+pub use run_commissioning::run_commissioning;
+pub use run_options::{
+    CommissionOptions, CommissionRun, MAX_TOTAL_ALIGNED_GRID_WORK, OutputBounds, OutputCurves,
+};
 
 /// The format tag a commissioning spec carries in its `schema` key. A spec without the key is an
 /// LBL spec and is read as this format; any other tag is refused as `unknown-schema`.

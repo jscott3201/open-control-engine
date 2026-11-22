@@ -20,6 +20,7 @@ same-id	-	0	0	crates/leverage/oce-verify/tests/fixtures/AHU-0016/mutants/thresho
 refused	class-outside-obc	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/gate.cxf.json
 refused	class-outside-obc	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/gate_multiand.cxf.json
 refused	class-outside-obc	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/hysteresis.cxf.json
+refused	class-outside-obc	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/plant.cxf.json
 refused	invalid-name	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/signals.cxf.json
 refused	class-outside-obc	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/threshold.cxf.json
 refused	class-outside-obc	-	-	crates/leverage/oce-verify/tests/fixtures/subjects/threshold_integer.cxf.json

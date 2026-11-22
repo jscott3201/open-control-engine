@@ -21,11 +21,11 @@ use crate::receipt::{
 };
 use crate::refusal_classes::engine_refusal_class;
 
-fn entry(key: &str, value: Json) -> (String, Json) {
+pub(crate) fn entry(key: &str, value: Json) -> (String, Json) {
     (key.to_owned(), value)
 }
 
-fn count(value: u64) -> Json {
+pub(crate) fn count(value: u64) -> Json {
     Json::Raw(value.to_string())
 }
 
@@ -44,7 +44,7 @@ pub(crate) fn value(value: ReceiptValue) -> Json {
 }
 
 /// A time, spelled as a Real value.
-fn time(t: f64) -> Json {
+pub(crate) fn time(t: f64) -> Json {
     value(ReceiptValue::Real(t))
 }
 
@@ -98,6 +98,9 @@ fn comparison(comparison: &Comparison) -> Json {
 fn body(body: &ReceiptBody, funnel_reference: Option<&'static str>) -> Json {
     match body {
         ReceiptBody::Vectors(vectors) => vector_body(vectors, funnel_reference),
+        ReceiptBody::Commissioning(commissioning) => {
+            crate::commissioning::receipt_body_json(commissioning)
+        }
     }
 }
 
@@ -293,7 +296,7 @@ pub(crate) fn failure(failure: &Failure) -> Json {
     Json::object(entries)
 }
 
-fn warning(warning: &UnmatchedWarning) -> Json {
+pub(crate) fn warning(warning: &UnmatchedWarning) -> Json {
     Json::object([
         entry("t", time(warning.t)),
         entry("block", Json::str(&warning.block)),

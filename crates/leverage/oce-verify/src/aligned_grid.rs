@@ -30,7 +30,9 @@ use std::collections::BTreeSet;
 
 use crate::compare_error::CompareError;
 use crate::compare_limits::CompareLimits;
-use crate::envelope::{Curve, Envelope, FunnelResult, Series, Tolerances, check_inputs};
+use crate::envelope::{
+    Applied, Curve, Envelope, FunnelResult, HalfSize, Series, Tolerances, check_inputs,
+};
 
 /// The revision of the grid envelope [`aligned_grid()`] builds: revision 1, the arithmetic of
 /// `oce-conformance`'s `build_bounds` and `compare` as copied here. A receipt carries it as
@@ -102,12 +104,18 @@ pub fn aligned_grid(
 
     let reference_points: Vec<(f64, f64)> = pairs(reference).collect();
     let test_points: Vec<(f64, f64)> = pairs(test).collect();
-    let (lower, upper) = build_bounds(&reference_points, tolerances)?;
+    let rectangles = rectangles(&reference_points, tolerances)?;
+    let (lower, upper) = bounds_over(&reference_points, &rectangles);
 
     let mut errors = Vec::with_capacity(test_points.len());
     for &(x, y) in &test_points {
         errors.push((x, error_at(x, y, &lower, &upper)?));
     }
+    let applied = Applied {
+        errors_at_test: errors.iter().map(|(_, error)| *error).collect(),
+        half_width: HalfSize::of(rectangles.iter().map(|r| r.half_width)),
+        half_height: HalfSize::of(rectangles.iter().map(|r| r.half_height)),
+    };
     let test_instants: BTreeSet<u64> = test_points.iter().map(|(x, _)| x.to_bits()).collect();
     let mut breakpoints: Vec<f64> = lower
         .iter()
@@ -127,9 +135,9 @@ pub fn aligned_grid(
         Envelope::AlignedGrid,
         reference,
         test,
-        Curve::from_points(lower),
-        Curve::from_points(upper),
+        (Curve::from_points(lower), Curve::from_points(upper)),
         Curve::from_points(errors),
+        applied,
     ))
 }
 
@@ -137,19 +145,25 @@ fn pairs<'a>(series: Series<'a>) -> impl Iterator<Item = (f64, f64)> + 'a {
     series.x.iter().copied().zip(series.y.iter().copied())
 }
 
-/// The lower and upper bound around `reference`, on the grid of every reference `x` and every
-/// rectangle edge.
-///
-/// Between two adjacent grid points the set of covering rectangles is constant and the reference
-/// is linear, so the chord between the extrema sampled at the grid points still encloses the
-/// reference and every rectangle: the band is conservative by construction.
+/// The lower and upper bound around `reference` under `tolerances`: [`bounds_over`] its
+/// rectangles. The original's `build_bounds`, which the parity tests call.
+#[cfg(test)]
 fn build_bounds(
     reference: &[(f64, f64)],
     tolerances: &Tolerances,
 ) -> Result<(Points, Points), CompareError> {
-    let rectangles = rectangles(reference, tolerances)?;
+    Ok(bounds_over(reference, &rectangles(reference, tolerances)?))
+}
+
+/// The lower and upper bound around `reference`, on the grid of every reference `x` and every
+/// edge of its `rectangles`.
+///
+/// Between two adjacent grid points the set of covering rectangles is constant and the reference
+/// is linear, so the chord between the extrema sampled at the grid points still encloses the
+/// reference and every rectangle: the band is conservative by construction.
+fn bounds_over(reference: &[(f64, f64)], rectangles: &[Rectangle]) -> (Points, Points) {
     let mut grid = Vec::with_capacity(rectangles.len() * 3);
-    for rectangle in &rectangles {
+    for rectangle in rectangles {
         grid.push(rectangle.x - rectangle.half_width);
         grid.push(rectangle.x);
         grid.push(rectangle.x + rectangle.half_width);
@@ -163,7 +177,7 @@ fn build_bounds(
         let y = value_at(reference, x);
         let mut low = y;
         let mut high = y;
-        for rectangle in &rectangles {
+        for rectangle in rectangles {
             if ((rectangle.x - rectangle.half_width)..=(rectangle.x + rectangle.half_width))
                 .contains(&x)
             {
@@ -174,7 +188,7 @@ fn build_bounds(
         lower.push((x, low));
         upper.push((x, high));
     }
-    Ok((lower, upper))
+    (lower, upper)
 }
 
 /// The rectangle around each reference point, its half-sizes the **sum** of the three tolerance

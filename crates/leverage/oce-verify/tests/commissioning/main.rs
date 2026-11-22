@@ -18,6 +18,16 @@ mod limit_boundaries;
 mod listings;
 mod load_cost;
 mod point_mapping;
+mod run_bind;
+mod run_bounds;
+mod run_comparison;
+mod run_cost;
+mod run_gate_row;
+mod run_hostile;
+mod run_masking;
+mod run_parameters;
+mod run_receipts;
+mod run_refused_frames;
 mod spec_fields;
 mod trend_bounds;
 mod trend_controller_output;
@@ -30,8 +40,9 @@ mod trend_hostile;
 mod trend_padded_files;
 
 use oce_verify::{
-    CommissioningSpec, Location, PointMapping, SourceError, SpecError, SpecInputs, SpecLimits,
-    TrendLimits, TrendSources,
+    CommissionOptions, CommissionRun, CommissioningBody, CommissioningSpec, Location, OutputCurves,
+    OutputReport, PointMapping, ReceiptBody, SourceError, SpecError, SpecInputs, SpecLimits,
+    TrendLimits, TrendSources, VerifyError, run_commissioning,
 };
 
 /// The text of a fixture under `tests/fixtures/commissioning/`.
@@ -178,6 +189,108 @@ fn read_trends(
             .collect(),
     };
     TrendSources::read(spec, 0, &inputs, &TrendLimits::default())
+}
+
+/// The bytes of a file of the run fixture, `tests/fixtures/commissioning/run/`.
+fn run_file(name: &str) -> Vec<u8> {
+    support::fixture_bytes(&format!("commissioning/run/{name}"))
+}
+
+/// The run fixture's spec.
+fn run_spec() -> CommissioningSpec {
+    loaded(&String::from_utf8(run_file("spec.json")).expect("UTF-8"))
+}
+
+/// The run fixture's spec with each `(old, new)` of `edits` replaced in its text; an `old`
+/// that does not occur fails the test.
+fn run_spec_edited(edits: &[(&str, &str)]) -> CommissioningSpec {
+    let text = String::from_utf8(support::edited(&run_file("spec.json"), edits)).expect("UTF-8");
+    loaded(&text)
+}
+
+/// The run fixture's file `name` with each `(old, new)` of `edits` replaced.
+fn run_file_edited(name: &str, edits: &[(&str, &str)]) -> Vec<u8> {
+    support::edited(&run_file(name), edits)
+}
+
+/// The files the run fixture's spec names, with `replaced` (path, bytes) in place of the
+/// fixture's file of the same path or added beside them, and the `plant` subject as the CXF.
+fn run_inputs(replaced: &[(&str, &[u8])]) -> SpecInputs {
+    let mut files: Vec<(String, Vec<u8>)> = ["points.json", "inputs.csv", "outputs.csv", "fan.csv"]
+        .iter()
+        .map(|name| {
+            let bytes = replaced
+                .iter()
+                .find(|(path, _)| path == name)
+                .map_or_else(|| run_file(name), |(_, bytes)| bytes.to_vec());
+            ((*name).to_owned(), bytes)
+        })
+        .collect();
+    for (path, bytes) in replaced {
+        if !files.iter().any(|(given, _)| given == path) {
+            files.push(((*path).to_owned(), bytes.to_vec()));
+        }
+    }
+    SpecInputs {
+        cxf: support::subject("plant"),
+        files,
+    }
+}
+
+/// Run reference 0 of `spec` on `inputs` under `options`.
+fn commission(
+    spec: &CommissioningSpec,
+    inputs: &SpecInputs,
+    options: &CommissionOptions,
+) -> Result<CommissionRun, VerifyError> {
+    run_commissioning(spec, 0, inputs, options)
+}
+
+/// Run reference 0 of `spec` on `inputs` under the default options; it must give a receipt.
+fn commissioned(spec: &CommissioningSpec, inputs: &SpecInputs) -> CommissionRun {
+    commission(spec, inputs, &CommissionOptions::default()).unwrap_or_else(|error| {
+        panic!(
+            "the run gives a receipt: {} {:?} at {}: {error}",
+            error.code(),
+            error.cause(),
+            error.subject()
+        )
+    })
+}
+
+/// The refusal of reference 0 of `spec` on `inputs` under the default options.
+fn refused_run(spec: &CommissioningSpec, inputs: &SpecInputs) -> VerifyError {
+    match commission(spec, inputs, &CommissionOptions::default()) {
+        Ok(run) => panic!(
+            "the run is refused, and gave:\n{}",
+            run.receipt.to_canonical_json()
+        ),
+        Err(error) => error,
+    }
+}
+
+/// The commissioning body of `receipt`.
+fn body_of(receipt: &oce_verify::Receipt) -> &CommissioningBody {
+    match &receipt.body {
+        ReceiptBody::Commissioning(body) => body,
+        _ => panic!("a commissioning run issues a commissioning receipt"),
+    }
+}
+
+/// The report of the output whose canonical path ends with `.{name}`.
+fn output_named<'b>(body: &'b CommissioningBody, name: &str) -> &'b OutputReport {
+    body.outputs
+        .iter()
+        .find(|output| output.output.ends_with(&format!(".{name}")))
+        .unwrap_or_else(|| panic!("an output named {name}"))
+}
+
+/// The curves of the output whose canonical path ends with `.{name}`.
+fn curves_named<'r>(run: &'r CommissionRun, name: &str) -> &'r OutputCurves {
+    run.curves
+        .iter()
+        .find(|curves| curves.output.ends_with(&format!(".{name}")))
+        .unwrap_or_else(|| panic!("curves named {name}"))
 }
 
 #[test]

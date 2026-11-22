@@ -400,6 +400,11 @@ vector file's rules. Arrays keep the order each row states.
 | `timings` | object | `load_ms`, `run_ms`, `compare_ms`: integers, zero unless the caller measured |
 | `body` | object | by `kind`: the vector body below, or the commissioning note's body |
 
+*(As landed, GitHub #744, issues #662 and #663:)* the receipt has two kinds now:
+`ReceiptKind::Commissioning` and `ReceiptBody::Commissioning` carry the commissioning note's
+body, on the header #741 gave the `tolerance` form (`Comparison::tolerance`). No vector receipt
+byte moved.
+
 **Body.**
 
 | Field | Type | Present | Content, order and bound |

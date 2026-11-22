@@ -55,13 +55,14 @@
 //! `100.0`, which rounds the exact quotient once; multiplying by `0.001` or `0.01`, neither exact
 //! in binary, would round twice and be one ulp off for about one reading in eight.
 //!
-//! **What bind adds** (#662). Two checks need the sequence's ports, which this module does not
-//! see. A port whose declared quantity is `TemperatureDifference` refuses an absolute
-//! temperature pair ([`UnitError::AbsoluteForDifference`], through
-//! `UnitConversion::for_port_quantity`). And a mapping's `cdl.unit` must equal the unit the
-//! port declares (`unit-refused` at bind, owner ruling of 2026-11-21): the identity rule and
-//! every row trust `cdl.unit` to be the engine's unit, so they are only safe together with that
-//! check.
+//! **What bind adds** (#662). Two checks need the sequence's ports, and bind makes both through
+//! this module. A port's declared quantity admits the temperature rows of its kind only, a
+//! positive rule per quantity matched by its local name (`QuantityRule`; owner rulings of
+//! 2026-11-21): an absolute pair on a `TemperatureDifference` port is
+//! [`UnitError::AbsoluteForDifference`], a difference pair on a `ThermodynamicTemperature` port
+//! [`UnitError::DifferenceForAbsolute`]. And a mapping's `cdl.unit` must equal the unit the port
+//! declares ([`UnitError::PortUnitMismatch`]): the identity rule and every row trust `cdl.unit`
+//! to be the engine's unit, so they are only safe together with that check.
 
 use std::fmt;
 
@@ -77,11 +78,54 @@ pub const UNIT_ERROR_CODES: &[&str] = &[
     "empty-unit",
     "overflow",
     "absolute-for-difference",
+    "difference-for-absolute",
+    "port-unit-mismatch",
 ];
 
 /// The quantity a CDL port declares when its value is a temperature difference, as the
 /// Buildings library's CDL sequences write it (`quantity="TemperatureDifference"`).
 pub(crate) const TEMPERATURE_DIFFERENCE: &str = "TemperatureDifference";
+
+/// The quantity a CDL port declares when its value is a temperature reading, a point on a scale
+/// (`quantity="ThermodynamicTemperature"`).
+pub(crate) const THERMODYNAMIC_TEMPERATURE: &str = "ThermodynamicTemperature";
+
+/// What a port's declared quantity says about the temperature rows of `units/v1` (owner ruling
+/// of 2026-11-21 on #662): a positive rule per quantity.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum QuantityRule {
+    /// `ThermodynamicTemperature`: absolute rows or the identity, never a difference row.
+    Absolute,
+    /// `TemperatureDifference`: difference rows or the identity, never an absolute row.
+    Difference,
+    /// Any other quantity, or none: every row.
+    Any,
+}
+
+impl QuantityRule {
+    /// The rule for a port whose declared quantity is `quantity`, as the facade carries it.
+    ///
+    /// A quantity is matched by its **local name**, the text after its last `#`, `/` or `:`
+    /// (the content id's rule for a relative name), byte for byte: the bare
+    /// `TemperatureDifference`, the compact IRI `q:TemperatureDifference` and a full QUDT IRI
+    /// `http://qudt.org/vocab/quantitykind/TemperatureDifference` are one quantity (owner ruling
+    /// of 2026-11-21). A port with no quantity takes every row: the modelica-json translations
+    /// write theirs as `qudt:hasQuantityKind`, which the importer does not read yet, so for
+    /// them the mapping's spelling decides.
+    pub(crate) fn of(quantity: Option<&str>) -> Self {
+        let Some(quantity) = quantity else {
+            return Self::Any;
+        };
+        let local = quantity
+            .rfind(['#', '/', ':'])
+            .map_or(quantity, |at| &quantity[at + 1..]);
+        match local {
+            TEMPERATURE_DIFFERENCE => Self::Difference,
+            THERMODYNAMIC_TEMPERATURE => Self::Absolute,
+            _ => Self::Any,
+        }
+    }
+}
 
 /// The most bytes of one unit spelling a [`UnitError`] quotes, its escapes and the `...` that
 /// marks a cut included.
@@ -142,6 +186,14 @@ impl Operation {
                 | Self::CelsiusToKelvin
                 | Self::FahrenheitToCelsius
                 | Self::KelvinToCelsius
+        )
+    }
+
+    /// Whether the operation converts a temperature difference: the two `*_delta` rows.
+    const fn is_temperature_difference(self) -> bool {
+        matches!(
+            self,
+            Self::FahrenheitDifferenceToKelvin | Self::CelsiusDifferenceToKelvin
         )
     }
 
@@ -290,6 +342,25 @@ pub enum UnitError {
         /// The CDL point's unit, as the table spells it.
         to: &'static str,
     },
+    /// A temperature difference pair (`degF_delta` → `K`, `degC_delta` → `K`) on a port whose
+    /// declared quantity is `ThermodynamicTemperature`: a reading converted without its offset
+    /// would be 255 K too cold. The device side needs `degF` or `degC` (owner ruling,
+    /// 2026-11-21). Decided at bind, where the port's quantity is known.
+    DifferenceForAbsolute {
+        /// The device's unit, as the table spells it.
+        from: &'static str,
+        /// The CDL point's unit, as the table spells it.
+        to: &'static str,
+    },
+    /// A mapping's `cdl.unit` that is not the unit the sequence port declares: the identity
+    /// rule and every row trust `cdl.unit` to be the engine's unit (owner ruling, 2026-11-21).
+    /// A unit on one side only disagrees; no unit on either side agrees. Decided at bind.
+    PortUnitMismatch {
+        /// The mapping's `cdl.unit`, as an excerpt; `None` when the mapping writes none.
+        mapping: Option<String>,
+        /// The port's declared unit, as an excerpt; `None` when it declares none.
+        port: Option<String>,
+    },
 }
 
 impl UnitError {
@@ -309,6 +380,8 @@ impl UnitError {
             Self::EmptyUnit { .. } => 2,
             Self::Overflow { .. } => 3,
             Self::AbsoluteForDifference { .. } => 4,
+            Self::DifferenceForAbsolute { .. } => 5,
+            Self::PortUnitMismatch { .. } => 6,
         }
     }
 }
@@ -342,6 +415,23 @@ impl fmt::Display for UnitError {
                 "`{from}` to `{to}` converts a temperature reading, but the port is a \
                  temperature difference: write the device unit as `degF_delta` or `degC_delta`"
             ),
+            Self::DifferenceForAbsolute { from, to } => write!(
+                f,
+                "`{from}` to `{to}` converts a temperature difference, but the port is a \
+                 temperature reading: write the device unit as `degF` or `degC`"
+            ),
+            Self::PortUnitMismatch { mapping, port } => {
+                let shown = |unit: &Option<String>| {
+                    unit.as_ref()
+                        .map_or_else(|| "no unit".to_owned(), |unit| format!("`{unit}`"))
+                };
+                write!(
+                    f,
+                    "the mapping gives the CDL point {} and the sequence port declares {}",
+                    shown(mapping),
+                    shown(port)
+                )
+            }
         }
     }
 }
@@ -399,35 +489,57 @@ impl UnitConversion {
     }
 
     /// The conversion again, for a CDL port whose declared quantity is `quantity` (the
-    /// facade's `PointInfo::quantity`): bind (#662) calls it once per mapped point, before any
-    /// frame.
+    /// facade's `PointInfo::quantity`): bind calls it once per mapped point, before any frame.
     ///
-    /// A port declared `TemperatureDifference` takes a difference, so an absolute temperature
-    /// pair, whose offset would add 273.15 K or 255.37 K to an adjustment, is refused; a
-    /// difference unit (`degF_delta`, `degC_delta`), the identity and every other row pass. Any
-    /// other quantity, or none, passes every conversion: the table then cannot tell a difference
-    /// from a reading, and the mapping's spelling decides.
+    /// A positive rule per quantity ([`QuantityRule::of`], owner ruling of 2026-11-21): a
+    /// `ThermodynamicTemperature` port takes an absolute row or the identity, a
+    /// `TemperatureDifference` port a difference row or the identity, and any other quantity,
+    /// or none, every row. A quantity is matched by its local name, so an IRI spelling of
+    /// either counts.
     ///
     /// # Errors
     ///
     /// [`UnitError::AbsoluteForDifference`] for `degF` → `K`, `degC` → `K`, `degF` → `degC` or
-    /// `K` → `degC` on a `TemperatureDifference` port.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "bind (#662) is the first caller")
-    )]
+    /// `K` → `degC` on a `TemperatureDifference` port; [`UnitError::DifferenceForAbsolute`] for
+    /// `degF_delta` → `K` or `degC_delta` → `K` on a `ThermodynamicTemperature` port.
     pub(crate) fn for_port_quantity(self, quantity: Option<&str>) -> Result<Self, UnitError> {
-        match self {
-            Self::Listed(listed)
-                if quantity == Some(TEMPERATURE_DIFFERENCE)
-                    && listed.operation.is_absolute_temperature() =>
-            {
+        let Self::Listed(listed) = self else {
+            return Ok(self);
+        };
+        match QuantityRule::of(quantity) {
+            QuantityRule::Difference if listed.operation.is_absolute_temperature() => {
                 Err(UnitError::AbsoluteForDifference {
                     from: listed.from,
                     to: listed.to,
                 })
             }
+            QuantityRule::Absolute if listed.operation.is_temperature_difference() => {
+                Err(UnitError::DifferenceForAbsolute {
+                    from: listed.from,
+                    to: listed.to,
+                })
+            }
             _ => Ok(self),
+        }
+    }
+
+    /// Whether a mapping's `cdl.unit` is the unit the port declares: the same spelling, byte for
+    /// byte, or none on both sides (owner ruling of 2026-11-21).
+    ///
+    /// # Errors
+    ///
+    /// [`UnitError::PortUnitMismatch`] for any other pair.
+    pub(crate) fn check_port_unit(
+        mapping: Option<&str>,
+        port: Option<&str>,
+    ) -> Result<(), UnitError> {
+        if mapping == port {
+            Ok(())
+        } else {
+            Err(UnitError::PortUnitMismatch {
+                mapping: mapping.map(excerpt),
+                port: port.map(excerpt),
+            })
         }
     }
 

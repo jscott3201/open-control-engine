@@ -1,0 +1,22 @@
+[
+  { "cdl": { "name": "T", "unit": "K", "type": "float" },
+    "device": { "name": "Supply Temp", "unit": "degC", "type": "float" } },
+  { "cdl": { "name": "dT", "unit": "K", "type": "float" },
+    "device": { "name": "Offset", "unit": "degC_delta", "type": "float" } },
+  { "cdl": { "name": "en", "type": "bool" },
+    "device": { "name": "Enable", "type": "bool" } },
+  { "cdl": { "name": "n", "type": "int" },
+    "device": { "name": "Stage", "type": "int" } },
+  { "cdl": { "name": "lim", "unit": "1", "type": "float" },
+    "device": { "name": "Limit", "unit": "percent", "type": "float" } },
+  { "cdl": { "name": "TSet", "unit": "K", "type": "float" },
+    "device": { "name": "Setpoint", "unit": "degC", "type": "float" } },
+  { "cdl": { "name": "enOut", "type": "bool" },
+    "device": { "name": "Enabled", "type": "bool" } },
+  { "cdl": { "name": "nOut", "type": "int" },
+    "device": { "name": "Staged", "type": "int" } },
+  { "cdl": { "name": "limOut", "unit": "1", "type": "float" },
+    "device": { "name": "Limited", "unit": "percent", "type": "float" } },
+  { "cdl": { "name": "fanSta.y", "type": "bool" },
+    "device": { "name": "Fan Status", "type": "bool" } }
+]

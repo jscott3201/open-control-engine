@@ -361,7 +361,9 @@ with the crate (`tests/fixtures/units/`). These are consequences of building it:
   `qudt:hasQuantityKind`, so `PointInfo::quantity` is `None` there. A `*_delta` unit mapped onto
   a port whose quantity is `ThermodynamicTemperature` is not refused here either. All three
   belong to the binder (#662), which sees the port; a test lists the first two spellings as
-  deliberately passing.
+  deliberately passing. *(Superseded 2026-11-21 by the owner's rulings in "As landed: the run,
+  the comparison and the receipt": a quantity matches by its local name, and a positive rule per
+  quantity refuses a difference row on an absolute port too.)*
 - **Choices the note left open.** An empty unit spelling is refused as `empty-unit`, the device
   side's first, before the one-sided rule. A finite reading whose conversion overflows `f64` is
   refused as `overflow` (a factor above one, beyond about ±1e305). A NaN, replay's missing Real
@@ -882,6 +884,195 @@ its CDL names, units, digests and row counts stand for what #664 writes into `b3
 and reads from the vendored files. The vector receipt fills the same header with
 `kind: "vectors"`, `mode: "exact"` or `"tolerance"`, and its own body (scenarios, pass counts,
 mutant score).
+
+### As landed: the run, the comparison and the receipt
+
+*(GitHub #744, issues #662 and #663.)* `run_commissioning(spec, reference, inputs, options)` in
+`crates/leverage/oce-verify` runs one reference and returns a `CommissionRun`: the
+`oce/receipt/v1` receipt with `kind: "commissioning"` and the body of the two tables above
+(`CommissioningBody`, `OutputReport`), the trace with its inputs retained, and one `OutputCurves`
+per compared output. The code is in `src/commissioning/`:
+
+- `bind_ports.rs` and `bind_reference.rs`: binding the reference to its sequence;
+- `run_bounds.rs`: the bounds checked before the replay;
+- `drive.rs`: the replay;
+- `prepare.rs`: the comparison instants;
+- `indicator_mask.rs`: the indicators and their mask;
+- `compare_output.rs`: one output's comparison;
+- `report.rs` and `report_json.rs`: the receipt body and its writer;
+- `run_options.rs` and `run_commissioning.rs`: the options and the entry point.
+
+It builds on the shared receipt items the tolerance build (#684, GitHub #741) landed first:
+`ComparisonMode::Tolerance`, `Comparison::tolerance(envelope)` with `mode()`, `envelope()` and
+`envelope_version()`, and the codes `too-many-points` and `compare-refused`
+(`COMPARE_REFUSAL_CAUSES`), whose documents now cover both kinds. It adds
+`ReceiptKind::Commissioning` and `ReceiptBody::Commissioning`. No vector receipt byte moved. The
+funnel port gained two accessors and no arithmetic: `FunnelResult::errors_at_test`, one error
+per test sample in test order, and `half_width` and `half_height` (`HalfSize`, the min and max
+over the reference points).
+
+**Ruled by the owner on 2026-11-21**, in the review of GitHub #716, the questions of this build
+and the review of GitHub #744:
+
+1. **Quantity spelling.** A port's quantity matches by its local name, the text after its last
+   `#`, `/` or `:`. So `TemperatureDifference`, `q:TemperatureDifference` and a full QUDT IRI
+   are one quantity. A port with no quantity takes any row.
+2. **A positive rule per quantity:**
+   - a `ThermodynamicTemperature` port takes absolute rows or the identity;
+   - a `TemperatureDifference` port takes difference rows or the identity;
+   - any other quantity, or none, takes any row.
+
+   A difference row on an absolute port is `UnitError::DifferenceForAbsolute`
+   (`difference-for-absolute`), beside `absolute-for-difference`.
+3. **`cdl.unit` must be the port's unit**, as recorded on #662 before this build:
+   `UnitError::PortUnitMismatch` (`port-unit-mismatch`), the cause of `unit-refused`.
+4. **A non-finite engine sample.**
+   - The scan covers the engine series at the instants that are neither masked nor uncovered.
+   - Every compared instant's exceedance is positive infinity, so `first_exceedance_t` is the
+     first compared instant and `exceedance_time_s` spans the compared instants.
+   - `worst` keeps this note's override: the earliest such instant.
+5. **An indicator sample that is not Boolean** and not exactly `0` or `1` (a `0.5`, a NaN, an
+   Integer `2`) is `indicator-not-boolean`, exit 2, with no receipt. The refusal names the
+   indicator, the time and the value. Every sample is checked, whether or not the window
+   reaches it.
+6. **`sampling` is required for now.** A reference whose own `sampling` and the spec's are both
+   absent is refused as `sampling-required`, exit 2, with no receipt. Without a grid, the test
+   instants were only the test series' own times, and the envelope interpolated the reference
+   linearly between its samples. A value the engine held between two frames was therefore
+   judged as a ramp. The review reproduced two false passes: a trend step 3 s late passed under
+   a 1 s `x` tolerance, and a Boolean toggling between two logged points passed. Issue #746 is
+   the faithful change-of-value comparison that lifts the refusal: a step point at each change
+   in the reference, and discrete outputs at the union of both series' times. Decision 14's
+   "without `sampling`, both series are compared at their own times" waits for it.
+7. **`stop` is the last instant when the grid does not reach it.** The instants are
+   `start + k * s` for every `k >= 0` with `start + k * s <= stop`, and then `stop` itself when
+   the last of those is before it ("each series gets a sample exactly at `start` and `stop`").
+   Both series are held at that one set of instants; it is the `compared` row's set plus that
+   last instant.
+
+**The gap the first ruling leaves.** The vendored modelica-json translations write a quantity as
+`qudt:hasQuantityKind`, which the importer does not read: 160 occurrences in the 44 G36
+translations, 10 of them `TemperatureDifference`, none as `S231:quantity`. Every port of a
+translation therefore has no quantity and takes any row, so the mapping's spelling decides
+there. Their units are read (`qudt:hasUnit`, issue #631), so the unit check holds for them.
+Issue #743 asks the importer to read `qudt:hasQuantityKind`, which closes the gap.
+
+**Masking** keeps OBC §12.7.2's zero fill. Masked and uncovered instants are zeroed in both
+series before the envelope is built. Next to a mask edge the zero widens the band, as the
+owner's ruling on the tolerance windows (GitHub #741) records for vector sets; issue #745
+follows it up. With both series on one grid and zeroed at the same instants, a masked instant's error is
+above zero only by rounding, so `masked_exceedance` is empty in practice.
+
+**Readings of this build**, each where the note was silent or left a choice. They are the
+implementer's and the orchestrator's, listed for review:
+
+- **Key refusals** (the note names no kind). #658's selection refusals reach the caller as
+  `spec-refused`, with the spec reader's code as the cause: `unmatched-key`, `ambiguous-output`,
+  `conflicting-override` or `work-limit-exceeded` ("a lower layer's word is a cause").
+- **`duplicate-output`** is added, the twin of `duplicate-input`: two mapped names that resolve
+  to one boundary output ("a duplicate name on either side … is a typed error before any
+  frame"). A whole canonical path is an exact name, so `T` and `urn:x#top.T` are a duplicate.
+- **An indicator name with the prefix that matches several signals** is `unknown-indicator`,
+  with the candidates (decision 27: "an indicator name that is neither is `unknown-indicator`").
+- **`cdl.unit` against the port** is exact equality of the two optional spellings on a Real
+  port: none on both sides agrees, and a unit on one side only disagrees. The facade carries no
+  unit for an Integer or Boolean port, and the trend reader refuses every conversion but the
+  identity on one, so there is nothing to compare there.
+- **A mapping's CDL type that is not the port's type** (`float` a Real, `int` an Integer, `bool`
+  a Boolean) is `value-type-mismatch`, the vector bind's word.
+- **No sample at or before `start`** in either series makes the output `no_data` with no
+  instant: `compared`, `masked` and `uncovered` are all zero and its curve is empty. This is
+  the orchestrator's call, on decision 16.
+- **An uncovered stretch** is `[refused time, next executed time)`, empty when the two times are
+  equal, and `[refused time, stop]` when no executed frame follows (decision 28). A trace whose
+  engine accepted no frame has no engine sample at all, so every output is `no_data`.
+- **The exceedance column** (`OutputCurves::errors`) has one point per instant:
+  - the exceedance at a compared instant;
+  - the envelope's error on the zeroed series at a masked one;
+  - a NaN at an uncovered one, where the engine computed nothing.
+
+  A NaN is also written at every instant of a Real output with nothing compared. The column is
+  in memory only: the receipt never carries it, and nothing in the crate sums or compares it,
+  since every figure is computed from the compared instants alone. `oce verify --out` (#664)
+  decides how `errors.csv` spells it.
+- **Parameter edits** are applied once, on the engine bind loads, before any frame. The header
+  keeps that engine's `content_id` as loaded and the body takes `content_id` after the edits
+  (decision 30); `parameters` echoes each value as the spec wrote it. A test holds an edit to
+  moving the body's id and never the header's.
+- **`CommissionOptions`** adds `trends` (`TrendLimits`, what `TrendSources::read` takes) and
+  `max_total_aligned_grid_work` to the sketch's fields. It is `#[non_exhaustive]`, with
+  `CommissionOptions::with_data`.
+
+**The bounds of a run**, each checked before the replay and each pinned at its bound and one
+past:
+
+- **Instants per output**, at most the envelope's limit. That is `max_aligned_grid_points` for a
+  Real output under `aligned-grid`, and `max_funnel_points` for every other: an exact comparison
+  is linear too. The refusal is `too-many-points`, with the output's path. The count is the
+  grid's plus the off-grid stop, exact, by a binary search over `k` on the arithmetic the
+  instants are made with, so a huge window costs about 66 evaluations.
+- **The run's work**, `instants × (1 + indicators)` summed over the compared outputs, at most
+  16,777,216 (`MAX_RUN_POINTS`; `too-many-points`). The comparison is linear in the instants,
+  and masking reads each of an output's indicators once per instant (the review of GitHub
+  #744).
+- **Distinct indicator names** per reference, at most 64 (`MAX_INDICATORS`;
+  `too-many-indicators`). A rule's names are one bit each, so the rules that select an output
+  join in one OR apiece. Names are found through a map and an `indicatorSources` point by a
+  binary search, so binding is `n log n` in the names. The review measured the earlier linear
+  scans at 4.18 s for 32,760 names.
+- **The grid envelope's quadratic work**, `instants²` summed over the Real outputs under
+  `aligned-grid`, at most 2^32 (`MAX_TOTAL_ALIGNED_GRID_WORK`, lowerable through
+  `CommissionOptions`; `too-many-points`). This is the bound a vector set's tolerance windows
+  are held to.
+- **The trace**, `frames × bytes per row` at most the replay's `max_trace_bytes`. A row is 9
+  bytes, plus each output and each retained input at its width, plus one substitution bit per
+  input when one can be held: replay's formula. A run too long for its trace is refused as
+  `replay-failed` with the cause `trace-too-large` before the trace is allocated.
+- **The uncovered instants** are found by one walk over the instants and the stretches together,
+  linear in the two (the review of GitHub #744 measured the earlier per-instant scan at 16.6 s
+  for 160,000 alternating refused frames).
+
+**What a run holds.** At the default limits a run can hold, beside the caller's own file bytes:
+
+- the merged trend inputs, up to 1 GiB (`TrendLimits`);
+- the trace, up to 1 GiB (`max_trace_bytes`);
+- the instants, 8 bytes each;
+- for one output at a time, its held series, mask and curves, a few `f64` per instant under the
+  per-output cap: about 50 MB at 2^20 instants;
+- the indicator series, one per distinct name.
+
+That is about 2.1 GiB at most. Measured on the whole run (`tests/commissioning/run_cost.rs`):
+365 bytes a frame at peak at 20,000 frames, with four outputs and five retained inputs; the
+review measured about 250 at 2^20 frames. The receipt's complete lists are bounded at bind
+(`parameters` 256, `sources` 256, `outputs` 4,096). Its other lists are capped by constants
+(`MAX_UNIT_COLUMNS`, `MAX_RUN_WARNINGS`, `MAX_FINDINGS`, `MAX_UNVERIFIED_OUTPUTS`,
+`MAX_MASKED_INTERVALS`, `MAX_MASKED_EXCEEDANCE`; decision 42).
+
+**Codes** this build adds to `VERIFY_ERROR_CODES` (after GitHub #741's, in that order;
+`too-many-points` and `compare-refused` are shared with it): `reference-out-of-range`, `reference-incomplete`, `spec-refused`, `unknown-indicator`,
+`indicator-not-boolean`, `duplicate-output`, `frame-refused`, `too-many-sources`,
+`too-many-outputs`, `source-refused`, `unit-refused`, `sampling-required` and
+`too-many-indicators`. To `UNIT_ERROR_CODES` it adds `difference-for-absolute` and
+`port-unit-mismatch`. A `frame-refused` carries its class as the cause, and
+`VerifyError::frame_index`, `frame_time` and `engine_message` (cut to 256 bytes at a character
+boundary).
+
+**Evidence:**
+
+- goldens of a `pass`, a `fail` and a `no_data` receipt and their exceedance columns
+  (`tests/fixtures/commissioning/run/receipts/`);
+- `derive_run.py`, run with `python3 -I`, which shares no code with the crate. It derives a
+  four-output case under each envelope: the funnel's construction for a loop-free reference, and
+  `aligned-grid`. The case has a 5 s grid, an off-grid stop, one frame refused for a missing
+  sample and its uncovered stretch. The script also recomputes every golden's `receipt_id`;
+- the funnel's figures for one output, derived by hand from "Envelope";
+- the engine series, checked against a plain `prepare_frame` / `execute_frame` loop;
+- one receipt for chunk sizes 1, 7 and the whole run, for every order of the files and whatever
+  the timings;
+- seeded byte edits and hostile numbers, none of which panics;
+- the M3 gate row (decision 39): a synthetic trend from the engine, its setpoint raised by
+  0.1 K, fails with zero tolerances and passes within `atoly = 0.2`. Both golden receipts are
+  labelled `data: synthetic`.
 
 ## Rust API sketch
 

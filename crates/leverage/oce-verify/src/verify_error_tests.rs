@@ -43,12 +43,25 @@ fn declared_index(kind: VerifyErrorKind) -> usize {
         K::CompareRefused => 33,
         K::ReplayFailed => 34,
         K::WindowUncovered => 35,
+        K::ReferenceOutOfRange => 36,
+        K::ReferenceIncomplete => 37,
+        K::SpecRefused => 38,
+        K::UnknownIndicator => 39,
+        K::IndicatorNotBoolean => 40,
+        K::DuplicateOutput => 41,
+        K::FrameRefused => 42,
+        K::TooManySources => 43,
+        K::TooManyOutputs => 44,
+        K::SourceRefused => 45,
+        K::UnitRefused => 46,
+        K::SamplingRequired => 47,
+        K::TooManyIndicators => 48,
     }
 }
 
 #[test]
 fn the_code_list_is_every_kind_in_declaration_order() {
-    assert_eq!(VerifyErrorKind::ALL.len(), 36);
+    assert_eq!(VerifyErrorKind::ALL.len(), 49);
     for (index, kind) in VerifyErrorKind::ALL.iter().enumerate() {
         assert_eq!(declared_index(*kind), index, "{kind:?}");
     }

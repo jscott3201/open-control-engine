@@ -122,12 +122,20 @@ pub(crate) struct BoundDiagnostic {
 /// # Errors
 /// `subject-load-failed`, carrying the `DiagCode` spellings of every diagnostic the refusal has.
 pub(crate) fn load(subject: &[u8]) -> Result<(Engine, LoadReport), VerifyError> {
+    load_at(subject, "subject")
+}
+
+/// [`load`], with a refusal at `place` (`subject`, or a commissioning reference's `cxf`).
+///
+/// # Errors
+/// `subject-load-failed`, as [`load`] gives it.
+pub(crate) fn load_at(subject: &[u8], place: &str) -> Result<(Engine, LoadReport), VerifyError> {
     let mut engine = Engine::new();
     match engine.load_cxf(subject) {
         Ok((report, _)) => Ok((engine, report)),
         Err(error) => Err(VerifyError::new(
             Kind::SubjectLoadFailed,
-            "subject",
+            place,
             format!("the engine refused to load the subject: {error}"),
         )
         .with_diagnostic_codes(error.all_diagnostics().map(|d| d.code.as_str()).collect())),
@@ -241,7 +249,7 @@ pub(crate) fn bind<'a>(
 /// prefix or suffix. [`bind`] passes [`ENGINE_VERSION`], the version this build stamps in every
 /// blob and snapshot header (decision 33, amended 2026-11-12), so the Cargo version's pre-release
 /// suffix is not part of the receipt's.
-fn engine_version(version: EngineVersion) -> String {
+pub(crate) fn engine_version(version: EngineVersion) -> String {
     let EngineVersion {
         major,
         minor,
@@ -308,7 +316,7 @@ pub(crate) fn boundary(
 
 /// Every parameter's canonical path and declared type, sorted by path bytes, one row per path
 /// (the first, as `set_param` addresses it, where a table repeats one).
-fn parameter_types(engine: &Engine) -> Vec<(String, ValueType)> {
+pub(crate) fn parameter_types(engine: &Engine) -> Vec<(String, ValueType)> {
     let mut params: Vec<(String, ValueType)> = engine
         .params()
         .iter()
