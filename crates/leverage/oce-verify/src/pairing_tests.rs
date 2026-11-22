@@ -170,7 +170,8 @@ fn a_window_expectation_is_never_matched() {
         to_s: 60.0,
         first_tick: 0,
         last_tick: 1,
-        equals: crate::receipt::ReceiptValue::Boolean(true),
+        check: crate::bind::BoundCheck::Equals(crate::receipt::ReceiptValue::Boolean(true)),
+        when: Vec::new(),
     });
     let rows = [row(1, ASSERT, "b is false")];
     assert_eq!(

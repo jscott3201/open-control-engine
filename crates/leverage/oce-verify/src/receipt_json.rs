@@ -3,8 +3,9 @@
 //! The writer is the vector file's ([`crate::canonical::Json`]): keys sorted by their UTF-8 bytes
 //! at every depth, so the field order of the note's tables is a reading order, not a byte order.
 //! Every field the tables mark "always" is written, absent optional ones are left out (a
-//! scenario's `content_id` with no edits, a `diagnostic-missing` record's `message`, the body's
-//! `mutants` when the set lists none, a mutant entry's `scenario` and `failure` unless it was
+//! scenario's `content_id` with no edits, a `diagnostic-missing` record's `message`, the
+//! header's `comparison.envelope` and `comparison.envelope_version` and the body's
+//! `funnel_reference` under the exact mode, the body's `mutants` when the set lists none, a mutant entry's `scenario` and `failure` unless it was
 //! caught), and arrays keep the order each field states.
 //!
 //! Numbers: a count is a JSON integer; a time and a Real value are spelled by
@@ -14,9 +15,9 @@
 use crate::canonical::Json;
 use crate::number::canonical_real;
 use crate::receipt::{
-    Failure, FrameCounts, InstantCounts, MutantEntry, MutantSection, Receipt, ReceiptBody,
-    ReceiptHeader, ReceiptValue, ScenarioCounts, ScenarioReceipt, Totals, UnmatchedWarning,
-    VectorBody,
+    Comparison, Failure, FrameCounts, InstantCounts, MutantEntry, MutantSection, Receipt,
+    ReceiptBody, ReceiptHeader, ReceiptValue, ScenarioCounts, ScenarioReceipt, Totals,
+    UnmatchedWarning, VectorBody,
 };
 use crate::refusal_classes::engine_refusal_class;
 
@@ -51,7 +52,10 @@ fn time(t: f64) -> Json {
 /// the document `receipt_id` hashes.
 pub(crate) fn receipt(receipt: &Receipt, identified: bool) -> Json {
     let mut entries = header(&receipt.header, identified);
-    entries.push(entry("body", body(&receipt.body)));
+    entries.push(entry(
+        "body",
+        body(&receipt.body, receipt.funnel_reference()),
+    ));
     Json::object(entries)
 }
 
@@ -62,10 +66,7 @@ fn header(header: &ReceiptHeader, identified: bool) -> Vec<(String, Json)> {
         entry("content_id", Json::str(&header.content_id)),
         entry("engine_version", Json::str(&header.engine_version)),
         entry("spec_id", Json::str(&header.spec_id)),
-        entry(
-            "comparison",
-            Json::object([entry("mode", Json::str(header.comparison.mode.as_str()))]),
-        ),
+        entry("comparison", comparison(&header.comparison)),
         entry("passed", Json::Raw(header.passed.to_string())),
     ];
     if identified {
@@ -82,13 +83,25 @@ fn header(header: &ReceiptHeader, identified: bool) -> Vec<(String, Json)> {
     entries
 }
 
-fn body(body: &ReceiptBody) -> Json {
+/// `{ "mode" }`, with `envelope` and `envelope_version` when there is an envelope.
+fn comparison(comparison: &Comparison) -> Json {
+    let mut entries = vec![entry("mode", Json::str(comparison.mode().as_str()))];
+    if let (Some(envelope), Some(version)) = (comparison.envelope(), comparison.envelope_version())
+    {
+        entries.push(entry("envelope", Json::str(envelope.as_str())));
+        entries.push(entry("envelope_version", Json::str(version)));
+    }
+    Json::object(entries)
+}
+
+/// The body, with the `funnel_reference` [`Receipt::funnel_reference`] reads off the header.
+fn body(body: &ReceiptBody, funnel_reference: Option<&'static str>) -> Json {
     match body {
-        ReceiptBody::Vectors(vectors) => vector_body(vectors),
+        ReceiptBody::Vectors(vectors) => vector_body(vectors, funnel_reference),
     }
 }
 
-fn vector_body(body: &VectorBody) -> Json {
+fn vector_body(body: &VectorBody, funnel_reference: Option<&'static str>) -> Json {
     let mut entries = vec![
         entry("status", Json::str(body.status.as_str())),
         entry(
@@ -117,6 +130,9 @@ fn vector_body(body: &VectorBody) -> Json {
             Json::List(body.scenarios.iter().map(scenario).collect()),
         ),
     ];
+    if let Some(reference) = funnel_reference {
+        entries.push(entry("funnel_reference", Json::str(reference)));
+    }
     if let Some(mutants) = &body.mutants {
         entries.push(entry("mutants", mutant_section(mutants)));
     }
@@ -243,6 +259,20 @@ pub(crate) fn failure(failure: &Failure) -> Json {
             entries.push(entry("output", Json::str(output)));
             entries.push(entry("expected", value(*expected)));
             entries.push(entry("actual", value(*actual)));
+        }
+        Failure::ToleranceExceeded {
+            expectation,
+            output,
+            expected,
+            actual,
+            exceedance,
+            ..
+        } => {
+            entries.push(entry("expectation", count(*expectation)));
+            entries.push(entry("output", Json::str(output)));
+            entries.push(entry("expected", value(*expected)));
+            entries.push(entry("actual", value(*actual)));
+            entries.push(entry("exceedance", value(ReceiptValue::Real(*exceedance))));
         }
         Failure::DiagnosticMissing {
             expectation,

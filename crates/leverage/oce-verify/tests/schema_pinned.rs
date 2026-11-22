@@ -1,6 +1,6 @@
 //! The published schema of the vector format: regenerated and compared byte for byte, walked for
 //! keywords outside the strict profile, and checked for its closed objects, its two map shapes
-//! and its three `anyOf` sites (vectors note decision 17).
+//! and its four `anyOf` sites (vectors note decision 17).
 
 mod support;
 
@@ -230,7 +230,19 @@ fn the_root_is_the_vector_set_with_its_one_schema_tag() {
         .collect();
     assert_eq!(
         properties,
-        ["clock", "mutants", "params", "scenarios", "schema"]
+        [
+            "clock",
+            "envelope",
+            "mutants",
+            "params",
+            "scenarios",
+            "schema"
+        ]
+    );
+    assert_eq!(schema["properties"]["envelope"]["type"], "string");
+    assert_eq!(
+        schema["properties"]["envelope"]["enum"],
+        json!(["funnel", "aligned-grid"])
     );
     assert_eq!(schema["properties"]["schema"]["type"], "string");
     assert_eq!(
@@ -238,8 +250,8 @@ fn the_root_is_the_vector_set_with_its_one_schema_tag() {
         json!([VECTORS_SCHEMA])
     );
     assert_eq!(VECTORS_SCHEMA, "oce/vectors/v1");
-    // No key the format does not have yet.
-    for absent in ["within", "of", "when", "tolerance"] {
+    // No key the format does not have: the library contract's dropped `tolerance` among them.
+    for absent in ["tolerance", "ttol_s", "atol", "rtol"] {
         assert!(
             !VECTORS_JSON_SCHEMA.contains(&format!("\"{absent}\"")),
             "{absent}"
@@ -260,14 +272,18 @@ fn every_definition_has_the_keys_the_format_gives_it() {
             "Input",
             "Instant",
             "Mutant",
+            "Of",
+            "OfStep",
             "Scenario",
             "Step",
+            "ToleranceWindow",
             "Value",
-            "Window"
+            "Window",
+            "Within"
         ]
     );
     // (definition, every property, the required ones in declaration order)
-    let objects: [(&str, &[&str], &[&str]); 7] = [
+    let objects: [(&str, &[&str], &[&str]); 10] = [
         ("Clock", &["horizon_s", "step_s"], &["step_s", "horizon_s"]),
         ("Diagnostic", &["block", "message"], &["block"]),
         ("Instant", &["at_s", "diagnostic"], &["diagnostic", "at_s"]),
@@ -280,8 +296,19 @@ fn every_definition_has_the_keys_the_format_gives_it() {
         ("Step", &["t", "value"], &["t", "value"]),
         (
             "Window",
-            &["equals", "from_s", "output", "to_s"],
+            &["equals", "from_s", "output", "to_s", "when"],
             &["output", "from_s", "to_s", "equals"],
+        ),
+        (
+            "ToleranceWindow",
+            &["from_s", "of", "output", "to_s", "when", "within"],
+            &["output", "from_s", "to_s", "within", "of"],
+        ),
+        ("OfStep", &["t", "value"], &["t", "value"]),
+        (
+            "Within",
+            &["atolx", "atoly", "ltolx", "ltoly", "rtolx", "rtoly"],
+            &[],
         ),
     ];
     for (name, properties, required) in objects {
@@ -295,7 +322,11 @@ fn every_definition_has_the_keys_the_format_gives_it() {
             .map(String::as_str)
             .collect();
         assert_eq!(listed, properties, "{name}");
-        assert_eq!(strings(&def["required"]), required, "{name}");
+        if required.is_empty() {
+            assert!(def.get("required").is_none(), "{name}");
+        } else {
+            assert_eq!(strings(&def["required"]), required, "{name}");
+        }
         assert!(
             def["description"].as_str().is_some_and(|d| !d.is_empty()),
             "{name} is described"
@@ -311,8 +342,8 @@ fn any_of_appears_only_over_values_inputs_and_expectations() {
         .filter(|(_, def)| def.get("anyOf").is_some())
         .map(|(name, _)| name.as_str())
         .collect();
-    assert_eq!(with_any_of, ["Expectation", "Input", "Value"]);
-    assert_eq!(VECTORS_JSON_SCHEMA.matches("\"anyOf\"").count(), 3);
+    assert_eq!(with_any_of, ["Expectation", "Input", "Of", "Value"]);
+    assert_eq!(VECTORS_JSON_SCHEMA.matches("\"anyOf\"").count(), 4);
     let number = json!({"type": "number"});
     let boolean = json!({"type": "boolean"});
     assert_eq!(defs["Value"]["anyOf"], json!([number, boolean]));
@@ -322,12 +353,22 @@ fn any_of_appears_only_over_values_inputs_and_expectations() {
     );
     assert_eq!(
         defs["Expectation"]["anyOf"],
-        json!([{"$ref": "#/$defs/Window"}, {"$ref": "#/$defs/Instant"}])
+        json!([
+            {"$ref": "#/$defs/Window"},
+            {"$ref": "#/$defs/ToleranceWindow"},
+            {"$ref": "#/$defs/Instant"}
+        ])
     );
-    // Eight strings (the tag, a mutant's path and description, a scenario's name and
-    // description, an output, a diagnostic's block and message), none of them a value; and no
-    // null or integer type anywhere.
-    for (name, count) in [("string", 8), ("null", 0), ("integer", 0)] {
+    // An expected signal is a number or a list of steps: never a boolean.
+    assert_eq!(
+        defs["Of"]["anyOf"],
+        json!([number, {"type": "array", "items": {"$ref": "#/$defs/OfStep"}}])
+    );
+    // Twelve strings (the tag, the envelope, a mutant's path and description, a scenario's name
+    // and description, the output of each window form, the names of each window form's `when`,
+    // a diagnostic's block and message), none of them a value; and no null or integer type
+    // anywhere.
+    for (name, count) in [("string", 12), ("null", 0), ("integer", 0)] {
         let in_types = VECTORS_JSON_SCHEMA
             .matches(&format!("\"type\": \"{name}\""))
             .count();
@@ -360,13 +401,19 @@ fn the_two_map_shapes_are_inputs_and_params() {
             .count(),
         3
     );
-    // Times are plain numbers.
+    // Times, tolerances and expected values are plain numbers.
     for (def, key) in [
         ("Clock", "step_s"),
         ("Clock", "horizon_s"),
         ("Step", "t"),
         ("Window", "from_s"),
         ("Window", "to_s"),
+        ("ToleranceWindow", "from_s"),
+        ("ToleranceWindow", "to_s"),
+        ("OfStep", "t"),
+        ("OfStep", "value"),
+        ("Within", "atolx"),
+        ("Within", "rtoly"),
         ("Instant", "at_s"),
     ] {
         assert_eq!(

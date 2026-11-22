@@ -1,0 +1,77 @@
+{
+  "clock": {
+    "horizon_s": 1800,
+    "step_s": 30
+  },
+  "envelope": "aligned-grid",
+  "scenarios": [
+    {
+      "expect": [
+        {
+          "from_s": 300,
+          "of": [
+            {
+              "t": 300,
+              "value": 0
+            },
+            {
+              "t": 330.0,
+              "value": 0.25
+            },
+            {
+              "t": 1800.0,
+              "value": -0.0
+            }
+          ],
+          "output": "VDis_flow",
+          "to_s": 1800,
+          "when": [
+            "occupied",
+            "fan.on"
+          ],
+          "within": {
+            "atolx": 60,
+            "atoly": 0.005,
+            "ltolx": 1,
+            "ltoly": 1e-5,
+            "rtolx": 0,
+            "rtoly": 0.0001
+          }
+        },
+        {
+          "from_s": 60.0,
+          "of": 25.0,
+          "output": "y\u00e9",
+          "to_s": 60,
+          "within": {
+            "atoly": 0
+          }
+        },
+        {
+          "equals": false,
+          "from_s": 0,
+          "output": "yDam",
+          "to_s": 240,
+          "when": [
+            "\u2603"
+          ]
+        }
+      ],
+      "inputs": {
+        "VDis_flow_set": 0.25,
+        "occupied": [
+          {
+            "t": 0,
+            "value": false
+          },
+          {
+            "t": 300,
+            "value": true
+          }
+        ]
+      },
+      "name": "airflow_tracks_setpoint"
+    }
+  ],
+  "schema": "oce/vectors/v1"
+}

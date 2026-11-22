@@ -11,7 +11,8 @@
 //! order a builder happened to use.
 
 use crate::clock::Clock;
-use crate::model::{Expectation, Held, Input, Mutant, Parameter, Scenario};
+use crate::envelope::Envelope;
+use crate::model::{Check, Expectation, Held, Input, Mutant, OfHeld, Parameter, Scenario};
 use crate::number::Literal;
 
 /// A JSON value ready to be written.
@@ -158,12 +159,49 @@ fn input(input: &Input) -> Json {
 
 fn expectation(expectation: &Expectation) -> Json {
     match expectation {
-        Expectation::Window(window) => Json::object([
-            entry("output", Json::str(&window.output)),
-            entry("from_s", Json::Raw(window.from.canonical())),
-            entry("to_s", Json::Raw(window.to.canonical())),
-            entry("equals", literal(window.equals)),
-        ]),
+        Expectation::Window(window) => {
+            let mut entries = vec![
+                entry("output", Json::str(&window.output)),
+                entry("from_s", Json::Raw(window.from.canonical())),
+                entry("to_s", Json::Raw(window.to.canonical())),
+            ];
+            match &window.check {
+                Check::Equals(value) => entries.push(entry("equals", literal(*value))),
+                Check::Within(within) => {
+                    entries.push(entry(
+                        "within",
+                        Json::object(
+                            within
+                                .written
+                                .iter()
+                                .map(|(name, number)| entry(name, Json::Raw(number.canonical()))),
+                        ),
+                    ));
+                    let of = match &within.of {
+                        OfHeld::Constant(step) => Json::Raw(step.value.canonical()),
+                        OfHeld::Steps(steps) => Json::List(
+                            steps
+                                .iter()
+                                .map(|step| {
+                                    Json::object([
+                                        entry("t", Json::Raw(step.t.canonical())),
+                                        entry("value", Json::Raw(step.value.canonical())),
+                                    ])
+                                })
+                                .collect(),
+                        ),
+                    };
+                    entries.push(entry("of", of));
+                }
+            }
+            if !window.when.is_empty() {
+                entries.push(entry(
+                    "when",
+                    Json::List(window.when.iter().map(|name| Json::str(name)).collect()),
+                ));
+            }
+            Json::object(entries)
+        }
         Expectation::Diagnostic(instant) => {
             let mut diagnostic = vec![entry("block", Json::str(&instant.block))];
             if let Some(message) = &instant.message {
@@ -211,10 +249,12 @@ fn mutant(mutant: &Mutant) -> Json {
     Json::object(entries)
 }
 
-/// The canonical document of a vector set: its tag, clock, optional set parameters, optional
-/// mutants (in file order) and scenarios.
+/// The canonical document of a vector set: its tag, clock, optional envelope, optional set
+/// parameters, optional mutants (in file order) and scenarios. A window's `within` writes the
+/// names the file wrote; `of` and `when` keep their order.
 pub(crate) fn vector_set(
     clock: &Clock,
+    envelope: Option<Envelope>,
     params: Option<&[Parameter]>,
     mutants: Option<&[Mutant]>,
     scenarios: &[Scenario],
@@ -233,6 +273,9 @@ pub(crate) fn vector_set(
             Json::List(scenarios.iter().map(scenario).collect()),
         ),
     ];
+    if let Some(envelope) = envelope {
+        entries.push(entry("envelope", Json::str(envelope.as_str())));
+    }
     if let Some(params) = params {
         entries.push(entry("params", parameters(params)));
     }

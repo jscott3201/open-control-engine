@@ -1,0 +1,126 @@
+{
+  "body": {
+    "clock": {
+      "horizon_s": 1800,
+      "step_s": 60
+    },
+    "funnel_reference": "expectation",
+    "load_warnings": [
+      "unused-boundary-input"
+    ],
+    "load_warnings_total": 1,
+    "scenarios": [
+      {
+        "expectations": 2,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 42,
+          "failed": 0,
+          "masked": 20,
+          "passed": 42
+        },
+        "name": "counted_when_enabled",
+        "params": [],
+        "status": "pass",
+        "warnings": [
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 0.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 60.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 120.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 180.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 240.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 300.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 360.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 420.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 480.0
+          },
+          {
+            "block": "CDL.Utilities.Assert",
+            "message": "b is false",
+            "t": 540.0
+          }
+        ],
+        "warnings_total": 10
+      }
+    ],
+    "status": "pass",
+    "totals": {
+      "failures": 0,
+      "frames": {
+        "executed": 31,
+        "refused": 0,
+        "substituted": 0
+      },
+      "instants": {
+        "checked": 42,
+        "failed": 0,
+        "masked": 20,
+        "passed": 42
+      },
+      "scenarios": {
+        "fail": 0,
+        "no_data": 0,
+        "pass": 1,
+        "total": 1
+      },
+      "warnings": 10
+    }
+  },
+  "comparison": {
+    "envelope": "aligned-grid",
+    "envelope_version": "aligned-grid@1",
+    "mode": "tolerance"
+  },
+  "content_id": "oce:canon1:5b61075c708fb6a68e8abc35f5d6952874fdabd3cf7817eac0559e8a2b5cd9d0",
+  "engine_version": "0.6.0",
+  "kind": "vectors",
+  "passed": true,
+  "receipt_id": "receipt:fnv1a128:225c1766dd0e294229abe97fc5ebd0d0",
+  "schema": "oce/receipt/v1",
+  "spec_id": "spec:fnv1a128:a3d48db8df444bc95ee04db20b0702c5",
+  "timings": {
+    "compare_ms": 0,
+    "load_ms": 0,
+    "run_ms": 0
+  }
+}

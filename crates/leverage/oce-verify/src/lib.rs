@@ -3,10 +3,10 @@
 //! `docs/design/vectors.md`, issues #519 to #521), and the envelope arithmetic of its tolerance
 //! mode (design note `docs/design/commissioning.md`, issue #655).
 //!
-//! Status: three of the four parts of the verification product (M3): the one vector format,
-//! `oce/vectors/v1`, the run that checks a set against a sequence and issues the receipt, and
-//! mutant mode. The `oce verify` verb builds on it. Of the fourth, tolerance mode, the envelope
-//! arithmetic is in as a library surface; no vector file, receipt or verb asks for it yet.
+//! Status: the four parts of the verification product (M3): the one vector format,
+//! `oce/vectors/v1`, the run that checks a set against a sequence and issues the receipt, mutant
+//! mode, and tolerance mode: the envelope arithmetic, and the tolerance windows a vector file
+//! asks for it with (issue #684). The `oce verify` verb builds on it.
 //!
 //! A **vector set** is a strict-JSON document of scenarios, each a schedule of inputs over one
 //! clock and expectations over windows of it, to be checked against one loaded sequence, the
@@ -15,13 +15,15 @@
 //! - **The reader** ([`VectorSet::from_json_bytes`]): strict and bounded. The document is one
 //!   UTF-8 JSON value under the authoring wire form's profile ([`MAX_DEPTH`], [`MAX_LIST_LEN`],
 //!   [`MAX_STRING_BYTES`], no repeated key, no control character, no non-finite number) and the
-//!   lowerable [`VerifyLimits`]; every object is closed, so a key the format does not define
-//!   (`within`, `of` and `when` among them, until the format gains them) is refused, never
-//!   ignored. It takes bytes, opens nothing and never panics.
+//!   lowerable [`VerifyLimits`]; every object is closed, so a key the format does not define,
+//!   or one of its keys in another object, is refused, never ignored. It takes bytes, opens
+//!   nothing and never panics.
 //! - **The rules** a shape cannot say, checked at load: the clock's cadence, decided by
 //!   multiplication ([`Clock`]); step lists from `t = 0`, strictly increasing, never past the
 //!   horizon; windows inside the clock that hold at least one tick; a diagnostic instant on a
-//!   tick.
+//!   tick; a tolerance window's `within` (at least one of the six names, none negative, `ltolx`
+//!   at most 1), its `of` (from the window's start, never past its end) and a `when` of 1 to 16
+//!   names; the set's `envelope`, `funnel` or `aligned-grid`.
 //! - **The canonical form** ([`VectorSet::to_canonical_json`]) and the set's identity over it
 //!   ([`VectorSet::spec_id`], `spec:fnv1a128:<32 hex>`).
 //! - **Typed refusals** ([`VectorError`], [`VectorErrorKind`]): one closed kind per refusal,
@@ -37,7 +39,10 @@
 //!   frames, compared instants, bytes loaded and byte-frames) before every other load, and each
 //!   distinct parameter-edit list tried once on a fresh engine.
 //! - **The run**: each scenario on a freshly loaded engine, its parameter edits applied in passes
-//!   inside one halt, then one replay on the set's grid, compared exactly (a Real by its bits).
+//!   inside one halt, then one replay on the set's grid. An exact window is compared exactly (a
+//!   Real by its bits); a tolerance window under the set's envelope, built around its expected
+//!   signal after that signal is checked to lie inside its own envelope; a `when` masks the ticks
+//!   where one of its Boolean signals is false.
 //! - **The receipt** ([`Receipt`]): the header shared with the commissioning verifier and the
 //!   vector body, written canonically ([`Receipt::to_canonical_json`]) and named by `receipt_id`.
 //! - **Mutant mode**: the deliberately broken copies of the subject a set lists ([`Mutant`]),
@@ -47,8 +52,8 @@
 //!   and run refusal is an error with no receipt; a failed expectation is a failed scenario
 //!   inside one.
 //!
-//! and, apart from all of the above, the **envelopes** a tolerance comparison is made with: is a
-//! test series inside a band built around a reference series?
+//! and the **envelopes** a tolerance comparison is made with, a library surface of their own: is
+//! a test series inside a band built around a reference series?
 //!
 //! - **[`funnel()`]**: a port of LBNL funnel, the tool OBC §12 cites ([`FUNNEL_VERSION`]), held
 //!   to the pinned `pyfunnel` by a differential test: its five curves print, in C's `%.16g`
@@ -119,8 +124,27 @@
 //!     unreachable!("the scenario's one expectation is a window");
 //! };
 //! assert_eq!((window.first_tick(), window.last_tick()), (16, 30));
-//! assert_eq!(window.equals(), Literal::Boolean(true));
+//! assert_eq!(window.equals(), Some(Literal::Boolean(true)));
 //! assert!(set.spec_id().starts_with("spec:fnv1a128:"));
+//!
+//! // A tolerance window: `within` and `of` in place of `equals`, an optional `when` mask, and
+//! // the set's envelope, `funnel` when the set names none.
+//! let tolerant = VectorSet::from_json_bytes(
+//!     br#"{"schema": "oce/vectors/v1", "clock": {"step_s": 60, "horizon_s": 1800},
+//!         "scenarios": [{"name": "tracks", "inputs": {},
+//!           "expect": [{"output": "VDis_flow", "from_s": 300, "to_s": 1800,
+//!                       "within": {"atoly": 0.005, "atolx": 60},
+//!                       "of": [{"t": 300, "value": 0.0}, {"t": 600, "value": 0.25}],
+//!                       "when": ["occupied"]}]}]}"#,
+//!     &VerifyLimits::default(),
+//! )?;
+//! let Expectation::Window(window) = &tolerant.scenarios()[0].expectations()[0] else {
+//!     unreachable!("the scenario's one expectation is a window");
+//! };
+//! let within = window.within().expect("a tolerance window");
+//! assert_eq!((within.tolerances().atoly, within.tolerances().atolx), (0.005, 60.0));
+//! assert_eq!(window.when(), ["occupied"]);
+//! assert_eq!(tolerant.envelope(), oce_verify::Envelope::Funnel);
 //!
 //! // A key the format does not define is refused by its code, never ignored.
 //! let refused = VectorSet::from_json_bytes(
@@ -206,6 +230,7 @@
 
 mod aligned_grid;
 mod bind;
+mod bind_window;
 mod budget;
 mod canonical;
 mod clock;
@@ -222,6 +247,7 @@ mod fnv;
 mod funnel;
 mod g16;
 mod limits;
+mod mask;
 mod model;
 mod mutants;
 mod number;
@@ -234,6 +260,7 @@ mod relative_path;
 mod run;
 mod schema;
 mod strict;
+mod tolerance;
 mod typing;
 mod validate;
 mod vector_set;
@@ -263,21 +290,24 @@ pub use g16::format_g16;
 pub use limits::{
     MAX_DEPTH, MAX_LIST_LEN, MAX_LOAD_WARNINGS, MAX_STRING_BYTES, MAX_TIME_INTEGER, VerifyLimits,
 };
-pub use model::{DiagnosticInstant, Expectation, Input, Mutant, Parameter, Scenario, Step, Window};
+pub use model::{
+    DiagnosticInstant, Expectation, Input, Mutant, OfStep, Parameter, Scenario, Step, Window,
+    Within,
+};
 pub use number::Literal;
 pub use receipt::{
     Comparison, ComparisonMode, Failure, FrameCounts, InstantCounts, MutantCatch, MutantEntry,
     MutantSection, MutantStatus, ParamEdit, RECEIPT_SCHEMA, Receipt, ReceiptBody, ReceiptHeader,
     ReceiptKind, ReceiptValue, ScenarioCounts, ScenarioReceipt, ScenarioStatus, ScoreStatus,
-    Timings, Totals, UnmatchedWarning, VectorBody,
+    Timings, Totals, UnmatchedWarning, VECTOR_FUNNEL_REFERENCE, VectorBody,
 };
 pub use refusal_classes::{ENGINE_REFUSAL_CLASSES, engine_refusal_class};
 pub use run::{VectorInputs, VectorRun, VerifyOptions, run_vectors};
 pub use schema::{SCHEMA_PROFILE_KEYWORDS, VECTORS_JSON_SCHEMA, vectors_json_schema};
 pub use vector_set::VectorSet;
 pub use verify_error::{
-    MUTANT_PARAM_REFUSAL_CAUSES, PARAM_REFUSAL_CLASSES, REPLAY_FAILURE_CAUSES, VERIFY_ERROR_CODES,
-    VerifyError, VerifyErrorKind,
+    COMPARE_REFUSAL_CAUSES, MUTANT_PARAM_REFUSAL_CAUSES, PARAM_REFUSAL_CLASSES,
+    REPLAY_FAILURE_CAUSES, VERIFY_ERROR_CODES, VerifyError, VerifyErrorKind,
 };
 
 /// The format tag a vector set carries in its `schema` key. Any other tag is refused as

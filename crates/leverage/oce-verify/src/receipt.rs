@@ -18,9 +18,15 @@
 use oce_replay::EngineRefusal;
 
 use crate::clock::Clock;
+use crate::envelope::Envelope;
 
 /// The format tag every receipt carries in its `schema` key, for every kind (decision 37).
 pub const RECEIPT_SCHEMA: &str = "oce/receipt/v1";
+
+/// The body's `funnel_reference` in a vector receipt under the tolerance mode: a tolerance
+/// window's envelope is built around its expectation, `of`, and the output is the test
+/// (decision 38). No key chooses another.
+pub const VECTOR_FUNNEL_REFERENCE: &str = "expectation";
 
 /// Which verifier issued a receipt. The commissioning verifier adds its kind in place.
 #[non_exhaustive]
@@ -40,12 +46,16 @@ impl ReceiptKind {
     }
 }
 
-/// How outputs were compared. Tolerance mode adds its mode in place.
+/// How outputs were compared.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ComparisonMode {
     /// Every expected value equals the output exactly; a Real compares by its bits (`exact`).
     Exact,
+    /// An envelope was used somewhere (`tolerance`): for a vector set, at least one window is a
+    /// tolerance window, while its exact windows are still compared by bits (decision 42). Each
+    /// failure's code says which comparison failed.
+    Tolerance,
 }
 
 impl ComparisonMode {
@@ -54,17 +64,64 @@ impl ComparisonMode {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Exact => "exact",
+            Self::Tolerance => "tolerance",
         }
     }
 }
 
-/// The header's `comparison` object: the mode and, for a tolerance mode, its envelope. Exact mode
-/// has no envelope, so the object is `{ "mode": "exact" }` (decision 32).
-#[non_exhaustive]
+/// The header's `comparison` object: the mode and, for the tolerance mode, its envelope. Exact
+/// mode has no envelope, so the object is `{ "mode": "exact" }` (decision 32); the tolerance
+/// mode's is `{ "mode": "tolerance", "envelope", "envelope_version" }` (decision 42), the
+/// version naming the arithmetic ([`Envelope::version`]).
+///
+/// Built only by [`Comparison::exact`] and [`Comparison::tolerance`], so the tolerance mode always
+/// has an envelope and the exact mode never does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Comparison {
+    mode: ComparisonMode,
+    envelope: Option<Envelope>,
+}
+
+impl Comparison {
+    /// The exact mode: `{ "mode": "exact" }`.
+    #[must_use]
+    pub const fn exact() -> Self {
+        Self {
+            mode: ComparisonMode::Exact,
+            envelope: None,
+        }
+    }
+
+    /// The tolerance mode under `envelope`.
+    #[must_use]
+    pub const fn tolerance(envelope: Envelope) -> Self {
+        Self {
+            mode: ComparisonMode::Tolerance,
+            envelope: Some(envelope),
+        }
+    }
+
     /// The comparison mode.
-    pub mode: ComparisonMode,
+    #[must_use]
+    pub const fn mode(&self) -> ComparisonMode {
+        self.mode
+    }
+
+    /// The envelope of the tolerance mode; `None` under the exact mode.
+    #[must_use]
+    pub const fn envelope(&self) -> Option<Envelope> {
+        self.envelope
+    }
+
+    /// The version of the envelope's arithmetic, `funnel@a12fa96` or `aligned-grid@1`; `None`
+    /// under the exact mode.
+    #[must_use]
+    pub const fn envelope_version(&self) -> Option<&'static str> {
+        match self.envelope {
+            Some(envelope) => Some(envelope.version()),
+            None => None,
+        }
+    }
 }
 
 /// Durations a caller measured, in whole milliseconds. `oce-verify` measures nothing (decision
@@ -198,7 +255,8 @@ pub struct InstantCounts {
     pub passed: u64,
     /// Instants that did not.
     pub failed: u64,
-    /// Instants masked by a `when` indicator: zero until `when` exists.
+    /// Window ticks a `when` excluded: in neither `checked` nor `passed`; zero in a set with no
+    /// `when` (decision 46).
     pub masked: u64,
 }
 
@@ -260,6 +318,23 @@ pub enum Failure {
         /// The value the engine produced.
         actual: ReceiptValue,
     },
+    /// `tolerance-exceeded`: a tolerance window's output lay outside its envelope at a tick, or
+    /// was out of range there (a NaN, an infinity, or above 2^1000 in magnitude; decision 45).
+    ToleranceExceeded {
+        /// The expectation's index in the scenario's `expect` list.
+        expectation: u64,
+        /// The output's canonical path.
+        output: String,
+        /// The tick's time, seconds.
+        t: f64,
+        /// The value of `of` at that tick, a Real.
+        expected: ReceiptValue,
+        /// The value the engine produced, a Real.
+        actual: ReceiptValue,
+        /// How far the output lay outside the envelope there, in the output's unit: above zero,
+        /// and positive infinity for an out-of-range output.
+        exceedance: f64,
+    },
     /// `diagnostic-missing`: no warning at the expectation's tick matched its block (and
     /// message, when it gave one).
     DiagnosticMissing {
@@ -283,11 +358,13 @@ pub enum Failure {
 }
 
 impl Failure {
-    /// The record's code: `value-mismatch`, `diagnostic-missing` or `frame-refused`.
+    /// The record's code: `value-mismatch`, `tolerance-exceeded`, `diagnostic-missing` or
+    /// `frame-refused`.
     #[must_use]
     pub const fn code(&self) -> &'static str {
         match self {
             Self::ValueMismatch { .. } => "value-mismatch",
+            Self::ToleranceExceeded { .. } => "tolerance-exceeded",
             Self::DiagnosticMissing { .. } => "diagnostic-missing",
             Self::FrameRefused { .. } => "frame-refused",
         }
@@ -298,6 +375,7 @@ impl Failure {
     pub const fn t(&self) -> f64 {
         match self {
             Self::ValueMismatch { t, .. }
+            | Self::ToleranceExceeded { t, .. }
             | Self::DiagnosticMissing { t, .. }
             | Self::FrameRefused { t, .. } => *t,
         }
@@ -484,6 +562,17 @@ impl Receipt {
     #[must_use]
     pub fn to_canonical_json(&self) -> String {
         crate::receipt_json::receipt(self, true).to_document()
+    }
+
+    /// The body's `funnel_reference`: [`VECTOR_FUNNEL_REFERENCE`] for a vector receipt whose
+    /// header's mode is `tolerance`, `None` otherwise (decision 38). It is read off the header,
+    /// never stored, so the two cannot disagree.
+    #[must_use]
+    pub fn funnel_reference(&self) -> Option<&'static str> {
+        match (&self.body, self.header.comparison.mode()) {
+            (ReceiptBody::Vectors(_), ComparisonMode::Tolerance) => Some(VECTOR_FUNNEL_REFERENCE),
+            _ => None,
+        }
     }
 
     /// The identity of this receipt's content: `receipt:fnv1a128:` and the 32 lowercase hex

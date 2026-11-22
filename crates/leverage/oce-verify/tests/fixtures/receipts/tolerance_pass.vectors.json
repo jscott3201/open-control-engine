@@ -1,0 +1,20 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 1800 },
+  "scenarios": [
+    {
+      "name": "tracks_the_setpoint",
+      "description": "ahu.y follows a step of ahu.T from 20 to 22 at 600 s, inside a quarter degree and one tick.",
+      "inputs": {
+        "ahu.T": [ { "t": 0, "value": 20.0 }, { "t": 600, "value": 22.0 } ],
+        "zone.T": 2.0, "n": 3, "b": true, "lim": 5.0
+      },
+      "expect": [
+        { "output": "ahu.y", "from_s": 0, "to_s": 1800,
+          "within": { "atoly": 0.25, "atolx": 60 },
+          "of": [ { "t": 0, "value": 20.0 }, { "t": 600, "value": 22.0 } ] },
+        { "output": "bOut", "from_s": 0, "to_s": 1800, "equals": true }
+      ]
+    }
+  ]
+}

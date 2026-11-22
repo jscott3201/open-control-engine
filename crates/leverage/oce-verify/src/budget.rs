@@ -10,12 +10,17 @@
 //! | --- | --- | --- |
 //! | [`VerifyLimits::max_total_frames`] | `(N + 1) * s * (1 + m)` | `too-many-frames` |
 //! | [`VerifyLimits::max_total_instants`] | `(1 + m) * sum(I_j)` | `too-many-instants` |
+//! | [`VerifyLimits::compare`] | each tolerance window's ticks | `too-many-points` |
+//! | [`VerifyLimits::max_total_aligned_grid_work`] | `(1 + m) * sum(T_w^2)` over `aligned-grid` windows | `too-many-points` |
 //! | [`VerifyLimits::max_total_load_bytes`] | `D * (1 + e + s)` | `too-many-load-bytes` |
 //! | [`VerifyLimits::max_total_frame_bytes`] | `(N + 1) * s * D` | `too-many-frame-bytes` |
 //!
 //! Every count is an upper bound: each mutant is counted as if it ran every scenario, and each
 //! window as if no frame were refused, so a run inside its budgets does exactly the work it would
-//! do with none. `D * (1 + e + s)` is the subject's and each mutant's bind load, one trial per
+//! do with none. A tolerance window's ticks count among `I_j` exactly as an exact window's do,
+//! and each is also held, alone, to the point cap [`crate::CompareLimits`] gives the set's
+//! envelope (decision 48): the port's own cap, applied here so a comparison never meets it.
+//! `D * (1 + e + s)` is the subject's and each mutant's bind load, one trial per
 //! distinct list and one run per scenario. The budgets are checked in this order, the first one
 //! exceeded winning, with a scenario's `N + 1` held to the replay limits' `max_frames` first, as
 //! part of the frame budget. They are arithmetic on what binding already knows after the
@@ -25,7 +30,8 @@
 //! product that does not fit is past every limit, so a hostile count refuses: it never wraps and
 //! never panics.
 
-use crate::bind::{BoundExpectation, BoundScenario};
+use crate::bind::{BoundCheck, BoundExpectation, BoundScenario};
+use crate::envelope::Envelope;
 use crate::limits::VerifyLimits;
 use crate::vector_set::VectorSet;
 use crate::verify_error::{VerifyError, VerifyErrorKind as Kind};
@@ -132,13 +138,79 @@ fn exceeds(total: Option<u128>, limit: u64) -> bool {
     total.is_none_or(|total| total > u128::from(limit))
 }
 
-/// Hold `work` to the four budgets of `limits` (already effective), in the documented order.
+/// Hold each tolerance window of `scenarios`, in file order, to the point cap `limits.compare`
+/// gives `envelope`; then, under `aligned-grid`, the sum of every tolerance window's ticks
+/// squared, times `1 + mutants`, to [`VerifyLimits::max_total_aligned_grid_work`] (owner ruling
+/// of 2026-11-21: that envelope's work is quadratic in a window's ticks).
 ///
 /// # Errors
-/// `too-many-frames`, `too-many-instants`, `too-many-load-bytes` or `too-many-frame-bytes`, for
-/// the first budget exceeded; `too-many-frames` also for a scenario whose `N + 1` passes the
-/// replay limits' `max_frames`.
-pub(crate) fn check(work: &Work, limits: &VerifyLimits) -> Result<(), VerifyError> {
+/// `too-many-points` at the first window with more ticks than the cap, else at `scenarios` for
+/// the quadratic work.
+fn check_points(
+    scenarios: &[BoundScenario],
+    mutants: u128,
+    envelope: Envelope,
+    limits: &VerifyLimits,
+) -> Result<(), VerifyError> {
+    let cap = match envelope {
+        Envelope::Funnel => limits.compare.max_funnel_points,
+        Envelope::AlignedGrid => limits.compare.max_aligned_grid_points,
+    };
+    let cap = u64::try_from(cap).unwrap_or(u64::MAX);
+    let mut squares = 0_u128;
+    for (index, scenario) in scenarios.iter().enumerate() {
+        for (position, expectation) in scenario.expectations.iter().enumerate() {
+            let BoundExpectation::Window(window) = expectation else {
+                continue;
+            };
+            if !matches!(window.check, BoundCheck::Within { .. }) {
+                continue;
+            }
+            let ticks = window.last_tick.saturating_sub(window.first_tick) + 1;
+            if ticks > cap {
+                return Err(VerifyError::new(
+                    Kind::TooManyPoints,
+                    format!("scenarios[{index}].expect[{position}]"),
+                    format!(
+                        "the tolerance window holds {ticks} ticks; the {envelope} envelope compares at most {cap} points"
+                    ),
+                ));
+            }
+            squares = squares.saturating_add(u128::from(ticks) * u128::from(ticks));
+        }
+    }
+    if envelope == Envelope::AlignedGrid {
+        let work = mutants
+            .checked_add(1)
+            .and_then(|runs| runs.checked_mul(squares));
+        if exceeds(work, limits.max_total_aligned_grid_work) {
+            return Err(VerifyError::new(
+                Kind::TooManyPoints,
+                "scenarios",
+                format!(
+                    "the aligned-grid windows' ticks squared, on the subject and on each of {mutants} mutants, are {} units of work; at most {} are allowed",
+                    shown(work),
+                    limits.max_total_aligned_grid_work
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Hold `work` to the four budgets of `limits` (already effective), and each tolerance window of
+/// `bound` to the point cap of `envelope`, in the documented order.
+///
+/// # Errors
+/// `too-many-frames`, `too-many-instants`, `too-many-points`, `too-many-load-bytes` or
+/// `too-many-frame-bytes`, for the first bound exceeded; `too-many-frames` also for a scenario
+/// whose `N + 1` passes the replay limits' `max_frames`.
+pub(crate) fn check(
+    work: &Work,
+    bound: &[BoundScenario],
+    envelope: Envelope,
+    limits: &VerifyLimits,
+) -> Result<(), VerifyError> {
     let Work {
         ticks,
         scenarios,
@@ -181,6 +253,7 @@ pub(crate) fn check(work: &Work, limits: &VerifyLimits) -> Result<(), VerifyErro
             ),
         ));
     }
+    check_points(bound, mutants, envelope, limits)?;
     let loaded = work.load_bytes();
     if exceeds(loaded, limits.max_total_load_bytes) {
         return Err(VerifyError::new(

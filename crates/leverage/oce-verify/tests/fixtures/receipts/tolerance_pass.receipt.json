@@ -1,0 +1,75 @@
+{
+  "body": {
+    "clock": {
+      "horizon_s": 1800,
+      "step_s": 60
+    },
+    "funnel_reference": "expectation",
+    "load_warnings": [
+      "unused-boundary-input"
+    ],
+    "load_warnings_total": 1,
+    "scenarios": [
+      {
+        "expectations": 2,
+        "failures": [],
+        "failures_total": 0,
+        "frames": {
+          "executed": 31,
+          "refused": 0,
+          "substituted": 0
+        },
+        "instants": {
+          "checked": 62,
+          "failed": 0,
+          "masked": 0,
+          "passed": 62
+        },
+        "name": "tracks_the_setpoint",
+        "params": [],
+        "status": "pass",
+        "warnings": [],
+        "warnings_total": 0
+      }
+    ],
+    "status": "pass",
+    "totals": {
+      "failures": 0,
+      "frames": {
+        "executed": 31,
+        "refused": 0,
+        "substituted": 0
+      },
+      "instants": {
+        "checked": 62,
+        "failed": 0,
+        "masked": 0,
+        "passed": 62
+      },
+      "scenarios": {
+        "fail": 0,
+        "no_data": 0,
+        "pass": 1,
+        "total": 1
+      },
+      "warnings": 0
+    }
+  },
+  "comparison": {
+    "envelope": "funnel",
+    "envelope_version": "funnel@a12fa96",
+    "mode": "tolerance"
+  },
+  "content_id": "oce:canon1:5b61075c708fb6a68e8abc35f5d6952874fdabd3cf7817eac0559e8a2b5cd9d0",
+  "engine_version": "0.6.0",
+  "kind": "vectors",
+  "passed": true,
+  "receipt_id": "receipt:fnv1a128:293a39304b97c92ef7fd6f2e191a9057",
+  "schema": "oce/receipt/v1",
+  "spec_id": "spec:fnv1a128:265b07f4880abea89199b84a8f1cb632",
+  "timings": {
+    "compare_ms": 0,
+    "load_ms": 0,
+    "run_ms": 0
+  }
+}

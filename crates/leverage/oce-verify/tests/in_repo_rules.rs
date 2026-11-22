@@ -57,7 +57,10 @@ fn both_files_load_with_the_counts_the_note_records() {
             assert!(!scenario.expectations().is_empty());
         }
         for (name, window) in windows(set) {
-            assert!(matches!(window.equals(), Literal::Boolean(_)), "{name}");
+            assert!(
+                matches!(window.equals(), Some(Literal::Boolean(_))),
+                "{name}"
+            );
             assert_eq!(window.output(), "yFault", "{name}");
         }
     }
@@ -129,7 +132,13 @@ fn the_persistence_rule_holds_its_scenarios_in_file_order_with_their_windows() {
     let ticks: Vec<(u64, u64, Literal)> = windows(&set)
         .iter()
         .filter(|(name, _)| *name == "both_open")
-        .map(|(_, window)| (window.first_tick(), window.last_tick(), window.equals()))
+        .map(|(_, window)| {
+            (
+                window.first_tick(),
+                window.last_tick(),
+                window.equals().expect("an exact window"),
+            )
+        })
         .collect();
     assert_eq!(
         ticks,

@@ -72,6 +72,7 @@ fn value(text: &str) -> Value {
 /// A document with every optional key present, one object of every closed shape.
 const FULL: &str = r#"{
   "schema": "oce/vectors/v1",
+  "envelope": "aligned-grid",
   "clock": { "step_s": 60, "horizon_s": 1800 },
   "params": { "a.k": 1 },
   "mutants": [ { "path": "m/a.cxf.json", "description": "e" } ],
@@ -82,8 +83,11 @@ const FULL: &str = r#"{
       "params": { "b.k": 2.5 },
       "inputs": { "u": [ { "t": 0, "value": 1 } ], "v": true },
       "expect": [
-        { "output": "y", "from_s": 0, "to_s": 1800, "equals": false },
-        { "diagnostic": { "block": "CDL.Utilities.Assert", "message": "m" }, "at_s": 60 }
+        { "output": "y", "from_s": 0, "to_s": 1800, "equals": false, "when": [ "v" ] },
+        { "diagnostic": { "block": "CDL.Utilities.Assert", "message": "m" }, "at_s": 60 },
+        { "output": "z", "from_s": 0, "to_s": 1800,
+          "within": { "atolx": 60, "atoly": 0.5, "ltolx": 0.25, "ltoly": 0.01, "rtolx": 0.1, "rtoly": 0 },
+          "of": [ { "t": 0, "value": 1.5 } ], "when": [ "v", "u" ] }
       ]
     }
   ]
@@ -101,6 +105,13 @@ fn every_document_the_reader_loads_conforms_to_the_schema() {
         "canonical/every_field.json",
         "canonical/AHU-0016.json",
         "canonical/AHU-0004.json",
+        "sets/tolerance_every_key.json",
+        "canonical/tolerance_every_key.json",
+        "note/worked_example.json",
+        "receipts/tolerance_pass.vectors.json",
+        "receipts/tolerance_fail.vectors.json",
+        "receipts/tolerance_masked.vectors.json",
+        "receipts/tolerance_no_data.vectors.json",
     ] {
         documents.push(String::from_utf8(fixture_bytes(fixture)).expect("UTF-8"));
     }
@@ -126,6 +137,9 @@ const OBJECTS: &[(&str, &str)] = &[
     ("Window", "/scenarios/0/expect/0"),
     ("Instant", "/scenarios/0/expect/1"),
     ("Diagnostic", "/scenarios/0/expect/1/diagnostic"),
+    ("ToleranceWindow", "/scenarios/0/expect/2"),
+    ("Within", "/scenarios/0/expect/2/within"),
+    ("OfStep", "/scenarios/0/expect/2/of/0"),
 ];
 
 fn definition<'a>(root: &'a Value, name: &str) -> &'a Value {
@@ -189,12 +203,11 @@ fn the_reader_knows_exactly_the_keys_the_schema_lists() {
     let full = value(FULL);
     for (name, pointer) in OBJECTS {
         let def = definition(&root, name);
+        // An object whose every key is optional (`Within`) has no `required`.
         let required: Vec<&str> = def["required"]
             .as_array()
-            .expect("required")
-            .iter()
-            .map(|key| key.as_str().expect("key"))
-            .collect();
+            .map(|keys| keys.iter().map(|key| key.as_str().expect("key")).collect())
+            .unwrap_or_default();
         for key in keys(&def["properties"]) {
             // Without the key: refused as missing when the schema requires it, loaded when not.
             let mut without = full.clone();
@@ -203,7 +216,12 @@ fn the_reader_knows_exactly_the_keys_the_schema_lists() {
                 .and_then(Value::as_object_mut)
                 .expect("the object")
                 .remove(&key);
-            let (expected, verdict) = if required.contains(&key.as_str()) {
+            // `within` and `of` are a pair: either one alone is not a whole form, so the reader
+            // calls the expectation ambiguous where the schema calls the key missing.
+            let pair = *name == "ToleranceWindow" && (key == "within" || key == "of");
+            let (expected, verdict) = if pair {
+                ("ambiguous-expectation", false)
+            } else if required.contains(&key.as_str()) {
                 ("missing-key", false)
             } else {
                 ("loaded", true)
@@ -234,7 +252,55 @@ fn the_reader_knows_exactly_the_keys_the_schema_lists() {
 fn the_schema_and_the_reader_accept_and_refuse_the_same_value_shapes() {
     let root = schema();
     // (the pointer of a value in FULL, replacements, whether each is the right shape there)
-    let cases: [(&str, &[(&str, bool)]); 7] = [
+    let cases: [(&str, &[(&str, bool)]); 13] = [
+        (
+            "/scenarios/0/expect/2/of",
+            &[
+                ("1", true),
+                ("-2.5", true),
+                ("[{\"t\": 0, \"value\": 2}]", true),
+                ("true", false),
+                ("\"1\"", false),
+                ("null", false),
+                ("{}", false),
+                ("[[0, 1]]", false),
+            ],
+        ),
+        (
+            "/scenarios/0/expect/2/of/0/value",
+            &[
+                ("2", true),
+                ("true", false),
+                ("\"2\"", false),
+                ("null", false),
+            ],
+        ),
+        (
+            "/scenarios/0/expect/2/within/atoly",
+            &[
+                ("1", true),
+                ("0.0", true),
+                ("true", false),
+                ("\"1\"", false),
+            ],
+        ),
+        (
+            "/scenarios/0/expect/2/within",
+            &[("{\"rtoly\": 1}", true), ("[1]", false), ("1", false)],
+        ),
+        (
+            "/scenarios/0/expect/0/when",
+            &[
+                ("[\"v\"]", true),
+                ("\"v\"", false),
+                ("[1]", false),
+                ("{}", false),
+            ],
+        ),
+        (
+            "/envelope",
+            &[("\"funnel\"", true), ("1", false), ("[\"funnel\"]", false)],
+        ),
         (
             "/scenarios/0/expect/0/equals",
             &[
@@ -330,6 +396,13 @@ fn the_schema_and_the_reader_accept_and_refuse_the_same_value_shapes() {
     retagged["schema"] = json!("cxf-library/vectors/v1");
     assert!(!conforms(&retagged, &root, &root));
     assert_eq!(code_of(&document(&retagged)), "unknown-schema");
+    // The envelope: the schema's two-value enum and the reader's `unknown-envelope`.
+    for name in ["Funnel", "aligned_grid", ""] {
+        let mut renamed = full.clone();
+        renamed["envelope"] = json!(name);
+        assert!(!conforms(&renamed, &root, &root), "{name}");
+        assert_eq!(code_of(&document(&renamed)), "unknown-envelope", "{name}");
+    }
 }
 
 #[test]
@@ -340,6 +413,10 @@ fn an_expectation_of_both_forms_or_neither_fails_the_schema_and_the_reader() {
         json!({}),
         json!({"output": "y", "from_s": 0, "to_s": 60, "equals": false, "at_s": 60}),
         json!({"diagnostic": {"block": "B"}, "at_s": 60, "equals": true}),
+        json!({"diagnostic": {"block": "B"}, "at_s": 60, "when": ["v"]}),
+        json!({"output": "y", "from_s": 0, "to_s": 60, "equals": 1, "within": {"atoly": 1}, "of": 1}),
+        json!({"output": "y", "from_s": 0, "to_s": 60, "within": {"atoly": 1}}),
+        json!({"output": "y", "from_s": 0, "to_s": 60, "of": 1}),
     ] {
         let mut edited = full.clone();
         edited["scenarios"][0]["expect"][0] = expectation.clone();
@@ -358,7 +435,25 @@ fn the_schema_admits_documents_only_the_readers_rules_refuse() {
     // order, a window's ticks, names. Each conforms and is refused with its own code.
     let root = schema();
     let full = value(FULL);
-    let edits: [(&str, &str, &str); 6] = [
+    let edits: [(&str, &str, &str); 12] = [
+        (
+            "/scenarios/0/expect/2/within/ltolx",
+            "1.5",
+            "invalid-tolerance",
+        ),
+        (
+            "/scenarios/0/expect/2/within/atoly",
+            "-1",
+            "invalid-tolerance",
+        ),
+        ("/scenarios/0/expect/2/within", "{}", "invalid-tolerance"),
+        (
+            "/scenarios/0/expect/2/of",
+            "[{\"t\": 60, \"value\": 1}]",
+            "of-not-from-window-start",
+        ),
+        ("/scenarios/0/expect/2/when", "[]", "when-empty"),
+        ("/scenarios/0/expect/2/of", "[]", "step-list-empty"),
         ("/clock/horizon_s", "1830", "horizon-off-cadence"),
         ("/clock/step_s", "0", "invalid-clock"),
         ("/scenarios/0/inputs/u", "[]", "step-list-empty"),

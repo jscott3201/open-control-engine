@@ -4,16 +4,17 @@
 //! required key that is absent is `missing-key` at the object, and a value of another JSON type
 //! is `wrong-type` at the value; nothing is skipped, defaulted or read as `null`. The count
 //! bounds of [`VerifyLimits`] are applied as the items arrive, so a set past a bound is refused
-//! before the item past it is read. A time's integer token is held to
-//! [`MAX_TIME_INTEGER`]. The reader stops at the first refusal in document order.
+//! before the item past it is read. The integer token of a time, a tolerance or an expected
+//! value (`of`) is held to [`MAX_TIME_INTEGER`]. The reader stops at the first refusal in document order.
 //!
 //! [`crate::strict::scan`] runs before this pass and refuses every lexical defect and repeated
 //! key, so the cursor's own refusals do not occur here; they are still returned, never unwrapped,
 //! and a repeated key is still refused, so this reader is strict standing alone.
 
 use crate::dto::{
-    ClockDto, DiagnosticDto, Entries, ExpectationDto, InputDto, InstantDto, MutantDto, Optional,
-    ScenarioDto, Seconds, StepDto, ValueDto, VectorSetDto, WindowDto,
+    Amount, ClockDto, DiagnosticDto, Entries, EnvelopeName, ExpectationDto, InputDto, InstantDto,
+    MutantDto, OfDto, OfStepDto, Optional, ScenarioDto, Seconds, StepDto, ToleranceWindowDto,
+    ValueDto, VectorSetDto, WindowDto, WithinDto,
 };
 use crate::error::{Location, VectorErrorKind};
 use crate::limits::{MAX_TIME_INTEGER, VerifyLimits};
@@ -23,8 +24,9 @@ use crate::strict::{Cursor, Kind, Read, Refusal, duplicate_key};
 /// Read `text` as one vector set under `limits` (already [`VerifyLimits::effective`]).
 ///
 /// # Errors
-/// `unknown-key`, `missing-key`, `wrong-type`, `ambiguous-expectation`, a count bound or
-/// `integer-out-of-range` for a time, at the first such place in document order; any strict-JSON
+/// `unknown-key`, `missing-key`, `wrong-type`, `ambiguous-expectation`, a count bound
+/// (`too-many-when-signals` among them) or `integer-out-of-range` for a time, a tolerance or an
+/// expected value, at the first such place in document order; any strict-JSON
 /// refusal the cursor meets.
 pub(crate) fn decode(text: &str, limits: &VerifyLimits) -> Read<VectorSetDto> {
     let mut cursor = Cursor::new(text);
@@ -75,13 +77,19 @@ fn vector_set(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<VectorSetD
     let mut object = cursor.open_object()?;
     let (mut schema, mut clock_value, mut params_value, mut scenarios_value) =
         (None, None, None, None);
-    let mut mutants_value = None;
+    let (mut mutants_value, mut envelope) = (None, None);
     while let Some((key, at)) = cursor.next_key(&mut object)? {
         match key.as_str() {
             "schema" => {
                 cursor.expect(Kind::String, "the schema tag, a string")?;
                 put(&mut schema, cursor.string()?, &key, at)?;
             }
+            "envelope" => put(
+                &mut envelope,
+                EnvelopeName(text(cursor, "the envelope's name")?),
+                &key,
+                at,
+            )?,
             "clock" => put(&mut clock_value, clock(cursor)?, &key, at)?,
             "params" => put(&mut params_value, params(cursor, limits)?, &key, at)?,
             "mutants" => put(&mut mutants_value, mutants(cursor, limits)?, &key, at)?,
@@ -96,6 +104,7 @@ fn vector_set(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<VectorSetD
         params: Optional(params_value),
         mutants: Optional(mutants_value),
         scenarios: required(scenarios_value, "scenarios", opened)?,
+        envelope: Optional(envelope),
     })
 }
 
@@ -155,7 +164,20 @@ fn clock(cursor: &mut Cursor<'_>) -> Read<ClockDto> {
 
 /// A time: a number whose integer token, if it is one, is within [`MAX_TIME_INTEGER`].
 fn seconds(cursor: &mut Cursor<'_>) -> Read<Seconds> {
-    let at = cursor.expect(Kind::Number, "a time in seconds, a number")?;
+    exact_number(cursor, "a time in seconds, a number", "time").map(Seconds)
+}
+
+/// A tolerance or an expected signal's value: a number whose integer token, if it is one, is
+/// within [`MAX_TIME_INTEGER`], as a time's is (so an integer token never names a binary64 other
+/// than the one it spells).
+fn amount(cursor: &mut Cursor<'_>, what: &str) -> Read<Amount> {
+    exact_number(cursor, what, "number").map(Amount)
+}
+
+/// A number whose integer token, if it is one, is within [`MAX_TIME_INTEGER`]; `what` names the
+/// position in a `wrong-type` refusal and `noun` in an `integer-out-of-range` one.
+fn exact_number(cursor: &mut Cursor<'_>, what: &str, noun: &str) -> Read<Number> {
+    let at = cursor.expect(Kind::Number, what)?;
     let number = cursor.number()?;
     if let Number::Integer(value) = number
         && value.unsigned_abs() > MAX_TIME_INTEGER.unsigned_abs()
@@ -164,11 +186,11 @@ fn seconds(cursor: &mut Cursor<'_>) -> Read<Seconds> {
             VectorErrorKind::IntegerOutOfRange,
             at,
             format!(
-                "an integer time beyond {MAX_TIME_INTEGER} is not exact in binary64; write it as a real"
+                "an integer {noun} beyond {MAX_TIME_INTEGER} is not exact in binary64; write it as a real"
             ),
         ));
     }
-    Ok(Seconds(number))
+    Ok(number)
 }
 
 /// A value: a number or a boolean.
@@ -349,54 +371,189 @@ fn expectations(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<Vec<Expe
                 limits.max_expectations,
             ));
         }
-        all.push(expectation(cursor)?);
+        all.push(expectation(cursor, limits)?);
     }
     Ok(all)
 }
 
-/// One expectation. The six keys of both forms are read into one closed object; then exactly one
-/// form must be present, and whole.
-fn expectation(cursor: &mut Cursor<'_>) -> Read<ExpectationDto> {
+/// The keys of one expectation as read, before its form is decided.
+#[derive(Default)]
+struct ExpectationKeys {
+    output: Option<String>,
+    from_s: Option<Seconds>,
+    to_s: Option<Seconds>,
+    equals: Option<ValueDto>,
+    within: Option<WithinDto>,
+    of: Option<OfDto>,
+    when: Option<Vec<String>>,
+    diagnostic: Option<DiagnosticDto>,
+    at_s: Option<Seconds>,
+}
+
+const NEITHER: &str = "an expectation is a window (output, from_s, to_s and equals, or within and of; when optional) or an instant (diagnostic, at_s)";
+
+/// One expectation. The nine keys of the three forms are read into one closed object; then
+/// exactly one form must be present, and whole: a window with `equals`, a window with the pair
+/// `within` and `of` (either with an optional `when`), or an instant. Any other combination, a
+/// `when` on an instant included, is `ambiguous-expectation`.
+fn expectation(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<ExpectationDto> {
     cursor.expect(Kind::Object, "an expectation, an object")?;
     let mut object = cursor.open_object()?;
-    let (mut output, mut from_s, mut to_s, mut equals) = (None, None, None, None);
-    let (mut diagnostic_value, mut at_s) = (None, None);
+    let mut keys = ExpectationKeys::default();
     while let Some((key, at)) = cursor.next_key(&mut object)? {
         match key.as_str() {
-            "output" => put(&mut output, text(cursor, "the output name")?, &key, at)?,
-            "from_s" => put(&mut from_s, seconds(cursor)?, &key, at)?,
-            "to_s" => put(&mut to_s, seconds(cursor)?, &key, at)?,
-            "equals" => put(&mut equals, value(cursor)?, &key, at)?,
-            "diagnostic" => put(&mut diagnostic_value, diagnostic(cursor)?, &key, at)?,
-            "at_s" => put(&mut at_s, seconds(cursor)?, &key, at)?,
+            "output" => put(&mut keys.output, text(cursor, "the output name")?, &key, at)?,
+            "from_s" => put(&mut keys.from_s, seconds(cursor)?, &key, at)?,
+            "to_s" => put(&mut keys.to_s, seconds(cursor)?, &key, at)?,
+            "equals" => put(&mut keys.equals, value(cursor)?, &key, at)?,
+            "within" => put(&mut keys.within, within(cursor)?, &key, at)?,
+            "of" => put(&mut keys.of, of(cursor)?, &key, at)?,
+            "when" => put(&mut keys.when, when(cursor, limits)?, &key, at)?,
+            "diagnostic" => put(&mut keys.diagnostic, diagnostic(cursor)?, &key, at)?,
+            "at_s" => put(&mut keys.at_s, seconds(cursor)?, &key, at)?,
             _ => return Err(unknown_key(&key, at)),
         }
     }
     let opened = object.opened();
-    let window = output.is_some() || from_s.is_some() || to_s.is_some() || equals.is_some();
-    let instant = diagnostic_value.is_some() || at_s.is_some();
+    let ambiguous = |detail: &str| {
+        Err(Refusal::new(
+            VectorErrorKind::AmbiguousExpectation,
+            opened,
+            format!("{NEITHER}; {detail}"),
+        ))
+    };
+    let tolerance = keys.within.is_some() || keys.of.is_some();
+    let window = keys.output.is_some()
+        || keys.from_s.is_some()
+        || keys.to_s.is_some()
+        || keys.equals.is_some()
+        || tolerance
+        || keys.when.is_some();
+    let instant = keys.diagnostic.is_some() || keys.at_s.is_some();
     match (window, instant) {
-        (true, false) => Ok(ExpectationDto::Window(WindowDto {
-            output: required(output, "output", opened)?,
-            from_s: required(from_s, "from_s", opened)?,
-            to_s: required(to_s, "to_s", opened)?,
-            equals: required(equals, "equals", opened)?,
-        })),
+        (true, true) => ambiguous("this one mixes the window and instant keys"),
+        (false, false) => ambiguous("this one is neither"),
         (false, true) => Ok(ExpectationDto::Instant(InstantDto {
-            diagnostic: required(diagnostic_value, "diagnostic", opened)?,
-            at_s: required(at_s, "at_s", opened)?,
+            diagnostic: required(keys.diagnostic, "diagnostic", opened)?,
+            at_s: required(keys.at_s, "at_s", opened)?,
         })),
-        (true, true) => Err(Refusal::new(
-            VectorErrorKind::AmbiguousExpectation,
-            opened,
-            "an expectation is a window (output, from_s, to_s, equals) or an instant (diagnostic, at_s), not both",
-        )),
-        (false, false) => Err(Refusal::new(
-            VectorErrorKind::AmbiguousExpectation,
-            opened,
-            "an expectation is a window (output, from_s, to_s, equals) or an instant (diagnostic, at_s); this one is neither",
+        (true, false) if keys.equals.is_some() && tolerance => {
+            ambiguous("this window has both equals and a tolerance")
+        }
+        (true, false) if keys.within.is_some() != keys.of.is_some() => {
+            ambiguous("a tolerance window needs within and of together")
+        }
+        (true, false) if tolerance => Ok(ExpectationDto::ToleranceWindow(Box::new(
+            ToleranceWindowDto {
+                output: required(keys.output, "output", opened)?,
+                from_s: required(keys.from_s, "from_s", opened)?,
+                to_s: required(keys.to_s, "to_s", opened)?,
+                within: required(keys.within, "within", opened)?,
+                of: required(keys.of, "of", opened)?,
+                when: Optional(keys.when),
+            },
+        ))),
+        (true, false) => Ok(ExpectationDto::Window(WindowDto {
+            output: required(keys.output, "output", opened)?,
+            from_s: required(keys.from_s, "from_s", opened)?,
+            to_s: required(keys.to_s, "to_s", opened)?,
+            equals: required(keys.equals, "equals", opened)?,
+            when: Optional(keys.when),
+        })),
+    }
+}
+
+/// A `within` object: the six tolerance names, each optional. That at least one is present, and
+/// each value's range, are rules `validate` applies.
+fn within(cursor: &mut Cursor<'_>) -> Read<WithinDto> {
+    cursor.expect(Kind::Object, "the tolerances, an object")?;
+    let mut object = cursor.open_object()?;
+    let mut tolerances = WithinDto::default();
+    while let Some((key, at)) = cursor.next_key(&mut object)? {
+        let slot = match key.as_str() {
+            "atolx" => &mut tolerances.atolx,
+            "atoly" => &mut tolerances.atoly,
+            "ltolx" => &mut tolerances.ltolx,
+            "ltoly" => &mut tolerances.ltoly,
+            "rtolx" => &mut tolerances.rtolx,
+            "rtoly" => &mut tolerances.rtoly,
+            _ => return Err(unknown_key(&key, at)),
+        };
+        if slot.0.is_some() {
+            return Err(duplicate_key(&key, at));
+        }
+        slot.0 = Some(amount(cursor, "a tolerance, a number")?);
+    }
+    Ok(tolerances)
+}
+
+/// An `of`: a number, or a step list of `{ "t", "value" }` whose values are numbers. Anything
+/// else, a boolean or a string included, is `wrong-type` (decision 39).
+fn of(cursor: &mut Cursor<'_>) -> Read<OfDto> {
+    let (kind, at) = cursor.peek()?;
+    match kind {
+        Kind::Number => amount(cursor, "the expected value, a number").map(OfDto::Constant),
+        Kind::Array => {
+            let mut list = cursor.open_list()?;
+            let mut steps = Vec::new();
+            while cursor.next_item(&mut list)? {
+                steps.push(of_step(cursor)?);
+            }
+            Ok(OfDto::Steps(steps))
+        }
+        other => Err(Refusal::new(
+            VectorErrorKind::WrongType,
+            at,
+            format!(
+                "expected the expected signal (a number or a step list), found {}",
+                other.described()
+            ),
         )),
     }
+}
+
+fn of_step(cursor: &mut Cursor<'_>) -> Read<OfStepDto> {
+    cursor.expect(Kind::Object, "a step, an object")?;
+    let mut object = cursor.open_object()?;
+    let (mut t, mut held) = (None, None);
+    while let Some((key, at)) = cursor.next_key(&mut object)? {
+        match key.as_str() {
+            "t" => put(&mut t, seconds(cursor)?, &key, at)?,
+            "value" => put(
+                &mut held,
+                amount(cursor, "the expected value, a number")?,
+                &key,
+                at,
+            )?,
+            _ => return Err(unknown_key(&key, at)),
+        }
+    }
+    let opened = object.opened();
+    Ok(OfStepDto {
+        t: required(t, "t", opened)?,
+        value: required(held, "value", opened)?,
+    })
+}
+
+/// A `when` list of names, at most [`VerifyLimits::max_when_signals`] of them, refused as the
+/// name past the bound arrives. An empty list and an empty name are rules `validate` applies.
+fn when(cursor: &mut Cursor<'_>, limits: &VerifyLimits) -> Read<Vec<String>> {
+    cursor.expect(Kind::Array, "the when names, a list")?;
+    let mut list = cursor.open_list()?;
+    let mut names = Vec::new();
+    while cursor.next_item(&mut list)? {
+        let (_, at) = cursor.peek()?;
+        if exceeds(names.len() + 1, limits.max_when_signals) {
+            return Err(too_many(
+                VectorErrorKind::TooManyWhenSignals,
+                at,
+                "names in one when",
+                limits.max_when_signals,
+            ));
+        }
+        names.push(text(cursor, "a when name")?);
+    }
+    Ok(names)
 }
 
 fn diagnostic(cursor: &mut Cursor<'_>) -> Read<DiagnosticDto> {

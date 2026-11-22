@@ -342,6 +342,7 @@ fn first_catch(
             &bound.expectations,
             runs.outputs,
             caps,
+            runs.envelopes(),
             &subject,
         )?;
         let failed = ran.refused.is_some() || compared.instants.failed > 0;

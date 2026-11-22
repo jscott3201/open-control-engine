@@ -58,8 +58,7 @@ pub enum VectorErrorKind {
     StringTooLong,
     /// An object writes one key twice.
     DuplicateKey,
-    /// An object carries a key the format does not define. `within`, `of` and `when` are such
-    /// keys: refused, never ignored.
+    /// An object carries a key the format does not define: refused, never ignored.
     UnknownKey,
     /// An object lacks a required key.
     MissingKey,
@@ -108,8 +107,23 @@ pub enum VectorErrorKind {
     WindowOutsideClock,
     /// A window holds no tick of the clock.
     WindowUncovered,
-    /// An expectation is not exactly one of the window form and the instant form.
+    /// An expectation is not exactly one of its forms: a window with `equals`, a window with
+    /// `within` and `of`, or an instant. A window with both `equals` and `within`, one of
+    /// `within` and `of` without the other, and a `when` on an instant are all this.
     AmbiguousExpectation,
+    /// The set's `envelope` is a string other than `funnel` and `aligned-grid`.
+    UnknownEnvelope,
+    /// A `within` names no tolerance, a tolerance is negative, or `ltolx` is above 1 (funnel's
+    /// loop removal defines no result there).
+    InvalidTolerance,
+    /// An `of` step list's first `t` is not the window's `from_s`.
+    OfNotFromWindowStart,
+    /// An `of` step's `t` is after the window's `to_s`.
+    OfStepAfterWindow,
+    /// A `when` names no signal.
+    WhenEmpty,
+    /// A `when` names more signals than [`crate::VerifyLimits::max_when_signals`].
+    TooManyWhenSignals,
     /// A diagnostic `at_s` is not a tick of the clock.
     InstantOffCadence,
     /// A mutant path that is absolute, has an empty, `.` or `..` segment, or holds a backslash:
@@ -154,6 +168,12 @@ impl VectorErrorKind {
         Self::WindowOutsideClock,
         Self::WindowUncovered,
         Self::AmbiguousExpectation,
+        Self::UnknownEnvelope,
+        Self::InvalidTolerance,
+        Self::OfNotFromWindowStart,
+        Self::OfStepAfterWindow,
+        Self::WhenEmpty,
+        Self::TooManyWhenSignals,
         Self::InstantOffCadence,
         Self::MutantPathInvalid,
         Self::DuplicateMutant,
@@ -195,6 +215,12 @@ impl VectorErrorKind {
             Self::WindowOutsideClock => "window-outside-clock",
             Self::WindowUncovered => "window-uncovered",
             Self::AmbiguousExpectation => "ambiguous-expectation",
+            Self::UnknownEnvelope => "unknown-envelope",
+            Self::InvalidTolerance => "invalid-tolerance",
+            Self::OfNotFromWindowStart => "of-not-from-window-start",
+            Self::OfStepAfterWindow => "of-step-after-window",
+            Self::WhenEmpty => "when-empty",
+            Self::TooManyWhenSignals => "too-many-when-signals",
             Self::InstantOffCadence => "instant-off-cadence",
             Self::MutantPathInvalid => "mutant-path-invalid",
             Self::DuplicateMutant => "duplicate-mutant",
@@ -236,6 +262,12 @@ pub const VECTOR_ERROR_CODES: &[&str] = &[
     "window-outside-clock",
     "window-uncovered",
     "ambiguous-expectation",
+    "unknown-envelope",
+    "invalid-tolerance",
+    "of-not-from-window-start",
+    "of-step-after-window",
+    "when-empty",
+    "too-many-when-signals",
     "instant-off-cadence",
     "mutant-path-invalid",
     "duplicate-mutant",
@@ -389,15 +421,21 @@ mod tests {
             K::WindowOutsideClock => 29,
             K::WindowUncovered => 30,
             K::AmbiguousExpectation => 31,
-            K::InstantOffCadence => 32,
-            K::MutantPathInvalid => 33,
-            K::DuplicateMutant => 34,
+            K::UnknownEnvelope => 32,
+            K::InvalidTolerance => 33,
+            K::OfNotFromWindowStart => 34,
+            K::OfStepAfterWindow => 35,
+            K::WhenEmpty => 36,
+            K::TooManyWhenSignals => 37,
+            K::InstantOffCadence => 38,
+            K::MutantPathInvalid => 39,
+            K::DuplicateMutant => 40,
         }
     }
 
     #[test]
     fn the_code_list_is_every_kind_in_declaration_order() {
-        assert_eq!(VectorErrorKind::ALL.len(), 35);
+        assert_eq!(VectorErrorKind::ALL.len(), 41);
         for (index, kind) in VectorErrorKind::ALL.iter().enumerate() {
             assert_eq!(declared_index(*kind), index, "{kind:?}");
         }

@@ -1,0 +1,15 @@
+{
+  "schema": "oce/vectors/v1",
+  "clock": { "step_s": 60, "horizon_s": 1800 },
+  "scenarios": [
+    {
+      "name": "never_enabled",
+      "description": "b is false throughout, so every instant of the window is masked.",
+      "inputs": { "ahu.T": 35.0, "zone.T": 2.0, "n": 3, "b": false, "lim": 5.0 },
+      "expect": [
+        { "output": "ahu.y", "from_s": 0, "to_s": 1800,
+          "within": { "atoly": 0.5 }, "of": 21.0, "when": [ "b" ] }
+      ]
+    }
+  ]
+}

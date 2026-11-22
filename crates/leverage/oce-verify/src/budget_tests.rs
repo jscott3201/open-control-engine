@@ -3,6 +3,7 @@
 //! or panic.
 
 use super::{Work, check};
+use crate::envelope::Envelope;
 use crate::limits::VerifyLimits;
 
 /// A run of one scenario of one tick on a one-byte subject with no mutant, no edit list and no
@@ -19,10 +20,12 @@ fn least() -> Work {
 }
 
 fn code(work: &Work, limits: &VerifyLimits) -> Option<&'static str> {
-    check(work, limits).err().map(|error| {
-        assert_eq!(error.subject(), "scenarios", "{error}");
-        error.code()
-    })
+    check(work, &[], Envelope::Funnel, limits)
+        .err()
+        .map(|error| {
+            assert_eq!(error.subject(), "scenarios", "{error}");
+            error.code()
+        })
 }
 
 #[test]
@@ -139,6 +142,8 @@ fn a_scenario_past_the_replay_frame_limit_is_refused_first_and_names_the_clock()
             ticks: 31,
             ..least()
         },
+        &[],
+        Envelope::Funnel,
         &limits,
     )
     .expect_err("past the replay limit");
@@ -152,7 +157,7 @@ fn a_scenario_past_the_replay_frame_limit_is_refused_first_and_names_the_clock()
         scenarios: 0,
         ..least()
     };
-    assert!(check(&none, &limits).is_ok());
+    assert!(check(&none, &[], Envelope::Funnel, &limits).is_ok());
 }
 
 #[test]

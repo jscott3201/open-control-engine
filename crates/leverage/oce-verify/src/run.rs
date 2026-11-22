@@ -20,7 +20,13 @@
 //!    not, and coverage is not checked.
 //! 3. Otherwise every tick ran: `Trace::check_coverage` over the windows, where a miss is the
 //!    error `window-uncovered`.
-//! 4. Every tick in every window and every diagnostic instant is compared ([`crate::compare`]).
+//! 4. Every tick in every window and every diagnostic instant is compared ([`crate::compare`]);
+//!    a tolerance window under the set's envelope ([`crate::tolerance`]), where an expected
+//!    signal outside its own envelope, or an envelope that gives no result, is the error
+//!    `compare-refused`.
+//!
+//! A scenario with a `when` that names an input runs with `TraceOptions::inputs` set, so its
+//! trace keeps the inputs the mask reads; no other scenario's trace changes.
 //!
 //! A replay that ends in an error is `replay-failed` with its cause. Chunk sizes never change a
 //! trace, so they never change a receipt byte.
@@ -32,14 +38,14 @@ use oce_replay::{
 };
 
 use crate::bind::{self, BoundExpectation, BoundScenario};
-use crate::compare::{self, Caps, Compared};
+use crate::compare::{self, Caps, Compared, Envelopes};
 use crate::edit_lists::Edits;
 use crate::limits::VerifyLimits;
 use crate::parameters;
 use crate::receipt::{
-    Comparison, ComparisonMode, FrameCounts, ParamEdit, RECEIPT_SCHEMA, Receipt, ReceiptBody,
-    ReceiptHeader, ReceiptKind, ReceiptValue, ScenarioCounts, ScenarioReceipt, ScenarioStatus,
-    Timings, Totals, VectorBody,
+    Comparison, FrameCounts, ParamEdit, RECEIPT_SCHEMA, Receipt, ReceiptBody, ReceiptHeader,
+    ReceiptKind, ReceiptValue, ScenarioCounts, ScenarioReceipt, ScenarioStatus, Timings, Totals,
+    VectorBody,
 };
 use crate::refusal_classes::replay_failure_cause;
 use crate::vector_set::VectorSet;
@@ -158,6 +164,7 @@ pub fn run_vectors(
             &bound_scenario.expectations,
             &bound.outputs,
             caps,
+            runs.envelopes(),
             &subject,
         )?;
         scenarios.push(scenario_receipt(
@@ -179,6 +186,12 @@ pub fn run_vectors(
             body.status == ScenarioStatus::Pass,
         )?);
     }
+    // Decision 42: `tolerance` when any window of the set uses `within`, whatever ran.
+    let comparison = if set.uses_tolerance() {
+        Comparison::tolerance(set.envelope())
+    } else {
+        Comparison::exact()
+    };
     let mut receipt = Receipt {
         header: ReceiptHeader {
             schema: RECEIPT_SCHEMA.to_owned(),
@@ -186,9 +199,7 @@ pub fn run_vectors(
             content_id: bound.content_id,
             engine_version: bound.engine_version,
             spec_id: set.spec_id(),
-            comparison: Comparison {
-                mode: ComparisonMode::Exact,
-            },
+            comparison,
             passed: body.status == ScenarioStatus::Pass,
             receipt_id: String::new(),
             timings: options.timings.unwrap_or_default(),
@@ -253,6 +264,16 @@ pub(crate) struct Runs<'r> {
     pub(crate) limits: &'r VerifyLimits,
     /// Frames per `Replay::advance`.
     pub(crate) chunk: usize,
+}
+
+impl Runs<'_> {
+    /// The envelope the set's tolerance windows are compared under, with the run's limits.
+    pub(crate) fn envelopes(&self) -> Envelopes {
+        Envelopes {
+            envelope: self.set.envelope(),
+            limits: self.limits.compare,
+        }
+    }
 }
 
 /// One scenario's run on a freshly loaded engine of `cxf` (the subject's or a mutant's bytes).
@@ -339,6 +360,9 @@ fn replay_of(
         step: clock.step_s(),
     });
     options.limits = limits.replay;
+    // Decision 46: a scenario with a `when` that names an input keeps the inputs; no other
+    // scenario's trace changes.
+    options.trace.inputs = scenario.needs_inputs;
     Replay::new(engine, map, source, options).map_err(|error| replay_failed(subject, &error))
 }
 

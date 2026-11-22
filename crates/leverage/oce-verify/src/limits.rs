@@ -12,6 +12,8 @@
 
 use oce_replay::ReplayLimits;
 
+use crate::compare_limits::CompareLimits;
+
 /// The deepest nesting of objects and arrays. The deepest well-formed set nests six levels (set,
 /// scenarios, scenario, inputs, step list, step); two more are allowed so that a misplaced value
 /// is reported as a wrong type or an unknown key, not as depth.
@@ -83,6 +85,28 @@ pub struct VerifyLimits {
     /// the document that runs it. Maximum 2^40 = 1,099,511,627,776; past it the refusal is
     /// `too-many-frame-bytes`, decided at bind's budget step.
     pub max_total_frame_bytes: u64,
+    /// Names in one `when` list. Maximum 16; past it the refusal is `too-many-when-signals`, at
+    /// load. A mask costs its names times its window's ticks, so this bounds that product.
+    pub max_when_signals: u32,
+    /// The limits every tolerance window's two envelope comparisons run under
+    /// ([`CompareLimits`]): the two point caps, checked at bind's budget step (a `within` window
+    /// with more ticks than the cap of the set's envelope is `too-many-points`), and the
+    /// loop-removal work bound, which a comparison that passes it refuses as `compare-refused`
+    /// with the cause `work-limit-exceeded`. Each field is lowered to its documented maximum,
+    /// never raised.
+    pub compare: CompareLimits,
+    /// Work the `aligned-grid` comparisons of one run may ask for: `(1 + mutants)` times the sum,
+    /// over the tolerance windows of a set whose envelope is `aligned-grid`, of each window's
+    /// ticks squared, since that envelope tests every grid point against every rectangle.
+    /// Maximum 2^32 = 4,294,967,296 (four windows at the aligned-grid point cap of 32,768
+    /// ticks, or fourteen days at 5 s); past it the refusal is `too-many-points`, at bind's
+    /// budget step, before any comparison work (owner ruling of 2026-11-21). The worst case,
+    /// measured in a release build on arm64, end to end at exactly 2^32 units: any nonzero `x`
+    /// tolerance gives each rectangle three grid points, tripling the grid, so a window's two
+    /// comparisons cost about 2.25 ns per unit; 4,096 windows of 1,024 ticks with `atolx` 0.3
+    /// took 9.7 s and four windows of 32,768 ticks 7.2 s, against 3.1 s and 2.4 s with a `y`
+    /// tolerance only. So the largest admitted run takes about ten seconds.
+    pub max_total_aligned_grid_work: u64,
     /// The limits each scenario's replay runs under ([`oce_replay::ReplayLimits`]); each field is
     /// lowered to that crate's documented maximum, never raised. A scenario whose `N + 1` ticks
     /// pass its `max_frames` is `too-many-frames` at bind; a replay stopped by another of them is
@@ -106,6 +130,9 @@ impl VerifyLimits {
         max_total_instants: 1 << 28,
         max_total_load_bytes: 1 << 30,
         max_total_frame_bytes: 1 << 40,
+        max_when_signals: 16,
+        compare: CompareLimits::MAX,
+        max_total_aligned_grid_work: 1 << 32,
         replay: ReplayLimits::MAX,
     };
 
@@ -128,6 +155,11 @@ impl VerifyLimits {
             max_total_instants: self.max_total_instants.min(max.max_total_instants),
             max_total_load_bytes: self.max_total_load_bytes.min(max.max_total_load_bytes),
             max_total_frame_bytes: self.max_total_frame_bytes.min(max.max_total_frame_bytes),
+            max_when_signals: self.max_when_signals.min(max.max_when_signals),
+            compare: self.compare.effective(),
+            max_total_aligned_grid_work: self
+                .max_total_aligned_grid_work
+                .min(max.max_total_aligned_grid_work),
             replay: lowered(&self.replay),
         }
     }
@@ -175,6 +207,9 @@ mod tests {
         assert_eq!(limits.max_total_instants, 268_435_456);
         assert_eq!(limits.max_total_load_bytes, 1_073_741_824);
         assert_eq!(limits.max_total_frame_bytes, 1_099_511_627_776);
+        assert_eq!(limits.max_when_signals, 16);
+        assert_eq!(limits.compare, CompareLimits::MAX);
+        assert_eq!(limits.max_total_aligned_grid_work, 4_294_967_296);
         assert_eq!(limits.replay, ReplayLimits::MAX);
         assert_eq!(MAX_LOAD_WARNINGS, 64);
         assert_eq!(MAX_DEPTH, 8);
@@ -199,6 +234,13 @@ mod tests {
             max_total_instants: 8,
             max_total_load_bytes: 9,
             max_total_frame_bytes: 0,
+            max_when_signals: 2,
+            compare: CompareLimits {
+                max_funnel_points: 3,
+                max_aligned_grid_points: 0,
+                max_loop_removal_work: 4,
+            },
+            max_total_aligned_grid_work: 11,
             replay: ReplayLimits {
                 max_rows: 7,
                 max_columns: 0,
@@ -224,6 +266,13 @@ mod tests {
             max_total_instants: u64::MAX,
             max_total_load_bytes: u64::MAX,
             max_total_frame_bytes: u64::MAX,
+            max_when_signals: u32::MAX,
+            compare: CompareLimits {
+                max_funnel_points: usize::MAX,
+                max_aligned_grid_points: usize::MAX,
+                max_loop_removal_work: u64::MAX,
+            },
+            max_total_aligned_grid_work: u64::MAX,
             replay: ReplayLimits {
                 max_rows: u64::MAX,
                 max_columns: u32::MAX,
@@ -252,6 +301,13 @@ mod tests {
             max_total_instants: max.max_total_instants + 1,
             max_total_load_bytes: max.max_total_load_bytes + 1,
             max_total_frame_bytes: max.max_total_frame_bytes + 1,
+            max_when_signals: max.max_when_signals + 1,
+            compare: CompareLimits {
+                max_funnel_points: max.compare.max_funnel_points + 1,
+                max_aligned_grid_points: max.compare.max_aligned_grid_points + 1,
+                max_loop_removal_work: max.compare.max_loop_removal_work + 1,
+            },
+            max_total_aligned_grid_work: max.max_total_aligned_grid_work + 1,
             replay: ReplayLimits {
                 max_rows: max.replay.max_rows + 1,
                 max_columns: max.replay.max_columns + 1,

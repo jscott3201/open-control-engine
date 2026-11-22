@@ -23,26 +23,32 @@ fn declared_index(kind: VerifyErrorKind) -> usize {
         K::EnumPortUnsupported => 13,
         K::UnsupportedPortType => 14,
         K::TooManyFrames => 15,
-        K::TooManyInstants => 16,
-        K::TooManyLoadBytes => 17,
-        K::TooManyFrameBytes => 18,
-        K::MutantMissing => 19,
-        K::MutantUnlisted => 20,
-        K::DuplicateMutant => 21,
-        K::TooManyMutantBytes => 22,
-        K::MutantLoadFailed => 23,
-        K::MutantBoundaryDiffers => 24,
-        K::MutantIdentical => 25,
-        K::MutantParamRefused => 26,
-        K::RunRefused => 27,
-        K::ReplayFailed => 28,
-        K::WindowUncovered => 29,
+        K::WhenUnknown => 16,
+        K::WhenAmbiguous => 17,
+        K::WhenNotBoolean => 18,
+        K::ToleranceOnDiscreteOutput => 19,
+        K::TooManyPoints => 20,
+        K::TooManyInstants => 21,
+        K::TooManyLoadBytes => 22,
+        K::TooManyFrameBytes => 23,
+        K::MutantMissing => 24,
+        K::MutantUnlisted => 25,
+        K::DuplicateMutant => 26,
+        K::TooManyMutantBytes => 27,
+        K::MutantLoadFailed => 28,
+        K::MutantBoundaryDiffers => 29,
+        K::MutantIdentical => 30,
+        K::MutantParamRefused => 31,
+        K::RunRefused => 32,
+        K::CompareRefused => 33,
+        K::ReplayFailed => 34,
+        K::WindowUncovered => 35,
     }
 }
 
 #[test]
 fn the_code_list_is_every_kind_in_declaration_order() {
-    assert_eq!(VerifyErrorKind::ALL.len(), 30);
+    assert_eq!(VerifyErrorKind::ALL.len(), 36);
     for (index, kind) in VerifyErrorKind::ALL.iter().enumerate() {
         assert_eq!(declared_index(*kind), index, "{kind:?}");
     }
@@ -57,6 +63,7 @@ fn every_table_is_unique_lowercase_kebab_case() {
         REPLAY_FAILURE_CAUSES,
         PARAM_REFUSAL_CLASSES,
         MUTANT_PARAM_REFUSAL_CAUSES,
+        COMPARE_REFUSAL_CAUSES,
         crate::ENGINE_REFUSAL_CLASSES,
     ] {
         let mut seen = BTreeSet::new();
@@ -99,6 +106,59 @@ fn the_replay_causes_and_the_parameter_tables_are_the_notes() {
             "param-path-unknown"
         ]
     );
+}
+
+#[test]
+fn the_compare_causes_are_the_ports_codes_then_the_self_enclosure_cause() {
+    assert_eq!(
+        COMPARE_REFUSAL_CAUSES.len(),
+        crate::COMPARE_ERROR_CODES.len() + 1
+    );
+    assert_eq!(
+        &COMPARE_REFUSAL_CAUSES[..crate::COMPARE_ERROR_CODES.len()],
+        crate::COMPARE_ERROR_CODES
+    );
+    assert_eq!(
+        COMPARE_REFUSAL_CAUSES.last(),
+        Some(&"reference-outside-envelope")
+    );
+    use crate::{Axis, CompareError as E, SeriesEnd, SeriesRole};
+    let every = [
+        E::InvalidTolerance { name: "atolx" },
+        E::LengthMismatch {
+            series: SeriesRole::Test,
+            x_len: 1,
+            y_len: 2,
+        },
+        E::EmptySeries {
+            series: SeriesRole::Reference,
+        },
+        E::TooManyPoints {
+            series: SeriesRole::Reference,
+            points: 2,
+            limit: 1,
+        },
+        E::NonFiniteSample {
+            series: SeriesRole::Test,
+            axis: Axis::Y,
+            index: 0,
+        },
+        E::XNotNonDecreasing {
+            series: SeriesRole::Test,
+            index: 1,
+        },
+        E::MismatchedEndpoints {
+            end: SeriesEnd::First,
+            reference: 0.0,
+            test: 1.0,
+        },
+        E::WorkLimitExceeded { limit: 1 },
+        E::LoopRemovalUndefined,
+        E::NonFiniteEnvelope,
+    ];
+    for error in every {
+        assert_eq!(compare_refusal_cause(&error), error.code());
+    }
 }
 
 #[test]

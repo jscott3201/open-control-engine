@@ -8,8 +8,8 @@
 //! The schema keeps to a strict profile: [`SCHEMA_PROFILE_KEYWORDS`] lists every keyword it
 //! uses. Every object with `properties` is closed (`additionalProperties: false`); the two map
 //! shapes (`inputs` and `params`) are objects whose `additionalProperties` is the schema of
-//! their values; `anyOf` appears only over a value's shapes, an input's and an expectation's two
-//! forms; and there is no `oneOf`, `allOf`, `const`, `pattern`, `format`, `default`, `minItems`
+//! their values; `anyOf` appears only over a value's shapes, an input's two forms, an expected
+//! signal's (`of`) two forms and an expectation's three; and there is no `oneOf`, `allOf`, `const`, `pattern`, `format`, `default`, `minItems`
 //! or `null`. An optional key is one that `required` leaves out.
 //!
 //! A JSON Schema cannot say everything the reader checks (the cadence, step order, a window's

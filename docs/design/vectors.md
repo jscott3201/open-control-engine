@@ -15,7 +15,8 @@ the work budgets of the [work-budget note](vector-work-budget.md) (#561) in GitH
 [Part 4's readings](#part-4s-readings). 2026-11-20, issue #656: decisions 38 to 50 add the
 `within`, `of` and `when` keys of a window, the set-level `envelope` and the tolerance receipt.
 The owner ruled on four of them, 38, 41, 49 and 50; the other nine stand as written; see
-[Tolerance windows](#tolerance-windows). The build is #684.)*
+[Tolerance windows](#tolerance-windows). The build is #684. 2026-11-21: it landed in
+GitHub #741; see [The tolerance build's readings](#the-tolerance-builds-readings).)*
 
 **The version rule, in one sentence.** The format is `oce/vectors/v1` and stays `v1` until 1.0.0: a
 change is made in place, in the PR that rewrites every in-repo fixture and golden, and nothing
@@ -97,11 +98,14 @@ Where this contradicts the issue's outline, the code wins:
 
 Strict JSON, one object, closed at every level. The worked file below shows every field of the
 first cut. It is a shape built around the AHU-0016 rule, not a fixture: that rule has no `Assert`
-block, so the `diagnostic` line shows the form only.
+block and no Real output, so the `diagnostic` line and the tolerance window show the form only.
+*(2026-11-21, as landed in GitHub #741: the example gains the set's `envelope`, a tolerance
+window and a `when`; `tests/fixtures/note/worked_example.json` is copied from it again.)*
 
 ```json
 {
   "schema": "oce/vectors/v1",
+  "envelope": "funnel",
   "clock": { "step_s": 60, "horizon_s": 1800 },
   "params": {},
   "mutants": [
@@ -130,6 +134,20 @@ block, so the `diagnostic` line shows the form only.
         { "diagnostic": { "block": "CDL.Utilities.Assert", "message": "Both valves open." },
           "at_s": 360 }
       ]
+    },
+    {
+      "name": "valve_follows_command",
+      "inputs": {
+        "htg_vlv_cmd": [ { "t": 0, "value": 0.0 }, { "t": 300, "value": 20.0 } ],
+        "clg_vlv_cmd": 0.0
+      },
+      "expect": [
+        { "output": "yFault", "from_s": 0, "to_s": 1800, "equals": false },
+        { "output": "htg_vlv_pos", "from_s": 300, "to_s": 1800,
+          "within": { "atoly": 0.5, "atolx": 60 },
+          "of": [ { "t": 300, "value": 0.0 }, { "t": 360, "value": 20.0 } ],
+          "when": [ "htg_enabled" ] }
+      ]
     }
   ]
 }
@@ -144,7 +162,7 @@ block, so the `diagnostic` line shows the form only.
 | `scenarios[]` | yes | `name` (not empty, unique in the set), optional `description`, optional `params`, `inputs`, `expect` |
 | `inputs` | yes | input name → a constant, or a step list `[{ "t", "value" }]` starting at `t = 0` |
 | `expect[]` | yes | either a window (`output`, `from_s`, `to_s`, `equals`) or an instant (`diagnostic`, `at_s`) |
-| `envelope` | no | at set level, `funnel` or `aligned-grid`: the envelope every `within` window of the set is compared under; `funnel` when absent *(added 2026-11-20; this row and the three below are built by #684, and each key is `unknown-key` before it)* |
+| `envelope` | no | at set level, `funnel` or `aligned-grid`: the envelope every `within` window of the set is compared under; `funnel` when absent *(added 2026-11-20; this row and the three below are built by #684, and each key is `unknown-key` before it; as landed in GitHub #741)* |
 | `within`, `of` (window) | together, in place of `equals` | the six tolerance names, and the expected signal over the window: a number, or a step list `[{ "t", "value" }]` from the window's `from_s` |
 | `when` (window) | no | 1 to 16 names of Boolean inputs or outputs; the window's instants count only where every one is true |
 
@@ -185,7 +203,10 @@ expectation takes one warning and a warning is taken by at most one expectation,
 unmatched.
 
 **Tolerance windows.** *(Added 2026-11-20, decisions 38 to 46; the build is #684, and until it
-lands `envelope`, `within`, `of` and `when` are `unknown-key`.)* A window carries exactly one of
+lands `envelope`, `within`, `of` and `when` are `unknown-key`. As landed in GitHub #741, with
+the readings of [The tolerance build's readings](#the-tolerance-builds-readings): a boolean
+anywhere in `of` is `wrong-type`, and an integer token past ±2^53 in a tolerance or an `of` value
+is `integer-out-of-range`, as in a time.)* A window carries exactly one of
 `equals` or the pair `within` and `of`; `when` goes with either. An instant expectation takes
 none of the three. A scenario that uses them:
 
@@ -262,7 +283,9 @@ none of the three. A scenario that uses them:
 file, 16,777,216 ticks, 4,096 scenarios, 4,096 expectations per scenario, 256 parameters per map,
 256 mutants. Each is a typed error at its boundary, at load. *(Added 2026-11-20:)* 16 names per
 `when` (`max_when_signals`), and `compare`, the funnel port's `CompareLimits`: 1,048,576 points
-for `funnel`, 32,768 for `aligned-grid`, and 2^28 units of loop-removal work.
+for `funnel`, 32,768 for `aligned-grid`, and 2^28 units of loop-removal work. *(As ruled by the owner
+on 2026-11-21 and landed in GitHub #741:)* and `max_total_aligned_grid_work`, 2^32 units of
+`aligned-grid` work, each unit one tick squared of one window on one document (decision 48).
 
 **Canonical form.** `to_canonical_json` sorts keys by their UTF-8 bytes at every depth and writes
 two-space indentation, LF, one final line feed, and ASCII only: any other character is `\u` and
@@ -560,7 +583,7 @@ receipt.
 | --- | --- | --- |
 | `not-utf8`, `byte-order-mark`, `json-syntax` | load | bytes that are not one strict JSON document |
 | `input-too-large`, `nesting-too-deep`, `list-too-long`, `string-too-long` | load | a read bound (a step list past 65,536 steps is `list-too-long`) |
-| `duplicate-key`, `unknown-key`, `missing-key`, `wrong-type` | load | a closed object's shape; before the tolerance build (#684), `envelope`, `within`, `of` and `when` are `unknown-key` |
+| `duplicate-key`, `unknown-key`, `missing-key`, `wrong-type` | load | a closed object's shape; before the tolerance build (#684, landed in GitHub #741), `envelope`, `within`, `of` and `when` were `unknown-key`; now each is `unknown-key` in any object but its own |
 | `non-finite-number`, `integer-out-of-range`, `control-character` | load | a lexical refusal; `integer-out-of-range` is also an integer token beyond ±2^53 in a time position *(amended 2026-11-10)* |
 | `unknown-schema` | load | a `schema` other than `oce/vectors/v1`, the two older tags included |
 | `invalid-clock` | load | `step_s` not finite and positive, `horizon_s` not finite or negative |
@@ -570,7 +593,7 @@ receipt.
 | `step-list-empty`, `step-list-not-from-zero`, `step-times-not-increasing`, `step-after-horizon` | load | a step list |
 | `invalid-window`, `window-outside-clock`, `window-uncovered` | load | a window (the last also after a run with no refused frame) |
 | `ambiguous-expectation` | load | an expectation that is not exactly one of the two forms: also a window with both `equals` and `within`, one of `within` and `of` without the other, and a `when` on an instant |
-| `unknown-envelope` | load | an `envelope` other than `funnel` or `aligned-grid` *(added 2026-11-20 with the three rows below; built by #684)* |
+| `unknown-envelope` | load | an `envelope` other than `funnel` or `aligned-grid` *(added 2026-11-20 with the three rows below; built by #684, landed in GitHub #741)* |
 | `invalid-tolerance` | load | a `within` with no name, a negative tolerance (a non-finite one is `non-finite-number`), or an `ltolx` above 1 |
 | `of-not-from-window-start`, `of-step-after-window` | load | an `of` step list whose first `t` is not `from_s`, or with a `t` after `to_s`; an empty list and times that do not increase reuse `step-list-empty` and `step-times-not-increasing` |
 | `when-empty`, `too-many-when-signals` | load | a `when` with no name, or with more than 16 |
@@ -828,7 +851,7 @@ port (tracking item 6) the key is `unknown-key`, never ignored; that PR adds `wi
 place and amends this note with their window semantics. Rejected: the sketch's `atol`, `rtol`,
 `ttol_s` (a second spelling of one type); accepting and ignoring the key (`oce-verify` may not ship
 a `todo!` or a silent pass). *(Ruled 2026-11-09: accepted. 2026-11-20: decisions 38 to 45 give
-the window semantics, and #684 builds them.)*
+the window semantics, and #684 builds them. 2026-11-21: landed in GitHub #741.)*
 
 **10. `when` names Boolean signals, and waits with `within`.** A list of input or output names,
 ANDed, masking instants that are counted as `masked` and never passed (commissioning decision 2).
@@ -1140,6 +1163,27 @@ Rejected: dropping the masked instants and building an envelope over each unmask
 (`oce-conformance`'s segmenting, which the commissioning note keeps as a named deviation
 there).
 
+*(Ruled by the owner on 2026-11-21, on the review of GitHub #741.)* The zero fill of a masked
+instant stays, as OBC §12.7.2 step 8 has it, and its effect is stated plainly: a masked instant
+is never judged, but its zero is part of the reference the envelope is built from, so it shapes
+the band at the instants beside it. Two cases are measured and pinned
+(`tests/tolerance_masks.rs`), both under `funnel`:
+
+- **An `x` tolerance stretches the band.** `of` 100 with `within {"atolx": 60, "atoly": 1}`,
+  the mask false only at t = 300 s. An output of 0 at t = 360 s passes with the mask and fails by
+  99 without it: the rectangle around the zeroed reference at 300 s reaches 360 s, so the band
+  there runs down to -1.
+- **A range-relative tolerance widens the band.** `of` 100, then 110 from t = 300 s, with
+  `within {"rtoly": 0.1}`, only tick 0 masked. An output of 95 at t = 120 s passes with the mask
+  and fails by 4 without it: the reference's range goes from 10 to 110, so the band goes from 1
+  to 11 either side.
+
+A window whose every instant is masked adds nothing: no instant is checked, passed or failed,
+whatever the output does. The rule is revisited with real library vectors in #745, which lists
+the alternatives (refusing a `when` with `rtoly` or an `x` tolerance; building the band from the
+unmasked instants only); the same rule applies to the commissioning run, whose indicators zero
+the same way, and any change moves both together.
+
 **47. A refused frame under tolerance: unchanged for vector sets.** A frame-class refusal fails
 its scenario (exit 1) with one `frame-refused` record, and a run-class refusal is `run-refused`
 (exit 2), whatever the windows' forms (decision 26). A `within` window cut by the refusal is
@@ -1165,6 +1209,21 @@ tolerances and a test decision 45 has kept in range, so it cannot refuse; if it 
 the vector set. With a `when` it also depends on the mask's signals, and a mutant whose mask
 differs can be refused where the subject is not: that is an error on the mutant's run, as a
 run-class refusal is.
+
+*(As ruled by the owner on 2026-11-21 and landed in GitHub #741.)* `aligned-grid` tests every
+grid point against every rectangle, so a window's comparison costs its ticks squared, and the
+instant budget alone admitted hours of it (two scenarios of 4,096 windows of 32,768 ticks are
+2^28 instants and 2^43 units). A run is therefore also held to
+`VerifyLimits::max_total_aligned_grid_work`: `(1 + mutants)` times the sum, over the tolerance
+windows of an `aligned-grid` set, of each window's ticks squared, at most 2^32, lowerable only,
+refused as `too-many-points` (place `scenarios`) at the same step, after every window's point
+cap. 2^32 admits four windows at the 32,768-point cap, or fourteen days at 5 s. The worst case,
+measured end to end in a release build on arm64 at exactly 2^32 units: any nonzero `x`
+tolerance gives each rectangle three grid points, tripling the grid, so the cost is about
+2.25 ns per unit, and the largest admitted run took about 10 s (4,096 windows of 1,024 ticks
+with `atolx` 0.3: 9.7 s; four windows of 32,768 ticks: 7.2 s; 3.1 s and 2.4 s with a `y`
+tolerance only). `funnel` needs no such bound: its cost at its cap is linear, a 1,048,576-tick
+window running end to end in 0.16 s in a release build.
 
 **49. File-backed series have their own issue.** An input and `of` take a constant or a step
 list. A file-backed series is #685, after the commissioning sources (#660) and outside the M3
@@ -1744,3 +1803,74 @@ starts `src/` or `tests/` is under `crates/leverage/oce-verify/`.
 - golden receipts for a tolerance pass, a tolerance failure, a masked window and an all-masked
   `no_data` scenario, each `receipt_id` recomputed outside the crate;
 - the two in-repo `vectors.json` files do not change, so their `spec_id` values do not move.
+
+### The tolerance build's readings
+
+*(Added 2026-11-21, with GitHub #741, issue #684.)* The build of `within`, `of`, `when` and
+`envelope` landed as decisions 38 to 50 state. Where the note was silent it read as follows; the
+first two are the orchestrator's readings of recorded decisions, put on the issue and not new
+owner rulings, and the rest are the build's, each saying whether overruling it would change
+behaviour.
+
+1. **A boolean in `of` is `wrong-type`**, at the top level and in a step's `value` (decision 39:
+   "a number or a step list and nothing else"). `of` is read as numbers only, so
+   `value-type-mismatch` cannot arise for it; the schema's `Of` and `OfStep` say `number`
+   *(changes behaviour)*.
+2. **An integer token past ±2^53 in a tolerance or an `of` value is `integer-out-of-range`** at
+   load, the rule a time already has ("Clock"), so an integer token never names a binary64
+   other than the one it spells. An `of` step's `t` is a time position already. So
+   `value-not-representable` cannot arise for `of` either *(changes behaviour)*.
+3. **Load order.** The set's `envelope` is judged straight after the clock. In a window, the
+   output name, its bounds and its ticks come first, then `within` (an empty one, then each name
+   in the order `atolx`, `atoly`, `ltolx`, `ltoly`, `rtolx`, `rtoly`: negative, then `ltolx`
+   above 1), then `of`, then `when` (empty, then an empty name). `too-many-when-signals` is a
+   count bound, refused as the 17th name is read, at its line and column, as the other count
+   bounds are *(order only)*.
+4. **Bind order in a window:** the output, then what it checks (`equals` typed, or the
+   discrete-output refusal and then each `of` value typed), then each `when` name in file order
+   *(order only)*. A `when` name resolves against the inputs and outputs together by the one
+   name rule; an input and an output never share a path in a loaded subject, and if they did
+   the input would be kept.
+5. **`too-many-points` counts the window's ticks as written**, all of them, whatever a refused
+   frame later cuts; the first window in file order past the cap of the set's envelope is
+   named, `scenarios[i].expect[j]` *(changes nothing a loaded set can show)*.
+6. **The self-enclosure call reads, in this order:** a `CompareError` (its code as the cause),
+   then a bound past 2^1000 (`non-finite-envelope`), then an error above zero at any instant the
+   envelope reports (`reference-outside-envelope`). "A bound" is a `y` value of either bound
+   curve: the errors the judgement reads are differences of `y` values *(changes which cause
+   wins when two apply)*.
+7. **`x` is the trace's time of each tick**, the grid's `k * step_s`, and `of` holds at a tick the
+   value of its last step at or before that time *(no behaviour)*.
+8. **An out-of-range output** carries the reference's value into the test series. Under either
+   envelope an instant's error depends on the test's value at that instant only, so the value
+   substituted changes no other instant; it only keeps a NaN or an infinity from the port, which
+   refuses it (`non-finite-sample`). The judgement reads the error at each tick by matching the
+   tick's bits in the error curve; a tick it did not report would be `compare-refused` with the
+   cause `length-mismatch`, a defence no loaded set reaches *(no behaviour)*.
+9. **A masked tick is counted only where it was compared**: ticks at and after a refused frame
+   are neither masked nor checked *(changes counts under a refused frame only)*.
+10. **The API beyond the sketch:** `Window::equals` is an `Option` (`None` for a tolerance
+    window), with `Window::within` (`Within`: `tolerances`, `names`, `of`, `of_is_constant`) and
+    `Window::when`; `OfStep`; `VectorSet::envelope`, `written_envelope` and `uses_tolerance`;
+    `Comparison`, whose fields are private, built only by `Comparison::exact` and
+    `Comparison::tolerance` and read by `mode`, `envelope` and `envelope_version` (from
+    `Envelope::version`), so the tolerance mode always has an envelope and the exact mode never
+    does; `Receipt::funnel_reference` and `VECTOR_FUNNEL_REFERENCE`, the body's field read off
+    the header's mode rather than stored, so the two cannot disagree; `Failure::ToleranceExceeded`;
+    `COMPARE_REFUSAL_CAUSES`; and `VerifyLimits::max_when_signals`, `VerifyLimits::compare` and
+    `VerifyLimits::max_total_aligned_grid_work`.
+
+**What moved.** No receipt of a set without a tolerance window changes a byte: its header is
+still `{ "mode": "exact" }`, `funnel_reference` is absent, and `masked` was already written (as
+zero). No `spec_id` of a set that writes none of the four keys moves; the two in-repo files and
+their canonical goldens are unchanged. The published schema gains `envelope`, `when` on a window,
+the `ToleranceWindow`, `Within`, `Of` and `OfStep` definitions. `oce vocab` gains the twelve
+codes. The version needs no bump: the workspace is at 0.6.0 since GitHub #720 (decision 50).
+
+**Measured.** The port's tick-grid result holds on the two in-repo rules
+(`tests/tolerance_in_repo_rules.rs`, citing `tests/funnel_tick_grid.rs`): each of their 21
+windows, and each scenario's windows joined over the clock, is inside its own envelope under both
+envelopes at an `x` tolerance of none, one and two steps, with and without a `y` tolerance. The
+rounding case is refused as `reference-outside-envelope` and admitted by a `y` tolerance, an `x`
+tolerance off the step, and `aligned-grid` (`tests/tolerance_windows.rs`).
+

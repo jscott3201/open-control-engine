@@ -1029,6 +1029,55 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **`oce-verify` reads tolerance windows and issues the tolerance receipt** (GitHub #741, issue
+  #684; design note `docs/design/vectors.md`, decisions 38 to 50, "The tolerance build's
+  readings"). **Breaking, in place:** `oce/vectors/v1` gains four keys and `oce/receipt/v1` a
+  mode, both at revision 1 (standing rule 9); the workspace is already at 0.6.0 (GitHub #720), so
+  nothing is bumped. A 0.5.0 reader refuses a file using the keys as `unknown-key`.
+  - **`oce/vectors/v1`.** A window carries exactly one of `equals` or the pair `within` (the six
+    tolerance names, at least one, each finite and not negative, `ltolx` at most 1) and `of` (a
+    number, or a step list from the window's `from_s` to no later than its `to_s`); `when`, 1 to
+    16 names of Boolean inputs or outputs, goes with either; the set's optional `envelope` is
+    `funnel` (the default) or `aligned-grid`. A boolean in `of` is `wrong-type` and an integer
+    token past ±2^53 in a tolerance or an `of` value is `integer-out-of-range` (readings of
+    decision 39 and of the time rule). The canonical form writes the names the file wrote,
+    sorted; an absent name or envelope stays absent. The schema is regenerated with
+    `ToleranceWindow`, `Within`, `Of` and `OfStep`.
+  - **The run.** A tolerance window is judged on its ticks under the set's envelope, around its
+    expectation: masked ticks zeroed in both series, an out-of-range output (NaN, infinity, past
+    2^1000) failing its instant with the exceedance positive infinity, a self-enclosure call
+    first (its expectation against itself: `compare-refused` with the cause
+    `reference-outside-envelope`, `non-finite-envelope` or the port's code), then the judgement.
+    A `when` masks either window form; masked ticks count as `masked`, never `checked`. A
+    scenario whose `when` names an input keeps the inputs in its trace. The zero fill of a masked
+    tick stays, by owner ruling (2026-11-21): it shapes the band beside it under an `x`
+    tolerance or `rtoly`, as two pinned cases show; issue #745 revisits it.
+  - **`oce/receipt/v1`.** `ComparisonMode::Tolerance`; `Comparison { mode, envelope }` writes
+    `{ "mode": "tolerance", "envelope", "envelope_version" }` when a window of the set uses
+    `within` (`funnel@a12fa96` or `aligned-grid@1`), and `{ "mode": "exact" }` otherwise; the body's
+    `funnel_reference` (`expectation`) under the tolerance mode; the `tolerance-exceeded` failure
+    record with `expected`, `actual` and `exceedance`, also as a caught mutant's `failure`.
+  - **Codes.** Load: `unknown-envelope`, `invalid-tolerance`, `of-not-from-window-start`,
+    `of-step-after-window`, `when-empty`, `too-many-when-signals`. Bind: `when-unknown`,
+    `when-ambiguous`, `when-not-boolean`, `tolerance-on-discrete-output`, `too-many-points`
+    (each window against the point cap of the set's envelope, after the instant budget, and, by
+    owner ruling, an `aligned-grid` set's windows' ticks squared times one plus the mutants
+    against the new `VerifyLimits::max_total_aligned_grid_work`, 2^32). Run:
+    `compare-refused`, its cause from `COMPARE_REFUSAL_CAUSES`. `VerifyLimits` gains
+    `max_when_signals` (16) and `compare` (`CompareLimits`), both lower-only. `oce vocab` lists the
+    twelve; its `unknown-key` meaning no longer names `within` and `when`.
+  - **API.** `Window::equals` is an `Option`; `Window::within` (`Within`, `OfStep`) and
+    `Window::when`; `VectorSet::envelope`, `written_envelope`, `uses_tolerance`; `Comparison`
+    with private fields, built by `exact` and `tolerance`, read by `mode`, `envelope` and
+    `envelope_version`; `Receipt::funnel_reference`, read off the header.
+  - **What moved.** No receipt of a set without a tolerance window, and no `spec_id` of a set
+    without the keys, changes a byte; nothing is re-blessed but the schema and `oce vocab`'s two
+    transcripts. New goldens: four tolerance receipts (pass, failure, masked under
+    `aligned-grid`, all-masked `no_data`), each `receipt_id` also derived by
+    `tests/fixtures/derive_canonical.py --receipt`, and the canonical form of a set with every new
+    key. The port's tick-grid measurement holds on the 21 windows of the two in-repo rules
+    (`tests/tolerance_in_repo_rules.rs`).
+
 - **`oce-replay`'s `CsvSource` trims the spaces and tabs around a csv cell and a header name, so
   the commissioning trend reader reads OBC §12.7.3's padded files as printed** (GitHub #739,
   issue #733; replay note, "As built"; commissioning note, "As landed: the trend sources",
