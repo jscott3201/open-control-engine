@@ -38,11 +38,11 @@ use crate::parameter_reads::{InstanceReads, StringParameterBudget};
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
 use oce_diag::DiagnosticList;
 
+use super::enumeration_parameters::validate_enumeration_parameter_value;
 use super::instance_interface::InstanceDerivation;
 use super::local_name;
 use super::parameter_attrs::CheckedParameters;
 use super::real_parameters::hold_in_catalog_type;
-use super::specialize::validate_g36_parameter_value;
 
 /// One resolved instance's wiring state, carried from Step 3 through Steps 5-8.
 pub(super) struct Inst<'a> {
@@ -116,7 +116,7 @@ pub(super) fn ground_instance_params(
                 });
                 continue;
             };
-            validate_g36_parameter_value(
+            validate_enumeration_parameter_value(
                 pnode,
                 cxf_val,
                 &ParamScope::with_enclosing(enclosing, &siblings),

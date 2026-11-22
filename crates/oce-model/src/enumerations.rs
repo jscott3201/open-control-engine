@@ -118,6 +118,59 @@ pub fn enumeration_class(class_path: &str) -> Option<&'static EnumerationClass> 
         .find(|row| row.class_path == class_path)
 }
 
+/// The row a document names by its **canonical class path**: `path` is exactly a row's
+/// [`EnumerationClass::qualified_path`] (`Buildings.Controls.OBC.CDL.Types.SimpleController`,
+/// `Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes`). [`enumeration_class_by_iri`] is the
+/// same comparison on the fragment of a typing IRI.
+///
+/// This is the one place the engine decides which enumeration or constant package a document's
+/// text names (issue #762, the owner's ruling of 2026-11-22): every enumeration value, default,
+/// guard literal and `isOfDataType` reference is resolved through it, in the CXF reader, the
+/// expression evaluator and the authoring layer alike. Any other spelling is `None`: a bare or
+/// relative path (`SimpleController`, `CDL.Types.SimpleController`), another package
+/// (`Foo.SimpleController`, `Modelica.Blocks.Types.SimpleController`, a CDL enumeration under
+/// `…ASHRAE.G36.Types.`), another letter case, or surrounding whitespace. The match is exact
+/// byte equality; nothing allocates and nothing panics.
+#[must_use]
+pub fn enumeration_class_by_path(path: &str) -> Option<&'static EnumerationClass> {
+    ENUMERATION_CLASSES
+        .iter()
+        .find(|row| row.qualified_path == path)
+}
+
+/// The row a typing IRI (`S231:isOfDataType`, a guard's or connector's type) names: its fragment
+/// after the last `#` or `/` (the whole text when it has neither) resolved by
+/// [`enumeration_class_by_path`], so `http://example.org#Buildings.Controls.OBC.CDL.Types.ZeroTime`
+/// and `http://data.ashrae.org/S231#Buildings.Controls.OBC.CDL.Types.ZeroTime` name `ZeroTime`
+/// and `http://example.org#ZeroTime` or `…#Buildings.Controls.OBC.CDL.Typos.ZeroTime` name
+/// nothing (issues #637, #762). The namespace itself is not judged here. Allocates nothing.
+#[must_use]
+pub fn enumeration_class_by_iri(iri: &str) -> Option<&'static EnumerationClass> {
+    enumeration_class_by_path(iri_fragment(iri))
+}
+
+/// The row whose type name (the last segment, [`EnumerationClass::type_name`]) `written` ends
+/// with, when `written` is **not** that row's canonical path: the enumeration a refusal names as
+/// the spelling expected (`Foo.SimpleController` → `…CDL.Types.SimpleController`).
+///
+/// **Never an identity.** It words a refusal and nothing else: a caller reaches it only after
+/// [`enumeration_class_by_path`] returned `None`, and what it returns is quoted in a diagnostic,
+/// never used as a value's class. `written` may be an IRI (its fragment after the last `#` or
+/// `/` is read) or a class path. Allocates nothing; never panics.
+#[must_use]
+pub fn enumeration_spelling_hint(written: &str) -> Option<&'static EnumerationClass> {
+    let fragment = iri_fragment(written);
+    let last = fragment.rsplit('.').next().unwrap_or(fragment);
+    ENUMERATION_CLASSES
+        .iter()
+        .find(|row| row.type_name() == last && row.qualified_path != fragment)
+}
+
+/// The fragment of an IRI after its last `#` or `/`; a class path is its own fragment.
+fn iri_fragment(text: &str) -> &str {
+    text.rsplit(['#', '/']).next().unwrap_or(text)
+}
+
 /// The enumeration row whose [`EnumerationClass::id`] is `id`.
 #[must_use]
 pub fn enumeration_class_by_id(id: EnumClassId) -> Option<&'static EnumerationClass> {

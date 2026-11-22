@@ -67,16 +67,12 @@ impl ParamRuleProjection for RuleAdapter {
     }
     fn real_matrix_elements(
         base: &'static str,
-        rows: &'static str,
         default_rows: i64,
-        cols: &'static str,
         default_cols: i64,
     ) -> CatalogRule {
         CatalogRule::RealMatrixElements {
             base,
-            rows,
             default_rows,
-            cols,
             default_cols,
         }
     }

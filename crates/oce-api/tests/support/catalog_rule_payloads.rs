@@ -81,9 +81,7 @@ fn every_rule_payload_field_changes_the_catalog_tag() {
     });
     payloads!(RealMatrixElements {
         base: "before" => "after",
-        rows: "before" => "after",
         default_rows: i64::MIN => i64::MAX,
-        cols: "before" => "after",
         default_cols: i64::MIN => i64::MAX,
     });
     payloads!(TimeTableMatrix {

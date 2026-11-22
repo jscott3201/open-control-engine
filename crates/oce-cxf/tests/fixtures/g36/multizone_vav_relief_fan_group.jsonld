@@ -1102,12 +1102,6 @@
       "S231:label": "enaRel",
       "S231:hasParameter": [
         {
-          "@id": "http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.nout"
-        },
-        {
-          "@id": "http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.nin"
-        },
-        {
           "@id": "http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.K_1_1"
         },
         {
@@ -4652,22 +4646,6 @@
       "S231:hasOutput": {
         "@id": "http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_4.y"
       }
-    },
-    {
-      "@id": "http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.nout",
-      "@type": "S231:Parameter",
-      "S231:isOfDataType": {
-        "@id": "S231:Integer"
-      },
-      "S231:value": 4
-    },
-    {
-      "@id": "http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.nin",
-      "@type": "S231:Parameter",
-      "S231:isOfDataType": {
-        "@id": "S231:Integer"
-      },
-      "S231:value": 2
     },
     {
       "@id": "http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel.K_1_1",

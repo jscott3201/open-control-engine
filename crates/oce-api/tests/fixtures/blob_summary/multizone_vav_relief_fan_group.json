@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "engine_version": "0.6.0",
-  "content_id": "oce:canon1:d9981ee0fa959de2410e446303ad4f3dd64d45d350c273c20e3a41a2bb68247a",
+  "content_id": "oce:canon1:039904c0a86a403a73b7283c5cf5114be9cb3d86022a5acaf660827c17a34e56",
   "target_bound": false,
   "classes": [
     {"class_path": "CDL.Conversions.BooleanToInteger", "signature_hash": "5e08715184cb20ce"},
@@ -25,7 +25,7 @@
     {"class_path": "CDL.Reals.GreaterThreshold", "signature_hash": "ff7f20680e44a176"},
     {"class_path": "CDL.Reals.LessThreshold", "signature_hash": "ee896ae2191cc492"},
     {"class_path": "CDL.Reals.Limiter", "signature_hash": "d2c6b335d2a7176d"},
-    {"class_path": "CDL.Reals.MatrixGain", "signature_hash": "e4e6f143df08b139"},
+    {"class_path": "CDL.Reals.MatrixGain", "signature_hash": "861cf6b41e0d3e70"},
     {"class_path": "CDL.Reals.MovingAverage", "signature_hash": "63a93f78876e8589"},
     {"class_path": "CDL.Reals.MultiMin", "signature_hash": "ee9a1b8667e3b201"},
     {"class_path": "CDL.Reals.Multiply", "signature_hash": "70d2724a506843ec"},

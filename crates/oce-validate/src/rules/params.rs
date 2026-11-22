@@ -290,24 +290,8 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut DiagnosticList) 
         ParamRule::RealArrayElements { base, len } => {
             params_arrays::check_real_array_elements(blk, diags, base, len);
         }
-        ParamRule::RealMatrixElements {
-            base,
-            rows,
-            default_rows,
-            cols,
-            default_cols,
-        } => {
-            params_flattened::check_real_matrix_elements(
-                blk,
-                diags,
-                params_flattened::RealMatrixRule {
-                    base,
-                    rows,
-                    default_rows,
-                    cols,
-                    default_cols,
-                },
-            );
+        ParamRule::RealMatrixElements { base, .. } => {
+            params_flattened::check_real_matrix_elements(blk, diags, base);
         }
         ParamRule::TimeTableMatrix {
             base,

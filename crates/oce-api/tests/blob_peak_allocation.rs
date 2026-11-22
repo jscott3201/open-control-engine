@@ -14,7 +14,10 @@ use std::sync::Arc;
 
 use allocation_counter::measure;
 use blob_image::{Image, In, Inst, Out, VType, Val};
-use blob_models::{REAL_TIME_TABLE, dense_matrix_gain, time_table_words, time_tables};
+use blob_models::{
+    AT_BUDGET_SUMS, lone_gain_corner, multi_sum_words, sums_then_table, time_table_words,
+    time_tables,
+};
 use oce_blocks::MAX_RESOLVED_ARITY;
 use oce_graph::blob::{BlobError, InstanceField, MalformedFault, decode};
 use oce_model::{ParamTable, Value};
@@ -251,73 +254,65 @@ fn a_wide_block_of_unread_outputs_stays_within_the_linear_term() {
 }
 
 /// The four shapes of issue #700, by the blob lengths it records. Each `table_524288_2` block
-/// holds 8 MiB from one 60-byte record, and nothing summed them: 16 peaked at 134,225,920 bytes
-/// and 64 at 536,903,536. The fourth such block now crosses the budget (4 x 1,048,578 words is
-/// eight words past 2^22) and is refused, so 16 blocks and 64 peak alike.
+/// held 8 MiB from one 60-byte record, and nothing summed them: 16 peaked at 134,225,920 bytes
+/// and 64 at 536,903,536; issue #700 bounded them by the constructed budget. A lone corner cell is
+/// no table: its bound cells do not fill the rectangle they span, which the load gate refuses, so
+/// since issue #772 the decoder refuses it too, before the block is built (`ElementOutsideShape`)
+/// and holding nothing the record did not pay for. So do the dense gain's lone `K` corner and its
+/// `nin`/`nout` (no parameters of `MatrixGain` since issue #773).
 #[test]
 fn the_shapes_that_allocated_by_parameter_name_are_bounded_or_refused() {
     let table = "table_524288_2";
-    let words = time_table_words(524_288);
-    assert_eq!(words, 1_048_578);
-
-    // One block: accepted, as before, holding its table and nothing else of note.
-    let one = time_tables(&[table]).to_bytes();
-    assert_eq!(one.len(), 223);
-    let (peak, outcome) = peak_bytes(&one);
-    assert_eq!(outcome, Ok(()));
-    assert!(peak <= 8 * words + LINEAR_PEAK_RATIO * 223, "peak {peak}");
-    assert!(peak >= 8 * words, "the table is held: peak {peak}");
-
-    // 16 and 64 blocks: refused at the fourth, holding three tables and the one refused.
-    let refusal = BlobError::ConstructedTooLarge {
-        block: 3,
-        requested: 4 * words,
+    assert_eq!(time_table_words(524_288), 1_048_578);
+    let lone_corner = BlobError::ElementOutsideShape {
+        block: 0,
+        parameter: 0,
     };
-    assert_eq!(4 * words, 4_194_312);
-    for (count, length) in [(16usize, 1_123usize), (64, 4_003)] {
+    for (count, length) in [(1usize, 223usize), (16, 1_123), (64, 4_003)] {
         let bytes = time_tables(&vec![table; count]).to_bytes();
         assert_eq!(bytes.len(), length);
         let (peak, outcome) = peak_bytes(&bytes);
-        assert_eq!(outcome, Err(refusal), "{count} blocks");
+        assert_eq!(outcome, Err(lone_corner), "{count} blocks");
         assert!(
-            peak <= 8 * 4 * words + LINEAR_PEAK_RATIO * length as u64,
-            "{count} blocks peak {peak}"
+            peak <= LINEAR_PEAK_RATIO * length as u64,
+            "{count} blocks peak {peak}: nothing past the blob's own cost"
         );
-        assert!(peak <= documented_peak_bound(length), "{count} blocks");
     }
 
-    // A dense 1024 x 1024 gain with no cell bound: accepted, as the ruling requires. It holds
-    // 2^20 gains and 256 words of port kinds, and its constructor reads the cells through one
-    // scratch table of the same 2^20 slots.
-    let gain = dense_matrix_gain(1024, 1024).to_bytes();
-    assert_eq!(gain.len(), 12_528);
+    // The dense 1024 x 1024 gain: its lone corner is refused the same way, holding no gain.
+    let gain = lone_gain_corner(1024, 1024).to_bytes();
     let (peak, outcome) = peak_bytes(&gain);
-    assert_eq!(outcome, Ok(()));
-    let held = 8 * ((1u64 << 20) + 256);
-    let scratch = 8 * (1u64 << 20);
+    assert_eq!(outcome, Err(lone_corner));
     assert!(
-        peak <= held + scratch + LINEAR_PEAK_RATIO * 12_528,
-        "peak {peak}"
+        peak <= LINEAR_PEAK_RATIO * gain.len() as u64,
+        "peak {peak} for {} bytes",
+        gain.len()
     );
-    assert!(peak <= documented_peak_bound(gain.len()));
+    assert!(peak < 8 << 20, "no 2^20-gain table is built: peak {peak}");
 }
 
 #[test]
 fn blocks_holding_exactly_the_constructed_budget_decode_and_one_more_block_is_refused() {
-    // Four tables of 524,287 rows report 1,048,576 words each: exactly the budget.
-    let at_budget = "table_524287_2";
-    assert_eq!(4 * time_table_words(524_287), 1 << 22);
-    let bytes = time_tables(&[at_budget; 4]).to_bytes();
+    // Three widest sums and one top-up sum report exactly the budget: shape-valid blocks a blob
+    // can carry, built here (issue #772 refuses the lone table corner cells this test used).
+    let held: u64 = AT_BUDGET_SUMS
+        .iter()
+        .map(|&width| multi_sum_words(u64::from(width)))
+        .sum();
+    assert_eq!(held, 1 << 22);
+    let bytes = sums_then_table(&AT_BUDGET_SUMS, false).to_bytes();
     let (peak, outcome) = peak_bytes(&bytes);
     assert_eq!(outcome, Ok(()));
+    assert!(peak >= 8 * (1 << 22), "the budget is held: peak {peak}");
     assert!(
         peak <= 8 * (1 << 22) + LINEAR_PEAK_RATIO * bytes.len() as u64,
         "peak {peak}"
     );
+    assert!(peak <= documented_peak_bound(bytes.len()));
 
     // A fifth block that holds anything at all crosses it: the smallest table is four words.
     assert_eq!(time_table_words(1), 4);
-    let bytes = time_tables(&[at_budget, at_budget, at_budget, at_budget, "table_1_2"]).to_bytes();
+    let bytes = sums_then_table(&AT_BUDGET_SUMS, true).to_bytes();
     let (peak, outcome) = peak_bytes(&bytes);
     assert_eq!(
         outcome,
@@ -331,37 +326,53 @@ fn blocks_holding_exactly_the_constructed_budget_decode_and_one_more_block_is_re
         "peak {peak}"
     );
 
-    // The refused block need not be the last: the first to cross is named, in id order.
-    let bytes = time_tables(&[at_budget, at_budget, "table_1_2", at_budget, at_budget]).to_bytes();
+    // The refused block need not be the last: the first to cross is named, in id order. A
+    // one-input sum (two words) after the budget's first three blocks and before its top-up
+    // crosses at block 4, the top-up.
+    let bytes = sums_then_table(
+        &[
+            AT_BUDGET_SUMS[0],
+            AT_BUDGET_SUMS[1],
+            AT_BUDGET_SUMS[2],
+            1,
+            AT_BUDGET_SUMS[3],
+        ],
+        false,
+    )
+    .to_bytes();
     assert_eq!(
         peak_bytes(&bytes).1,
         Err(BlobError::ConstructedTooLarge {
             block: 4,
-            requested: (1 << 22) + 4
+            requested: (1 << 22) + multi_sum_words(1)
         })
     );
 }
 
 #[test]
 fn a_blob_that_spends_the_constructed_and_the_state_budget_in_full_decodes_within_their_sum() {
-    // Four tables at the constructed budget beside one moving mean whose window owns the whole
+    // Four sums at the constructed budget beside one moving mean whose window owns the whole
     // state budget: `n` sample words and four fixed ones.
     let window = i64::try_from(oce_graph::MAX_STATE_WORDS).unwrap() - 4;
-    let mut image = time_tables(&["table_524287_2"; 4]);
+    let mut image = sums_then_table(&AT_BUDGET_SUMS, false);
     let mean = blob_models::moving_mean(window);
-    image.classes = vec![mean.classes[0].clone(), class(REAL_TIME_TABLE)];
+    // Canonical class order: the moving mean's `CDL.Discrete…` path first.
+    image.classes.insert(0, mean.classes[0].clone());
     for instance in &mut image.instances {
-        instance.class = 1;
+        instance.class += 1;
     }
+    let next = image.connectors;
     let mut instance = mean.instances[0].clone();
-    instance.inputs = vec![4, 5];
-    instance.outputs = vec![6];
+    instance.class = 0;
+    instance.inputs = vec![next, next + 1];
+    instance.outputs = vec![next + 2];
     image.instances.push(instance);
-    image.connectors = 7;
+    image.connectors = next + 3;
     image.schedule = (0..5).collect();
-    image.inputs = mean.inputs.clone();
-    image.inputs[0].targets = vec![5];
-    image.inputs[1].targets = vec![4];
+    let mut inputs = mean.inputs.clone();
+    inputs[0].targets = vec![next + 1];
+    inputs[1].targets = vec![next];
+    image.inputs.extend(inputs);
     let bytes = image.to_bytes();
     let (peak, outcome) = peak_bytes(&bytes);
     assert_eq!(outcome, Ok(()));

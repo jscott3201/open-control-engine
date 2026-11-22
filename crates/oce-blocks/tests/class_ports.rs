@@ -111,8 +111,13 @@ fn width_scenarios() -> Vec<Scenario> {
         }
     }
     for (nin, nout) in [(1, 1), (2, 2), (MAX, 1), (1, MAX)] {
-        let params = vec![int("nin", nin), int("nout", nout)];
-        all.push(scenario("CDL.Reals.MatrixGain", params, (nin, nout)));
+        // `K`'s cells set the shape (issue #773): the corner cell alone spans it.
+        let corner: &'static str = format!("K_{nout}_{nin}").leak();
+        all.push(scenario(
+            "CDL.Reals.MatrixGain",
+            vec![int(corner, 0)],
+            (nin, nout),
+        ));
     }
     for (class, flag) in [
         ("CDL.Reals.MatrixMax", "rowMax"),

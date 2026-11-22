@@ -127,7 +127,9 @@ fn unnamed_classes_are_exactly_the_documented_exemptions() {
         let is_width_driven = entry.param_rules().iter().any(|rule| {
             matches!(
                 rule,
-                ParamRule::Structural { .. } | ParamRule::StructuralArrayElements { .. }
+                ParamRule::Structural { .. }
+                    | ParamRule::StructuralArrayElements { .. }
+                    | ParamRule::RealMatrixElements { .. }
             )
         });
         if is_width_driven {

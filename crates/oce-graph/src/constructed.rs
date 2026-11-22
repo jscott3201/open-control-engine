@@ -27,7 +27,9 @@ use crate::topo::block_path;
 /// admits for one block (the widest single block, a one-row `CDL.Reals.Sources.TimeTable` of
 /// 1,048,575 output columns, reports 2,228,223 words) and three dense 1024 × 1024
 /// `CDL.Reals.MatrixGain` blocks beside each other (1,048,832 words each). Real equipment models
-/// use a few dozen: the largest of the 46 G36 catalog fixtures reports 42 words.
+/// use a few dozen: the largest of the 46 G36 catalog fixtures reports 42 words. No valid CXF
+/// document reaches it (a dense matrix writes its cells, issue #773, and a document holds at most
+/// 2^20 array elements); it bounds blobs and graphs a host builds directly.
 ///
 /// Crossing it is a typed refusal, [`BuildError::ConstructedTooLarge`] on a model build and
 /// `BlobError::ConstructedTooLarge` on a blob decode, never a panic or an allocation abort. A

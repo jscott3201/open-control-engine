@@ -31,7 +31,7 @@ e71fcfa5e45fc30d	CDL.Reals.AddParameter
 6f8e193f41ab06c3	CDL.Reals.MultiMax
 ee9a1b8667e3b201	CDL.Reals.MultiMin
 4fafc291d1262ec9	CDL.Reals.MultiSum
-e4e6f143df08b139	CDL.Reals.MatrixGain
+861cf6b41e0d3e70	CDL.Reals.MatrixGain
 97fdd5a59569083b	CDL.Reals.MatrixMax
 eb06943b80e3205f	CDL.Reals.MatrixMin
 99d1ffab84d4f1e9	CDL.Reals.Sort

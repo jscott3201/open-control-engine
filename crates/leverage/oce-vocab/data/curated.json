@@ -25,22 +25,6 @@
       ]
     },
     {
-      "class": "CDL.Reals.MatrixGain",
-      "descriptions": [
-        {
-          "evidence": "vendored Buildings/Controls/OBC/CDL/Reals/MatrixGain.mo (protected nin = size(K, 2), nout = size(K, 1)); catalog rule RealMatrixElements (rows nout, cols nin)",
-          "subject": "nout",
-          "text": "Number of outputs: the number of rows of K"
-        },
-        {
-          "evidence": "vendored Buildings/Controls/OBC/CDL/Reals/MatrixGain.mo (protected nin = size(K, 2), nout = size(K, 1)); catalog rule RealMatrixElements (rows nout, cols nin)",
-          "subject": "nin",
-          "text": "Number of inputs: the number of columns of K"
-        }
-      ],
-      "notes": []
-    },
-    {
       "class": "CDL.Reals.Greater",
       "descriptions": [],
       "notes": [

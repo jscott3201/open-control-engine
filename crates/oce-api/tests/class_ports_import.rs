@@ -403,11 +403,11 @@ fn preserved_arrays_import_under_the_expanded_template_names() {
 
     let gain = import(&document(
         "CDL.Reals.MatrixGain",
-        &[
-            Param::Integer("nout", 2),
-            Param::Integer("nin", 3),
-            Param::Array("K[2,3]", "(2, 3)", vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
-        ],
+        &[Param::Array(
+            "K[2,3]",
+            "(2, 3)",
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        )],
         &[("u1", R), ("u2", R), ("u3", R)],
         &[("y1", R), ("y2", R)],
     ));
@@ -427,11 +427,11 @@ fn preserved_arrays_import_under_the_expanded_template_names() {
     // And the hand-written connectors are the ones `class_ports` names for those parameters.
     check(
         "CDL.Reals.MatrixGain",
-        &[
-            Param::Integer("nout", 2),
-            Param::Integer("nin", 3),
-            Param::Array("K[2,3]", "(2, 3)", vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
-        ],
+        &[Param::Array(
+            "K[2,3]",
+            "(2, 3)",
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        )],
         &[("u1", R), ("u2", R), ("u3", R)],
         &[("y1", R), ("y2", R)],
     );

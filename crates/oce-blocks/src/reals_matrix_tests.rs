@@ -131,8 +131,6 @@ fn matrix_gain_uses_default_identity_and_row_major_custom_matrix() {
 
     let via_registry = (lookup("CDL.Reals.MatrixGain").unwrap().make)(&ParamTable {
         values: vec![
-            ("nout".into(), Value::Integer(2)),
-            ("nin".into(), Value::Integer(3)),
             ("K_1_1".into(), Value::Real(0.5)),
             ("K_1_2".into(), Value::Real(2.0)),
             ("K_1_3".into(), Value::Real(-1.0)),
@@ -149,20 +147,26 @@ fn matrix_gain_uses_default_identity_and_row_major_custom_matrix() {
         vec![(-8.0f64).to_bits(), 14.0f64.to_bits()]
     );
 
-    let oversize_product = (lookup("CDL.Reals.MatrixGain").unwrap().make)(&ParamTable {
+    // The counts are `K`'s shape (issue #773): one cell past the port width spans a shape no block
+    // holds, so nothing is built; `nin`/`nout` bound beside `K` are read by nothing.
+    for cell in [
+        format!("K_{MAX_RESOLVED_PORT_WIDTH}_{MAX_RESOLVED_PORT_WIDTH}"),
+        format!("K_{}_1", MAX_RESOLVED_PORT_WIDTH + 1),
+    ] {
+        let oversize_product = (lookup("CDL.Reals.MatrixGain").unwrap().make)(&ParamTable {
+            values: vec![(cell.as_str().into(), Value::Real(1.0))],
+        });
+        assert!(oversize_product.resolved_signature().inputs.is_empty());
+        assert!(oversize_product.resolved_signature().outputs.is_empty());
+    }
+    let counts_ignored = (lookup("CDL.Reals.MatrixGain").unwrap().make)(&ParamTable {
         values: vec![
-            (
-                "nout".into(),
-                Value::Integer(i64::try_from(MAX_RESOLVED_PORT_WIDTH).unwrap()),
-            ),
-            (
-                "nin".into(),
-                Value::Integer(i64::try_from(MAX_RESOLVED_PORT_WIDTH).unwrap()),
-            ),
+            ("nout".into(), Value::Integer(7)),
+            ("nin".into(), Value::Integer(5)),
         ],
     });
-    assert!(oversize_product.resolved_signature().inputs.is_empty());
-    assert!(oversize_product.resolved_signature().outputs.is_empty());
+    assert_eq!(counts_ignored.resolved_signature().inputs.len(), 2);
+    assert_eq!(counts_ignored.resolved_signature().outputs.len(), 2);
 }
 
 #[test]

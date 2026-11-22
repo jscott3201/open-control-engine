@@ -303,14 +303,7 @@ pub(crate) fn rule_parameters(rule: &ParamRule) -> [Option<(&'static str, Option
             named(count, Some(Integer)),
             None,
         ],
-        ParamRule::RealMatrixElements {
-            base, rows, cols, ..
-        } => [
-            matrix(base),
-            named(rows, Some(Integer)),
-            named(cols, Some(Integer)),
-            None,
-        ],
+        ParamRule::RealMatrixElements { base, .. } => [matrix(base), None, None, None],
         ParamRule::TimeTableMatrix {
             base,
             time_scale,

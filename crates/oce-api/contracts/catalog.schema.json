@@ -531,9 +531,6 @@
                     "base": {
                       "type": "string"
                     },
-                    "cols": {
-                      "type": "string"
-                    },
                     "default_cols": {
                       "maximum": 9223372036854775807,
                       "minimum": -9223372036854775808,
@@ -544,9 +541,6 @@
                       "minimum": -9223372036854775808,
                       "type": "integer"
                     },
-                    "rows": {
-                      "type": "string"
-                    },
                     "rule": {
                       "const": "RealMatrixElements"
                     }
@@ -554,9 +548,7 @@
                   "required": [
                     "rule",
                     "base",
-                    "rows",
                     "default_rows",
-                    "cols",
                     "default_cols"
                   ],
                   "type": "object"

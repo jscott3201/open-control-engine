@@ -838,12 +838,6 @@
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain",
       "S231:hasParameter": [
         {
-          "@id": "urn:oce:author:multizone_vav_relief_fan_group.enaRel.nout"
-        },
-        {
-          "@id": "urn:oce:author:multizone_vav_relief_fan_group.enaRel.nin"
-        },
-        {
           "@id": "urn:oce:author:multizone_vav_relief_fan_group.enaRel.K"
         }
       ],
@@ -869,22 +863,6 @@
           "@id": "urn:oce:author:multizone_vav_relief_fan_group.enaRel.y4"
         }
       ]
-    },
-    {
-      "@id": "urn:oce:author:multizone_vav_relief_fan_group.enaRel.nout",
-      "@type": "S231:Parameter",
-      "S231:isOfDataType": {
-        "@id": "S231:Integer"
-      },
-      "S231:value": 4
-    },
-    {
-      "@id": "urn:oce:author:multizone_vav_relief_fan_group.enaRel.nin",
-      "@type": "S231:Parameter",
-      "S231:isOfDataType": {
-        "@id": "S231:Integer"
-      },
-      "S231:value": 2
     },
     {
       "@id": "urn:oce:author:multizone_vav_relief_fan_group.enaRel.K",

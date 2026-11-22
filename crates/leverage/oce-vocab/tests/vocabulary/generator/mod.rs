@@ -34,11 +34,9 @@ pub const ABSENT_CLASSES: &[&str] = &["CDL.Logical.TrueHoldWithReset"];
 
 /// `(class, parameter)` the catalog lists and CXF-Core omits because upstream declares them
 /// `protected`: generated with an empty description. Any other missing member fails the
-/// generator, and so does a listed one the document gains.
-pub const ABSENT_MEMBERS: &[(&str, &str)] = &[
-    ("CDL.Reals.MatrixGain", "nout"),
-    ("CDL.Reals.MatrixGain", "nin"),
-];
+/// generator, and so does a listed one the document gains. Empty since issue #773: the catalog
+/// lists no protected parameter (`MatrixGain`'s `nin`/`nout` were the two).
+pub const ABSENT_MEMBERS: &[(&str, &str)] = &[];
 
 /// Why the generator refused. `subject` is a connector or parameter name, or empty for the
 /// class itself.

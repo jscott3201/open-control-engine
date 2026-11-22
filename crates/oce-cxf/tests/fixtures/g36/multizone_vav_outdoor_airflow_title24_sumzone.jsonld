@@ -73,8 +73,6 @@
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain",
       "S231:label": "groFlo",
       "S231:hasParameter": [
-        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo.nout" },
-        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo.nin" },
         { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo.K" }
       ],
       "S231:hasInput": [
@@ -87,8 +85,6 @@
         { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo.y2" }
       ]
     },
-    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo.nout", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
-    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
     {
       "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo.K",
       "@type": "S231:Parameter",
@@ -116,8 +112,6 @@
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain",
       "S231:label": "groFlo1",
       "S231:hasParameter": [
-        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1.nout" },
-        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1.nin" },
         { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1.K" }
       ],
       "S231:hasInput": [
@@ -130,8 +124,6 @@
         { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1.y2" }
       ]
     },
-    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1.nout", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
-    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
     {
       "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.groFlo1.K",
       "@type": "S231:Parameter",

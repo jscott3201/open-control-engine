@@ -92,11 +92,10 @@ pub(super) const MULTI_SUM_PARAM_DEFAULTS: &[ParamDefault] = &[
     param_default_integer!("nin", MULTI_NIN_DEFAULT),
     param_default_real!("k_<i>", MULTI_SUM_K_DEFAULT),
 ];
-pub(super) const MATRIX_GAIN_PARAM_DEFAULTS: &[ParamDefault] = &[
-    param_default_integer!("nout", MATRIX_GAIN_NOUT_DEFAULT),
-    param_default_integer!("nin", MATRIX_GAIN_NIN_DEFAULT),
-    param_default_derived!("K_<row>_<col>", "1.0 if row == col else 0.0"),
-];
+pub(super) const MATRIX_GAIN_PARAM_DEFAULTS: &[ParamDefault] = &[param_default_derived!(
+    "K_<row>_<col>",
+    "[1, 0; 0, 1] when no cell is bound; nout = size(K, 1), nin = size(K, 2)"
+)];
 pub(super) const MATRIX_MAX_PARAM_DEFAULTS: &[ParamDefault] = &[
     param_default_required!("nRow"),
     param_default_required!("nCol"),

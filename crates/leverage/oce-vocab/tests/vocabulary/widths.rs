@@ -21,6 +21,9 @@ enum Shape {
     Equal(&'static str, &'static str),
     /// Two Integer width parameters whose product is bounded: a matrix, or a vector replicated.
     Product(&'static str, &'static str),
+    /// A matrix whose cells set its shape (`MatrixGain.K`, issue #773): one input per column and
+    /// one output per row of the cells bound.
+    Cells(&'static str),
     /// A `TimeTable` source: one output per table column after the time column.
     TimeTable {
         /// Whether the class requires a `period`.
@@ -37,7 +40,7 @@ const SHAPES: &[(&str, Shape)] = &[
     ("CDL.Reals.MultiMax", Shape::One("nin")),
     ("CDL.Reals.MultiMin", Shape::One("nin")),
     ("CDL.Reals.MultiSum", Shape::One("nin")),
-    ("CDL.Reals.MatrixGain", Shape::Product("nout", "nin")),
+    ("CDL.Reals.MatrixGain", Shape::Cells("K")),
     ("CDL.Reals.MatrixMax", Shape::Product("nRow", "nCol")),
     ("CDL.Reals.MatrixMin", Shape::Product("nRow", "nCol")),
     ("CDL.Reals.Sort", Shape::One("nin")),
@@ -109,6 +112,18 @@ fn integers(values: &[(&str, i64)]) -> Table {
         .collect()
 }
 
+/// The port-width bound (`oce_blocks::MAX_RESOLVED_PORT_WIDTH`), restated: the most cells a
+/// matrix whose cells set its shape may span.
+const MAX_CELLS: usize = 1 << 20;
+
+/// Every cell `<base>_<row>_<col>` of a `rows` by `cols` matrix, zeros.
+fn cells(base: &str, rows: usize, cols: usize) -> Table {
+    (1..=rows)
+        .flat_map(|row| (1..=cols).map(move |col| (row, col)))
+        .map(|(row, col)| (format!("{base}_{row}_{col}"), Value::Real(0.0)))
+        .collect()
+}
+
 /// A `rows` by `cols` time table (strictly increasing times in the first column, zeros
 /// elsewhere), with a `period` past the last time where the class requires one.
 fn time_table(rows: usize, cols: usize, period: bool) -> Table {
@@ -133,6 +148,7 @@ pub fn probe(class_path: &str) -> Option<Table> {
         Shape::One(width) => integers(&[(width, 2)]),
         Shape::Equal(a, b) => integers(&[(a, 2), (b, 2)]),
         Shape::Product(a, b) => integers(&[(a, 2), (b, 3)]),
+        Shape::Cells(base) => cells(base, 2, 3),
         Shape::TimeTable { period } => time_table(2, 3, period),
     })
 }
@@ -173,6 +189,12 @@ pub fn width_tables(class_path: &str) -> Option<Vec<Table>> {
             integers(&[(a, 2), (b, 3)]),
             integers(&[(a, maximum(class_path, a)), (b, 1)]),
             integers(&[(a, 1), (b, maximum(class_path, b))]),
+        ],
+        Shape::Cells(base) => vec![
+            cells(base, 1, 1),
+            cells(base, 2, 3),
+            cells(base, MAX_CELLS, 1),
+            cells(base, 1, MAX_CELLS),
         ],
         Shape::TimeTable { period } => vec![
             time_table(2, 2, period),

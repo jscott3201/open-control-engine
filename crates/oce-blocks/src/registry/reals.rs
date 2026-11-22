@@ -364,38 +364,13 @@ pub(super) const MULTI_SUM_PARAM_RULES: &[ParamRule] = &[
     },
 ];
 
-pub(super) const MATRIX_GAIN_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Structural { name: "nout" },
-    ParamRule::Structural { name: "nin" },
-    ParamRule::IntegerGreaterOrEqual {
-        name: "nout",
-        min: 0,
-    },
-    ParamRule::IntegerLessOrEqualConstant {
-        name: "nout",
-        max: MAX_RESOLVED_PORT_WIDTH as i64,
-    },
-    ParamRule::IntegerGreaterOrEqual {
-        name: "nin",
-        min: 0,
-    },
-    ParamRule::IntegerLessOrEqualConstant {
-        name: "nin",
-        max: MAX_RESOLVED_PORT_WIDTH as i64,
-    },
-    ParamRule::IntegerProductLessOrEqualConstant {
-        left: "nout",
-        right: "nin",
-        max: MAX_RESOLVED_PORT_WIDTH as i64,
-    },
-    ParamRule::RealMatrixElements {
-        base: "K",
-        rows: "nout",
-        default_rows: 2,
-        cols: "nin",
-        default_cols: 2,
-    },
-];
+/// `MatrixGain` declares `K` alone: upstream's `nout = size(K, 1)` and `nin = size(K, 2)` are
+/// protected, so the counts come from `K`'s cells (issue #773).
+pub(super) const MATRIX_GAIN_PARAM_RULES: &[ParamRule] = &[ParamRule::RealMatrixElements {
+    base: "K",
+    default_rows: MATRIX_GAIN_NOUT_DEFAULT,
+    default_cols: MATRIX_GAIN_NIN_DEFAULT,
+}];
 
 pub(super) const MATRIX_MAX_PARAM_RULES: &[ParamRule] = &[
     ParamRule::Required {
@@ -649,15 +624,25 @@ fn make_multi_sum(p: &ParamTable) -> Box<dyn Block> {
 }
 
 fn make_matrix_gain(p: &ParamTable) -> Box<dyn Block> {
-    let nout = bounded_usize_param(p, "nout", MATRIX_GAIN_NOUT_DEFAULT);
-    let nin = bounded_usize_param(p, "nin", MATRIX_GAIN_NIN_DEFAULT);
+    // The counts come from `K` (issue #773): its bound cells' largest row and column, or the
+    // default 2×2 identity when no cell is bound. `nin`/`nout` are not parameters of the class.
+    let cells = crate::bound_cells(p, "K");
+    let (nout, nin) = if cells.count == 0 {
+        (
+            usize::try_from(MATRIX_GAIN_NOUT_DEFAULT).unwrap_or(0),
+            usize::try_from(MATRIX_GAIN_NIN_DEFAULT).unwrap_or(0),
+        )
+    } else {
+        (cells.rows, cells.cols)
+    };
     let Some(product) = nout.checked_mul(nin) else {
         return Box::new(MatrixGain::new(0, 0, Vec::new()));
     };
     if product > MAX_RESOLVED_PORT_WIDTH {
         return Box::new(MatrixGain::new(0, 0, Vec::new()));
     }
-    // Row-major, each cell read once (GitHub #643); a cell left out is the identity's.
+    // Row-major, each cell read once (GitHub #643); a cell the load gate refuses to leave out
+    // (the matrix must be complete) is the identity's only in a model built without it.
     let diagonal = (1..=nout).flat_map(|row| (1..=nin).map(move |col| row == col));
     let gains = matrix_elements(p, "K", nout, nin)
         .into_iter()

@@ -63,6 +63,7 @@ mod declaration_scope_tests;
 #[cfg(test)]
 mod declaration_scope_withheld_tests;
 mod diags;
+mod enumeration_parameters;
 pub(crate) mod extension_blocks;
 mod instance_interface;
 mod instance_params;

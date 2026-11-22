@@ -65,8 +65,6 @@ fn matrix_gain_model() -> ModelGraph {
         &[ValueType::Real, ValueType::Real],
         &[ValueType::Real, ValueType::Real],
         vec![
-            (Arc::from("nout"), Value::Integer(2)),
-            (Arc::from("nin"), Value::Integer(2)),
             (Arc::from("K_1_1"), Value::Real(1.0)),
             (Arc::from("K_1_2"), Value::Real(0.0)),
             (Arc::from("K_2_1"), Value::Real(0.0)),
@@ -382,9 +380,11 @@ fn structural_vector_width_params_are_not_editable_at_rest() {
     eng.build_model_in_memory(matrix_gain_model(), None)
         .expect("valid MatrixGain loads");
     eng.halt().unwrap();
+    // `MatrixGain`'s counts are `K`'s shape (issue #773): there is no `nout` to edit, and a `K`
+    // cell is a value edit.
     assert!(matches!(
         eng.set_param("b0.nout", Value::Integer(3)),
-        Err(OcError::ParamStructural { .. })
+        Err(OcError::UnknownPoint(_))
     ));
     eng.set_param("b0.K_1_1", Value::Real(2.0))
         .expect("MatrixGain K entries are value-only coefficient edits");

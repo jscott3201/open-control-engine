@@ -119,10 +119,10 @@ fn vector_width_and_flattened_gain_parameters_are_checked() {
         &[ValueType::Real, ValueType::Real],
         &[ValueType::Real, ValueType::Real],
         vec![
-            (Arc::from("nout"), Value::Integer(2)),
-            (Arc::from("nin"), Value::Integer(2)),
             (Arc::from("K_1_1"), Value::Real(1.0)),
             (Arc::from("K_1_2"), Value::Boolean(true)),
+            (Arc::from("K_2_1"), Value::Real(0.0)),
+            (Arc::from("K_2_2"), Value::Real(1.0)),
         ],
     );
     let err = validate(&bad_matrix_gain).expect_err("K_1_2 must be numeric");

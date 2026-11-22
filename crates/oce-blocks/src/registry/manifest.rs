@@ -204,17 +204,13 @@ fn param_rule_json(rule: &ParamRule) -> String {
         ),
         ParamRule::RealMatrixElements {
             base,
-            rows,
             default_rows,
-            cols,
             default_cols,
         } => object(
             "RealMatrixElements",
             &[
                 ("base", json_str(base)),
-                ("rows", json_str(rows)),
                 ("default_rows", default_rows.to_string()),
-                ("cols", json_str(cols)),
                 ("default_cols", default_cols.to_string()),
             ],
         ),

@@ -66,7 +66,7 @@ fn the_embedded_files_join() {
 fn a_curated_description_never_replaces_a_generated_one() {
     for (class_path, subject) in [
         ("CDL.Reals.Subtract", "u1"),
-        ("CDL.Reals.MatrixGain", "K"),
+        ("CDL.Discrete.UnitDelay", "y_start"),
         ("CDL.Logical.TrueDelay", "delayTime"),
     ] {
         let error = refused(|curated| {
@@ -210,8 +210,6 @@ fn every_connector_and_parameter_is_described_after_the_merge() {
         ("CDL.Logical.TrueHoldWithReset", "clr"),
         ("CDL.Logical.TrueHoldWithReset", "y"),
         ("CDL.Logical.TrueHoldWithReset", "duration"),
-        ("CDL.Reals.MatrixGain", "nout"),
-        ("CDL.Reals.MatrixGain", "nin"),
     ] {
         let error = refused(|curated| {
             let curated_class = class(curated, class_path);
@@ -246,7 +244,8 @@ fn every_connector_and_parameter_is_described_after_the_merge() {
                 .map(|d| (class.class_path.clone(), d.subject.clone()))
         })
         .collect();
-    assert_eq!(undescribed.len(), 6);
+    // Four since issue #773 removed `MatrixGain`'s `nin` and `nout`, the other two.
+    assert_eq!(undescribed.len(), 4);
     assert_eq!(
         undescribed.iter().collect::<BTreeSet<_>>(),
         described.iter().collect::<BTreeSet<_>>()
@@ -370,8 +369,6 @@ fn the_view_serves_curated_text_only_where_the_generated_text_is_empty() {
     assert_eq!(
         curated_subjects,
         [
-            "CDL.Reals.MatrixGain.nout",
-            "CDL.Reals.MatrixGain.nin",
             "CDL.Logical.TrueHoldWithReset.u",
             "CDL.Logical.TrueHoldWithReset.clr",
             "CDL.Logical.TrueHoldWithReset.y",

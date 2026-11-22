@@ -366,11 +366,13 @@ fn a_value_of_another_kind_than_the_declared_one_is_refused_on_the_declaration()
 }
 
 #[test]
-fn an_undeclared_or_enumeration_declared_parameter_keeps_what_the_document_wrote() {
+fn an_undeclared_parameter_keeps_what_the_document_wrote() {
+    // A non-canonical enumeration path declares no type here: it is refused on the declaration
+    // before grounding (`enumeration_parameters`), so the hold never sees it as a type.
     for datatype in [
         None,
         Some("S231:NotAType"),
-        Some("Buildings.Controls.OBC.CDL.Types.SimpleController"),
+        Some("http://example.org#SimpleController"),
     ] {
         let node = declared(datatype);
         for value in [
@@ -390,6 +392,51 @@ fn an_undeclared_or_enumeration_declared_parameter_keeps_what_the_document_wrote
             );
         }
     }
+    // A declared CDL enumeration keeps a member of its own class, and refuses every other value
+    // (issue #762); a declared G36 enumeration is judged before grounding and kept here.
+    let simple = declared(Some("Buildings.Controls.OBC.CDL.Types.SimpleController"));
+    let member = Value::Enum {
+        class: EnumClassId::SIMPLE_CONTROLLER,
+        ordinal: 3,
+    };
+    assert!(
+        hold_in_declared_type(&simple, member.clone())
+            .unwrap()
+            .bit_eq(&member)
+    );
+    for value in [
+        Value::Integer(3),
+        Value::Real(3.0),
+        Value::Boolean(true),
+        Value::String("Buildings.Controls.OBC.CDL.Types.SimpleController.PD".into()),
+        Value::Enum {
+            class: EnumClassId::SMOOTHNESS,
+            ordinal: 1,
+        },
+    ] {
+        let (fault, kept) = hold_in_declared_type(&simple, value.clone()).unwrap_err();
+        assert_eq!(
+            fault,
+            DeclaredTypeFault::WrongKind {
+                declared: ValueType::Enum(EnumClassId::SIMPLE_CONTROLLER)
+            },
+            "{value:?}"
+        );
+        assert!(kept.bit_eq(&value));
+        let message = fault.diagnostic("urn:p", "p", &kept).message;
+        assert!(
+            message.contains("Buildings.Controls.OBC.CDL.Types.SimpleController.<member>"),
+            "{message}"
+        );
+    }
+    let coil = declared(Some(
+        "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil",
+    ));
+    assert!(
+        hold_in_declared_type(&coil, Value::Integer(2))
+            .unwrap()
+            .bit_eq(&Value::Integer(2))
+    );
     // A declared Integer or Boolean keeps its own kind untouched.
     assert!(
         hold_in_declared_type(&declared(Some("S231:Integer")), Value::Integer(i64::MAX))

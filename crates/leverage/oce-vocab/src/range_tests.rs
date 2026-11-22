@@ -193,9 +193,7 @@ fn rules_about_type_shape_and_structure_render_no_range() {
         },
         CatalogRule::RealMatrixElements {
             base: "p",
-            rows: "n",
             default_rows: 2,
-            cols: "m",
             default_cols: 2,
         },
         CatalogRule::TimeTableMatrix {

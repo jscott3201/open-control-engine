@@ -1,13 +1,13 @@
 {
   "format_version": 1,
   "engine_version": "0.6.0",
-  "content_id": "oce:canon1:b122200d87ddc5164e6946738cd4c6918fe255a56a6830289807972e425f66d0",
+  "content_id": "oce:canon1:6e08b139e13dc6d63bb5d15d8c7fd4f116d0b0b74efd415641323904fae50a00",
   "target_bound": false,
   "classes": [
     {"class_path": "CDL.Conversions.BooleanToReal", "signature_hash": "a9c29c427fe3c4da"},
     {"class_path": "CDL.Integers.Equal", "signature_hash": "5c04e75ea3d8bc7a"},
     {"class_path": "CDL.Integers.Sources.Constant", "signature_hash": "059978881e33c014"},
-    {"class_path": "CDL.Reals.MatrixGain", "signature_hash": "e4e6f143df08b139"},
+    {"class_path": "CDL.Reals.MatrixGain", "signature_hash": "861cf6b41e0d3e70"},
     {"class_path": "CDL.Reals.MultiMax", "signature_hash": "6f8e193f41ab06c3"},
     {"class_path": "CDL.Reals.MultiSum", "signature_hash": "4fafc291d1262ec9"},
     {"class_path": "CDL.Reals.Multiply", "signature_hash": "70d2724a506843ec"}

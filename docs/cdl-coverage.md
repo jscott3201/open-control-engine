@@ -240,8 +240,18 @@ catalog lists `k_<i>` and `K_<row>_<col>` once, and `oce_api::param_element_name
 `k_1`, `K_2_1` names the CXF import mints for a preserved array.
 
 An array element must lie inside its array's resolved extent, or the load is refused with
-`parameter-out-of-range`. So no value is dropped for lying outside its extent. A matrix cell must
-lie inside `nout` × `nin` (`MatrixGain.K`), and a `TimeTable` offset inside the table's outputs.
+`parameter-out-of-range`. So no value is dropped for lying outside its extent. A matrix whose cells
+set its shape (`MatrixGain.K`, a `TimeTable`'s `table`) must fill the rectangle its largest row and
+column span, every index from 1, and a `TimeTable` offset must lie inside the table's outputs. The
+compiled-schedule blob decoder applies the same shape rules (`ElementOutsideShape`, issue #772).
+
+`MatrixGain` declares `K` alone (issue #773, owner ruling of 2026-11-22): upstream's
+`nout = size(K, 1)` and `nin = size(K, 2)` are `protected`, so the input and output counts are
+`K`'s shape, and `nin` or `nout` on a `MatrixGain` is `unknown-parameter` (before, both were
+settable and nothing held them to `K`: `nout = 7` on a 2×2 `K` loaded with seven outputs, five of
+them `0.0`). With no cell bound, `K` is upstream's default, the 2×2 identity
+(`parameter Real K[:,:]=[1, 0; 0, 1]`, `Reals/MatrixGain.mo` line 4). A `K` whose cells leave its
+rectangle unfilled is `parameter-out-of-range`, one finding naming the unbound cells.
 Since GitHub #626, a vector element must lie inside its length too, its index from 1 to `n`:
 
 - `k` on both `MultiSum` classes, against `nin`;
@@ -282,10 +292,12 @@ or past the extent is `parameter-out-of-range` (GitHub #635), and any name under
 `TimeTable` offset's prefix that is no cell of its shape (`K_1`, `table_1_2_3`, `offset_x`) is the
 matrix or offset rule's `parameter-out-of-range`. The authoring validator refuses all of them at
 stage 1 as `unknown-parameter`; the compiled-schedule blob decoder refuses a blob carrying a
-parameter its class does not declare (`UndeclaredParameter`). The catalog lists every public
-parameter the pinned upstream source declares for each class, which `oce-cxf`'s
-`fixture_port_order` test holds class by class, so a parameter CDL defines is never refused as
-unknown.
+parameter its class does not declare (`UndeclaredParameter`) or an element outside its class's
+shape (`ElementOutsideShape`, issue #772). The catalog lists exactly the public parameters the
+pinned upstream source declares for each class, with no exception since issue #773 removed
+`MatrixGain`'s protected `nin`/`nout`, which `oce-cxf`'s `fixture_port_order` test holds class by
+class, so a parameter CDL defines is never refused as unknown and none it keeps protected is
+settable.
 
 `oce_api::class_metadata()` adds, for every class in catalog order, a one-sentence `description`
 (the upstream Modelica class description string where a vendored source exists, held to it by a

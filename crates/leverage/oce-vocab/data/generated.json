@@ -1029,18 +1029,6 @@
       ],
       "parameters": [
         {
-          "description": "",
-          "name": "nout",
-          "quantity": "",
-          "unit": ""
-        },
-        {
-          "description": "",
-          "name": "nin",
-          "quantity": "",
-          "unit": ""
-        },
-        {
           "description": "Gain matrix which is multiplied with the input",
           "name": "K",
           "quantity": "",

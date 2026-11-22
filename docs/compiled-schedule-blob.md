@@ -284,18 +284,27 @@ The hash does not cover tick behaviour; behavioural identity rests on the exact 
 ## Trust model
 
 For **semantics** a blob is trusted: a well-formed but wrong parameter executes as written, because
-the validator's parameter rules are not linked on a target. Two checks are linked, since in each a
-block would otherwise run on its default rather than on anything the blob wrote: a parameter under
-a name its class does not declare is refused (`UndeclaredParameter`, issue #748), and a parameter
-of a kind its catalog type does not admit is refused (`ParameterKindMismatch`, issue #734). A value of the
-right kind outside a class rule's range still executes. So does an array element past its
-array's extent: its canonical name is a declared name, and the extent rules that refuse it run at
-load, not in the decoder, so `table_3_2` on a 2-row `TimeTable` decodes and reshapes the table, and
-`k_3` on a `MultiSum` with `nin = 2` decodes and is dropped (issue #772 proposes the decoder
-check). A 0.6.0 blob written before that check
-(GitHub #754) and carrying such a value, for example an ordinal on `zerTim` or `smoothness`, which
-the readers then decoded, is refused rather than read with another meaning; no version bump is
-owed, since no release has been tagged since 0.6.0. Authenticate and authorize blobs in your
+the validator's parameter rules are not linked on a target. Three checks are linked, since in each
+a block would otherwise run on its default or drop or reshape what the blob wrote: a parameter
+under a name its class does not declare is refused (`UndeclaredParameter`, issue #748); a
+parameter of a kind its catalog type does not admit is refused (`ParameterKindMismatch`, issue
+#734); and an array or matrix element outside its class's shape is refused
+(`ElementOutsideShape`, issue #772): an element past its vector's resolved length (`k_3` on a
+`MultiSum` with `nin = 2`, once dropped), an offset past its table's outputs, an index too large
+for any width, and a table or matrix whose bound cells do not fill the rectangle their largest row
+and column span (`table_3_2` on a 2-row `TimeTable`, which once reshaped the table and changed its
+output). The decoder applies the class's **shape** rules, completeness as well as extent, with the
+load gate's own predicate (`oce_blocks::element_outside_extent`), once every parameter of the block
+is read and before the block is built. A value of the right kind outside a class rule's range
+still executes, and so does a complete table of another shape (a wrong value of the right kind).
+`MatrixGain` declares `K` alone: its counts are `K`'s shape, so `nin` and `nout` in a blob are
+`UndeclaredParameter` (issue #773). A 0.6.0 blob written before these checks (GitHub #754, and this
+change) and carrying such a value, for example an ordinal on `zerTim` or `smoothness`, an element
+outside its shape, or a `MatrixGain` (whose class signature hash moved with its parameters, so it
+is `ClassSignatureMismatch` before its `nin`/`nout` are read), is refused rather than read with
+another meaning; no version bump is owed, since no release has been tagged since 0.6.0. An
+enumeration value records its durable class path (`CDL.Types.SimpleController`, the full path for
+a G36 one) and is read by exact equality: any other spelling is `UnknownEnumClass`. Authenticate and authorize blobs in your
 host's envelope before decoding them, as you would snapshot bytes.
 
 For **memory safety** a blob is hostile: `decode` never panics, refuses malformed bytes with a
@@ -309,9 +318,12 @@ length (the test bounds it at 8×).
 
 Block constructors are the one place an allocation is sized by a parameter's name or value
 rather than by a count of bytes: a `CDL.Reals.Sources.TimeTable` sizes its table from the largest
-`table_<row>_<col>` name it is given, a `CDL.Reals.MatrixGain` holds `nin × nout` gains whether
-or not one is bound. Each block is capped by `MAX_RESOLVED_PORT_WIDTH`, and a model has many, so
-the decoder holds them to a model-wide budget (issue #700): every constructed block reports the
+`table_<row>_<col>` name it is given, a `CDL.Reals.MatrixGain` its gains from `K`'s, and a
+`MultiSum` its gains from `nin`. Since issue #772 a lone corner cell no longer reaches a
+constructor from a blob (its cells do not fill their rectangle, `ElementOutsideShape`), so the
+blocks that reach the budget are shape-valid ones whose bytes pay for them: a widest `MultiSum`
+holds 1,179,648 words behind 2^20 connector ids. Each block is capped by `MAX_RESOLVED_PORT_WIDTH`,
+and a model has many, so the decoder holds them to a model-wide budget (issue #700): every constructed block reports the
 words it holds outside its state (`Block::constructed_words`), the decoder sums them as it
 constructs, and the first block that takes the total past `oce_graph::MAX_CONSTRUCTED_WORDS`
 (4,194,304 words, 32 MiB) is dropped and the blob refused with `ConstructedTooLarge`. The state
@@ -331,11 +343,17 @@ for about 184 decoded: a block of 200,000 unread outputs holds 44.2× its blob, 
 measured, and the tests hold every shape and every seeded hostile model to 64×. The constructed
 budget is a budget of its own, not a share of the state budget, so a model may spend both in
 full; it admits one block at the widest the per-block bound allows (2,228,223 words) and three
-dense 1024 × 1024 gain matrices together, while the largest of the 46 G36 fixtures holds 42
-words. A model past it is refused, not truncated: reduce the table, matrix or vector sizes, or
-split the model. The CXF load applies the same budget with the same counter
+widest `MultiSum` blocks and a fourth of 582,542 inputs together, while the largest of the 46 G36
+fixtures holds 42 words. A model past it is refused, not truncated: reduce the table, matrix or
+vector sizes, or split the model. The CXF load applies the same budget with the same counter
 (`BuildError::ConstructedTooLarge`, recorded as `resource-limit-exceeded`), so a model the host
-loaded is one the target constructs. Every registered block constructor is fuzzed with hostile
+loaded is one the target constructs. No valid CXF document reaches it: since issue #773 a dense
+matrix writes its cells, and a document holds at most 8 MiB (`MAX_CXF_BYTES`) and 2^20 array
+elements, so the largest construction measured is one `MatrixGain` of 1024 × 1024 written cells
+(1,048,832 words, a quarter of the budget) and what the remaining bytes buy as ports, at about 180
+bytes a word (`crates/oce-api/tests/cxf_constructed_budget.rs`). The budget is defence in depth for
+blobs and for hosts that build graphs directly; its load-path refusal is pinned on a hand-built
+graph (`crates/oce-api/src/engine_constructed_budget_tests.rs`). Every registered block constructor is fuzzed with hostile
 parameter tables bounded by `MAX_RESOLVED_PORT_WIDTH`, and measured against what it reports.
 
 **Integrity** is a CRC-32C trailer over every preceding byte. It detects corruption in flash,
@@ -357,7 +375,9 @@ catalog type admits (`ParameterKindMismatch`: a Real on an Integer parameter, an
 2^53 on a Real one, and on an enumeration parameter anything but an enumeration value of its own
 class: an ordinal, a string, another enumeration's member; the load gate's own predicate,
 `oce_blocks::admits_parameter_value`, so a block is never built on the default its reader falls
-back to, issue #734 and the owner's ruling R2), the constructed budget
+back to, issue #734 and the owner's ruling R2), every element inside its class's shape
+(`ElementOutsideShape`: extent and completeness, `oce_blocks::element_outside_extent`, judged
+once the block's parameters are read, issue #772), the constructed budget
 (`MAX_CONSTRUCTED_WORDS`, charged the moment the block is constructed), the constructed block's
 kind, state length and arity, connectors in range and not already claimed), then every class
 used and every connector claimed; boundary inputs (not Enum-typed, typed targets used once,
@@ -503,8 +523,9 @@ without a panic, and a missing, foreign, swapped or oversized file.
 | The same run on bare metal | `firmware/link/tests/run_tests.rs` (every golden reaches its digest through the image's run code) and `schedule_tests.rs` (the image's schedule equals the test schedule bit for bit), per PR; `qemu.yml` (nightly): the image on `netduinoplus2` and riscv32 `virt` prints the host's run digest after each of 160 frames |
 | Encoded on one machine, the same run on x86_64, aarch64 and wasm32 | `crates/oce-conformance/tests/blob_round_trip.rs` ([above](#the-blob-round-trip)): every output, warning and raw state word after every frame of all 46 fixtures, recorded in all four per-PR determinism cells (required identical, release codegen included) and replayed from the x86_64 debug recording on aarch64 and on `wasm32-wasip1` under wasmtime, per PR; its controls flip one recorded bit and require the report to name it |
 | Raw state words restore all or nothing | `crates/oce-graph/tests/blob_state_words.rs` |
-| Decoder memory is bounded by the blob length and two fixed budgets | `blob_peak_allocation.rs`: the shapes of issue #700 (one, 16 and 64 `TimeTable` blocks sized by one parameter name, a dense 1024 × 1024 `MatrixGain`) decode or refuse with `ConstructedTooLarge` within the words they hold and 64× their length; blocks holding exactly the constructed budget decode and one more block of four words is refused; a blob spending the constructed and the state budget in full decodes within their sum; a block of 200,000 unread outputs stays within the linear term. `blob_hostile_parameter_models.rs`: 100 seeded models of up to thirteen blocks with hostile parameter tables decode or refuse exactly as predicted from the words each block reports, the summary carries the same verdict, and no peak passes the bound. `blob_constructed_budget.rs`: the refusal's place among every other refusal, and `inspect`, `inspect_blob` and `Executable::from_blob` reporting it alike. `oce-graph`'s `constructed_budget` unit tests: exactly the budget accepted, one word past refused, overflow saturated. `oce-blocks` `tests/constructed_words.rs`: every registered class, under the hostile tables, holds no more and no less than it reports, and no construction peaks above `MAX_CONSTRUCTION_PEAK_BYTES` |
-| Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed) and `oce-blocks` `tests/hostile_parameters.rs` |
+| Decoder memory is bounded by the blob length and two fixed budgets | `blob_peak_allocation.rs`: the shapes of issue #700 (one, 16 and 64 `TimeTable` blocks sized by one parameter name, a lone 1024 × 1024 `MatrixGain` corner) are refused with `ElementOutsideShape` within 64× their length, before any table is built (issue #772); blocks holding exactly the constructed budget (shape-valid `MultiSum` blocks built in the test) decode and one more block of four words is refused; a blob spending the constructed and the state budget in full decodes within their sum; a block of 200,000 unread outputs stays within the linear term. `blob_hostile_parameter_models.rs`: 100 seeded models of up to thirteen blocks with hostile parameter tables decode or refuse exactly as predicted from each block's shape and the words it reports, the summary carries the same verdict, and no peak passes the bound. `blob_constructed_budget.rs`: the refusal's place among every other refusal, and `inspect`, `inspect_blob` and `Executable::from_blob` reporting it alike. `oce-graph`'s `constructed_budget` unit tests: exactly the budget accepted, one word past refused, overflow saturated. `oce-blocks` `tests/constructed_words.rs`: every registered class, under the hostile tables, holds no more and no less than it reports, and no construction peaks above `MAX_CONSTRUCTION_PEAK_BYTES` |
+| Typed refusal, never a panic | `blob_hostile_bytes.rs` and `blob_hostile_model.rs` (one test per refusal), `blob_fuzz.rs` (10,000 seeded random mutations, re-checksummed), `blob_element_shapes.rs` (issue #772's reproductions, and 4,000 seeded edits of valid blobs' parameter names, each a decode or a typed refusal, a shape refusal exactly where the class's shape rules put it) and `oce-blocks` `tests/hostile_parameters.rs` |
+| The decoder refuses exactly what the load gate refuses for shape | `oce-validate`'s `tests/extent_agreement.rs`: 6,000 seeded parameter tables of the vector, matrix and table classes; every one the load gate refuses for an element outside its extent or an unfilled matrix, `oce_blocks::element_outside_extent` refuses, and every one it refuses, the load gate refuses |
 | A blob of an earlier layout under the same format number is refused | `blob_old_layout.rs`: the release-0.4.0 encoding of one fixture, kept unblessed, is refused with `EngineVersionMismatch` by `decode` and by `Executable::from_blob` |
 | A blob of the same layout and an earlier meaning is refused | `engine_0_5_0_artefacts.rs`: the release-0.5.0 encoding of `trim_and_respond_have_hol_false`, kept unblessed, differs from this build's in one parameter record (an Integer where a Real parameter now holds a Real) and the content id, and is refused with `EngineVersionMismatch` by `decode`, `Executable::from_blob` and `inspect_blob`; restamped with this version it would decode |
 | Which refusal wins is one rule for the blob and the snapshot | `blob_refusal_precedence.rs` and `oce-api`'s `src/tests/state_codec_tests.rs`: every pair of defects in each artefact reports the earlier check, every truncation of another version's blob below a header is `Truncated` and above it `EngineVersionMismatch`, and every flipped version bit is a version refusal; `blob_old_layout.rs`: the release-0.4.0 blob stays a version refusal with its length, trailer, profile or body damaged |

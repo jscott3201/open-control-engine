@@ -6,11 +6,12 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::{BinOp, EvalResult, ExprAst, Scope, UnOp};
 use oce_model::{
-    EnumClassId, Value, enum_class_id, enum_member_ordinal, g36_enum_class_id,
-    g36_integer_constant, is_g36_integer_constant_package, is_g36_type_path,
+    EnumClassId, Value, enum_class_id, enum_member_ordinal, enumeration_spelling_hint,
+    is_g36_type_path,
 };
 
-use crate::dto::{CxfValue, IriRef, Node};
+use crate::dto::{IriRef, Node};
+use crate::ground::non_canonical_enumeration_message;
 use crate::scope_chain::ScopeFrame;
 use oce_diag::DiagnosticList;
 
@@ -226,134 +227,6 @@ fn complete_scope<'a>(
     }
 }
 
-/// Emit source-profile diagnostics for G36 enum parameters before generic grounding.
-pub(super) fn validate_g36_parameter_value(
-    node: &Node,
-    value: &CxfValue,
-    scope: &dyn Scope,
-    diags: &mut DiagnosticList,
-) {
-    let Some(type_iri) = node.is_of_data_type.as_ref().map(|iri| iri.id.as_str()) else {
-        return;
-    };
-    if let Some(class) = g36_enum_class_id(type_iri) {
-        validate_g36_enum_value(node, type_iri, class, value, scope, diags);
-    } else if is_g36_type_path(type_iri) && !is_g36_integer_constant_package(type_iri) {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::UnknownEnumType,
-                format!("unknown G36 enum type `{type_iri}`"),
-            )
-            .with_subject(node.id.clone()),
-        );
-    }
-}
-
-fn validate_g36_enum_value(
-    node: &Node,
-    type_iri: &str,
-    declared: EnumClassId,
-    value: &CxfValue,
-    scope: &dyn Scope,
-    diags: &mut DiagnosticList,
-) {
-    match value {
-        CxfValue::Expr(text) => {
-            validate_g36_enum_expr(node, type_iri, declared, text, scope, diags)
-        }
-        CxfValue::Int(_) | CxfValue::Float(_) | CxfValue::Typed { .. } => diags.push(
-            Diagnostic::error(
-                DiagCode::EnumIntegerStandin,
-                "G36 enum parameters require canonical enum literals, not numeric stand-ins",
-            )
-            .with_subject(node.id.clone()),
-        ),
-        CxfValue::Bool(_) | CxfValue::List(_) => diags.push(
-            Diagnostic::error(
-                DiagCode::UnknownEnumLiteral,
-                "G36 enum parameter value is not a canonical enum literal",
-            )
-            .with_subject(node.id.clone()),
-        ),
-    }
-}
-
-fn validate_g36_enum_expr(
-    node: &Node,
-    type_iri: &str,
-    declared: EnumClassId,
-    text: &str,
-    scope: &dyn Scope,
-    diags: &mut DiagnosticList,
-) {
-    if g36_integer_constant(text).is_some() {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::EnumIntegerStandin,
-                "G36 integer constants cannot stand in for enum literals",
-            )
-            .with_subject(node.id.clone()),
-        );
-        return;
-    }
-    let Some((class_path, literal)) = text.rsplit_once('.') else {
-        if let Some(EvalResult::Scalar(Value::Enum { class, .. })) = scope.lookup(text) {
-            if *class == declared {
-                return;
-            }
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::TypeMismatch,
-                    format!(
-                        "G36 enum parameter reference `{text}` does not match declared type `{type_iri}`"
-                    ),
-                )
-                .with_subject(node.id.clone()),
-            );
-            return;
-        }
-        diags.push(
-            Diagnostic::error(
-                DiagCode::UnknownEnumLiteral,
-                format!("G36 enum literal `{text}` is not fully qualified"),
-            )
-            .with_subject(node.id.clone()),
-        );
-        return;
-    };
-    let Some(actual) = g36_enum_class_id(class_path) else {
-        let code = if is_g36_type_path(class_path) {
-            DiagCode::UnknownEnumType
-        } else {
-            DiagCode::TypeMismatch
-        };
-        diags.push(
-            Diagnostic::error(code, format!("`{text}` is not a literal of `{type_iri}`"))
-                .with_subject(node.id.clone()),
-        );
-        return;
-    };
-    if actual != declared {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::TypeMismatch,
-                format!("G36 enum literal `{text}` does not match declared type `{type_iri}`"),
-            )
-            .with_subject(node.id.clone()),
-        );
-        return;
-    }
-    if enum_member_ordinal(actual, literal).is_none() {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::UnknownEnumLiteral,
-                format!("unknown G36 enum literal `{text}`"),
-            )
-            .with_subject(node.id.clone()),
-        );
-    }
-}
-
 fn evaluate_guard(node: &Node, scope: &CompleteScope, diags: &mut DiagnosticList) -> Option<bool> {
     let Some(expr) = node.cond_expr.as_deref() else {
         diags.push(
@@ -517,6 +390,19 @@ fn validate_enum_comparison(
         return false;
     };
     let Some(reference_class) = enum_class_id(class_path) else {
+        // A guard literal names its enumeration by the canonical class path only (issue #762):
+        // one whose last segment names a known enumeration is refused naming that path.
+        if let Some(row) = enumeration_spelling_hint(class_path) {
+            let expected = format!("{}.<member>", row.qualified_path);
+            diags.raise(|| {
+                Diagnostic::error(
+                    DiagCode::UnknownEnumType,
+                    non_canonical_enumeration_message(class_path, &expected),
+                )
+                .with_subject(node.id.clone())
+            });
+            return false;
+        }
         let code = if is_g36_type_path(class_path) {
             DiagCode::UnknownEnumType
         } else {

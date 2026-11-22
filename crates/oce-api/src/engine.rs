@@ -405,3 +405,7 @@ pub(crate) fn out_connector_paths(model: &ModelGraph) -> Vec<String> {
 #[cfg(test)]
 #[path = "engine_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "engine_constructed_budget_tests.rs"]
+mod constructed_budget_tests;

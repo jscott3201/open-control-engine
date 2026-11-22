@@ -128,6 +128,19 @@ pub enum BlobError {
         /// Index in the block's parameter list.
         parameter: u32,
     },
+    /// A parameter names an array or matrix element outside its class's shape (issue #772): an
+    /// index of zero, an element past its vector's resolved length (`k_3` on a `MultiSum` of
+    /// `nin = 2`), an offset past its table's output count, or a matrix cell that leaves the
+    /// rectangle its largest row and column span unfilled (`table_3_2` on a two-row `TimeTable`).
+    /// The load gate refuses such an element by its extent rules; a blob never carries one.
+    /// `parameter` is the first such element, judged once every parameter of the block is read
+    /// and before the block is built from them.
+    ElementOutsideShape {
+        /// The block id.
+        block: u32,
+        /// Index in the block's parameter list.
+        parameter: u32,
+    },
     /// An Enum value names a class path this build does not know.
     UnknownEnumClass {
         /// Byte offset of the value.
@@ -435,6 +448,10 @@ impl core::fmt::Display for BlobError {
             Self::ParameterKindMismatch { block, parameter } => write!(
                 f,
                 "block {block} parameter {parameter} holds a value its catalog type does not admit"
+            ),
+            Self::ElementOutsideShape { block, parameter } => write!(
+                f,
+                "block {block} parameter {parameter} names an element outside its class's shape"
             ),
             Self::UnknownEnumClass { offset } => {
                 write!(f, "enum value at byte {offset} names an unknown class")

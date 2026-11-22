@@ -191,6 +191,86 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
+- **An enumeration is named by its canonical class path, and by nothing else** (GitHub #PRNUM,
+  issues #762 and #637; the owner's ruling of 2026-11-22). **Breaking, in place:** a CDL
+  enumeration was matched by the last segment of its path, so `controllerType` written
+  `SimpleController.PD`, `Foo.SimpleController.PD`,
+  `Buildings.Controls.OBC.ASHRAE.G36.Types.SimpleController.PD` (no such G36 type) or
+  `Modelica.Blocks.Types.SimpleController.PD` (another library's enumeration) loaded as CDL `PD`
+  with the canonical spelling's content id, and an `isOfDataType` such as
+  `http://example.org#Buildings.Controls.OBC.CDL.Typos.ZeroTime` typed a parameter `ZeroTime`
+  (issue #637), while one naming nothing typed nothing and the value loaded as written. Each is
+  refused now, `unknown-enum-type`, once, on the parameter or the guard's node, naming the
+  canonical path expected and quoting the written path by its excerpt, made visible:
+  ``enumeration `Foo.SimpleController` is not written under its canonical class path; write
+  `Buildings.Controls.OBC.CDL.Types.SimpleController.<member>` ``.
+  - **One identity.** `oce_model::enumeration_class_by_path` (new; `enumeration_class_by_iri` for a
+    typing IRI's fragment after its last `#` or `/`, `enumeration_member` for `<path>.<member>`)
+    decides which enumeration or Integer constant package a document's text names, by exact
+    equality with the row's full path. `enum_class_id`, `g36_enum_class_id`, the G36 constants,
+    `SimpleController::from_qualified`, `ZeroTime::from_qualified`, the expression evaluator's
+    enumeration references (`ExprError::NonCanonicalEnumeration`, new), the CXF reader's values,
+    guards and typing IRIs, and the authoring importer (through `oce_api::enumeration_by_path` and
+    `enumeration_by_iri`, new) all resolve through it. `oce_model::enumeration_spelling_hint`
+    (new) names the canonical path in a refusal and is never an identity. The tune-at-rest rule
+    check reads an enumeration value only (its last-segment reading of a string is gone; a typed
+    `set_param` never reached it). A durable class path in a blob or snapshot is compared exactly,
+    as before.
+  - **Everywhere a value is read.** A block parameter's value, a sequence or composite parameter's
+    value and declared type, a value handed down through nested composites, a conditional guard's
+    literal and an expression's comparison all apply it. A G36 Integer constant
+    (`…ASHRAE.G36.Types.OperationModes.occupied`, `ZoneStates`, `FreezeProtectionStages`,
+    `DemandLimitLevels`) is named by the same rule: its package's full path, then the member
+    (`OperationModes.occupied` alone, or an IRI-prefixed member, is refused). A parameter declared
+    a CDL enumeration now holds a member of it or is refused on the declaration
+    (`parameter-kind-mismatch`), as a G36-typed one already was; an unknown CDL `Types` class
+    (`…CDL.Types.ZeroTim`) is `unknown-enum-type` listing the four. Whitespace around a canonical
+    path in a value is the expression's and is read as before; inside the path it is refused.
+  - **What moved.** Nothing that loads moved: measured over 540 documents (every tracked `@graph`
+    document, the vendored translations, and the 139 `open-control-library` documents as written
+    and with the retired `S231P#` namespace rewritten), every document that loads before and after
+    has a byte-identical content id and blob, and none is newly refused for an enumeration
+    spelling; no model or translation writes a non-canonical path. No format byte changes and no
+    version bump (no release has been tagged since 0.6.0).
+- **The blob decoder applies each class's shape rules** (GitHub #PRNUM, issue #772; owner ruling
+  of 2026-11-22). **Breaking, in place:** a blob carrying an array element past its vector's
+  resolved length, an index too large for any width, a `TimeTable` offset past its table's
+  outputs, or a table or matrix whose bound cells do not fill the rectangle their largest row and
+  column span is refused with `BlobError::ElementOutsideShape { block, parameter }` (new
+  variant), naming the first such element, once every parameter of the block is read and before
+  the block is built. Before, the decoder judged only whether the class declares the name, so
+  `table_3_2` on a 2-row `TimeTable` reshaped the table (its output went from `[2, 3, 2]` to
+  `[9, 9, 9]`) and `k_3` on a `MultiSum` with `nin = 2` or `extract_2` on an `ExtractSignal` of
+  one output was dropped. The predicate, `oce_blocks::element_outside_extent` (new, with
+  `bound_cells` and `BoundCells`), is the load gate's shape rules, completeness as well as extent,
+  `no_std`, allocation-free and linear in the block's parameters; a seeded test holds it to the
+  load gate over 6,000 parameter tables both ways. A blob the engine writes never carries such an
+  element, and every one over the corpus decodes; a 0.6.0 blob written before this change that
+  carries one is refused rather than built. A lone corner cell no longer sizes a table from a
+  blob, so issue #700's constructed-budget tests reach the budget with shape-valid `MultiSum`
+  blocks built in the test, and the CXF path's with a hand-built graph: no valid CXF document
+  reaches the budget (a dense matrix writes its cells, issue #773, and a document holds at most 2^20
+  array elements; the largest measured holds about a quarter of it).
+- **`MatrixGain`'s input and output counts are `K`'s shape; `nin` and `nout` are refused**
+  (GitHub #PRNUM, issue #773; owner ruling of 2026-11-22). **Breaking, in place:** upstream
+  declares `nin = size(K, 2)` and `nout = size(K, 1)` `protected`, but the catalog listed both as
+  settable and nothing held them to `K`, so `nout = 7` on a 2×2 `K` loaded with seven outputs,
+  five of them `0.0`. They are no parameters of the class now: `unknown-parameter` at load and
+  `BlobError::UndeclaredParameter` in a blob. The counts are the rows and columns `K`'s cells span,
+  and a `K` whose cells leave that rectangle unfilled is `parameter-out-of-range` (one finding
+  naming the unbound cells); with no cell bound, `K` is upstream's default 2×2 identity
+  (`Reals/MatrixGain.mo` line 4). `ParamRule::RealMatrixElements` (and `CatalogRule`'s) is now
+  `{ base, default_rows, default_cols }`, changed in place: the catalog JSON, its content id
+  (`catalog:1:fnv1a128:792b6a02de93b1fce53441d22c1aafab`), the registry manifest and
+  `MatrixGain`'s class signature hash move, so every document holding a `MatrixGain` moves id,
+  every compatibility descriptor and replay record names the new catalog, and a blob holding a
+  `MatrixGain` written before this change is refused with `BlobError::ClassSignatureMismatch`
+  (pinned with the relief fan group's earlier blob). The catalog-completeness test
+  (`every_upstream_public_parameter_is_a_catalog_parameter_and_no_other`) has no exception left.
+  Three tracked G36 test fixtures, transcribed by hand with `nin`/`nout`, and one authoring
+  fixture now bind `K` alone; their outputs against the golden-gen references are unchanged. No
+  format revision changes and no version bump.
+
 - **A parameter name the block's class does not declare is refused, never dropped while the
   block runs on its default** (GitHub #766, issue #748; the remaining half of #467).
   **Breaking, in place:** a document or a blob that binds a block a parameter under a name its
@@ -232,13 +312,13 @@ so far, and no tag is cut by the bump.
     stricter than the load gate's spelling rules: a non-canonical element (`k_01`) is undeclared
     there too. It applies no extent rule, which the load gate does: a canonical element past its
     array's extent (`table_3_2` on a 2-row `TimeTable`, `k_3` on a `MultiSum` with `nin = 2`) is a
-    declared name and still decodes, as before; issue #772 proposes the check. `no_std + alloc`
-    builds.
+    declared name and still decodes, as before; the decoder applies the class's shape rules since
+    issue #772 (GitHub #PRNUM, below). `no_std + alloc` builds.
   - **The catalog is complete.** Every public parameter the pinned upstream source declares for
     each of the 132 vendored classes is a catalog parameter and no other is (186 between them;
-    `Reals.MatrixGain` lists its protected `nin` and `nout` as settable, and nothing holds them
-    to `K`'s shape: `nout = 7` on a 2x2 `K` loads with seven outputs, five of them `0.0`, as it
-    did before; issue #773 asks whether to refuse them or require the shape), held
+    `Reals.MatrixGain` listed its protected `nin` and `nout` as settable, and nothing held them
+    to `K`'s shape: `nout = 7` on a 2x2 `K` loaded with seven outputs, five of them `0.0`; since
+    issue #773 they are no catalog parameters and the counts are `K`'s, GitHub #PRNUM, below), held
     class by class by a new `fixture_port_order` test from the same scan of the vendored Modelica
     that checks port order. So no parameter CDL defines is refused as unknown.
   - **What moved.** No vendored translation that loads and no `open-control-library` rule (139,
@@ -826,7 +906,7 @@ so far, and no tag is cut by the bump.
     and `isOfDataType` in 257 tracked and 140 library documents).
   - **Follow-ups:** composites typed in another namespace, including near-miss spellings of the
     S231 namespace IRI itself (#636); CDL enumeration IRIs in another namespace matched by last
-    segment (#637); role-aware checking (#638); the authoring importer's reading of the compact
+    segment (#637, closed by GitHub #PRNUM: an enumeration is named by its canonical path only); role-aware checking (#638); the authoring importer's reading of the compact
     spelling (#639).
 - **A `unit`, `quantity` or `displayUnit` term carrying an invisible character is refused, in both
   readers** (GitHub #646, issue #629; owner ruling of 2026-11-12). A term on a connector, a
@@ -1380,6 +1460,16 @@ so far, and no tag is cut by the bump.
     README, "Writing a file" and "Reading a file a document names"); it type-checks
     (`--target x86_64-pc-windows-msvc --all-targets`) and is untested.
 
+- **`oce import` names an enumeration through the engine's own lookup, and reads one typed in the
+  S231 namespace** (GitHub #PRNUM, issue #762). The importer resolves a member path and an
+  `isOfDataType` through `oce_api::enumeration_by_path` and `enumeration_by_iri`, so it accepts
+  exactly the canonical paths the engine accepts: an enumeration declared
+  `S231:Buildings.Controls.OBC.CDL.Types.ZeroTime` (CXF-Core's `EnumerationType`), refused as
+  `unknown-datatype` before, now reads as the engine reads it. A test holds the two readers to one
+  verdict over a generated set of contexts and spellings; the two differences left are general
+  (an untyped root parameter, #778; an expression on a block parameter) and listed in
+  `docs/design/importer.md`. `MatrixGain`'s `nin`/`nout` are `unknown-parameter` at stage 1, as in
+  the engine, and what `oce emit` writes for a `MatrixGain` loads.
 - **No `oce` verb writes through a symbolic link at its target, and a file a document names is
   opened component by component without following one** (GitHub #764, issue #758; ruled by the
   owner on 2026-11-22). **Breaking, in place**, for a symlinked output: `oce verify VECTORS --out

@@ -418,9 +418,10 @@ fn every_catalog_parameter_is_one_entry_and_every_entry_is_a_catalog_parameter()
             metadata.class_path
         );
     }
-    // The design note counts 186: the catalog's parameter defaults. `class_metadata()` also
-    // lists the three `TimeTable` sources' rule-only `table`, which an author must assign.
-    assert_eq!(parameters, 186 + 3);
+    // The design note counts 186, the catalog's parameter defaults, less `MatrixGain`'s `nin` and
+    // `nout` (no parameters of the class since issue #773): 184. `class_metadata()` also lists
+    // the three `TimeTable` sources' rule-only `table`, which an author must assign.
+    assert_eq!(parameters, 184 + 3);
 }
 
 #[test]
@@ -437,11 +438,12 @@ fn the_coverage_counts_are_the_design_notes() {
     assert_eq!(connectors().count(), 265 + 57);
     assert_eq!(connectors().filter(|c| c.dims > 0).count(), 42);
     assert_eq!(connectors().filter(|c| c.dims == 2).count(), 5);
-    assert_eq!(parameters().count(), 186 + 3);
-    // Descriptions: every one present, all but six generated.
+    assert_eq!(parameters().count(), 184 + 3);
+    // Descriptions: every one present, all but four generated (six before issue #773 removed
+    // `MatrixGain`'s curated `nin` and `nout`).
     let is_curated = |origin: TextOrigin| origin == TextOrigin::Curated;
     assert_eq!(connectors().filter(|c| is_curated(c.origin)).count(), 3);
-    assert_eq!(parameters().filter(|p| is_curated(p.origin)).count(), 3);
+    assert_eq!(parameters().filter(|p| is_curated(p.origin)).count(), 1);
     assert!(connectors().all(|c| !c.description.is_empty()));
     assert!(parameters().all(|p| !p.description.is_empty()));
     // Declared units and quantities.
@@ -482,9 +484,10 @@ fn the_coverage_counts_are_the_design_notes() {
             "Time"
         ]
     );
-    // Curation: thirteen classes named, thirteen notes, six descriptions.
+    // Curation: twelve classes named, thirteen notes, four descriptions (thirteen classes and six
+    // descriptions before issue #773 removed `MatrixGain`'s curated `nin` and `nout`).
     let curated_file = curated();
-    assert_eq!(curated_file.classes.len(), 13);
+    assert_eq!(curated_file.classes.len(), 12);
     assert_eq!(
         classes.iter().map(|class| class.notes.len()).sum::<usize>(),
         13
@@ -494,7 +497,7 @@ fn the_coverage_counts_are_the_design_notes() {
         .iter()
         .map(|c| c.descriptions.len())
         .sum();
-    assert_eq!(descriptions, 6);
+    assert_eq!(descriptions, 4);
 }
 
 #[test]

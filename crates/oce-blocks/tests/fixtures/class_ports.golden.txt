@@ -468,16 +468,16 @@ CDL.Logical.MultiOr nin=2
 CDL.Logical.MultiOr nin=1048576
   in  (1048576) u1:Boolean u2:Boolean u3:Boolean ... u1048574:Boolean u1048575:Boolean u1048576:Boolean
   out (1) y:Boolean
-CDL.Reals.MatrixGain nin=1 nout=1
+CDL.Reals.MatrixGain K_1_1=0
   in  (1) u1:Real
   out (1) y1:Real
-CDL.Reals.MatrixGain nin=2 nout=2
+CDL.Reals.MatrixGain K_2_2=0
   in  (2) u1:Real u2:Real
   out (2) y1:Real y2:Real
-CDL.Reals.MatrixGain nin=1048576 nout=1
+CDL.Reals.MatrixGain K_1_1048576=0
   in  (1048576) u1:Real u2:Real u3:Real ... u1048574:Real u1048575:Real u1048576:Real
   out (1) y1:Real
-CDL.Reals.MatrixGain nin=1 nout=1048576
+CDL.Reals.MatrixGain K_1048576_1=0
   in  (1) u1:Real
   out (1048576) y1:Real y2:Real y3:Real ... y1048574:Real y1048575:Real y1048576:Real
 CDL.Reals.MatrixMax nRow=1 nCol=1 rowMax=true
@@ -830,9 +830,7 @@ CDL.Reals.MultiSum
   + k_<i>: Real = 1.0
 CDL.Reals.MatrixGain
   "Output the product of a gain matrix with the input signal vector"
-  + nout: Integer = 2
-  + nin: Integer = 2
-  + K_<row>_<col>: Real = derived `1.0 if row == col else 0.0`
+  + K_<row>_<col>: Real = derived `[1, 0; 0, 1] when no cell is bound; nout = size(K, 1), nin = size(K, 2)`
 CDL.Reals.MatrixMax
   "Output vector of row- or column-wise maximum of the input matrix"
   + nRow: Integer = required

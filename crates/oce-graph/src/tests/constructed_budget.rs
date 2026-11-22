@@ -165,14 +165,10 @@ fn a_model_refusal_names_the_crossing_instance_by_its_authored_identity() {
 #[test]
 fn registered_blocks_charge_what_their_constructors_hold() {
     let mut budget = ConstructedBudget::new();
-    // 1024 inputs and outputs (128 words of port kinds each) and 2^20 gains.
-    let gain = make(
-        "CDL.Reals.MatrixGain",
-        &[
-            ("nin", Value::Integer(1024)),
-            ("nout", Value::Integer(1024)),
-        ],
-    );
+    // 1024 inputs and outputs (128 words of port kinds each) and 2^20 gains: `K`'s corner cell
+    // sets its shape (issue #773; the constructor reads the shape the cells span, and the load
+    // gate and the blob decoder refuse the unbound cells before a model gets here).
+    let gain = make("CDL.Reals.MatrixGain", &[("K_1024_1024", Value::Real(1.0))]);
     for held in 1..=3 {
         budget.charge(gain.as_ref()).unwrap();
         assert_eq!(budget.words(), held * 1_048_832);

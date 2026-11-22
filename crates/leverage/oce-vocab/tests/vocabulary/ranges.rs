@@ -111,9 +111,9 @@ const RENDERED: &[(&str, &str, &str, &[&str])] = &[
     ),
     (
         "IntegerProductLessOrEqualConstant",
-        "CDL.Reals.MatrixGain",
-        "nout",
-        &["nout >= 0", "nout <= 1048576", "nout * nin <= 1048576"],
+        "CDL.Routing.RealVectorReplicator",
+        "nin",
+        &["nin >= 0", "nin <= 1048576", "nin * nout <= 1048576"],
     ),
     (
         "IntegerArrayElementsInRange",
@@ -241,8 +241,9 @@ fn every_value_rule_of_every_class_reaches_a_parameter_of_that_class() {
         classes += usize::from(value_rules > 0);
     }
     // Volume pins: a change that stops finding rules must not leave this vacuously green.
-    // 176 lines: 133 one-parameter bounds, 3 element bounds and 20 relations listed twice.
-    assert_eq!((classes, ranged, lines), (51, 101, 176));
+    // 170 lines: 129 one-parameter bounds, 3 element bounds and 19 relations listed twice.
+    // (176 before issue #773: `MatrixGain`'s four bounds on `nin`/`nout` and their product.)
+    assert_eq!((classes, ranged, lines), (50, 99, 170));
 }
 
 #[test]
@@ -272,7 +273,7 @@ fn the_served_view_carries_the_catalogs_range_for_every_parameter() {
         }
     }
     // The three reserved lowering identities have no rules, so the view has every line.
-    assert_eq!(checked, 176);
+    assert_eq!(checked, 170);
 }
 
 /// Whether the class rules accept the table, by the same checks a load runs.
@@ -421,13 +422,14 @@ fn a_relation_line_is_the_relation_the_class_rules_enforce() {
     assert!(accepted(stage, &table(1, 0.001)));
     assert!(!accepted(stage, &table(1, below(0.001))));
 
-    // `nout * nin <= 1048576`: inclusive.
-    let gain = "CDL.Reals.MatrixGain";
-    assert!(range(gain, "nin").contains(&"nout * nin <= 1048576".to_owned()));
+    // `nin * nout <= 1048576`: inclusive. (`MatrixGain` carried this bound on `nout * nin` until
+    // issue #773; its counts are now `K`'s shape, and the replicator carries the product rule.)
+    let replicator = "CDL.Routing.RealVectorReplicator";
+    assert!(range(replicator, "nout").contains(&"nin * nout <= 1048576".to_owned()));
     let table =
-        |nout: i64, nin: i64| [("nout", Value::Integer(nout)), ("nin", Value::Integer(nin))];
-    assert!(accepted(gain, &table(1024, 1024)));
-    assert!(!accepted(gain, &table(1024, 1025)));
+        |nin: i64, nout: i64| [("nin", Value::Integer(nin)), ("nout", Value::Integer(nout))];
+    assert!(accepted(replicator, &table(1024, 1024)));
+    assert!(!accepted(replicator, &table(1024, 1025)));
 
     // `1 <= extract_<i> <= nin`: inclusive at both ends, for every element.
     let extract = "CDL.Routing.BooleanExtractSignal";

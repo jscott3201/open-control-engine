@@ -5,10 +5,15 @@
 //! that is correct in every other respect.
 //!
 //! For every case the test predicts the decoder's outcome from the blocks it constructed
-//! itself: the first block that takes the constructed total past
+//! itself, block by block in id order: a block that binds an element outside its class's shape
+//! (a lone table corner cell sizing a table it does not fill, an element past its vector's
+//! length) is `ElementOutsideShape` naming the first such element, before the block is built
+//! (issue #772); otherwise the first block that takes the constructed total past
 //! `oce_graph::MAX_CONSTRUCTED_WORDS` is a typed `ConstructedTooLarge` naming that block and
 //! the words requested; a block too wide to wire is the arity refusal it was written to be;
-//! otherwise the blob decodes. `decode` must agree, `inspect` must carry the same verdict, and
+//! otherwise the blob decodes. Since issue #772 most of this fuzz's heavy blocks (lone corner
+//! cells) end their model at the shape refusal; the budget itself is reached by shape-valid
+//! blocks in `blob_constructed_budget.rs` and `blob_peak_allocation.rs`. `decode` must agree, `inspect` must carry the same verdict, and
 //! the peak held must stay within the documented bound: the linear term, the words of the
 //! blocks kept, one block's construction, and the state words.
 //!
@@ -139,10 +144,20 @@ fn image_of(plan: &[Planned]) -> (Image, Result<(), BlobError>) {
     image.connectors = connector;
     image.schedule = (0..u32::try_from(plan.len()).unwrap()).collect();
 
-    // The oracle: the decoder charges a block the moment it is constructed, then compares it.
+    // The oracle: the decoder refuses an element outside the class's shape before it builds the
+    // block, charges a block the moment it is constructed, then compares it.
     let mut total = 0usize;
     for (index, planned) in plan.iter().enumerate() {
         let block = u32::try_from(index).unwrap();
+        if let Some(position) =
+            oce_blocks::element_outside_extent(planned.class_path, &planned.params)
+        {
+            let parameter = u32::try_from(position).unwrap();
+            return (
+                image,
+                Err(BlobError::ElementOutsideShape { block, parameter }),
+            );
+        }
         total += planned.words;
         if total > MAX_CONSTRUCTED_WORDS {
             let requested = total as u64;
@@ -185,14 +200,29 @@ fn plan_block(class_path: &'static str, table: &ParamTable) -> Planned {
     }
 }
 
-/// The shapes of issue #700 at seeded sizes: a table sized by one cell name, or a dense gain
-/// with no cell bound. Each holds up to 8 MiB behind a few ports, so it can be wired and a
-/// model of them accumulates until the budget refuses it.
+/// The shapes of issue #700 at seeded sizes, one in four a table or gain sized by one corner cell
+/// name: each would hold up to 8 MiB behind a few ports, and since issue #772 the corner alone is
+/// outside its class's shape (the cells do not fill their rectangle) and is refused before it is
+/// built. The others bind every cell of a table or gain of up to 3,000 cells, as an encoder
+/// writes them, so models of them decode.
 fn narrow_and_heavy(rng: &mut XorShift) -> (&'static str, ParamTable) {
     let integer = |name: String, value: i64| (Arc::from(name.as_str()), Value::Integer(value));
+    let lone_corner = rng.below(4) == 0;
     if rng.below(8) == 0 {
-        let (nin, nout) = *rng.pick(&[(1024, 1024), (1024, 1000), (512, 512), (2000, 48)]);
-        let values = vec![integer("nin".into(), nin), integer("nout".into(), nout)];
+        let (rows, cols) = if lone_corner {
+            *rng.pick(&[(1024, 1024), (1000, 1024), (512, 512), (48, 2000)])
+        } else {
+            *rng.pick(&[(1, 1), (2, 3), (16, 16), (64, 32)])
+        };
+        // A lone corner, or every cell of the matrix: shape-valid, as an encoder writes it.
+        let values = if lone_corner {
+            vec![integer(format!("K_{rows}_{cols}"), 1)]
+        } else {
+            (1..=rows)
+                .flat_map(|row| (1..=cols).map(move |col| (row, col)))
+                .map(|(row, col)| integer(format!("K_{row}_{col}"), i64::from(row == col)))
+                .collect()
+        };
         return ("CDL.Reals.MatrixGain", ParamTable { values });
     }
     let class_path = *rng.pick(&[
@@ -200,11 +230,30 @@ fn narrow_and_heavy(rng: &mut XorShift) -> (&'static str, ParamTable) {
         "CDL.Integers.Sources.TimeTable",
         "CDL.Logical.Sources.TimeTable",
     ]);
-    let rows = *rng.pick(&[
-        1usize, 1000, 262_143, 349_525, 349_525, 524_287, 524_287, 524_288,
-    ]);
     let cols = *rng.pick(&[2usize, 2, 3]);
-    let values = vec![integer(format!("table_{rows}_{cols}"), 0)];
+    if lone_corner {
+        let rows = *rng.pick(&[1000usize, 262_143, 349_525, 524_287, 524_288]);
+        return (
+            class_path,
+            ParamTable {
+                values: vec![integer(format!("table_{rows}_{cols}"), 0)],
+            },
+        );
+    }
+    // A complete table, its time column strictly increasing and its values 0 or 1 so every
+    // table class admits them.
+    let rows = *rng.pick(&[1usize, 2, 100, 1000]);
+    let values = (1..=rows)
+        .flat_map(|row| (1..=cols).map(move |col| (row, col)))
+        .map(|(row, col)| {
+            let value = if col == 1 {
+                row as i64
+            } else {
+                (row % 2) as i64
+            };
+            integer(format!("table_{row}_{col}"), value)
+        })
+        .collect();
     (class_path, ParamTable { values })
 }
 
@@ -236,6 +285,7 @@ fn hostile_models_decode_or_refuse_typed_within_the_documented_peak() {
     let every: Vec<&'static str> = catalog().iter().map(|entry| entry.class_path).collect();
 
     let (mut accepted, mut crossed, mut unwired, mut largest) = (0u64, 0u64, 0u64, 0u64);
+    let mut shaped = 0u64;
     for case in 0..cases {
         // One case in three takes its blocks as they come, so a block too wide to wire ends
         // it at that block. The others redraw such a block, so the model is refused only by
@@ -291,7 +341,8 @@ fn hostile_models_decode_or_refuse_typed_within_the_documented_peak() {
         let stopped_at = match expected {
             Ok(()) => plan.len(),
             Err(BlobError::ConstructedTooLarge { block, .. })
-            | Err(BlobError::InstanceMismatch { block, .. }) => block as usize,
+            | Err(BlobError::InstanceMismatch { block, .. })
+            | Err(BlobError::ElementOutsideShape { block, .. }) => block as usize,
             Err(other) => panic!("case {case}: unpredicted {other:?}"),
         };
         let kept: usize = plan[..stopped_at].iter().map(|block| block.words).sum();
@@ -311,14 +362,28 @@ fn hostile_models_decode_or_refuse_typed_within_the_documented_peak() {
         match expected {
             Ok(()) => accepted += 1,
             Err(BlobError::ConstructedTooLarge { .. }) => crossed += 1,
+            Err(BlobError::ElementOutsideShape { .. }) => shaped += 1,
             Err(_) => unwired += 1,
         }
     }
-    // The seeded default reaches all three outcomes, and models that hold most of the budget.
+    // The seeded default reaches the outcomes its blocks can reach. Before issue #772 a lone
+    // corner cell built its megabyte table and 10 or more models crossed the budget, peaking
+    // above 24 MiB; the corner is now refused before it is built, so these models stop at its
+    // shape and hold little. The budget is reached by shape-valid blocks instead
+    // (`blob_constructed_budget.rs`, `blob_peak_allocation.rs`).
     if cases >= 100 {
         assert!(accepted >= 10, "{accepted} accepted");
-        assert!(crossed >= 10, "{crossed} past the budget");
+        assert!(
+            shaped >= 10,
+            "{shaped} refused for an element outside its shape"
+        );
         assert!(unwired >= 10, "{unwired} too wide to wire");
-        assert!(largest > 24 << 20, "largest peak {largest}");
+        assert!(
+            largest < 24 << 20,
+            "largest peak {largest}: no corner cell built a table"
+        );
+        // No model of these blocks holds the budget any more: shape-valid tables of at most
+        // 3,000 cells, and corners refused before they are built.
+        assert_eq!(crossed, 0, "{crossed} past the budget");
     }
 }

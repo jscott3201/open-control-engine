@@ -53,6 +53,26 @@ pub fn enumeration(class_path: &str) -> Option<&'static EnumerationClass> {
     oce_model::enumeration_class(class_path)
 }
 
+/// The row a document names by its **canonical class path**, exactly
+/// `Buildings.Controls.OBC.<class path>` (`Buildings.Controls.OBC.CDL.Types.ZeroTime`). Any other
+/// spelling is `None`: a bare or relative name, another package (`Modelica.Blocks.Types.…`, a CDL
+/// enumeration under `…ASHRAE.G36.Types.`), another case or surrounding whitespace (issue #762).
+/// It is the engine's one identity for enumeration text, so a host or the authoring layer that
+/// resolves through it accepts exactly what the engine accepts.
+#[must_use]
+pub fn enumeration_by_path(path: &str) -> Option<&'static EnumerationClass> {
+    oce_model::enumeration_class_by_path(path)
+}
+
+/// The row a typing IRI names: [`enumeration_by_path`] on its fragment after the last `#` or `/`
+/// (`http://example.org#Buildings.Controls.OBC.CDL.Types.ZeroTime`,
+/// `http://data.ashrae.org/S231#Buildings.Controls.OBC.CDL.Types.ZeroTime`). The namespace is not
+/// judged; `…#ZeroTime` or `…#Foo.ZeroTime` is `None` (issues #637, #762).
+#[must_use]
+pub fn enumeration_by_iri(iri: &str) -> Option<&'static EnumerationClass> {
+    oce_model::enumeration_class_by_iri(iri)
+}
+
 /// The enumeration whose [`EnumClassId`] is `id` — the class a `ValueType::Enum(id)` or
 /// `Value::Enum { class: id, .. }` names. `None` for an id the engine does not know.
 #[must_use]

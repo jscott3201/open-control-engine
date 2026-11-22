@@ -4,10 +4,12 @@
 //! lists, the G36 enumeration ids and the G36 Integer constant packages are written there once.
 
 use crate::EnumClassId;
-use crate::enumerations::{EnumerationClass, EnumerationKind, MemberValue, enumeration_classes};
+use crate::enumerations::{
+    EnumerationClass, EnumerationKind, MemberValue, enumeration_class_by_iri,
+    enumeration_class_by_path, enumeration_classes,
+};
 
 const G36_TYPES_PREFIX: &str = "Buildings.Controls.OBC.ASHRAE.G36.Types.";
-const CDL_TYPES_PREFIX: &str = "Buildings.Controls.OBC.CDL.Types.";
 
 /// Canonical durable identity and source-order members for one known enum class.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,10 +41,12 @@ pub enum SimpleController {
 }
 
 impl SimpleController {
-    /// Parse a CXF-qualified `CDL.Types.SimpleController.*` value by its trailing member.
+    /// Parse a member written under its canonical class path,
+    /// `Buildings.Controls.OBC.CDL.Types.SimpleController.<member>` ([`enumeration_member`]); any
+    /// other prefix is `None` (issue #762).
     #[must_use]
     pub fn from_qualified(s: &str) -> Option<Self> {
-        let (_, member) = split_qualified_member(s)?;
+        let member = canonical_member_of(s, EnumClassId::SIMPLE_CONTROLLER)?;
         match member {
             "P" => Some(Self::P),
             "PI" => Some(Self::Pi),
@@ -113,11 +117,12 @@ impl ZeroTime {
         }
     }
 
-    /// Parse a CXF-qualified `CDL.Types.ZeroTime.*` value by its trailing member.
+    /// Parse a member written under its canonical class path,
+    /// `Buildings.Controls.OBC.CDL.Types.ZeroTime.<member>` ([`enumeration_member`]); any other
+    /// prefix is `None` (issue #762).
     #[must_use]
     pub fn from_qualified(s: &str) -> Option<Self> {
-        let (_, member) = split_qualified_member(s)?;
-        Self::from_member(member)
+        Self::from_member(canonical_member_of(s, EnumClassId::ZERO_TIME)?)
     }
 }
 
@@ -144,21 +149,30 @@ impl EnumClassId {
     pub const G36_VENTILATION_STANDARD: Self = Self(110);
 }
 
-/// Resolve a known CDL enum class to its stable in-memory id.
+/// Resolve a known enumeration to its stable in-memory id, by its canonical class path only.
 ///
-/// A G36 enumeration resolves only by its full canonical `Buildings.Controls.OBC.ASHRAE.G36.Types.*`
-/// path (after the last `#` or `/` of an IRI); a CDL enumeration by the last `.`-segment of
-/// `qualified` alone (`SimpleController`, `…CDL.Types.SimpleController`).
+/// CDL and G36 alike resolve only by the full path, `Buildings.Controls.OBC.CDL.Types.<Enum>` or
+/// `Buildings.Controls.OBC.ASHRAE.G36.Types.<Enum>`, written as is or as the fragment of an IRI
+/// after its last `#` or `/` ([`enumeration_class_by_iri`], issues #637 and #762). An expression's
+/// enumeration reference reaches this through the evaluator's scope; it holds neither `#` nor `/`. A bare, relative or
+/// otherwise prefixed name is `None`, as is a constant package (never a parameter type).
 #[must_use]
 pub fn enum_class_id(qualified: &str) -> Option<EnumClassId> {
-    g36_enum_class_id(qualified).or_else(|| {
-        let name = normalized_class(qualified);
-        enumeration_classes()
-            .iter()
-            .filter(|row| is_cdl_types_row(row))
-            .find(|row| row.type_name() == name)
-            .and_then(|row| row.id)
-    })
+    enumeration_class_by_iri(qualified)
+        .filter(|row| row.kind == EnumerationKind::Enumeration)
+        .and_then(|row| row.id)
+}
+
+/// A member written under its canonical class path, `<qualified_path>.<member>`: the row
+/// [`enumeration_class_by_path`] resolves for the text before the last `.`, and the member after
+/// it, when that row has a member of exactly that name. `None` for every other spelling (another
+/// prefix, an unknown member, an empty member, another case). Covers enumerations and the G36
+/// Integer constant packages alike. Allocates nothing; never panics.
+#[must_use]
+pub fn enumeration_member(text: &str) -> Option<(&'static EnumerationClass, &str)> {
+    let (class, member) = split_qualified_member(text)?;
+    let row = enumeration_class_by_path(class)?;
+    row.member_value(member).map(|_| (row, member))
 }
 
 /// Return the canonical descriptor for a known enum class id.
@@ -179,12 +193,15 @@ pub fn enum_descriptor(class: EnumClassId) -> Option<EnumDescriptor> {
     })
 }
 
-/// Resolve a canonical durable enum class path.
+/// Resolve a durable enum class path ([`EnumDescriptor::class_path`]) by exact equality: the form
+/// a state snapshot, compiled-schedule blob or replay wire records, never document text.
 #[must_use]
 pub fn enum_descriptor_by_path(class_path: &str) -> Option<EnumDescriptor> {
-    let class = enum_class_id(class_path)?;
-    let descriptor = enum_descriptor(class)?;
-    (descriptor.class_path == class_path).then_some(descriptor)
+    enumeration_classes()
+        .iter()
+        .filter(|row| row.kind == EnumerationKind::Enumeration)
+        .find(|row| durable_class_path(row) == class_path)
+        .and_then(|row| enum_descriptor(row.id?))
 }
 
 /// Resolve a member literal within a known CDL enum class to its 1-based ordinal.
@@ -196,10 +213,16 @@ pub fn enum_member_ordinal(class: EnumClassId, literal: &str) -> Option<u32> {
     }
 }
 
-/// Whether `qualified` names the source-pinned ASHRAE G36 `Types` package.
+/// Whether `qualified` (or an IRI's fragment after its last `#` or `/`) is a path under the
+/// source-pinned ASHRAE G36 `Types` package, `Buildings.Controls.OBC.ASHRAE.G36.Types.`, known or
+/// not. Words a refusal (`unknown-enum-type` for an unknown class under it); never an identity.
 #[must_use]
 pub fn is_g36_type_path(qualified: &str) -> bool {
-    canonical_g36_type(qualified).is_some()
+    qualified
+        .rsplit(['#', '/'])
+        .next()
+        .unwrap_or(qualified)
+        .starts_with(G36_TYPES_PREFIX)
 }
 
 /// Resolve a source-pinned ASHRAE G36 enum class to its stable in-memory id.
@@ -225,11 +248,21 @@ pub fn is_g36_integer_constant_package(qualified: &str) -> bool {
     g36_row(qualified, EnumerationKind::ConstantPackage).is_some()
 }
 
-/// Resolve a fully-qualified ASHRAE G36 integer constant reference.
+/// Resolve an ASHRAE G36 Integer constant written under its package's canonical path,
+/// `Buildings.Controls.OBC.ASHRAE.G36.Types.<Package>.<member>` ([`enumeration_member`]): the
+/// same rule as an enumeration member (issue #762). Any other prefix, an IRI or an unknown member
+/// is `None`.
 #[must_use]
 pub fn g36_integer_constant(qualified: &str) -> Option<i64> {
-    let (package, literal) = split_qualified_member(qualified)?;
-    g36_integer_constant_in_package(package, literal)
+    match enumeration_member(qualified)? {
+        (row, member) if row.kind == EnumerationKind::ConstantPackage && is_g36_types_row(row) => {
+            match row.member_value(member)? {
+                MemberValue::Integer(value) => Some(value),
+                MemberValue::Ordinal(_) => None,
+            }
+        }
+        _ => None,
+    }
 }
 
 /// Resolve an ASHRAE G36 integer constant by package and member name.
@@ -255,35 +288,22 @@ fn is_g36_types_row(row: &EnumerationClass) -> bool {
     row.qualified_path.starts_with(G36_TYPES_PREFIX)
 }
 
-fn is_cdl_types_row(row: &EnumerationClass) -> bool {
-    row.qualified_path.starts_with(CDL_TYPES_PREFIX)
+/// The G36 `Types` row of `kind` that the typing IRI or path `qualified` names by its full
+/// canonical path.
+fn g36_row(qualified: &str, kind: EnumerationKind) -> Option<&'static EnumerationClass> {
+    enumeration_class_by_iri(qualified).filter(|row| row.kind == kind && is_g36_types_row(row))
 }
 
-/// The G36 `Types` row of `kind` that `qualified` names by its full canonical path.
-fn g36_row(qualified: &str, kind: EnumerationKind) -> Option<&'static EnumerationClass> {
-    let name = canonical_g36_type(qualified)?;
-    enumeration_classes().iter().find(|row| {
-        row.kind == kind
-            && is_g36_types_row(row)
-            && row.qualified_path.strip_prefix(G36_TYPES_PREFIX) == Some(name)
-    })
+/// The member of `text` when it is written under the canonical path of the enumeration `class`.
+fn canonical_member_of(text: &str, class: EnumClassId) -> Option<&str> {
+    enumeration_member(text)
+        .filter(|(row, _)| row.id == Some(class))
+        .map(|(_, member)| member)
 }
 
 fn split_qualified_member(s: &str) -> Option<(&str, &str)> {
     let (prefix, member) = s.rsplit_once('.')?;
     (!prefix.is_empty() && !member.is_empty()).then_some((prefix, member))
-}
-
-fn canonical_g36_type(qualified: &str) -> Option<&str> {
-    qualified
-        .rsplit(['#', '/'])
-        .next()
-        .unwrap_or(qualified)
-        .strip_prefix(G36_TYPES_PREFIX)
-}
-
-fn normalized_class(qualified: &str) -> &str {
-    qualified.rsplit('.').next().unwrap_or(qualified)
 }
 
 #[cfg(test)]

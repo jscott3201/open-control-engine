@@ -135,8 +135,6 @@ fn canonical_spellings_load_and_have_a_content_id() {
         document(
             "CDL.Reals.MatrixGain",
             &[
-                ("nin", 2.0),
-                ("nout", 2.0),
                 ("K_1_1", 1.0),
                 ("K_1_2", 0.0),
                 ("K_2_1", 0.0),
@@ -201,8 +199,6 @@ fn a_width_driven_and_a_matrix_element_alias_are_refused() {
     let doc = document(
         "CDL.Reals.MatrixGain",
         &[
-            ("nin", 2.0),
-            ("nout", 2.0),
             ("K_1_1", 1.0),
             ("K_1_2", 0.0),
             ("K_2_1", 0.0),

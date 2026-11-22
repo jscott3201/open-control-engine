@@ -93,14 +93,8 @@ impl ParamRuleProjection for Names {
     fn real_array_elements(base: &'static str, len: &'static str) -> RuleNames {
         ("RealArrayElements", vec![len], vec![base])
     }
-    fn real_matrix_elements(
-        base: &'static str,
-        rows: &'static str,
-        _: i64,
-        cols: &'static str,
-        _: i64,
-    ) -> RuleNames {
-        ("RealMatrixElements", vec![rows, cols], vec![base])
+    fn real_matrix_elements(base: &'static str, _: i64, _: i64) -> RuleNames {
+        ("RealMatrixElements", vec![], vec![base])
     }
     fn time_table_matrix(
         base: &'static str,

@@ -1,6 +1,10 @@
 //! The enumeration helpers as hand-written `match` arms, verbatim from before the one table
 //! (issue #468), kept as the differential oracle the table-backed functions must agree with on
-//! every input. Only the item paths changed (`crate::` became `oce_model::`).
+//! every input. Only the item paths changed (`crate::` became `oce_model::`), and three arms
+//! follow the owner's canonical-path ruling of issue #762 (2026-11-22): a CDL enumeration
+//! resolves by its full path only (before, by its last segment), a G36 Integer constant value by
+//! its package's exact path (before, also as an IRI fragment), and a durable class path is
+//! compared with each descriptor's (before, through the lenient class lookup).
 
 #![allow(dead_code)]
 
@@ -61,11 +65,11 @@ const ZERO_TIME_MEMBERS: &[&str] = &[
 /// Resolve a known CDL enum class to its stable in-memory id.
 #[must_use]
 pub fn enum_class_id(qualified: &str) -> Option<EnumClassId> {
-    g36_enum_class_id(qualified).or_else(|| match normalized_class(qualified) {
-        "SimpleController" => Some(EnumClassId::SIMPLE_CONTROLLER),
-        "Smoothness" => Some(EnumClassId::SMOOTHNESS),
-        "Extrapolation" => Some(EnumClassId::EXTRAPOLATION),
-        "ZeroTime" => Some(EnumClassId::ZERO_TIME),
+    g36_enum_class_id(qualified).or_else(|| match iri_fragment(qualified) {
+        "Buildings.Controls.OBC.CDL.Types.SimpleController" => Some(EnumClassId::SIMPLE_CONTROLLER),
+        "Buildings.Controls.OBC.CDL.Types.Smoothness" => Some(EnumClassId::SMOOTHNESS),
+        "Buildings.Controls.OBC.CDL.Types.Extrapolation" => Some(EnumClassId::EXTRAPOLATION),
+        "Buildings.Controls.OBC.CDL.Types.ZeroTime" => Some(EnumClassId::ZERO_TIME),
         _ => None,
     })
 }
@@ -133,9 +137,10 @@ pub fn enum_descriptor(class: EnumClassId) -> Option<EnumDescriptor> {
 /// Resolve a canonical durable enum class path.
 #[must_use]
 pub fn enum_descriptor_by_path(class_path: &str) -> Option<EnumDescriptor> {
-    let class = enum_class_id(class_path)?;
-    let descriptor = enum_descriptor(class)?;
-    (descriptor.class_path == class_path).then_some(descriptor)
+    (1..=4)
+        .chain(101..=110)
+        .filter_map(|id| enum_descriptor(EnumClassId(id)))
+        .find(|descriptor| descriptor.class_path == class_path)
 }
 
 /// Resolve a member literal within a known CDL enum class to its 1-based ordinal.
@@ -266,6 +271,9 @@ pub fn is_g36_integer_constant_package(qualified: &str) -> bool {
 #[must_use]
 pub fn g36_integer_constant(qualified: &str) -> Option<i64> {
     let (package, literal) = split_qualified_member(qualified)?;
+    if package.contains(['#', '/']) {
+        return None;
+    }
     g36_integer_constant_in_package(package, literal)
 }
 
@@ -308,6 +316,6 @@ fn canonical_g36_type(qualified: &str) -> Option<&str> {
         .strip_prefix(G36_TYPES_PREFIX)
 }
 
-fn normalized_class(qualified: &str) -> &str {
-    qualified.rsplit('.').next().unwrap_or(qualified)
+fn iri_fragment(qualified: &str) -> &str {
+    qualified.rsplit(['#', '/']).next().unwrap_or(qualified)
 }

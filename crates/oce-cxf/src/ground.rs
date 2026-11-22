@@ -71,6 +71,9 @@ impl GroundErr {
     pub(crate) fn diag_code(&self) -> oce_diag::DiagCode {
         match self {
             GroundErr::NonFinite { .. } => oce_diag::DiagCode::NonFiniteParameter,
+            GroundErr::Expr(oce_expr::ExprError::NonCanonicalEnumeration { .. }) => {
+                oce_diag::DiagCode::UnknownEnumType
+            }
             _ => oce_diag::DiagCode::GroundingFailed,
         }
     }
@@ -88,6 +91,13 @@ impl fmt::Display for GroundErr {
                 "typed literal {lexical:?} (datatype {datatype}) is not a valid {want}"
             ),
             GroundErr::UnknownDatatype(dt) => write!(f, "unknown XSD datatype {dt}"),
+            GroundErr::Expr(oce_expr::ExprError::NonCanonicalEnumeration {
+                written,
+                canonical,
+            }) => f.write_str(&non_canonical_enumeration_message(
+                written,
+                &format!("{canonical}.<member>"),
+            )),
             GroundErr::Expr(e) => write!(f, "expression binding did not ground: {e}"),
             GroundErr::NonScalar => f.write_str("binding did not ground to a scalar value"),
             GroundErr::ArrayShape(message) => f.write_str(message),
@@ -104,6 +114,18 @@ impl fmt::Display for GroundErr {
             ),
         }
     }
+}
+
+/// The refusal of an enumeration written under a path other than its canonical class path
+/// (issue #762): the written path quoted through [`oce_diag::excerpt`] and [`oce_diag::visible`],
+/// and the spelling expected, `expected` (engine text: the canonical path, with `.<member>` for a
+/// value). Shared by every site that refuses one: a grounded value, a conditional guard's literal
+/// and a typing IRI.
+pub(crate) fn non_canonical_enumeration_message(written: &str, expected: &str) -> String {
+    format!(
+        "enumeration `{}` is not written under its canonical class path; write `{expected}`",
+        oce_diag::visible(&oce_diag::excerpt(written))
+    )
 }
 
 /// The fragment of an XSD datatype IRI after the last `#` or `/` (e.g.

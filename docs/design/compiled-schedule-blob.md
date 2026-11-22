@@ -481,6 +481,11 @@ The decoder refuses in this order:
    - duplicate parameter names within one instance (`DuplicateParameter`);
    - *(amended 2026-11-22, issue #748)* a parameter name the instance's class does not declare
      (`UndeclaredParameter`), before the parameter's value is read;
+   - *(amended 2026-11-22, issue #772)* once every parameter of the instance is read and before the
+     block is built, an element outside its class's shape (`ElementOutsideShape`): past its
+     vector's resolved length, an index too large for any width, an offset past its table's
+     outputs, or a cell that leaves its matrix's rectangle unfilled, the load gate's own shape
+     rules (`oce_blocks::element_outside_extent`), completeness as well as extent;
    - an Enum value whose class path is unknown (`UnknownEnumClass`), or whose ordinal is outside
      `1..=members` (`EnumOrdinalOutOfRange`);
    - the model-wide constructed budget, charged the moment the block is constructed

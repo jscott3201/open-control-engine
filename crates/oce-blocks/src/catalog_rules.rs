@@ -49,9 +49,7 @@ pub trait ParamRuleProjection {
     /// Project [`ParamRule::RealMatrixElements`], preserving every declared field.
     fn real_matrix_elements(
         base: &'static str,
-        rows: &'static str,
         default_rows: i64,
-        cols: &'static str,
         default_cols: i64,
     ) -> Self::Output;
     /// Project [`ParamRule::TimeTableMatrix`], preserving every declared field.
@@ -146,11 +144,9 @@ impl ParamRule {
             Self::RealArrayElements { base, len } => P::real_array_elements(base, len),
             Self::RealMatrixElements {
                 base,
-                rows,
                 default_rows,
-                cols,
                 default_cols,
-            } => P::real_matrix_elements(base, rows, default_rows, cols, default_cols),
+            } => P::real_matrix_elements(base, default_rows, default_cols),
             Self::TimeTableMatrix {
                 base,
                 values,
