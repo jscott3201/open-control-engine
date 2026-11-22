@@ -12,7 +12,7 @@ reopened. Decisions 9 to 16 were made while drafting and accepted by the archite
 `crates/leverage/oce-diff` (issue #665, GitHub #692,
 [crate README](../../crates/leverage/oce-diff/README.md)), the CXF adapter as its
 `diff_topology` (issue #666, GitHub #715), the blob comparison as its `compare_blobs` (issue
-#667, GitHub #723) and the `oce diff` verb in `oce-cli` (issue #668, GitHub #PR_NUMBER,
+#667, GitHub #723) and the `oce diff` verb in `oce-cli` (issue #668, GitHub #738,
 [`oce` README](../../crates/leverage/oce-cli/README.md#oce-diff)). What building them showed is
 listed under [As landed](#as-landed).
 
@@ -162,8 +162,8 @@ writes a `Change | Subject | Was | Now` table for a bundle card. Both are golden
 CXF; both sides must be the same kind. `--format` chooses the one document on stdout, the JSON
 report (the default) or `render_markdown`'s table; `render_text` goes to stderr under the CLI's
 `--render` (owner rulings of 2026-11-21, [As landed](#as-landed)). The JSON report is the CLI's
-closed envelope (`tool`, `schema`, `command`, `ok`) with the `Diff` as its result. Exit codes follow the **`oce` CLI rule for every
-subcommand** (decision 1): **0** yes (here, `equal`), **1** no (any difference), **2** error (usage,
+closed envelope (`tool`, `schema`, `command`, `ok`) with the `Diff` as its result. Exit codes
+follow the **`oce` CLI rule for every subcommand** (decision 1): **0** yes (here, `equal`), **1** no (any difference), **2** error (usage,
 a parse refusal of either input, a CXF load refusal, I/O). Exit 1 never means a crash. The
 [authoring note's CLI section](authoring-layer.md#cli) follows the same rule.
 
@@ -829,7 +829,7 @@ What building the blob comparison (issue #667, GitHub #723) showed, under decisi
   blocks reads `unknown` or `different`, never `same`. A changed initial parameter also moves the
   content id, which covers bound parameters.
 
-What building the `oce diff` verb (issue #668, GitHub #PR_NUMBER) showed. Ruled by the owner on
+What building the `oce diff` verb (issue #668, GitHub #738) showed. Ruled by the owner on
 2026-11-21, on the two readings issue #668 asked for, which amend the CLI line above:
 
 - **`--format json|markdown`, no `--format human`.** `oce` settled after this note that stdout
@@ -848,7 +848,7 @@ states each in full:
 
 - **The envelope is `oce-report/1`, unchanged.** `input` is the base's path as given, beside the
   verb's own keys `head` (the head's path), `form` and `diff`, which is exactly the data
-  `Diff::to_json` writes, so removing the envelope leaves this crate's JSON byte for byte. A
+  `Diff::to_json` writes, so removing the envelope leaves `oce-diff`'s JSON byte for byte. A
   refusal is exit 2 with the report and no `diff`; an error about one side carries `at`, `base`
   or `head`. With `--format markdown` the table is stdout for exit 0 and 1 alike, as a `verify`
   receipt is.

@@ -949,7 +949,7 @@ so far, and no tag is cut by the bump.
 ### Leverage
 
 - **`oce diff` prints the structural diff of two sequences or two CXF documents** (GitHub
-  #PR_NUMBER, issues #668, #725; design note `docs/design/diff.md`, "CLI", decisions 1, 10 and 16,
+  #738, issues #668, #725; design note `docs/design/diff.md`, "CLI", decisions 1, 10 and 16,
   part 4 of 4). `oce diff <base> <head> [--from cxf|text|wire] [--no-renames] [--format
   json|markdown]`, in `oce-cli` over `oce-diff` (a new leverage-to-leverage edge; `Cargo.lock`
   moves by that one line).
@@ -983,7 +983,7 @@ so far, and no tag is cut by the bump.
     diff. Thirteen mutants of the verb's logic, all killed. The transcripts `help_oce`, `usage_no_arguments`, `vocab_text` and
     `vocab_json` move for the new command and codes, and `id_files`'s pinned fixture count for the
     three new authored inputs.
-- **The review follow-ups of the blob comparison** (GitHub #PR_NUMBER, issue #725).
+- **The review follow-ups of the blob comparison** (GitHub #738, issue #725).
   `crates/leverage/README.md` names the CXF adapter and the blob comparison in `oce-diff`'s row.
   A new aligned blob pair whose class tables differ (one class no block uses, after the last; the
   facade's summary reads it and its decoder refuses it as `UnusedClass`) kills the mutant that
