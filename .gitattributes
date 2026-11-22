@@ -3,3 +3,6 @@
 *.oceb binary
 # oce-replay canonical trace goldens are byte-exact binary fixtures too.
 *.trace binary
+# The vendored Building 33 trend files end their lines with CRLF upstream; the hash manifest and
+# the upstream blob OIDs pin those bytes. Never normalize line endings there.
+third_party/modelica-buildings-cdl/Buildings/Resources/Data/** -text

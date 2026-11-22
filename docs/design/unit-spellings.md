@@ -189,6 +189,12 @@ uses QUDT's published namespaces.
 
 - **Every unit IRI maps** through modelica-json's table or its S231 fallback. None is unmapped,
   and none is `M3-PER-MIN` or `IN_H2O_60DEG_F`.
+- *(Amended 2026-11-22, issue #661.)* `cxf/` now also holds the Building 33 sequence
+  `CoolingCoilValve`, which is not G36 and is outside both tables. In its one document it adds
+  10 `qudt:hasUnit` (`UNITLESS` 3, `K` 3, `SEC` 1, S231 fallback `1/F` 2 and `1/K` 1), 2
+  `S231:hasDisplayUnit` (`DEG_C`) and 3 `qudt:hasQuantityKind` (`ThermodynamicTemperature`);
+  every one maps. `crates/oce-cxf/tests/vendored_unit_iris.rs` counts the 45 documents
+  together.
 - **All 19 translation `q:Pressure` mean `PressureDifference`.** The vendored G36 sources declare
   `quantity="PressureDifference"` 19 times and `quantity="Pressure"` never. `Pressure` appears only
   in two CDL Psychrometrics classes.

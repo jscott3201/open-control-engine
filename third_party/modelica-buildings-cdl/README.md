@@ -1,8 +1,8 @@
 # Vendored: Modelica Buildings Library — CDL block sources
 
 Third-party source, copied verbatim. **Nothing here is open-control code, and nothing here is
-compiled.** These files are read as *data* by three input-hygiene audits and by the block
-vocabulary's generator test (see "Who reads it").
+compiled.** These files are read as *data* by input-hygiene audits, by the block vocabulary's
+generator test and by the corpus pins (see "Who reads it").
 
 ## License
 
@@ -25,8 +25,8 @@ so `cargo package` does not see it.
 | --- | --- |
 | Upstream | https://github.com/lbl-srg/modelica-buildings |
 | Commit | `a131864e4c4df22ebcd52bb8da439de0087ac365` |
-| Files | 176 `.mo` class sources + `Buildings/legal.html` |
-| Vendored tree size | About 4.14 MB (`Buildings/` 1.34 MB; generated `cxf/` 2.11 MB; generated `cxf-core/` 0.68 MB) |
+| Files | 177 `.mo` class sources + `Buildings/legal.html` + the eight files of the Building 33 trend directory |
+| Vendored tree size | About 15.8 MB (`Buildings/` 12.99 MB, of which the Building 33 trends 11.63 MB; generated `cxf/` 2.15 MB; generated `cxf-core/` 0.68 MB) |
 
 The always-on local integrity check is the `structural oracle (input hygiene)` step of
 `bash .agents/gate.sh`. Its hash manifest checks every expected path and byte in both directions,
@@ -50,9 +50,9 @@ while IFS= read -r tracked_path; do
     drifted=$((drifted + 1))
   fi
 done < <(git -C "$repo_root" ls-files -- 'third_party/modelica-buildings-cdl/Buildings/**')
-printf 'compared=%s (must equal upstream-buildings count 177) drifted=%s (must be 0)\n' \
+printf 'compared=%s (must equal upstream-buildings count 186) drifted=%s (must be 0)\n' \
   "$compared" "$drifted"
-test "$compared" -eq 177 && test "$drifted" -eq 0
+test "$compared" -eq 186 && test "$drifted" -eq 0
 ```
 
 This spot-check deliberately verifies fidelity rather than completeness: the upstream tree is a
@@ -62,18 +62,23 @@ bidirectional manifest gate.
 The corpus contains the 132 elementary CDL classes reachable from the 46 G36 fixtures plus the
 44 G36 and type classes having a mirror-pathed document under `cxf/`. This exact criterion keeps
 the structural oracle's class resolution and conditional declarations locally reproducible
-without vendoring the whole library. The upstream spot-check covers both `.mo` source sets.
+without vendoring the whole library. Beside them sits the Building 33 commissioning example
+(issue #661): the sequence `Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.mo`,
+its translation under `cxf/`, and its recorded trends (see "Building 33 trend data"). The
+upstream spot-check covers every `.mo` source and the trend files.
 
 ## Generated CXF structural oracle
 
-`cxf/` contains 44 machine translations of the vendored Modelica sources. They were generated
+`cxf/` contains 45 machine translations of the vendored Modelica sources. They were generated
 with `modelica-json` commit `85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb` (master, cloned
 2026-07-28) under Node v26.5.0, from the Buildings commit recorded above. The translations are
 derived copies under the same upstream license; they are test data and are not compiled or
 packaged in an `oce-*` crate.
 
 For each of the 31 upstream classes named by the structural-oracle class manifest
-`crates/oce-cxf/tests/fixtures/g36/structural_oracle_manifest.json`, generation used:
+`crates/oce-cxf/tests/fixtures/g36/structural_oracle_manifest.json`, and for
+`Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve` (issue #661), generation
+used:
 
 ```bash
 MODELICAPATH=<directory-containing-Buildings> node app.js \
@@ -99,8 +104,21 @@ cd /tmp/modelica-json
 diff -r "$repo_root/third_party/modelica-buildings-cdl/cxf" /tmp/regenerated-cxf
 ```
 
-The 44 checked-in documents were byte-compared with a fresh regeneration at exactly those pins
-on 2026-07-28.
+The 44 G36 documents were byte-compared with a fresh regeneration at exactly those pins
+on 2026-07-28. `CoolingCoilValve.jsonld` was generated on 2026-11-22 by
+`scripts/vendored_cxf/regenerate.sh`, which runs the command above for every class inside
+`node:26.5.0-bookworm-slim` pinned by digest (Node v26.5.0, npm 11.17.0, linux arm64), from
+partial clones at the two pins; the same run regenerated all 45 documents byte-identical to the
+tree. That script is the reproducible form of the procedure above: run it with an empty scratch
+directory and it exits non-zero on any difference.
+
+The Building 33 translation does not load. modelica-json at this pin writes the string
+`undefined` as the value of every parameter whose binding holds a parenthesised sub-expression,
+which in `CoolingCoilValve` is `TOutCooCut`, `TOutDelta`, `TSupHighLim`, `TSupHigLim` (each
+`50*(5/9) - 32*(5/9) + 273.15` or alike) and `Ti` (`k*interval/(alc_int_k * alc_k_unit_conv)`).
+The engine refuses the document with ten `grounding-failed` errors: those five, and the five
+bindings that read them. The file is kept as generated, `undefined` included; it is not edited
+to load (issue #760).
 
 ## Generated CXF-Core document
 
@@ -160,6 +178,40 @@ outside the translator's table is written as the original string in the S231 nam
 `PressureDifference` and `Pressure` both become the quantity kind `Pressure`; and the vector
 outputs of `MatrixMax` and `MatrixMin` carry no dimension count.
 
+## Building 33 trend data
+
+`Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/`
+holds the recorded trends OBC §12.6 verifies the cooling-coil valve sequence against, copied
+verbatim at the commit above. Upstream's `README.md` there reads: "5s interval data trends for
+the cooling coil control subsequence recorded at LBNL, Building 33, B33-AHU-2-ClVal-5s, 3 days
+of data starting at 2018-06-07 00:00:00 PDT."
+
+| File | Bytes | SHA-256 |
+| --- | --- | --- |
+| `Clg_Coil_Valve.mos` | 2,241,940 | `66864324f33f834657ad5b1c376f25785912af5e537a5b38dfd049d35ff95d8b` |
+| `OA_Temp.mos` | 2,640,854 | `11d9c47305285f705a4c8e68bf14b14d94c93fadd8eae64ebeebaf98c4c1fde9` |
+| `README.md` | 170 | `549d20de7480ebb4f84f1675cfbdd6a271bc30d64e8e1f619d3cbc88269052c7` |
+| `SA_Clg_Stpt.mos` | 2,248,480 | `8d900460dd0c09aa9b0d1a8511ac529868978371e643d5fdb93e5cba4f422e7d` |
+| `Supply_Air_Temp.mos` | 2,244,798 | `e746421176f8aafede7c19f9478b029273e1ca6a301b3ca6a9498561e4e0de35` |
+| `VFD_Fan_Enable.mos` | 377 | `35b91f83b024bc5b9ec52402d4f7951224163167c87e5370ce7bbf601a2faef7` |
+| `VFD_Fan_Feedback.mos` | 2,245,250 | `6d928790e7d84057b779b087173f75f3795aaff94f502e24c09b6688b792b253` |
+| `csv2mos.py` | 9,631 | `1b8bc093d4d84ca4b5985174101198b37d95e3bbd973ceb6b68f853a573ee3a1` |
+
+Each `.mos` is a `CombiTimeTable` text file (`#1`, then one `double` matrix) with the columns
+`Seconds_Elapsed, Unix_Time, Value`: 75,563 to 75,578 rows in 5 s steps, then 600 s steps, to
+about 485,000 s; the fan enable is a change-of-value log of seven rows. The six `.mos` files end
+their lines with CRLF upstream, and their bytes, carriage returns included, are what the hash
+manifest and the upstream blob OIDs pin, so the repository's `.gitattributes` exempts this
+directory from line-end normalisation. `csv2mos.py` is upstream's converter from the exported
+CSV; it is data here and is never run. The upstream model that reads the trends,
+`Buildings.Utilities.Plotters.Examples.ControlsVerification_CoolingCoilValve`, is not vendored:
+it is a Modelica model with plotters, not a CDL sequence.
+
+**License.** The files are part of the Modelica Buildings Library repository at the pinned
+commit and carry no notice of their own, so the library's license above, `Buildings/legal.html`,
+covers them as it covers the `.mo` sources; Lawrence Berkeley National Laboratory, where the
+trends were recorded, is one of its copyright holders.
+
 ## Why the files are unmodified
 
 They are deliberately **not** stripped down to interface declarations, even though the consuming
@@ -176,7 +228,7 @@ broken the upstream-fidelity comparison above.
 
 ## Who reads it
 
-Three input-hygiene audits and one generator test, and nothing else:
+Input-hygiene audits, one generator test and the corpus pins, and nothing else:
 
 - `crates/oce-cxf/tests/fixture_port_order.rs` derives each class's port declaration
   order from these sources at test time and checks that every fixture lists its ports in
@@ -188,6 +240,10 @@ Three input-hygiene audits and one generator test, and nothing else:
   `crates/oce-cxf/tests/fixture_structural_oracle.rs` hashes every byte of every
   manifest-listed file and rejects additions, deletions, and non-whitelisted file types. Unlike
   the declaration-only scanner, it covers the complete vendored bytes.
+- `crates/oce-cxf/tests/vendored_corpus_delta.rs` imports every `cxf/` document and pins its
+  diagnostics, and pins the Building 33 translation's refusal (issue #661);
+  `crates/oce-cxf/tests/vendored_unit_iris.rs` and `parameter_grounding_corpus.rs` count and
+  import the `cxf/` documents too.
 - `crates/leverage/oce-vocab/tests/vocabulary/` reads `cxf-core/CXF-Core.jsonld` to regenerate
   the block vocabulary's `data/generated.json` and compare it byte for byte, and reads the `.mo`
   sources as text to check that every generated unit and quantity is declared there.
@@ -208,8 +264,9 @@ provenance commit field passes the light gate green.
 
 `.agents/revendor-upstream.sh` is the reporter of record — run it before and after any advance; it
 verifies local bytes, upstream fidelity by blob OID, and cone drift, and it never re-blesses
-anything. It is the cheap first pass over the clone-based spot-check above (about eight API
-calls, no clone).
+anything. It is the cheap first pass over the clone-based spot-check above (about eighteen API
+calls, no clone). Its fidelity leg reads three upstream cones: `Buildings/Controls/OBC` with
+`legal.html`, `Buildings/Utilities/Plotters` and `Buildings/Resources/Data/Utilities/Plotters`.
 
 Any byte change anywhere under this vendored tree — including to this README — requires both
 re-blessing the hash manifest and re-deriving and deliberately hand-editing the tree-SHA constant.

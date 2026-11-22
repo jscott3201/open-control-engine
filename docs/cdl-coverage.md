@@ -396,8 +396,11 @@ propagation, expression folding, conditional-instance removal, `replaceable`/`re
 — is not implemented. If your sequence exists only as `.mo`, something
 upstream has to produce CXF first.
 
-**Upstream modelica-json output does not load today.** The 44 modelica-json CXF translations
-vendored under `third_party/modelica-buildings-cdl/cxf/` all fail to load. They depend on a
+**Upstream modelica-json output does not load today.** The 44 G36 modelica-json CXF
+translations vendored under `third_party/modelica-buildings-cdl/cxf/` all fail to load. So does
+the 45th, the Building 33 sequence `CoolingCoilValve` (issue #661), for a cause of its own: the
+translator writes the string `undefined` for every parameter binding with a parenthesised
+sub-expression. They depend on a
 cross-document class library the engine does not have, and they use array connectors and array
 instances, which Rule 7 of the [CXF composite subset](cxf-composite-subset.md) refuses. The test
 header in `crates/oce-cxf/tests/vendored_corpus_delta.rs` states the same limit, and that test pins

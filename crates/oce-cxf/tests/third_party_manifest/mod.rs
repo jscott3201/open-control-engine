@@ -20,7 +20,7 @@ const BUILDINGS_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 const MODELICA_JSON_COMMIT: &str = "85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb";
 // Derived after the README commit with:
 // git rev-parse HEAD:third_party/modelica-buildings-cdl
-const SUBTREE_TREE_SHA: &str = "c943691a48fe4e6d511884634b27b193252339bf";
+const SUBTREE_TREE_SHA: &str = "529d30979054acc59c772682d5c5ca8eefa0ed4b";
 const SCHEMA: &str = "open-control/modelica-buildings-cdl-hash-manifest/v1";
 const MANIFEST_PATH: &str =
     "../../tools/reference-catalog/modelica-buildings-cdl.hash-manifest.json";
@@ -153,12 +153,23 @@ fn reject_executable(_path: &Path, _relative: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// The one upstream directory whose recorded trends are vendored (issue #661): only directly
+/// inside it may a `.mos` trend table, the `csv2mos.py` converter and a nested `README.md`
+/// appear.
+const TREND_DATA_DIR: &str =
+    "Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/";
+
 fn validate_path(path: &str) -> Result<&'static str, String> {
     let basename = path.rsplit('/').next().unwrap_or(path);
+    let in_trend_data = path
+        .strip_prefix(TREND_DATA_DIR)
+        .is_some_and(|rest| !rest.contains('/'));
     let whitelisted = path.ends_with(".mo")
         || path.ends_with(".jsonld")
         || basename == "legal.html"
-        || basename == "README.md";
+        || path == "README.md"
+        || (in_trend_data
+            && (path.ends_with(".mos") || basename == "csv2mos.py" || basename == "README.md"));
     if !whitelisted {
         return Err(format!(
             "non-whitelisted vendored path `{path}`: untracked junk (e.g. `.DS_Store`) — \
@@ -553,6 +564,126 @@ fn additions_deletions_and_junk_are_distinct_failures() {
         base.manifest.bucket_counts.get("generated-cxf-core"),
         Some(&1)
     );
+}
+
+#[test]
+fn trend_file_types_are_accepted_only_directly_inside_the_trend_directory() {
+    for accepted in ["Supply_Air_Temp.mos", "csv2mos.py", "README.md"] {
+        assert_eq!(
+            validate_path(&format!("{TREND_DATA_DIR}{accepted}")),
+            Ok("upstream-buildings"),
+            "{accepted}"
+        );
+    }
+    for refused in [
+        "cxf/Trend.mos".to_owned(),
+        "cxf/csv2mos.py".to_owned(),
+        "cxf/README.md".to_owned(),
+        "Buildings/Controls/OBC/README.md".to_owned(),
+        "Buildings/Resources/Data/Other/Trend.mos".to_owned(),
+        format!("{TREND_DATA_DIR}nested/Trend.mos"),
+        format!("{TREND_DATA_DIR}other.py"),
+        format!("{TREND_DATA_DIR}Trend.csv"),
+    ] {
+        let error = validate_path(&refused).expect_err(&refused);
+        assert!(error.contains("new vendored file type"), "{error}");
+    }
+}
+
+#[test]
+fn trend_tables_keep_upstream_crlf_line_ends() {
+    let base = corpus().expect("vendored corpus must be readable");
+    let tables: Vec<_> = base
+        .listing
+        .iter()
+        .filter(|file| file.path.starts_with(TREND_DATA_DIR) && file.path.ends_with(".mos"))
+        .collect();
+    assert_eq!(tables.len(), 6);
+    for table in tables {
+        let line_feeds = table.bytes.iter().filter(|&&b| b == b'\n').count();
+        let crlf = table
+            .bytes
+            .windows(2)
+            .filter(|pair| pair == b"\r\n")
+            .count();
+        assert!(
+            line_feeds > 0 && crlf == line_feeds,
+            "`{}`: {line_feeds} line feeds, {crlf} after a carriage return; upstream ends every \
+             line with CRLF, so a checkout normalised these bytes — keep the root \
+             .gitattributes rule `third_party/modelica-buildings-cdl/Buildings/Resources/Data/** \
+             -text`",
+            table.path
+        );
+    }
+}
+
+#[test]
+fn trend_file_additions_deletions_and_changes_are_caught() {
+    let base = corpus().expect("vendored corpus must be readable");
+    let trend = |file: &FileData| file.path.starts_with(TREND_DATA_DIR);
+    let names: BTreeSet<_> = base
+        .listing
+        .iter()
+        .filter(|file| trend(file))
+        .map(|file| file.path.trim_start_matches(TREND_DATA_DIR))
+        .collect();
+    let expected = [
+        "Clg_Coil_Valve.mos",
+        "OA_Temp.mos",
+        "README.md",
+        "SA_Clg_Stpt.mos",
+        "Supply_Air_Temp.mos",
+        "VFD_Fan_Enable.mos",
+        "VFD_Fan_Feedback.mos",
+        "csv2mos.py",
+    ];
+    assert_eq!(names, expected.into_iter().collect());
+
+    let mut added = base.listing.clone();
+    added.push(FileData {
+        path: format!("{TREND_DATA_DIR}Extra_Trend.mos"),
+        bytes: b"#1\r\n".to_vec(),
+    });
+    let error = structured_diff(&base.manifest, &build_manifest(&added).expect("valid"))
+        .expect_err("an added trend must fail");
+    assert!(error.contains("disk-only path"), "{error}");
+    assert!(error.contains("Extra_Trend.mos"), "{error}");
+
+    for name in ["OA_Temp.mos", "csv2mos.py", "README.md"] {
+        let path = format!("{TREND_DATA_DIR}{name}");
+        let removed: Vec<_> = base
+            .listing
+            .iter()
+            .filter(|file| file.path != path)
+            .cloned()
+            .collect();
+        let error = structured_diff(&base.manifest, &build_manifest(&removed).expect("valid"))
+            .expect_err("a deleted trend file must fail");
+        assert!(
+            error.contains(&format!("manifest-only path `{path}`")),
+            "{error}"
+        );
+
+        // A line end normalised from CRLF to LF is a changed file, as a flipped byte is.
+        let mut changed = base.listing.clone();
+        let file = changed
+            .iter_mut()
+            .find(|file| file.path == path)
+            .expect("listed");
+        file.bytes = file
+            .bytes
+            .iter()
+            .copied()
+            .filter(|&b| b != b'\r')
+            .chain(std::iter::once(b'\n'))
+            .collect();
+        let error = structured_diff(&base.manifest, &build_manifest(&changed).expect("valid"))
+            .expect_err("a changed trend file must fail");
+        assert!(
+            error.contains(&format!("`{path}` differs: sha256")),
+            "{error}"
+        );
+    }
 }
 
 #[test]
