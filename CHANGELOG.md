@@ -207,21 +207,29 @@ so far, and no tag is cut by the bump.
     (named only by a rule over both, which reads neither unless both are present and numeric),
     the logical blocks' `pre_u_start` and the rest went the same way. An enumeration value of
     another class passed the member rule (it read only the ordinal), so
-    `smoothness = Extrapolation.LastTwoPoints` ran linear segments, and
-    `PID.controllerType` given an Integer, an unknown String or another class's member ran PI.
+    `smoothness = Extrapolation.LastTwoPoints` ran linear segments (the default). On
+    `PID.controllerType`, which no rule judged, an Integer, a Real, a Boolean, a bare string or a
+    dotted string naming no member ran the default PI; a dotted string ran its last segment's
+    member whatever its path (`"Foo.Bar.PD"` ran PD); and another enumeration's member ran the
+    controller its ordinal names (`Extrapolation.HoldLastPoint` ran P, `Extrapolation.Periodic`
+    ran PD, an ordinal past 3 ran PID).
   - **The rulings.** R1: `2.0` on an Integer parameter is refused, not narrowed (no Integer
     binding in the vendored translations, the tracked documents or the library writes a Real).
     R2: an enumeration parameter takes a qualified member of its own enumeration, which the
     resolver grounds to an enumeration value of that class, and nothing else, everywhere. An
     Integer ordinal (`zerTim = 11`, `smoothness = 2`), a G36 integer constant
-    (`controllerType = OperationModes.occupied`, the Integer 1, which ran as `P`), an Integer
+    (`controllerType = OperationModes.occupied`, the Integer 1, which ran the default PI), an
+    Integer
     expression (`"1+2"`) or Integer parameter, a string (bare `"NY2017"` or qualified, whatever
     its path: `"Foo.Bar.PD"`, `".PD"`, `"…Types.Smoothness.PD"`; no tracked document, vendored
     translation or library rule carries an enumeration as a string, so strings are refused
     outright) and another enumeration's member are `parameter-kind-mismatch`. This removes
     ordinal and string readings that predate this change: the `TimeTable` smoothness and
-    extrapolation readers, the `zerTim` reader and the `EnumMembers` rule took ordinals, and
-    the `controllerType` and `zerTim` readers took strings.
+    extrapolation readers and the `EnumMembers` rule took ordinals and strings (by the last
+    dotted segment: `smoothness = "ConstantSegments"` ran ConstantSegments); the `zerTim` reader
+    took ordinals and dotted strings (`zerTim = 11` ran NY2017; a bare `"NY2017"` passed the
+    member rule and ran the default year); the `controllerType` reader took dotted strings and
+    read any enumeration value by its ordinal.
   - **The rule, table-driven.** `oce_blocks::admits_parameter_value` (new, with
     `parameter_kind_fault`, `parameter_kind_is_ruled`, `ParameterKindFault`, `exact_real` and
     `MAX_EXACT_INTEGER_AS_REAL`) says what a catalog type admits: a Real parameter a Real or an

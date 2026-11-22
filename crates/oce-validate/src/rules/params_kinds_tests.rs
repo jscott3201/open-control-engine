@@ -459,3 +459,45 @@ fn a_parameter_the_catalog_does_not_type_is_not_judged() {
         Vec::new()
     );
 }
+
+#[test]
+fn another_enumerations_periodic_ordinal_is_one_kind_finding_and_no_periodic_check() {
+    // `SimpleController.PD` is ordinal 3, the ordinal of `Extrapolation.Periodic`. The table does
+    // not span time, which a periodic table must: only a member of `Extrapolation` makes the
+    // table periodic, so the one finding is the kind mismatch.
+    let class = "CDL.Reals.Sources.TimeTable";
+    let entries = [
+        ("table_1_1", Value::Real(1.0)),
+        ("table_1_2", Value::Real(0.0)),
+        ("table_2_1", Value::Real(1.0)),
+        ("table_2_2", Value::Real(2.0)),
+        (
+            "extrapolation",
+            Value::Enum {
+                class: EnumClassId::SIMPLE_CONTROLLER,
+                ordinal: 3,
+            },
+        ),
+    ];
+    assert_eq!(
+        refusal(class, &entries),
+        vec![kind_mismatch(
+            "extrapolation",
+            class,
+            &format!("{:?}", ValueType::Enum(EnumClassId::EXTRAPOLATION)),
+            "Enum"
+        )]
+    );
+    // The positive control: `Extrapolation.Periodic` on the same table is the periodic finding.
+    let mut periodic = entries.to_vec();
+    periodic[4].1 = Value::Enum {
+        class: EnumClassId::EXTRAPOLATION,
+        ordinal: 3,
+    };
+    let diags = refusal(class, &periodic);
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert!(
+        diags[0].message.contains("must span a positive time range"),
+        "{diags:?}"
+    );
+}

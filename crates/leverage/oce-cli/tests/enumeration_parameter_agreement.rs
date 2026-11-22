@@ -4,9 +4,10 @@
 //! Integer expression, an Integer root parameter, a string and another enumeration's member are
 //! refused by both, and the qualified member loads in both.
 //!
-//! Before the ruling the engine ran several of these on a value the document did not name:
-//! `PID.controllerType = OperationModes.occupied` grounds to the Integer 1 and ran as `P`,
-//! `zerTim = 11` ran as `NY2017`, and `TimeTable.smoothness = 2` as `ConstantSegments`.
+//! Before the ruling the engine loaded these and ran a value the document did not name, or its
+//! default: `PID.controllerType = OperationModes.occupied` grounds to the Integer 1 and ran the
+//! default PI, `controllerType = "Foo.Bar.PD"` ran PD, `zerTim = 11` ran as `NY2017`, and
+//! `TimeTable.smoothness = 2` as `ConstantSegments`.
 
 mod support;
 

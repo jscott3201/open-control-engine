@@ -351,8 +351,9 @@ pub(crate) fn string_param(params: &ParamTable, name: &str, default: &'static st
 /// `CDL.Types.SimpleController` names, `default` when unbound. Nothing else is read (the owner's
 /// ruling R2 on issue #734): an ordinal, a string or another enumeration's member is refused by
 /// the load gate and the blob decoder before a block is built, so the default stands only for an
-/// absent parameter. (Before, another class's ordinal was read as a controller's, and a string by
-/// its member name.)
+/// absent parameter. (Before, any enumeration value was read by its ordinal, another class's
+/// included, a dotted string by its last segment whatever its path, and every other value fell
+/// back to the default.)
 pub(super) fn controller_type_param(
     params: &ParamTable,
     name: &str,
@@ -431,7 +432,8 @@ mod tests {
         }
         // Nothing else is a controller (ruling R2, issue #734): the load gate and the blob
         // decoder refuse each of these, and the reader leaves the default for none of them to
-        // reach. Before, an ordinal, a string and another class's member were each read.
+        // reach. Before, an ordinal fell back to the default, a dotted string was read by its last
+        // segment and another class's member by its ordinal.
         for value in [
             Value::Enum {
                 class: EnumClassId::SIMPLE_CONTROLLER,

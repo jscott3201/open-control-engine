@@ -162,7 +162,8 @@ refused where the engine loaded them before. No content id moves: a document tha
 and after this change has the same parameter table, so the same id and blob, and runs the same
 (every reader decodes an enumeration value of its own class as it did). What changes is which
 documents load: one that wrote such a value loaded and ran a value it did not name (`zerTim = 11`
-ran `NY2017`, `PID.controllerType = OperationModes.occupied` ran `P`, an Integer parameter given
+ran `NY2017`, `PID.controllerType = OperationModes.occupied` ran the default PI, `controllerType =
+Extrapolation.Periodic` ran PD, an Integer parameter given
 `4.0` ran its default) and is refused now, with no id. A 0.6.0 compiled-schedule blob written before
 the change and carrying such a value is refused by the decoder (`ParameterKindMismatch`), not read
 with another meaning, and a state snapshot can only be restored into an engine that loaded its

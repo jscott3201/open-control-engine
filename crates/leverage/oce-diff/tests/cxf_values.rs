@@ -428,7 +428,7 @@ fn a_boundary_type_and_a_ground_value_are_spelled_as_the_authoring_form_spells_t
     }
     // Only a qualified member is admitted (issue #734, ruling R2): a string, even one naming a
     // member, an ordinal and an ordinal outside the enumeration are no block this level can wire
-    // (before, `x` loaded and ran as the default controller and `PD` ran as PD).
+    // (before, `x` and `PD` loaded and ran the default PI, and the qualified string ran PD).
     for refused in [
         Value::String("x".into()),
         Value::String("PD".into()),

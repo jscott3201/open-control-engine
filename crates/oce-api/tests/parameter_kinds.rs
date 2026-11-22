@@ -198,9 +198,10 @@ fn an_enumeration_runs_as_the_qualified_member_it_names() {
 
 #[test]
 fn an_enumeration_spelt_any_other_way_is_refused_where_it_ran_as_a_member() {
-    // Ruling R2 (2026-11-21). Before: `2` and the strings ran as `ConstantSegments`;
-    // `OperationModes.occupied` (the Integer 1) ran linear segments; `LastTwoPoints` (ordinal 2
-    // of `Extrapolation`) passed the ordinal check and ran the default.
+    // Ruling R2 (2026-11-21). Before: `2` and the strings ran as `ConstantSegments` (the reader
+    // took an ordinal and a string's last segment); `OperationModes.occupied` (the Integer 1)
+    // ran linear segments as ordinal 1; `LastTwoPoints` (ordinal 2 of `Extrapolation`) passed
+    // the ordinal check and ran the default.
     for literal in [
         "2",
         "1",
@@ -252,8 +253,9 @@ fn a_controller_runs_as_the_qualified_member_and_every_other_spelling_is_refused
         "{p:?}"
     );
     assert!(!pi[3].bit_eq(&p[3]), "PI integrates: {pi:?} against {p:?}");
-    // Before the ruling `OperationModes.occupied` (the Integer 1) ran as `P`, `3` as `PD`, a
-    // string by its last segment whatever its path.
+    // Before this change (measured on `development`): the Integer forms ran the default PI, a
+    // dotted string ran its last segment's member whatever its path (`"Foo.Bar.PD"` ran PD), and
+    // another enumeration's member ran the controller its ordinal names.
     let integer_root = [parameter_documents::declared("n", "Integer", "3")];
     for (literal, root) in [
         (
