@@ -485,7 +485,7 @@ on 2026-11-10 (comment on #545), with the dispatch rule below, after the review 
 proposed it, and ruled on again on 2026-11-10 and 2026-11-11 (issue #555). It exists because
 the script's `full`-only steps run in no lighter mode, which is also why the two files only those
 steps exercise are in it, and because a pin advance has tests that no per-PR job runs:
-`oce-conformance`'s `conformance` binary, three of whose modules read the vendored tree and the
+`oce-conformance`'s `conformance` binary, four of whose modules read the vendored tree and the
 reference catalog; that crate's `clean_room` unit tests and `open_modelica_nand` binary, which do
 not read the vendored files but pin the vendored `Nand.mo` by path, line and equation; and the
 doctests. An earlier reason given here, that the G36 half of the pin guard runs

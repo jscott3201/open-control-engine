@@ -1,4 +1,109 @@
 {
   "format": "oce-known-divergence-register-v1",
-  "entries": []
+  "entries": [
+    {
+      "id": "DVG-000001",
+      "summary": "At a re-enable one frame after a disable, OpenModelica resets the PIDWithReset integrator (Change fires again) and the engine does not (Change held true on two consecutive frames is one rising edge).",
+      "subject": {
+        "class": "CDL.Reals.PIDWithReset",
+        "scenario": "building_33_coolingcoilvalve_reenable_probe",
+        "signal": "yCooVal",
+        "observation": "t=382 s, enable false at 377 s and true at 382 s, TSup 290 K from 382 s"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-verify:building_33_openmodelica_reenable:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:CoolingCoilValveReenableProbe"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/leverage/oce-verify/tests/fixtures/commissioning/building33/openmodelica/yCooVal_reenable_probe.engine.csv",
+          "sha256": "cc411251803318c976e9c5514795625e299eedd07fccd18bffef9e979e69bffe",
+          "summary": "The engine's valve signal over the probe frames, as bits: 0.036, 0.051 and 0.066 at 382, 387 and 392 s."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/leverage/oce-verify/tests/fixtures/commissioning/building33/openmodelica/yCooVal_reenable_probe.csv",
+          "sha256": "bf9fed6a92497210174b08e1965346a543f4190ba7777aa235694cc2b3ca55d0",
+          "summary": "OpenModelica 1.25.1 running upstream CoolingCoilValve on the probe frames: reset at 382 s, then 0, 0.015 and 0.030."
+        }
+      ],
+      "comparison_reference": "crates/leverage/oce-verify/tests/commissioning/building_33_openmodelica_reenable.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "a87c1d53b5d37ab57468d9f873044b89dd2b8b4a",
+      "state": "open",
+      "disposition": "Owner decision pending in issue #800 (https://github.com/jscott3201/open-control-engine/issues/800): whether HostTick v1 should count each pulse of a Boolean held true on consecutive frames as an event, as Modelica does, or keep one rising edge; no engine behaviour changed with this entry.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000002",
+      "summary": "OnCounter fed by Change of a signal that changes on consecutive frames: OpenModelica counts every change, the engine one per run of consecutive changes.",
+      "subject": {
+        "class": "CDL.Integers.OnCounter",
+        "scenario": "change_pulses",
+        "signal": "y",
+        "observation": "u changes at 2, 3, 5, 7, 8 and 9 s at 1 s frames; counts part from 3 s"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_event_pulses:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:OnCounterChangePilot"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/integers_on_counter/change_pulses.engine.csv",
+          "sha256": "5d4ecddb4166c652a88874939cc8246691a13103421ff33111c16d960229e830",
+          "summary": "The engine's count over the ten frames: 3, 3, 4, 4, 4, 5, 5, 6, 6, 6."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/integers_on_counter/change_pulses.canonical.csv",
+          "sha256": "233761d4f02bdaac8e2e0a98840de829049e536cac20ec235a1975b829f6b52c",
+          "summary": "OpenModelica 1.25.1 running OnCounterChangePilot: 3, 3, 4, 5, 5, 6, 6, 7, 8, 9."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_event_pulses.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "a87c1d53b5d37ab57468d9f873044b89dd2b8b4a",
+      "state": "open",
+      "disposition": "Owner decision pending in issue #800 (https://github.com/jscott3201/open-control-engine/issues/800): whether HostTick v1 should count each pulse of a Boolean held true on consecutive frames as an event, as Modelica does, or keep one rising edge; no engine behaviour changed with this entry.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    }
+  ]
 }

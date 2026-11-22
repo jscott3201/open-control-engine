@@ -2,7 +2,7 @@
   "class": "CDL.Reals.PIDWithReset",
   "pilot": "tools/openmodelica-event-reference/events/PIDWithResetPilot.mo",
   "pilot_sha256": "50a06e2a98167e857731ebf1db3b8434cadcfc5fb85abc9cac072e0c5d70fbae",
-  "simulate_template_sha256": "9547cdfb45e8e1418c79e327ab0f9fa0d6b0782b9fd77f40abf68c9c90f8bdd0",
+  "simulate_template_sha256": "8e14c335d78af9b66502d46232b6c65f0585062023e2d901b388f19450ececd5",
   "image": "openmodelica/openmodelica@sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
   "omc": "OpenModelica 1.25.1",
   "architecture": "arm64",
@@ -16,7 +16,7 @@
   "projection": "at each frame instant 0 to 9 s, the last row within 1e-6 s of it",
   "command": "docker run --rm --pull=never --network none --memory 4g --cpus 4 --user <host-uid>:<host-gid> -e HOME=/work -v <buildings>:/libs/buildings:ro -v <msl>:/libs/msl:ro -v tools/openmodelica-event-reference/events:/scripts:ro -v <run directory>:/work -w /work <image> omc /work/run.mos",
   "raw": "pid_with_reset.raw.csv",
-  "raw_sha256": "9bbbde6dfc3fff9e6e52d42618ad99ba0e0324d87559ca895ae5ff846ecb1567",
   "initially_true_sha256": "afc84bcdabda377c807868bcad7d0f6b6cfa1bb002a99c22fc626937c9723bba",
-  "rising_after_start_sha256": "fc429dbd27b17e877cb74dbdfa3e9ece38f6299913fe63d9c42769f8e53f5f1e"
+  "rising_after_start_sha256": "fc429dbd27b17e877cb74dbdfa3e9ece38f6299913fe63d9c42769f8e53f5f1e",
+  "raw_sha256": "9bbbde6dfc3fff9e6e52d42618ad99ba0e0324d87559ca895ae5ff846ecb1567"
 }

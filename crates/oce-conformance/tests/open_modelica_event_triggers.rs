@@ -13,8 +13,11 @@
 //! Every output is exact in both tools, so every comparison is exact: the counts, samples and
 //! maxima are discrete, the integrator's input is 0, and the PI's integral time is 1e20 s, so
 //! its integral moves by less than half an ulp per frame and its output is the proportional
-//! part plus the held or reset integral. What that leaves out (the integration itself) is the
-//! Building 33 comparison of `oce-verify` (issue #787).
+//! part plus the held or reset integral. What that leaves out: `IntegratorWithReset`'s
+//! integration is `open_modelica_integrator_ramp.rs`, `PIDWithReset`'s the Building 33
+//! comparison of `oce-verify` (issue #787), and a trigger fed by a pulse that is true on
+//! consecutive frames, where the engine and OpenModelica disagree, is
+//! `open_modelica_event_pulses.rs` (issue #800).
 //!
 //! - The engine, driven through the facade at the ten frame instants with the reference's
 //!   inputs, equals OpenModelica at every frame of the ten scenarios, twice over.
@@ -23,8 +26,10 @@
 //!   OpenModelica's output at every frame, and each of the two readings the rule replaced
 //!   (an event at frame 0 for a trigger already true; an event shown one frame late) differs
 //!   from it at pinned frames: the evidence tells the rules apart in every class.
-//! - The provenance record of each class binds the pilot, the canonical tables and the raw
-//!   result by SHA-256, and names the pinned image, `omc` version and library commits.
+//! - The provenance record of each class binds the pilot, the canonical tables, the raw result
+//!   and the simulation script by SHA-256, names the pinned image, `omc` version and library
+//!   commits and trees, and records the digest of the class source it simulated, which equals
+//!   the vendored copy's.
 
 use oce_conformance::{CombiTimeTable, ComparisonResult, DriveMode};
 use sha2::{Digest, Sha256};
@@ -34,7 +39,7 @@ use crate::block_harness::{
     drive_case_with_external_reference_at_instants,
 };
 
-const IMAGE: &str = "openmodelica/openmodelica@sha256:\
+pub(crate) const IMAGE: &str = "openmodelica/openmodelica@sha256:\
 79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864";
 const FRAMES: usize = 10;
 
@@ -104,6 +109,7 @@ struct Evidence {
     case: BlockCase,
     directory: &'static str,
     pilot: &'static [u8],
+    vendored: &'static [u8],
     raw: &'static [u8],
     provenance: &'static str,
     initially_true: &'static [u8],
@@ -111,13 +117,17 @@ struct Evidence {
 }
 
 macro_rules! evidence {
-    ($case:expr, $dir:literal, $pilot:literal, $raw:literal) => {
+    ($case:expr, $dir:literal, $pilot:literal, $source:literal, $raw:literal) => {
         Evidence {
             case: $case,
             directory: $dir,
             pilot: include_bytes!(concat!(
                 "../../../tools/openmodelica-event-reference/events/",
                 $pilot
+            )),
+            vendored: include_bytes!(concat!(
+                "../../../third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/",
+                $source
             )),
             raw: include_bytes!(concat!("fixtures/open_modelica/", $dir, "/", $raw)),
             provenance: include_str!(concat!("fixtures/open_modelica/", $dir, "/provenance.json")),
@@ -141,30 +151,35 @@ fn classes() -> [Evidence; 5] {
             ON_COUNTER,
             "integers_on_counter",
             "OnCounterPilot.mo",
+            "Integers/OnCounter.mo",
             "on_counter.raw.csv"
         ),
         evidence!(
             TRIGGERED_SAMPLER,
             "discrete_triggered_sampler",
             "TriggeredSamplerPilot.mo",
+            "Discrete/TriggeredSampler.mo",
             "triggered_sampler.raw.csv"
         ),
         evidence!(
             TRIGGERED_MAX,
             "discrete_triggered_max",
             "TriggeredMaxPilot.mo",
+            "Discrete/TriggeredMax.mo",
             "triggered_max.raw.csv"
         ),
         evidence!(
             INTEGRATOR_WITH_RESET,
             "reals_integrator_with_reset",
             "IntegratorWithResetPilot.mo",
+            "Reals/IntegratorWithReset.mo",
             "integrator_with_reset.raw.csv"
         ),
         evidence!(
             PID_WITH_RESET,
             "reals_pid_with_reset",
             "PIDWithResetPilot.mo",
+            "Reals/PIDWithReset.mo",
             "pid_with_reset.raw.csv"
         ),
     ]
@@ -191,7 +206,7 @@ impl Evidence {
     }
 }
 
-fn sha256(bytes: &[u8]) -> String {
+pub(crate) fn sha256(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
         .map(|byte| format!("{byte:02x}"))
@@ -199,7 +214,7 @@ fn sha256(bytes: &[u8]) -> String {
 }
 
 /// The reference's rows as `(column name -> value)` lookups, in frame order.
-fn columns(reference: &CombiTimeTable) -> (Vec<String>, Vec<Vec<f64>>) {
+pub(crate) fn columns(reference: &CombiTimeTable) -> (Vec<String>, Vec<Vec<f64>>) {
     let names = reference.col_names.clone().expect("named columns");
     let rows = reference
         .data
@@ -494,22 +509,13 @@ fn each_class_s_provenance_binds_its_pilot_tables_and_raw_result() {
         let field = |key: &str| record[key].as_str().expect(key).to_owned();
         let label = evidence.directory;
         assert_eq!(field("class"), evidence.case.class_path, "{label}");
-        assert_eq!(field("omc"), "OpenModelica 1.25.1", "{label}");
-        assert_eq!(field("image"), IMAGE, "{label}");
-        assert_eq!(field("architecture"), "arm64", "{label}");
-        // The library commits every other OpenModelica case of the repository records.
-        assert_eq!(
-            field("buildings_commit"),
-            "a131864e4c4df22ebcd52bb8da439de0087ac365",
-            "{label}"
+        assert_run_record(
+            &record,
+            label,
+            evidence.pilot,
+            evidence.vendored,
+            evidence.raw,
         );
-        assert_eq!(
-            field("msl_commit"),
-            "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
-            "{label}"
-        );
-        assert_eq!(field("pilot_sha256"), sha256(evidence.pilot), "{label}");
-        assert_eq!(field("raw_sha256"), sha256(evidence.raw), "{label}");
         for scenario in SCENARIOS {
             assert_eq!(
                 field(&format!("{scenario}_sha256")),
@@ -527,4 +533,55 @@ fn each_class_s_provenance_binds_its_pilot_tables_and_raw_result() {
             "{label}"
         );
     }
+}
+
+/// The simulation script every pilot ran, with its `@PILOT@` placeholder.
+const SIMULATE_TEMPLATE: &[u8] =
+    include_bytes!("../../../tools/openmodelica-event-reference/events/simulate.mos");
+
+/// Assert the fields every pilot's provenance record shares: the producer, the pinned image and
+/// architecture, the library commits and trees every other OpenModelica case of the repository
+/// records, the simulation script, the pilot and raw result by digest, and the class source
+/// OpenModelica simulated, whose digest must equal the vendored copy's.
+pub(crate) fn assert_run_record(
+    record: &serde_json::Value,
+    label: &str,
+    pilot: &[u8],
+    vendored: &[u8],
+    raw: &[u8],
+) {
+    let field = |key: &str| record[key].as_str().expect(key).to_owned();
+    for (key, value) in [
+        ("omc", "OpenModelica 1.25.1"),
+        ("image", IMAGE),
+        ("architecture", "arm64"),
+        (
+            "buildings_commit",
+            "a131864e4c4df22ebcd52bb8da439de0087ac365",
+        ),
+        ("buildings_tree", "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09"),
+        ("msl_commit", "7a4bf7de77a3986e8eb1e88cbb515d646f78f834"),
+        ("msl_tree", "43d7d8fc1a991358e9e5e91976e27cdc4280173f"),
+    ] {
+        assert_eq!(field(key), value, "{label} {key}");
+    }
+    assert_eq!(
+        field("simulate_template_sha256"),
+        sha256(SIMULATE_TEMPLATE),
+        "{label}"
+    );
+    assert_eq!(field("pilot_sha256"), sha256(pilot), "{label}");
+    assert_eq!(field("raw_sha256"), sha256(raw), "{label}");
+    assert_eq!(field("class_source_sha256"), sha256(vendored), "{label}");
+}
+
+/// The vendored source of `class` (`CDL.<family>.<name>`), for the other OpenModelica event
+/// modules: this module is the one place the `conformance` binary's event evidence reads the
+/// vendored tree.
+pub(crate) fn vendored_source(class: &str) -> &'static [u8] {
+    classes()
+        .into_iter()
+        .find(|evidence| evidence.case.class_path == class)
+        .map(|evidence| evidence.vendored)
+        .unwrap_or_else(|| panic!("no vendored source for {class}"))
 }

@@ -16,9 +16,10 @@
 #
 # Each pilot runs in its own container: no network, the host user, 4 CPUs and 4 GB, both
 # libraries and the pilots read-only, simulate.mos with @PILOT@ replaced by the pilot's name.
-# For each pilot the script writes, beside the class's other files: <class>.raw.csv (the result
-# as OpenModelica wrote it), the two canonical tables canonicalize.py projects from it, run.log
-# (omc's output) and provenance.json. No test runs this script; the tests read those files.
+# For each pilot the script writes, beside the class's other files: the result as OpenModelica
+# wrote it (<name>.raw.csv), the canonical tables canonicalize.py projects from it, omc's output
+# (run.log) and provenance.json; the two extra pilots of a class (OnCounterChangePilot,
+# IntegratorWithResetRampPilot) prefix their log and record with their scenario's name. No test runs this script; the tests read those files.
 # Docker images and libraries are left as they are.
 set -eu
 
@@ -52,8 +53,12 @@ ARCHITECTURE=$(docker image inspect "$IMAGE" --format '{{.Architecture}}')
 
 sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
 
+# run_pilot PILOT DIRECTORY RAW CLASS SOURCE PREFIX STEM...: run PILOT, write its result as
+# <RAW>.raw.csv, its log as <PREFIX>run.log and its record as <PREFIX>provenance.json under
+# DIRECTORY, beside the canonical tables <STEM>.canonical.csv that canonicalize.py writes.
 run_pilot() {
-  pilot=$1; slug=$2; raw=$3; class=$4; source=$5
+  pilot=$1; slug=$2; raw=$3; class=$4; source=$5; prefix=$6
+  shift 6
   out="$FIXTURES/$slug"
   mkdir -p "$out"
   work=$(mktemp -d)
@@ -61,12 +66,18 @@ run_pilot() {
   docker run --rm --pull=never --network none --memory 4g --cpus 4 \
     --user "$(id -u):$(id -g)" -e HOME=/work \
     -v "$BUILDINGS":/libs/buildings:ro -v "$MODELICA":/libs/msl:ro -v "$HERE":/scripts:ro \
-    -v "$work":/work -w /work "$IMAGE" omc /work/run.mos > "$out/run.log" 2>&1
-  grep -q 'The simulation finished successfully' "$out/run.log" || { cat "$out/run.log" >&2; exit 1; }
+    -v "$work":/work -w /work "$IMAGE" omc /work/run.mos > "$out/${prefix}run.log" 2>&1
+  grep -q 'The simulation finished successfully' "$out/${prefix}run.log" \
+    || { cat "$out/${prefix}run.log" >&2; exit 1; }
   cp "$work/${pilot}_res.csv" "$out/$raw.raw.csv"
   rm -rf "$work"
   python3 -I "$HERE/canonicalize.py" "$pilot" "$out/$raw.raw.csv" "$out"
-  cat > "$out/provenance.json" <<JSON
+  tables=''
+  for stem in "$@"; do
+    tables="$tables
+  \"${stem}_sha256\": \"$(sha "$out/$stem.canonical.csv")\","
+  done
+  cat > "$out/${prefix}provenance.json" <<JSON
 {
   "class": "$class",
   "pilot": "tools/openmodelica-event-reference/events/$pilot.mo",
@@ -84,18 +95,24 @@ run_pilot() {
   "settings": "$SETTINGS",
   "projection": "$PROJECTION",
   "command": "$COMMAND",
-  "raw": "$raw.raw.csv",
-  "raw_sha256": "$(sha "$out/$raw.raw.csv")",
-  "initially_true_sha256": "$(sha "$out/initially_true.canonical.csv")",
-  "rising_after_start_sha256": "$(sha "$out/rising_after_start.canonical.csv")"
+  "raw": "$raw.raw.csv",$tables
+  "raw_sha256": "$(sha "$out/$raw.raw.csv")"
 }
 JSON
-  echo "wrote $slug"
+  echo "wrote $slug/${prefix}provenance.json"
 }
 
 CDL='Buildings/Controls/OBC/CDL'
-run_pilot OnCounterPilot integers_on_counter on_counter CDL.Integers.OnCounter "$CDL/Integers/OnCounter.mo"
-run_pilot TriggeredSamplerPilot discrete_triggered_sampler triggered_sampler CDL.Discrete.TriggeredSampler "$CDL/Discrete/TriggeredSampler.mo"
-run_pilot TriggeredMaxPilot discrete_triggered_max triggered_max CDL.Discrete.TriggeredMax "$CDL/Discrete/TriggeredMax.mo"
-run_pilot IntegratorWithResetPilot reals_integrator_with_reset integrator_with_reset CDL.Reals.IntegratorWithReset "$CDL/Reals/IntegratorWithReset.mo"
-run_pilot PIDWithResetPilot reals_pid_with_reset pid_with_reset CDL.Reals.PIDWithReset "$CDL/Reals/PIDWithReset.mo"
+TWO='initially_true rising_after_start'
+# shellcheck disable=SC2086
+run_pilot OnCounterPilot integers_on_counter on_counter CDL.Integers.OnCounter "$CDL/Integers/OnCounter.mo" '' $TWO
+run_pilot OnCounterChangePilot integers_on_counter change_pulses CDL.Integers.OnCounter "$CDL/Integers/OnCounter.mo" change_pulses. change_pulses
+# shellcheck disable=SC2086
+run_pilot TriggeredSamplerPilot discrete_triggered_sampler triggered_sampler CDL.Discrete.TriggeredSampler "$CDL/Discrete/TriggeredSampler.mo" '' $TWO
+# shellcheck disable=SC2086
+run_pilot TriggeredMaxPilot discrete_triggered_max triggered_max CDL.Discrete.TriggeredMax "$CDL/Discrete/TriggeredMax.mo" '' $TWO
+# shellcheck disable=SC2086
+run_pilot IntegratorWithResetPilot reals_integrator_with_reset integrator_with_reset CDL.Reals.IntegratorWithReset "$CDL/Reals/IntegratorWithReset.mo" '' $TWO
+run_pilot IntegratorWithResetRampPilot reals_integrator_with_reset ramp CDL.Reals.IntegratorWithReset "$CDL/Reals/IntegratorWithReset.mo" ramp. ramp
+# shellcheck disable=SC2086
+run_pilot PIDWithResetPilot reals_pid_with_reset pid_with_reset CDL.Reals.PIDWithReset "$CDL/Reals/PIDWithReset.mo" '' $TWO

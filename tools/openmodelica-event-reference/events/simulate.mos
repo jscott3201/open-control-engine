@@ -13,5 +13,5 @@ loadFile("/libs/buildings/Buildings/package.mo"); getErrorString();
 loadFile("/scripts/@PILOT@.mo"); getErrorString();
 simulate(@PILOT@, startTime=0, stopTime=10, numberOfIntervals=10,
   tolerance=1e-6, method="cvode", outputFormat="csv",
-  variableFilter="time|(initiallyTrue|risingAfterStart)[.](u|u_s|u_m|y_reset_in|trigger|reset|y)");
+  variableFilter="time|(initiallyTrue|risingAfterStart|consecutivePulses|consecutivePulsesChange|ramp)[.](u|u_s|u_m|y_reset_in|trigger|reset|y)");
 getErrorString();

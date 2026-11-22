@@ -189,8 +189,10 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
 Detected disagreements may be recorded in
 `crates/oce-conformance/tests/fixtures/known_divergence/register.json` after human adjudication.
 The register is evidence only: membership does not change discrepancies, comparison settings,
-tier status, goldens, or test results. Its initial revision is empty because no current clean-room
-Nand discrepancy reproduces. A private test reader validates the closed schema and local evidence
+tier status, goldens, or test results. Its initial revision was empty because no clean-room Nand
+discrepancy reproduces; it now holds two entries, `DVG-000001` and `DVG-000002`, the engine and
+OpenModelica apart where a pulse is true on two consecutive frames (GitHub #796, issue #800, open
+for the owner's decision), each pinned by a test that holds the engine to its registered evidence. A private test reader validates the closed schema and local evidence
 digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.
 The separate OpenModelica evidence profiles execute four cases against OMC 1.25.1 and the pinned
 Buildings and MSL sources: exhaustive `CDL.Logical.Nand/all_boolean_input_pairs_evented`, the
@@ -217,15 +219,20 @@ candidate. Final retained validation is still required before fixture admission.
 validator is POSIX-only. The Rust validator supplies the Windows path boundary and rejects reparse
 points, hardlinks, identity changes, and oversized files.
 
-Separately, one OpenModelica run per class checks the event timing of five event-triggered classes
+Separately, one OpenModelica run per pilot checks the event timing of five event-triggered classes
 (`OnCounter`, `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset`, `PIDWithReset` in PI
 mode): a trigger true from the initial instant, and a control rising at frame 1, each compared
-exactly at ten frames (`open_modelica_event_triggers.rs`, issue #670; pilots and `regenerate.sh`
-under `tools/openmodelica-event-reference/`, provenance per class). These runs are not repeated
+exactly at ten frames, the integrators with their integral held (`open_modelica_event_triggers.rs`,
+issue #670; pilots and `regenerate.sh` under `tools/openmodelica-event-reference/`, provenance per
+pilot). `open_modelica_integrator_ramp.rs` compares `IntegratorWithReset` on a nonzero input: an
+exact one-frame lag, the same after a reset as after the start, halving on finer frames.
+`open_modelica_event_pulses.rs` pins a known divergence (issue #800). These runs are not repeated
 and carry no OCI manifest or projection mutation, unlike the four cases above; a provenance record
-binds each one's pilot, raw result and canonical tables by digest. `oce-verify`'s
-`building_33_openmodelica_frames.rs` compares upstream's `CoolingCoilValve` on 78 synthetic frames
-(issue #787): exact at every reset, within a stated integration bound elsewhere.
+binds each one's pilot, simulation script, raw result and canonical tables by digest, and the class
+source OpenModelica ran to the vendored copy. `oce-verify`'s `building_33_openmodelica_frames.rs`
+compares upstream's `CoolingCoilValve` on 78 synthetic frames (issue #787): exact at every engine
+reset, a pinned, unbounded integration difference elsewhere, first-order convergence on uniform
+finer frames; `building_33_openmodelica_reenable.rs` pins the second divergence of issue #800.
 
 `CDL.Logical.Pre` is not an expected-green OpenModelica case. Its upstream same-time event iteration
 differs from the fixed HostTick v1 projection, which advances once per HostTick transition.

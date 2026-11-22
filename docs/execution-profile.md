@@ -117,13 +117,17 @@ in its source already matched this rule.
 **Checked against OpenModelica** (issues #670 and #787). OpenModelica 1.25.1 ran each of the five
 classes from a pilot model at 1 s frames with held inputs, once with the trigger true from the
 initial instant and once with it rising at frame 1: at every frame of the ten scenarios its output
-equals the engine's, exactly (`crates/oce-conformance/tests/open_modelica_event_triggers.rs`). It
-fires no `when` at the initial instant and shows each event at its own frame, and an event at
-frame 0 or an event shown one frame late differs from it in every class. Upstream's
-`CoolingCoilValve` on the 78 synthetic Building 33 frames reinitialises its integrator at every
-change of the enable, and the engine equals it there to 1e-12; away from the resets the two differ
-by the integration, which falls in proportion to the frame step
-(`crates/leverage/oce-verify/tests/commissioning/building_33_openmodelica_frames.rs`).
+equals the engine's, exactly (`crates/oce-conformance/tests/open_modelica_event_triggers.rs`; the
+integrators with their integral held, `u = 0` and `Ti = 1e20` s). It fires no `when` at the initial
+instant and shows each event at its own frame, and an event at frame 0 or an event shown one frame
+late differs from it in every class. With a nonzero input, `IntegratorWithReset` trails
+OpenModelica by exactly one frame of the input held at the last reset or at the start
+(`open_modelica_integrator_ramp.rs`), and the reset frame's skipped Euler step is what keeps that
+lag the same after a reset as after the start. Upstream's `CoolingCoilValve` on the 78 synthetic
+Building 33 frames resets its integrator at all nine changes of the enable, the engine at eight;
+at each engine reset they agree to 1e-12
+(`crates/leverage/oce-verify/tests/commissioning/building_33_openmodelica_frames.rs`). The ninth
+is the limit below.
 
 Modelica settles feedback into an event input by event iteration, which HostTick v1 does not run.
 The engine refuses such a model with `algebraic-loop`, and the record of the event input names the
@@ -195,6 +199,20 @@ that version, which is not a build identity. State compatibility does not authen
 authorize actuation.
 
 ## Conformance boundary
+
+**A pulse true on consecutive frames is one event to an event input** (open: issue #800 needs an
+owner decision; this is the observed behaviour, not settled design). A Boolean that a pulse block
+holds for one frame (`Logical.Change`, `Edge`, `FallingEdge` and the like) is true on two
+consecutive frames when its source changes on two consecutive frames, and an event input it feeds
+sees one false-to-true transition, so the receiving block applies one event. In Modelica the pulse
+is true only at each change's instant, so the `when` fires at each: two events. OpenModelica shows
+both cases as known divergences (`crates/oce-conformance/tests/fixtures/known_divergence/register.json`):
+`DVG-000001`, upstream's `CoolingCoilValve` re-enabled one frame after a disable, where
+OpenModelica resets its PI again at the re-enable and the engine does not
+(`building_33_openmodelica_reenable.rs`; the valve stays `k` times the change in the error above
+OpenModelica's), and `DVG-000002`, `OnCounter` counting `Change` pulses of a signal that changes
+on consecutive frames (`open_modelica_event_pulses.rs`; OpenModelica counts six, the engine three).
+On frames finer than the source's changes the two agree.
 
 Open Control Engine supports the `CDL.Logical.Pre` interface and the HostTick v1 behavior above. It
 does **not** claim exact Modelica or OpenModelica same-time event-iteration equivalence for `Pre`, or

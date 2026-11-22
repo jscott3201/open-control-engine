@@ -2,7 +2,7 @@
   "class": "CDL.Discrete.TriggeredSampler",
   "pilot": "tools/openmodelica-event-reference/events/TriggeredSamplerPilot.mo",
   "pilot_sha256": "d6fc21e81a84bed4b0acc67f91f176c41a3a3696f8ecce364b25ff54a8cf3ae3",
-  "simulate_template_sha256": "9547cdfb45e8e1418c79e327ab0f9fa0d6b0782b9fd77f40abf68c9c90f8bdd0",
+  "simulate_template_sha256": "8e14c335d78af9b66502d46232b6c65f0585062023e2d901b388f19450ececd5",
   "image": "openmodelica/openmodelica@sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
   "omc": "OpenModelica 1.25.1",
   "architecture": "arm64",
@@ -16,7 +16,7 @@
   "projection": "at each frame instant 0 to 9 s, the last row within 1e-6 s of it",
   "command": "docker run --rm --pull=never --network none --memory 4g --cpus 4 --user <host-uid>:<host-gid> -e HOME=/work -v <buildings>:/libs/buildings:ro -v <msl>:/libs/msl:ro -v tools/openmodelica-event-reference/events:/scripts:ro -v <run directory>:/work -w /work <image> omc /work/run.mos",
   "raw": "triggered_sampler.raw.csv",
-  "raw_sha256": "1a9c3462a9cc7337e85543340f8cbed3683ecbb5a78d7314950e93883963209a",
   "initially_true_sha256": "abc30278a734f295a6fafb340af529d8ecf6689605ae406506d29a9c229f481e",
-  "rising_after_start_sha256": "bab91897f2298117f89ffa50432bc31dcb72130dd9ca7fc4060ecacc3705e500"
+  "rising_after_start_sha256": "bab91897f2298117f89ffa50432bc31dcb72130dd9ca7fc4060ecacc3705e500",
+  "raw_sha256": "1a9c3462a9cc7337e85543340f8cbed3683ecbb5a78d7314950e93883963209a"
 }

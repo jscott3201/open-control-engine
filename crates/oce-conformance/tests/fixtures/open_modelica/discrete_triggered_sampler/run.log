@@ -11,16 +11,16 @@ true
 ""
 record SimulationResult
     resultFile = "/work/TriggeredSamplerPilot_res.csv",
-    simulationOptions = "startTime = 0.0, stopTime = 10.0, numberOfIntervals = 10, tolerance = 1e-6, method = 'cvode', fileNamePrefix = 'TriggeredSamplerPilot', options = '', outputFormat = 'csv', variableFilter = 'time|(initiallyTrue|risingAfterStart)[.](u|u_s|u_m|y_reset_in|trigger|reset|y)', cflags = '', simflags = ''",
+    simulationOptions = "startTime = 0.0, stopTime = 10.0, numberOfIntervals = 10, tolerance = 1e-6, method = 'cvode', fileNamePrefix = 'TriggeredSamplerPilot', options = '', outputFormat = 'csv', variableFilter = 'time|(initiallyTrue|risingAfterStart|consecutivePulses|consecutivePulsesChange|ramp)[.](u|u_s|u_m|y_reset_in|trigger|reset|y)', cflags = '', simflags = ''",
     messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
 LOG_SUCCESS       | info    | The simulation finished successfully.
 ",
-    timeFrontend = 0.42938845800000003,
-    timeBackend = 0.005466208,
-    timeSimCode = 0.004494584,
-    timeTemplates = 0.006901125,
-    timeCompile = 0.31620075,
-    timeSimulation = 0.0067770420000000005,
-    timeTotal = 0.769389751
+    timeFrontend = 0.444117751,
+    timeBackend = 0.009596667000000001,
+    timeSimCode = 0.008131000000000001,
+    timeTemplates = 0.00868125,
+    timeCompile = 0.389168541,
+    timeSimulation = 0.011749750000000002,
+    timeTotal = 0.871629542
 end SimulationResult;
 ""

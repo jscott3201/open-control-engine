@@ -11,16 +11,16 @@ true
 ""
 record SimulationResult
     resultFile = "/work/OnCounterPilot_res.csv",
-    simulationOptions = "startTime = 0.0, stopTime = 10.0, numberOfIntervals = 10, tolerance = 1e-6, method = 'cvode', fileNamePrefix = 'OnCounterPilot', options = '', outputFormat = 'csv', variableFilter = 'time|(initiallyTrue|risingAfterStart)[.](u|u_s|u_m|y_reset_in|trigger|reset|y)', cflags = '', simflags = ''",
+    simulationOptions = "startTime = 0.0, stopTime = 10.0, numberOfIntervals = 10, tolerance = 1e-6, method = 'cvode', fileNamePrefix = 'OnCounterPilot', options = '', outputFormat = 'csv', variableFilter = 'time|(initiallyTrue|risingAfterStart|consecutivePulses|consecutivePulsesChange|ramp)[.](u|u_s|u_m|y_reset_in|trigger|reset|y)', cflags = '', simflags = ''",
     messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
 LOG_SUCCESS       | info    | The simulation finished successfully.
 ",
-    timeFrontend = 0.43783912499999994,
-    timeBackend = 0.00594875,
-    timeSimCode = 0.004795958,
-    timeTemplates = 0.008294666000000001,
-    timeCompile = 0.315180167,
-    timeSimulation = 0.0069370000000000005,
-    timeTotal = 0.779162209
+    timeFrontend = 0.46181258299999994,
+    timeBackend = 0.00761575,
+    timeSimCode = 0.0053186250000000004,
+    timeTemplates = 0.010030708000000001,
+    timeCompile = 0.388025667,
+    timeSimulation = 0.011932375,
+    timeTotal = 0.88500675
 end SimulationResult;
 ""

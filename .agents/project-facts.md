@@ -207,7 +207,7 @@ Pin-advance PRs â€” any change under `third_party/**` or to the pin constants â€
 run per PR, `oce-cxf`'s `g36_catalog_tests` in the `crate tests` job and `oce-blocks`'s
 `registry::catalog_tests` in the determinism subset. What a pin advance gets only from `full`, or
 from the nightly after it has landed, is
-`oce-conformance`'s `conformance` binary, three of whose modules read the vendored tree and
+`oce-conformance`'s `conformance` binary, four of whose modules read the vendored tree and
 the reference catalog, that crate's `clean_room` unit tests and `open_modelica_nand` binary, which
 pin the vendored `Nand.mo` by path, line and equation, and the doctests.
 

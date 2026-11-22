@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Take OpenModelica's `cooVal.yCooVal` at the frame instants of `valve_oracle.txt`.
 
-    python3 -I extract_frames.py <result.csv> ../valve_oracle.txt <yCooVal_frames.csv>
+    python3 -I extract_frames.py <result.csv> ../valve_oracle.txt <yCooVal_frames.csv> [probe]
 
 OpenModelica writes a row at every output instant (every 1 s here) and two rows at every event
 (before and after). The table's time events land a little after the frame instant (about
@@ -14,7 +14,8 @@ the script stops: the run saw the frames the engine sees. `reset` is 1 where the
 of `limPI` was reinitialised at the instant (`limPI.I.y` in the last row differs from the first
 by more than 1e-6; between the two rows it otherwise moves by less than 1e-9), 0 elsewhere.
 The output is `x,y,reset`, one row per frame, in the oracle's order, `x` as the oracle writes
-the time. Issue #787.
+the time. Issue #787. With `probe`, the held inputs are checked against the oracle's with
+`TSup` at 290 K from 382 s, as `frames_wrapper.py probe` writes them (issue #800).
 """
 
 import csv
@@ -22,10 +23,12 @@ import sys
 
 WINDOW = 1e-6
 RESET = 1e-6
+PROBE_FROM = 382.0
+PROBE_SUPPLY = 290.0
 INPUTS = ("cooVal.TSup", "cooVal.TSupSet", "cooVal.TOut", "cooVal.uFanFee")
 
 
-def main(result, oracle, output):
+def main(result, oracle, output, probe=False):
     with open(result, newline="") as handle:
         rows = list(csv.reader(handle))
     header = rows[0]
@@ -41,7 +44,10 @@ def main(result, oracle, output):
             raise SystemExit("no row within {} s of t = {}".format(WINDOW, t))
         first, last = near[0], near[-1]
         held = [float(last[column[name]]) for name in INPUTS]
-        if held != [float(cell) for cell in cells[2:6]]:
+        expected = [float(cell) for cell in cells[2:6]]
+        if probe and t >= PROBE_FROM:
+            expected[0] = PROBE_SUPPLY
+        if held != expected:
             raise SystemExit("t = {}: held inputs {} differ from the oracle's".format(t, held))
         fan_sta = last[column["cooVal.uFanSta"]] == "1"
         if fan_sta != (cells[6] == "true"):
@@ -54,4 +60,6 @@ def main(result, oracle, output):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    if len(sys.argv) not in (4, 5) or sys.argv[4:] not in ([], ["probe"]):
+        raise SystemExit("usage: extract_frames.py RESULT ORACLE OUTPUT [probe]")
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:] == ["probe"])
