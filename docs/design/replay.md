@@ -375,7 +375,10 @@ The decisions stand; where one could not be built as written, the gap is named.
   quotes is outside RFC 4180; `csv-core` joins it to the cell, and that reading is kept
   untrimmed, so `"1" ` reads as `1 ` and ` "1"` as `"1"`, each refused by its parse rather than
   read by a guess. A cell of padding alone is empty, so missing. Two header names equal once
-  trimmed are `DuplicateColumn`. `max_cell_bytes` counts a cell before it is trimmed: the cap is
+  trimmed are `DuplicateColumn`. A missing token is compared with the trimmed cell, so a token
+  whose first or last byte is a space or a tab could never match and its sentinel would read as
+  a value: `CsvSource::new` refuses it as `SourceError::PaddedMissingToken`, never trims it
+  (trimming `-9999 ` would turn an unpadded `-9999` cell from a value into a missing one). `max_cell_bytes` counts a cell before it is trimmed: the cap is
   enforced as the bytes arrive, before trailing padding can be told from the cell, and it bounds
   memory with no second counter. Unpadded input reads as before, bit for bit.
 - **Text columns (GitHub #739, issue #728).** `CsvFormat::text_columns` names header columns whose

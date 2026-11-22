@@ -51,8 +51,8 @@ quoted here as test inputs for a reader of the format they define.
 - **Read on:** 2026-11-21, the same way as the listings: fetched with `curl`, the markup removed
   and the entities unescaped, nothing else changed. Each ends with the one line feed its block
   ends with: `obc_reference_input.csv` is 300 bytes and `obc_indicator.csv` 33.
-- **What they hold.** Spaces around every value and header after the first, as the
-  specification prints them; `tests/commissioning/trend_padded_files.rs` reads both as they are
+- **What they hold.** A space before every header after the first, and every value padded,
+  the times included (`   0,    1, ...`), as the specification prints them; `tests/commissioning/trend_padded_files.rs` reads both as they are
   and pins their length and their first bytes.
 
 ## The canonical goldens are not blessed

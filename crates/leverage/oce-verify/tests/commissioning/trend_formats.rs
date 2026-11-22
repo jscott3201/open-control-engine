@@ -171,8 +171,20 @@ fn a_half_in_a_boolean_column_is_refused_with_its_file_row_and_column() {
     // Boolean spelling.
     let error = csv(r#""B": "B""#, "time,B\n0,0.5\n").unwrap_err();
     assert_eq!(
-        (error.code(), error.cause(), error.row(), error.column()),
-        ("cell-refused", Some("not-boolean-text"), Some(1), Some("B"))
+        (
+            error.code(),
+            error.cause(),
+            error.file(),
+            error.row(),
+            error.column()
+        ),
+        (
+            "cell-refused",
+            Some("not-boolean-text"),
+            Some("d/f"),
+            Some(1),
+            Some("B")
+        )
     );
     // A combiTimeTable `bool` device column holds numbers: exactly 0 and 1 only.
     let error = combi(r#""2": "B""#, "#1\ndouble t(1,2)\n0 0.5\n").unwrap_err();
@@ -227,6 +239,34 @@ fn a_csv_boolean_reads_the_type_table_s_six_spellings_and_refuses_every_other_te
     let read =
         super::read_trends(&spec, &[("d/f", b"time,Occ\n0,active\n1,inactive\n")]).expect("reads");
     assert_eq!(read.expected[0].values, SeriesValues::Integer(vec![1, 0]));
+}
+
+#[test]
+fn of_several_faulty_cells_in_a_row_a_real_cell_replay_cannot_parse_is_reported_first() {
+    // Replay parses a row's Real columns before this crate reads its `bool` text cells, and this
+    // crate then converts the columns in plan order (here the header names' order, declared in
+    // it too). A `bool` cell no longer comes first because replay parsed it: issue #728 moved it
+    // to the text side. Header `A` or `C` reads the Real device point `T`.
+    let shape = |columns: &str, text: &str| {
+        let error = csv(columns, text).unwrap_err();
+        (error.code().to_owned(), error.column().map(str::to_owned))
+    };
+    let at = |code: &str, column: &str| (code.to_owned(), Some(column.to_owned()));
+    // A Real cell that does not parse, after a bad `bool` cell: the Real column.
+    assert_eq!(
+        shape(r#""B": "B", "C": "T""#, "time,B,C\n0,yes,x\n"),
+        at("bad-cell", "C")
+    );
+    // A Real cell refused after the parse, before a bad `bool` cell: the Real column.
+    assert_eq!(
+        shape(r#""A": "T", "B": "B""#, "time,A,B\n0,inf,yes\n"),
+        at("non-finite-number", "A")
+    );
+    // A bad `bool` cell before a Real cell refused after the parse: the `bool` column.
+    assert_eq!(
+        shape(r#""B": "B", "C": "T""#, "time,B,C\n0,yes,inf\n"),
+        at("cell-refused", "B")
+    );
 }
 
 #[test]

@@ -55,8 +55,8 @@ pub fn text(cell: &str) -> Option<String> {
     Some(cell.to_owned())
 }
 
-/// A reader that hands `bytes` over `piece` bytes per call (after the first, which the source
-/// fills to four bytes itself), so every chunk boundary a test needs can be placed.
+/// A reader that hands `bytes` over `piece` bytes per call (the source's first fill calls it
+/// until seven bytes are buffered), so every chunk boundary a test needs can be placed.
 pub struct Pieces {
     /// The bytes still to hand over.
     pub bytes: Vec<u8>,

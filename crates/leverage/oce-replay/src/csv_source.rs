@@ -65,8 +65,9 @@ pub struct CsvFormat {
     pub time: CsvTime,
     /// Cell texts that mean "missing" besides the empty cell. Default `NA` and `NaN`. A Real cell
     /// that parses to NaN is missing whatever this list says. A token is compared with the cell
-    /// after its padding is trimmed, so a token that begins or ends with a space or a tab never
-    /// matches.
+    /// after its padding is trimmed, so a token whose first or last byte is a space or a tab
+    /// could never match, and [`CsvSource::new`] refuses it
+    /// ([`SourceError::PaddedMissingToken`]) rather than read the sentinel as a value.
     pub missing_tokens: Vec<String>,
     /// Header names of columns whose cells are handed over as text, unparsed, by
     /// [`CsvSource::text_cells`] (issue #728). Default empty. A text column is no input slot: a
@@ -316,10 +317,11 @@ impl<R: Read> CsvSource<R> {
     /// their padding before they are compared, with each other and with the names asked for.
     ///
     /// # Errors
-    /// [`SourceError::Limit`]; `BadDelimiter`; `TooManyBytes`; `TooManyColumns`; `CellTooLong`
-    /// (row 0); `NotUtf8` (row 0); `DuplicateColumn`, two names equal once trimmed included;
-    /// `MissingColumn` for the time column, a mapped column or a text column (time first, then
-    /// slot order, then text-column order); `Read` for a reader failure.
+    /// [`SourceError::Limit`]; `BadDelimiter`; `PaddedMissingToken` for the first missing token
+    /// whose first or last byte is a space or a tab; `TooManyBytes`; `TooManyColumns`;
+    /// `CellTooLong` (row 0); `NotUtf8` (row 0); `DuplicateColumn`, two names equal once trimmed
+    /// included; `MissingColumn` for the time column, a mapped column or a text column (time
+    /// first, then slot order, then text-column order); `Read` for a reader failure.
     pub fn new(
         map: &InputMap,
         reader: R,
@@ -330,6 +332,18 @@ impl<R: Read> CsvSource<R> {
         let d = format.delimiter;
         if !d.is_ascii() || matches!(d, b'"' | b'\r' | b'\n') {
             return Err(SourceError::BadDelimiter { delimiter: d });
+        }
+        let padded = |token: &&String| {
+            let bytes = token.as_bytes();
+            [bytes.first(), bytes.last()]
+                .into_iter()
+                .flatten()
+                .any(|byte| matches!(byte, b' ' | b'\t'))
+        };
+        if let Some(token) = format.missing_tokens.iter().find(padded) {
+            return Err(SourceError::PaddedMissingToken {
+                token: token.clone(),
+            });
         }
         let max_cell = limits.max_cell_bytes as usize;
         let max_columns = limits.max_columns as usize;

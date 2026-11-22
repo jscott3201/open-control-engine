@@ -138,6 +138,9 @@ fn the_first_header_is_the_time_whatever_it_is_named() {
     let padded = read(b" time\t, yCoo \n  0,\t10\n").expect("reads");
     assert_eq!(padded.expected[0].times, [0.0]);
     assert_eq!(padded.expected[0].device, "yCoo");
+    // A quoted first header keeps its spaces, in this reader as in replay's, and is the time.
+    let quoted = read(b"\" time \",yCoo\n0,10\n").expect("reads");
+    assert_eq!(quoted.expected[0].times, [0.0]);
     // A quoted name keeps its spaces, so it names no mapped point.
     let error = read(b"time,\" yCoo\"\n0,10\n").expect_err("refused");
     assert_eq!(

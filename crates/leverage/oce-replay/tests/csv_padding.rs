@@ -183,18 +183,83 @@ fn a_missing_token_is_compared_with_the_trimmed_cell() {
         typed("t,b,i,x\n NA ,1,1,1\n"),
         Err(SourceError::MissingTime { row: 1 })
     );
-    // A token that is itself padded never matches: every cell it could match is trimmed first.
-    let format = CsvFormat {
-        missing_tokens: vec![" NA".to_owned()],
+}
+
+/// The format in seconds with time column `t` and `tokens` as its only missing tokens.
+fn with_tokens(tokens: &[&str]) -> CsvFormat {
+    CsvFormat {
+        missing_tokens: tokens.iter().map(|&t| t.to_owned()).collect(),
         ..CsvFormat::seconds("t")
+    }
+}
+
+#[test]
+fn a_missing_token_that_begins_or_ends_with_padding_is_refused_at_construction() {
+    // Every cell is trimmed before the tokens are compared, so such a token could never match
+    // and its sentinel would read as a value: a Real `-9999`, a Boolean ` 1`, a time `0 `.
+    for (token, bytes) in [
+        ("-9999 ", &b"t,b,i,x\n0,1,1,-9999 \n"[..]),
+        (" 1", b"t,b,i,x\n0, 1,1,1\n"),
+        ("0 ", b"t,b,i,x\n0 ,1,1,1\n"),
+        ("\tNA", b"t,b,i,x\n0,1,1,\tNA\n"),
+        (" ", b"t,b,i,x\n0,1,1, \n"),
+    ] {
+        assert_eq!(
+            read_typed(bytes, with_tokens(&["NA", token])),
+            Err(SourceError::PaddedMissingToken {
+                token: token.to_owned()
+            }),
+            "{token:?}"
+        );
+        // Before any byte is read, whatever the header holds.
+        assert_eq!(
+            read_typed(b"", with_tokens(&[token])),
+            Err(SourceError::PaddedMissingToken {
+                token: token.to_owned()
+            })
+        );
+    }
+    // The first such token is named; a delimiter is checked before the tokens.
+    assert_eq!(
+        read_typed(b"t,b,i,x\n", with_tokens(&["a", "b\t", " c"])),
+        Err(SourceError::PaddedMissingToken {
+            token: "b\t".to_owned()
+        })
+    );
+    let format = CsvFormat {
+        delimiter: b'"',
+        ..with_tokens(&[" NA"])
     };
     assert_eq!(
-        read_typed(b"t,b,i,x\n0,1,1, NA\n", format),
+        read_typed(b"", format),
+        Err(SourceError::BadDelimiter { delimiter: b'"' })
+    );
+    // The control: the unpadded token reads its padded and unpadded cells as missing, inside
+    // padding only around the token, and an unpadded `-9999` stays a value under another token.
+    let rows = read_typed(
+        b"t,b,i,x\n0,1,1,-9999\n1,1,1, -9999\t\n2,1,1,- 9999\n",
+        with_tokens(&["-9999"]),
+    );
+    assert_eq!(
+        rows,
         Err(SourceError::BadCell {
-            row: 1,
+            row: 3,
             column: "x".to_owned()
         })
     );
+    let rows = read_typed(
+        b"t,b,i,x\n0,1,1,-9999\n1,1,1, -9999\t\n",
+        with_tokens(&["-9999"]),
+    )
+    .unwrap();
+    assert_eq!(
+        rows.iter().map(|r| r.1[2].as_str()).collect::<Vec<_>>(),
+        ["-", "-"]
+    );
+    let rows = read_typed(b"t,b,i,x\n0,1,1,-9999\n", with_tokens(&["-999"])).unwrap();
+    assert_eq!(rows[0].1[2], x(-9999.0));
+    // An empty token is no padding: it names the empty cell, which is missing anyway.
+    assert!(read_typed(b"t,b,i,x\n0,1,1,\n", with_tokens(&[""])).is_ok());
 }
 
 #[test]
@@ -233,6 +298,10 @@ fn padding_outside_quotes_is_kept_as_csv_core_reads_it() {
     // quote (RFC 4180 has neither): kept untrimmed, so the parse refuses them.
     let rows = read_text(b"t,a,b,c\n0,\"a\" , \"a\",\"a\"b \n", &["a", "b", "c"]).unwrap();
     assert_eq!(rows, [(0.0, vec![text("a "), text("\"a\""), text("ab ")])]);
+    // Nor is a quote after a byte-order mark in the middle of the input: `csv-core` strips a
+    // mark only from its first input, so this cell is unquoted, and trimmed.
+    let rows = read_text(b"t,a\n0,\xef\xbb\xbf\"x\" \n", &["a"]).unwrap();
+    assert_eq!(rows, [(0.0, vec![text("\u{feff}\"x\"")])]);
     for cell in ["\"1\" ", " \"1\""] {
         assert!(
             matches!(

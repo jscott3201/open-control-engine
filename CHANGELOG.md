@@ -965,8 +965,12 @@ so far, and no tag is cut by the bump.
     time `MissingTime`), where it was `BadCell`. A padded header name matches the name a caller
     asks for, and a caller name written with the padding (`" uHea"`), which matched, is now
     `MissingColumn`; two names equal once trimmed are `DuplicateColumn`; `ignored_columns`, and
-    so a trace's ignored columns and canonical bytes, list trimmed names. A missing token that
-    begins or ends with a space or a tab never matches.
+    so a trace's ignored columns and canonical bytes, list trimmed names. A missing token whose
+    first or last byte is a space or a tab, which matched its padded cell, is refused at
+    construction as the new `SourceError::PaddedMissingToken`: compared with trimmed cells it
+    could never match, and its sentinel (`-9999 ` on a Real, ` 1` on a Boolean, `0 ` on a time)
+    would have read as a value. It is refused, not trimmed, so an unpadded `-9999` cell under the
+    token `-9999 ` is not turned into a missing one.
   - **`oce-verify`.** OBC §12.7.3's `reference_input.csv`, added verbatim as a fixture, reads as
     an input source and as a `controllerOutput`, and its `indicator.csv` as an indicator source.
     A mapping device name written with the padding (`" uHea"`) is now `column-missing` or
@@ -994,8 +998,14 @@ so far, and no tag is cut by the bump.
   - **`oce-verify`.** A `csv` file's `bool` device column is one of the text columns, read by
     `boolean_from_text`: `true`, `false`, `active`, `inactive`, `1` and `0` read (as 0 and 1 into
     a CDL `int`), and every other text (`0.5`, `True`, `yes`) is `cell-refused` caused by
-    `not-boolean-text`, where it was `bad-cell` (breaking in place). The `expect(dead_code)` on
-    `boolean_from_text` and `NotBooleanText` is gone. The merged-inputs and `controllerOutput`
+    `not-boolean-text`, where it was `bad-cell` (breaking in place). With several faulty cells
+    in one row the first refusal reported may now be another column, because replay parses the
+    Real columns before this crate reads the `bool` text cells: a Real cell that does not parse
+    after a bad `bool` cell is now `bad-cell` on the Real column, and a Real cell refused after
+    the parse (an infinity) before a bad `bool` cell is now `non-finite-number` on the Real
+    column, where both were `bad-cell` on the `bool` column; a bad `bool` cell before a Real
+    cell refused after the parse is still the `bool` column, now `cell-refused`. The
+    `expect(dead_code)` on `boolean_from_text` and `NotBooleanText` is gone. The merged-inputs and `controllerOutput`
     goldens and the independent oracle are unchanged.
   - **Evidence.** The six spellings, refusals with file, row and column, a `bool` column into a
     CDL `int`, the missing rule with and without tokens, the order of refusals, the cell cap, the
