@@ -363,8 +363,9 @@ fn every_fixture_lists_ports_in_upstream_declaration_order() {
 /// classes. Upstream declares no `final` parameter in its public section and no `extends` clause
 /// (a base class could carry parameters), and both are pinned. The one difference is listed:
 /// `Reals.MatrixGain` declares `nin` and `nout` as protected `size(K, …)` parameters, which the
-/// catalog lists because a CXF document may state them (and the class rules hold them to `K`'s
-/// shape).
+/// catalog lists as settable. Nothing holds them to `K`'s shape: `nout = 7` on a 2x2 `K` loads
+/// with seven outputs, five of them `0.0`. Whether to refuse them or require `K`'s shape is
+/// issue #773's decision.
 #[test]
 fn every_upstream_public_parameter_is_a_catalog_parameter_and_no_other() {
     use std::collections::BTreeSet;

@@ -213,7 +213,10 @@ so far, and no tag is cut by the bump.
     (`oce-validate`, new rule `params_declared`) refuses every other binding on a registered class
     as `unknown-parameter` (`DiagCode::UnknownParameter`, new; the authoring layer's stage-1 code,
     so the parity table's row is now an engine row), one finding per binding, subject the block,
-    the message naming the parameter and, within a few edits, the declared one it probably meant:
+    the message naming the parameter (as every message quotes document text: at most 64 bytes of
+    it, each format or control character written `\u{…}`, so `amplitude\u{200B}` cannot read as
+    the declared name refused) and, within a few edits, the declared one it probably meant (also
+    tried with those characters removed):
     ``parameter `amplitud` on block `CDL.Integers.Sources.Pulse` is not a parameter of its class;
     did you mean `amplitude`?``. A case slip, a swap of two letters or one or two edits on a
     longer name are suggested; an array's bare base or a misspelt element suggests its template
@@ -227,10 +230,15 @@ so far, and no tag is cut by the bump.
     declare with `BlobError::UndeclaredParameter { block, parameter }` (new variant), judged
     before the value, so a block is never built from a table holding a name it ignores. It is
     stricter than the load gate's spelling rules: a non-canonical element (`k_01`) is undeclared
-    there too. `no_std + alloc` builds.
+    there too. It applies no extent rule, which the load gate does: a canonical element past its
+    array's extent (`table_3_2` on a 2-row `TimeTable`, `k_3` on a `MultiSum` with `nin = 2`) is a
+    declared name and still decodes, as before; issue #772 proposes the check. `no_std + alloc`
+    builds.
   - **The catalog is complete.** Every public parameter the pinned upstream source declares for
     each of the 132 vendored classes is a catalog parameter and no other is (186 between them;
-    `Reals.MatrixGain` lists its protected `nin` and `nout`, which a document may state), held
+    `Reals.MatrixGain` lists its protected `nin` and `nout` as settable, and nothing holds them
+    to `K`'s shape: `nout = 7` on a 2x2 `K` loads with seven outputs, five of them `0.0`, as it
+    did before; issue #773 asks whether to refuse them or require the shape), held
     class by class by a new `fixture_port_order` test from the same scan of the vendored Modelica
     that checks port order. So no parameter CDL defines is refused as unknown.
   - **What moved.** No vendored translation that loads and no `open-control-library` rule (139,

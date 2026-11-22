@@ -288,7 +288,11 @@ the validator's parameter rules are not linked on a target. Two checks are linke
 block would otherwise run on its default rather than on anything the blob wrote: a parameter under
 a name its class does not declare is refused (`UndeclaredParameter`, issue #748), and a parameter
 of a kind its catalog type does not admit is refused (`ParameterKindMismatch`, issue #734). A value of the
-right kind outside a class rule's range still executes. A 0.6.0 blob written before that check
+right kind outside a class rule's range still executes. So does an array element past its
+array's extent: its canonical name is a declared name, and the extent rules that refuse it run at
+load, not in the decoder, so `table_3_2` on a 2-row `TimeTable` decodes and reshapes the table, and
+`k_3` on a `MultiSum` with `nin = 2` decodes and is dropped (issue #772 proposes the decoder
+check). A 0.6.0 blob written before that check
 (GitHub #754) and carrying such a value, for example an ordinal on `zerTim` or `smoothness`, which
 the readers then decoded, is refused rather than read with another meaning; no version bump is
 owed, since no release has been tagged since 0.6.0. Authenticate and authorize blobs in your

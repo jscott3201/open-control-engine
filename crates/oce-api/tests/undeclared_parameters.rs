@@ -84,6 +84,24 @@ fn an_integer_parameter_misspelt_is_refused_and_spelt_right_runs_as_written() {
 }
 
 #[test]
+fn a_name_with_an_invisible_character_is_refused_with_the_character_shown() {
+    // `amplitude` followed by a zero-width space reads as the declared name: the finding writes
+    // the character as an escape and suggests the name it hides.
+    let misspelt = document(
+        &source(PULSE, "Integer"),
+        &[value("period", "4"), value("amplitude\u{200B}", "3")],
+        &[],
+    );
+    assert_eq!(
+        unknown_names(&misspelt),
+        vec![(
+            BLOCK.to_owned(),
+            message("amplitude\\u{200B}", PULSE, Some("amplitude"))
+        )]
+    );
+}
+
+#[test]
 fn a_real_parameter_in_the_wrong_case_is_refused_and_spelt_right_runs_as_written() {
     let constant = "CDL.Reals.Sources.Constant";
     let misspelt = document(&source(constant, "Real"), &[value("K", "2.5")], &[]);

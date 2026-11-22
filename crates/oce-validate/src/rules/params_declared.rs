@@ -6,8 +6,10 @@
 //! while the misspelt value still entered the model, the content id and the compiled blob. Each
 //! such binding is now [`DiagCode::UnknownParameter`], one finding per binding in parameter order.
 //! The subject is the block, as for every class-level parameter finding; the message names the
-//! parameter first and, when [`oce_blocks::nearest_declared_parameter`] finds one, the declared
-//! parameter it probably meant.
+//! parameter first, quoted as every message quotes document text (at most
+//! [`oce_diag::EXCERPT_BYTES`] bytes, each format or control character written `\u{…}`), and,
+//! when [`oce_blocks::nearest_declared_parameter`] finds one, the declared parameter it probably
+//! meant (also tried with the name's format and control characters removed).
 //!
 //! What a class declares is [`oce_blocks::declares_parameter`]: its scalar parameters and the
 //! canonical elements of its arrays. Two kinds of undeclared name are refused by another rule
@@ -27,8 +29,11 @@
 //! is within a few bytes of its length; each finding is raised through the bounded list, so none
 //! is built once the list has ended.
 
-use oce_blocks::{ParamRule, declares_parameter, nearest_declared_parameter, spells_array_element};
-use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
+use oce_blocks::{
+    MAX_COMPARED_NAME_BYTES, ParamNameTemplate, ParamRule, declares_parameter,
+    nearest_declared_parameter, spells_array_element,
+};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList, excerpt, is_format_or_control, visible};
 use oce_model::BlockInstance;
 
 use super::block_subject_of;
@@ -54,7 +59,13 @@ pub(super) fn check_declared_parameter_names(
             Some(false) => {}
         }
         diags.raise(|| {
-            let message = match nearest_declared_parameter(class, name) {
+            // The name is the document's: quoted bounded and with every character no reader can
+            // see escaped, so `amplitude\u{200B}` never reads as the declared name refused and a
+            // 60 KB name is not a 60 KB message. The class is a registered path and the
+            // suggestion a catalog name, both engine text.
+            let nearest = suggestion(class, name);
+            let name = visible(&excerpt(name)).into_owned();
+            let message = match nearest {
                 Some(nearest) => format!(
                     "parameter `{name}` on block `{class}` is not a parameter of its class; did \
                      you mean `{nearest}`?"
@@ -67,6 +78,26 @@ pub(super) fn check_declared_parameter_names(
                 .with_subject(block_subject_of(blk))
         });
     }
+}
+
+/// The declared parameter `name` probably meant: the nearest to it as written, or else to it with
+/// its format and control characters removed (`amplitude\u{200B}` means `amplitude`). The second
+/// try is made only for a name short enough to be within reach of a catalog name, so a hostile
+/// long name costs no copy.
+fn suggestion(class: &str, name: &str) -> Option<&'static str> {
+    nearest_declared_parameter(class, name).or_else(|| {
+        let stripped = (name.len() <= 4 * MAX_COMPARED_NAME_BYTES
+            && name.contains(is_format_or_control))
+        .then(|| name.replace(is_format_or_control, ""))?;
+        // The stripped name may be a declared name itself, which the nearest-name search never
+        // returns for itself: name the catalog entry that covers it.
+        oce_blocks::class_parameters(class)
+            .into_iter()
+            .flatten()
+            .find(|parameter| ParamNameTemplate::parse(parameter.name).names(&stripped))
+            .map(|parameter| parameter.name)
+            .or_else(|| nearest_declared_parameter(class, &stripped))
+    })
 }
 
 /// Whether a matrix or offset rule of the class judges `name`: those rules read every name under

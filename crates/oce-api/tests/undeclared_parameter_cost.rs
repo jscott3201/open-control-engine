@@ -5,8 +5,9 @@
 //! one is refused with a finding that names it and, when one is close, the declared name it
 //! probably meant. A hostile table can carry many names, each long: the lookup allocates nothing,
 //! the suggestion rejects a name whose length is far from every declared name's by its length
-//! alone, and every finding is raised through the load gate's bounded diagnostic list (8 MiB of
-//! text), so once the list has ended a further name costs a count and nothing is built for it.
+//! alone, a finding quotes at most a 64-byte excerpt of its name, and every finding is raised
+//! through the load gate's bounded diagnostic list (8 MiB of text), so once the list has ended a
+//! further name costs a count and nothing is built for it.
 //!
 //! Held here, through `oce_validate::validate_block_parameters` (the load gate's parameter checks
 //! on one block, the path `class_ports` takes; no document bound applies) and through
@@ -14,7 +15,7 @@
 //!
 //! - **a peak** of the list's budget plus a fixed amount a name, however long the names are;
 //! - **requested bytes** and **allocations** that grow by a fixed amount a name between two
-//!   sizes, never by a name's length once the list has ended;
+//!   sizes, never by a name's length;
 //! - **the count**: every name is listed or counted in the list's closing error.
 //!
 //! Measured with `allocation-counter`, whose counters are local to the measuring thread. The
@@ -79,8 +80,8 @@ fn accounted(diagnostics: &[Diagnostic]) -> usize {
 #[test]
 fn many_short_undeclared_names_cost_a_fixed_amount_each() {
     // 50,000 and 100,000 names of 64 bytes: every one is listed or counted, and the second
-    // 50,000 cost what the first did. [measured: 37.7 and 43.6 MB requested in 250,021 and
-    // 274,166 allocations, about 117 bytes and half an allocation a further name, at peaks of
+    // 50,000 cost what the first did. [measured: 40.9 and 47.1 MB requested in 300,021 and
+    // 328,994 allocations, about 123 bytes and 0.6 of an allocation a further name, at peaks of
     // 16.0 and 19.1 MB]
     let mut infos = Vec::new();
     for count in [50_000, 100_000] {
@@ -107,29 +108,29 @@ fn many_short_undeclared_names_cost_a_fixed_amount_each() {
 }
 
 #[test]
-fn long_undeclared_names_past_the_list_budget_cost_nothing_by_their_length() {
-    // 200 and 400 names of 64 KiB: the list holds about 128 findings before its budget ends it,
-    // and every later name costs a count, never a copy of its 64 KiB. [measured: 33,554,063 and
-    // 33,566,415 bytes requested in 785 allocations each, at peaks of 8.55 MB]
+fn long_undeclared_names_cost_a_fixed_amount_each_whatever_their_length() {
+    // 200 and 400 names of 64 KiB: each finding quotes a 64-byte excerpt of its name, never the
+    // name whole, so every one is listed in a short message and the second 200 cost about what
+    // the first did, nothing by the 64 KiB. [measured: 202,936 and 405,464 bytes
+    // requested in 1,613 and 3,214 allocations, about 1 KB and 8 allocations a name, at peaks of
+    // 65,024 and 129,512 bytes; before the excerpt, 33.5 MB each]
     let mut infos = Vec::new();
     for count in [200, 400] {
         let table = hostile_table(count, 64 * 1024);
         let (diagnostics, info) = refused(&table);
         assert_eq!(accounted(&diagnostics), count, "{count}");
         assert!(
-            diagnostics
-                .iter()
-                .any(|d| d.code == DiagCode::ResourceLimitExceeded),
-            "the list ended"
+            diagnostics.iter().all(|d| d.message.len() < 256),
+            "a message quotes a name whole"
         );
         assert!(
-            info.bytes_max <= 3 * BUDGET,
+            info.bytes_max <= BUDGET,
             "{count}: {} bytes held",
             info.bytes_max
         );
         infos.push(info);
     }
-    let further = infos[1].bytes_total.abs_diff(infos[0].bytes_total);
+    let further = infos[1].bytes_total - infos[0].bytes_total;
     assert!(
         further <= 200 * 1_024,
         "{further} more bytes for 200 more names of 64 KiB"

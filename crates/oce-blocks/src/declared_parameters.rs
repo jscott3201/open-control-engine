@@ -15,10 +15,13 @@
 //! declared under its own name; an array parameter's elements under the flattened spelling the
 //! CXF import writes, each index a one-based decimal with no sign and no leading zero (`k_2`,
 //! `table_1_2`; [`crate::ParamNameTemplate::names`]). An element past the array's extent is a
-//! declared name: the class's extent rules refuse it, by its index.
+//! declared name. The class's extent rules refuse it by its index, but only at load
+//! (`oce-validate`): the blob decoder applies no extent rule, so a blob carrying such an element
+//! decodes (`table_3_2` on a 2-row `TimeTable` changes its output; issue #772).
 //!
-//! The catalog lists every public parameter of every vendored CDL class: the `oce-validate`
-//! tests hold it equal, class by class, to the parameters the pinned Modelica sources declare.
+//! The catalog lists every public parameter of every vendored CDL class: `oce-cxf`'s
+//! `fixture_port_order` test holds it equal, class by class, to the parameters the pinned
+//! Modelica sources declare.
 //!
 //! # Element spellings
 //!

@@ -453,3 +453,52 @@ fn random_class_and_name_pairs_are_refused_exactly_when_the_class_does_not_decla
         "{refused} refused, {admitted} admitted"
     );
 }
+
+#[test]
+fn an_invisible_character_in_the_name_is_written_as_an_escape_and_the_meant_name_suggested() {
+    // `amplitude` and a zero-width space: quoted raw, the finding would read as the declared
+    // name refused. The escape shows the character; the suggestion is tried without it.
+    for (name, quoted) in [
+        ("amplitude\u{200B}", "amplitude\\u{200B}"),
+        ("\u{202E}amplitude", "\\u{202E}amplitude"),
+        ("ampli\u{202E}tude", "ampli\\u{202E}tude"),
+        ("amplitud\u{0007}", "amplitud\\u{0007}"),
+    ] {
+        let found = refusal(
+            PULSE,
+            &[("period", Value::Real(4.0)), (name, Value::Integer(3))],
+        );
+        assert_eq!(
+            found,
+            vec![unknown(quoted, PULSE, Some("amplitude"))],
+            "{name:?}"
+        );
+        assert!(!found[0].message.contains(name), "{name:?} quoted raw");
+    }
+    // A name that is invisible characters only suggests nothing.
+    assert_eq!(
+        refusal(
+            PULSE,
+            &[
+                ("period", Value::Real(4.0)),
+                ("\u{200B}", Value::Integer(3))
+            ]
+        ),
+        vec![unknown("\\u{200B}", PULSE, None)]
+    );
+}
+
+#[test]
+fn a_long_name_is_quoted_by_an_excerpt_not_whole() {
+    let long = format!("{}\u{200B}", "q".repeat(60 * 1024));
+    let found = refusal(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(1.0)), (&long, Value::Real(1.0))],
+    );
+    let excerpt = format!("{}…", "q".repeat(oce_diag::EXCERPT_BYTES));
+    assert_eq!(
+        found,
+        vec![unknown(&excerpt, "CDL.Reals.Sources.Constant", None)]
+    );
+    assert!(found[0].message.len() < 256, "{}", found[0].message.len());
+}
