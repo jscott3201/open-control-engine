@@ -2185,6 +2185,11 @@ flaky-result = "fail"
 slow-timeout = { period = "60s", terminate-after = 2, on-timeout = "fail" }
 leak-timeout = { period = "2s", result = "fail" }
 global-timeout = "15m"
+[test-groups]
+constructed-budget = { max-threads = 2 }
+[[profile.default.overrides]]
+filter = 'package(oce-api) & (test(/^blob_constructed_budget::/) | test(/^blob_peak_allocation::/) | test(/^blob_summary_allocations::/) | test(/^cxf_constructed_budget::/) | test(/^blob_hostile_parameter_models::/) | test(=blob_element_shapes::a_complete_matrix_past_the_port_width_is_outside_its_shape))'
+test-group = 'constructed-budget'
 [profile.ci]
 fail-fast = false
 failure-output = "immediate-final"
