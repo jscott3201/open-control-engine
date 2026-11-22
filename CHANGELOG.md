@@ -1095,7 +1095,7 @@ so far, and no tag is cut by the bump.
 ### Leverage
 
 - **`oce verify --commission <SPEC>` runs one reference of a commissioning spec from the command
-  line** (GitHub #PR_NUMBER, issue #664; design note `docs/design/commissioning.md`, "CLI",
+  line** (GitHub #757, issue #664; design note `docs/design/commissioning.md`, "CLI",
   decisions 21 and 33 to 37, "As landed: the verb"). Flags: `--reference <N>` (needed when the
   spec has several references, else `reference-required`, listing each), `--out <DIR>`,
   `--bounds` (with `--out`), `--data trended|synthetic`, `--deny-warnings`, `--timings`; the

@@ -1234,7 +1234,7 @@ outside `timings` depends on either flag. `--data` sets the body's `data` label 
 
 ### As landed: the verb
 
-*(GitHub #PR_NUMBER, issue #664.)* `oce verify --commission` is in `crates/leverage/oce-cli`
+*(GitHub #757, issue #664.)* `oce verify --commission` is in `crates/leverage/oce-cli`
 (`src/commands/verify_commission.rs`, `commission_files.rs`, `commission_out.rs`, and
 `contained.rs`, the path rule it now shares with the mutant reader). The receipt on stdout is
 the library's, byte for byte: the tests hold the binary's stdout to `oce-verify`'s golden
