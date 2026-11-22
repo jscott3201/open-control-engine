@@ -90,3 +90,48 @@ fn a_rendering_with_nothing_to_escape_is_the_bytes_it_was() {
         )
     );
 }
+
+#[test]
+fn a_diff_rendering_that_quotes_a_wire_files_class_is_written_with_escapes() {
+    // GitHub issue #668: `oce diff --render` writes `oce_diff::render_text`, which spells a
+    // control character as `\u{…}` but leaves a format or separator character as it is; the CLI
+    // escapes each line of it as it escapes every other rendering. The diff never validates, so
+    // the class the file wrote reaches the diff's text as written.
+    let wire = wire_with_a_hostile_class();
+    let base = author_fixture("wire/econ_enable.json");
+    let run = oce(
+        &["diff", &base, "-", "--from", "wire", "--render", "always"],
+        &wire,
+    );
+    assert_eq!(run.code, 1, "{}", run.transcript());
+    // The report carries the class exactly as the file wrote it.
+    assert!(
+        String::from_utf8(run.stdout.clone())
+            .expect("UTF-8")
+            .contains(
+                &serde_json::to_string(&format!("CDL.Reals.Sub{HOSTILE}tract")).expect("a string")
+            ),
+        "{}",
+        run.transcript()
+    );
+    let rendered = String::from_utf8(run.stderr.clone()).expect("UTF-8");
+    assert!(carries_none(&rendered), "{rendered:?}");
+    assert!(
+        rendered.contains(&format!("CDL.Reals.Sub{ESCAPED}tract")),
+        "{rendered:?}"
+    );
+    // Line for line what `render_text` writes, once each line is escaped.
+    let parse = |bytes: &[u8]| oce_author::from_wire_bytes(bytes).expect("the wire reads");
+    let base_bytes = std::fs::read(crate_dir().join(&base)).expect("fixture");
+    let diff = oce_diff::diff(
+        &parse(&base_bytes),
+        &parse(&wire),
+        &oce_diff::DiffOptions::default(),
+    );
+    let text = oce_diff::render_text(&diff);
+    assert!(
+        text.contains(HOSTILE),
+        "render_text leaves them as they are"
+    );
+    assert_eq!(rendered.matches('\n').count(), text.matches('\n').count());
+}

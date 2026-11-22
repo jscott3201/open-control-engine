@@ -2,7 +2,7 @@ exit: 0
 --- stdout
 Author, check and inspect Open Control Engine sequences.
 
-Exit status: 0 yes (clean), 1 no (error findings, a non-canonical file), 2 error (usage, read, parse or size failure). Reports are JSON on stdout; see the crate README for the contract.
+Exit status: 0 yes (clean), 1 no (error findings, a non-canonical file, a difference), 2 error (usage, read, parse or size failure). Reports are JSON on stdout; see the crate README for the contract.
 
 Usage: oce [OPTIONS] <COMMAND>
 
@@ -15,6 +15,7 @@ Commands:
   verify    Replay a vector set against a subject and print the receipt
   id        Print the canonical content id of a CXF document or an authored sequence
   import    Read a flat CXF document into the authoring form
+  diff      Compare two sequences, or two CXF documents, and print the structural diff
   help      Print this message or the help of the given subcommand(s)
 
 Options:

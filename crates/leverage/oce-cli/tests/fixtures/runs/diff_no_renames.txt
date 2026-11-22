@@ -1,0 +1,17 @@
+exit: 1
+--- stdout
+| Change | Subject | Was | Now |
+| --- | --- | --- | --- |
+| rewired | `TChiWatSupSet` | `sel.y` | `sw.y` |
+| removed | `THigh` | `CDL.Reals.Sources.Constant(k = 285.15)` | |
+| removed | `TLow` | `CDL.Reals.Sources.Constant(k = 279.15)` | |
+| added | `TMax` | | `CDL.Reals.Sources.Constant(k = 285.15)` |
+| added | `TMin` | | `CDL.Reals.Sources.Constant(k = 279.15)` |
+| removed | `ena` | `CDL.Logical.And` | |
+| removed | `hold` | `CDL.Logical.TrueDelay(delayTime = 300, delayOnInit = true)` | |
+| added | `onDelay` | | `CDL.Logical.TrueDelay(delayTime = 600, delayOnInit = true)` |
+| added | `plaOn` | | `CDL.Logical.And` |
+| removed | `sel` | `CDL.Reals.Switch` | |
+| added | `sw` | | `CDL.Reals.Switch` |
+| comment-changed | `sequence` |  Chilled-water supply temperature reset, reference. |  agent draft |
+--- stderr

@@ -21,8 +21,11 @@
 //! An error is `{ "code", "detail", "span" }`, plus optional keys, each written only when it has
 //! a value. `at` is the place the refusal is about: a `verify` refusal's (`scenarios[0].inputs.u`,
 //! `mutants[2]`, `subject`, `line 3 column 7`; owner rulings of 2026-11-11, vectors note "Part
-//! 4's readings"), `"input"` for an `id` document the engine refuses, and an `import` refusal's
-//! subject (a node `@id`, or `document`). The others are `verify`'s and `id`'s: `path`, the
+//! 4's readings"), `"input"` for an `id` document the engine refuses, an `import` refusal's
+//! subject (a node `@id`, or `document`), and the side of a `diff` refusal (`base`, `head`). In
+//! the human-readable rendering an error whose `at` names a place the command registered
+//! ([`Report::place`]) is located at that place's input name, so a refusal of `diff`'s head is
+//! shown at the head's file. The others are `verify`'s and `id`'s: `path`, the
 //! canonical path
 //! it concerns; `candidates`, an ambiguous name's matches in their order; `cause`, a value from a
 //! closed table `oce-verify` owns; `diagnostic_codes`, the engine's codes of a subject that did not
@@ -45,6 +48,8 @@ pub(crate) struct Report {
     fields: Map<String, Value>,
     /// The verdict line of the human-readable rendering.
     verdict: String,
+    /// The input names an error's `at` locates it at in the human-readable rendering.
+    places: Vec<(&'static str, String)>,
 }
 
 impl Report {
@@ -57,7 +62,13 @@ impl Report {
             errors: Vec::new(),
             fields: Map::new(),
             verdict: String::new(),
+            places: Vec::new(),
         }
+    }
+
+    /// Render an error whose `at` is `at` at the input `name` (as given) instead of at `input`.
+    pub(crate) fn place(&mut self, at: &'static str, name: String) {
+        self.places.push((at, name));
     }
 
     /// Set a command field (`stages`, `canonical`, `classes`, …).
@@ -221,6 +232,12 @@ impl Report {
         }
         for error in &self.errors {
             let field = |key: &str| printable(error.get(key).and_then(Value::as_str).unwrap_or(""));
+            let at = error.get("at").and_then(Value::as_str);
+            let place = self
+                .places
+                .iter()
+                .find(|(registered, _)| Some(*registered) == at)
+                .map_or_else(|| place.clone(), |(_, name)| printable(name));
             out.push_str(&format!(
                 "{}: error[{}] {}\n",
                 located(&place, error.get("span")),
@@ -258,6 +275,16 @@ fn printable(text: &str) -> String {
         }
     }
     out
+}
+
+/// `text` with each of its lines written by [`printable`]: its line feeds are kept and every
+/// other format, control or separator character is an escape. For a multi-line rendering a
+/// command writes to stderr itself (a diff's text).
+pub(crate) fn printable_lines(text: &str) -> String {
+    text.split('\n')
+        .map(printable)
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Whether [`printable`] writes `character` as an escape.
@@ -353,6 +380,32 @@ mod tests {
         // The input name twice, a finding's code, subject and detail, an error's detail, the input name
         // in the verdict line and the verdict.
         assert_eq!(human.matches(escaped).count(), 8, "{human:?}");
+    }
+
+    #[test]
+    fn a_multi_line_rendering_keeps_its_line_feeds_and_escapes_the_rest() {
+        let hostile = "# oce diff a\u{202e}b -> c\n> x\u{1b}[2J\r\n\u{2028}\n";
+        assert_eq!(
+            printable_lines(hostile),
+            "# oce diff a\\u{202E}b -> c\n> x\\u{001B}[2J\\u{000D}\n\\u{2028}\n"
+        );
+        assert_eq!(printable_lines(""), "");
+        assert_eq!(printable_lines("plain\n"), "plain\n");
+    }
+
+    #[test]
+    fn an_error_at_a_registered_place_is_rendered_at_that_places_name() {
+        let mut report = Report::new("diff", Some("base.oce".to_owned()));
+        report.place("head", "head\u{1b}.oce".to_owned());
+        report.error_at("json-syntax", "bad", None, &Facts::about("head"));
+        report.error_at("not-found", "gone", None, &Facts::about("base"));
+        report.error("stdin-twice", "twice", None);
+        report.verdict("refused");
+        assert_eq!(
+            report.to_human(),
+            "head\\u{001B}.oce: error[json-syntax] bad\nbase.oce: error[not-found] gone\n\
+             base.oce: error[stdin-twice] twice\noce diff base.oce: refused\n"
+        );
     }
 
     #[test]

@@ -361,7 +361,7 @@ fn emit_and_id_agree_over_every_tracked_authored_fixture() {
     // Pinned, so that a fixture added later is classified here.
     assert_eq!(
         (clean, answered_no, refused, by_name, fixtures.len()),
-        (9, 14, 13, 2, 38)
+        (11, 15, 13, 2, 41)
     );
 }
 

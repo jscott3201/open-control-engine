@@ -3,11 +3,12 @@
 //! decisions 9 and 20; GitHub issue #489; vocabulary note `docs/design/vocabulary.md`, decision
 //! 12, GitHub issue #500; vectors note `docs/design/vectors.md`, "CLI", decision 34, GitHub issue
 //! #522; content-id note `docs/design/content-id.md`, GitHub issue #513; importer note
-//! `docs/design/importer.md`, GitHub issue #514).
+//! `docs/design/importer.md`, GitHub issue #514; diff note `docs/design/diff.md`, "CLI", decisions
+//! 1 and 16, GitHub issue #668).
 //!
 //! The binary (`src/main.rs`) is a thin shell over [`run`], which parses the arguments with `clap`
-//! and dispatches to one of eight commands over `oce-author`, `oce-vocab`, `oce-verify` and the
-//! facade:
+//! and dispatches to one of nine commands over `oce-author`, `oce-vocab`, `oce-verify`, `oce-diff`
+//! and the facade:
 //!
 //! - `emit`: an authored sequence (text or wire) to flat CXF, after both validation stages;
 //! - `validate`: both validation stages, or stage 1 alone, as a JSON report;
@@ -18,15 +19,17 @@
 //!   report;
 //! - `verify`: a vector set replayed against a subject, the receipt on stdout;
 //! - `id`: the canonical content id of a CXF document or an authored sequence, alone on stdout;
-//! - `import`: a flat CXF document into the authoring form, canonical text or wire.
+//! - `import`: a flat CXF document into the authoring form, canonical text or wire;
+//! - `diff`: the structural diff of two authoring models or two CXF documents.
 //!
-//! **Exit codes** follow the one `oce` rule: `0` yes (clean, every scenario passed), `1` no (an
-//! error finding, a non-canonical file, a class whose ports do not resolve, a failed or `no_data`
-//! verdict), `2` error (a usage error, input that cannot be read or parsed, an over-size input, an
-//! I/O failure, a run that reached no verdict, an input that has no content id, a document the
-//! importer refuses). **Output** is deterministic: stdout carries
-//! exactly one document — the command's product (CXF, canonical text, a wire document, a catalog
-//! listing, a receipt, a content id) or its JSON report (`report.rs`, documented in the crate README) — with sorted keys, LF
+//! **Exit codes** follow the one `oce` rule: `0` yes (clean, every scenario passed, nothing
+//! differs), `1` no (an error finding, a non-canonical file, a class whose ports do not resolve, a
+//! failed or `no_data` verdict, any difference), `2` error (a usage error, input that cannot be
+//! read, parsed or loaded, an over-size input, an I/O failure, a run that reached no verdict, an
+//! input that has no content id, a document the importer refuses). **Output** is deterministic:
+//! stdout carries exactly one document — the command's product (CXF, canonical text, a wire
+//! document, a catalog listing, a receipt, a content id, a diff's Markdown table) or its JSON
+//! report (`report.rs`, documented in the crate README) — with sorted keys, LF
 //! line endings and no timestamps; a human-readable rendering goes to stderr only when stderr is a
 //! terminal or `--render always` asks for it, with every format and control character written as
 //! an escape. Nothing here panics on hostile input, and no path the tool prints is one it did not
@@ -36,11 +39,12 @@
 //! own binary and integration tests; they are not a supported library API.
 //!
 //! The crate sits above the facade: it depends on `oce-api` and the leverage crates `oce-author`,
-//! `oce-vocab` and `oce-verify` only, and every engine it loads is a throwaway of the validator's
-//! or the verifier's own.
+//! `oce-vocab`, `oce-verify` and `oce-diff` only, and every engine it loads is a throwaway: the
+//! validator's, the verifier's, or one `id` or `diff` loads to read a CXF document.
 
 mod codes;
 mod commands;
+mod diff_codes;
 mod input;
 mod report;
 mod verify_codes;
@@ -77,8 +81,9 @@ impl Exit {
 
 /// Author, check and inspect Open Control Engine sequences.
 ///
-/// Exit status: 0 yes (clean), 1 no (error findings, a non-canonical file), 2 error (usage, read,
-/// parse or size failure). Reports are JSON on stdout; see the crate README for the contract.
+/// Exit status: 0 yes (clean), 1 no (error findings, a non-canonical file, a difference), 2 error
+/// (usage, read, parse or size failure). Reports are JSON on stdout; see the crate README for the
+/// contract.
 #[derive(Debug, Parser)]
 #[command(name = "oce", version, propagate_version = true)]
 struct Cli {
@@ -158,7 +163,7 @@ pub(crate) struct VerifyArgs {
     pub(crate) timings: bool,
 }
 
-/// The forms `id` reads its input in.
+/// The forms `id` and `diff` read an input in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 pub(crate) enum IdForm {
     // Flat CXF, given to the engine untouched (`.jsonld`, `.cxf.json`).
@@ -184,6 +189,36 @@ pub(crate) struct IdArgs {
     /// Print the JSON report, with content_id, instead of the id line.
     #[arg(long)]
     pub(crate) json: bool,
+}
+
+/// The document `diff` writes on stdout.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+pub(crate) enum DiffFormat {
+    // The JSON report, with the diff under `diff`.
+    Json,
+    // The diff as a Markdown table (`Change | Subject | Was | Now`), for a bundle card.
+    Markdown,
+}
+
+/// What `diff` compares and how it answers.
+#[derive(Debug, Args)]
+pub(crate) struct DiffArgs {
+    /// The base (earlier) side: text (`.oce`), wire (`.json`) or CXF (`.jsonld`, `.cxf.json`), or
+    /// `-` for stdin.
+    pub(crate) base: OsString,
+    /// The head (later) side, in the base's form, or `-` for stdin (on one side only).
+    pub(crate) head: OsString,
+    /// The form of both sides; overrides the names, and is required for stdin.
+    #[arg(long, value_enum)]
+    pub(crate) from: Option<IdForm>,
+    /// Turn the rename pass off: every unmatched block is removed or added, and the diff carries
+    /// the note rename-pass-off. graph_equal does not change.
+    #[arg(long)]
+    pub(crate) no_renames: bool,
+    /// The document on stdout: the JSON report with the diff, or the diff as a Markdown table.
+    /// The text rendering goes to stderr under --render.
+    #[arg(long, value_enum, default_value_t = DiffFormat::Json)]
+    pub(crate) format: DiffFormat,
 }
 
 /// What `import` reads and what it writes.
@@ -280,6 +315,13 @@ enum Command {
     /// and did not carry. A document the importer refuses is exit 2 with the report. The
     /// sequence is not validated: run validate or emit on the result.
     Import(ImportArgs),
+    /// Compare two sequences, or two CXF documents, and print the structural diff.
+    ///
+    /// Stdout is the JSON report with the diff (the diff as a Markdown table with --format
+    /// markdown): exit 0 when nothing differs, 1 for any difference, a reordering or a comment
+    /// included (summary.graph_equal answers "same structure"). Both sides are one form and are
+    /// never validated. A side that cannot be read, parsed or loaded is exit 2 with the report.
+    Diff(DiffArgs),
 }
 
 /// The streams one run reads and writes, and whether stderr is a terminal.
@@ -347,6 +389,7 @@ where
         Command::Verify(args) => commands::verify::run(&args),
         Command::Id(args) => commands::id::run(&args, streams),
         Command::Import(args) => commands::import::run(&args, streams),
+        Command::Diff(args) => commands::diff::run(&args, render, streams),
     };
     commands::finish(outcome, render, streams)
 }

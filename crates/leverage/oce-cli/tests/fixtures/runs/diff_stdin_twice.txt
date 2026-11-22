@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "diff",
+  "errors": [
+    {
+      "code": "stdin-twice",
+      "detail": "stdin (-) is read once; give at most one side as -",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": null,
+  "head": "-",
+  "input": "-",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

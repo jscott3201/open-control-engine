@@ -1,0 +1,26 @@
+exit: 2
+--- stdout
+{
+  "command": "diff",
+  "errors": [
+    {
+      "at": "head",
+      "code": "bad-escape",
+      "detail": "`\\q` is not an escape; only `\\\"`, `\\\\` and `\\n` are",
+      "span": {
+        "column": 24,
+        "line": 4
+      }
+    }
+  ],
+  "findings": [],
+  "form": "text",
+  "head": "tests/fixtures/inputs/malformed.oce",
+  "input": "tests/fixtures/inputs/diff/reference.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr
+tests/fixtures/inputs/malformed.oce:4:24: error[bad-escape] `\q` is not an escape; only `\"`, `\\` and `\n` are
+oce diff tests/fixtures/inputs/diff/reference.oce: refused: the head could not be parsed; no diff

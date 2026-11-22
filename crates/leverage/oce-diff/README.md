@@ -5,14 +5,14 @@ receipt, a bundle card or an agent can read, with authored block names as the id
 Design note: [`docs/design/diff.md`](../../../docs/design/diff.md), which is the specification of
 everything here.
 
-Three of four parts are in. **The authoring diff** (issue #665): `diff` compares two authoring
+All four parts are in. **The authoring diff** (issue #665): `diff` compares two authoring
 models and returns a sorted, schema-tagged `Diff`; the bounded rename pass presents renamed blocks;
 two pure renderers turn the data into text and a Markdown table. **The CXF adapter** (issue #666):
 `diff_topology` gives the same data for two loaded CXF documents, compared through the facade's
 `Topology` views ([below](#the-cxf-adapter)). **The blob comparison** (issue #667):
 `compare_blobs` says same or different for two compiled-schedule blobs, by content id, class
-table and initial-state CRCs ([below](#the-blob-comparison)). The `oce diff` verb (#668) builds
-on them.
+table and initial-state CRCs ([below](#the-blob-comparison)). **The `oce diff` verb** (issue
+#668) is in `oce-cli` ([below](#the-oce-diff-verb)).
 
 It is a leverage crate: among `oce-*` packages it depends on `oce-api` and `oce-author` only. It
 never validates and never evaluates: it takes parsed models, loaded topologies or blob bytes as
@@ -158,7 +158,7 @@ exactly as at the authoring level, and it builds a `Diff` with `source: cxf`.
 - **The sequence** of each side is its root id after the namespace (the IRI after its last `#`,
   `/` or `:`, as the content id names an IRI). Every name is stripped of the root, so a renamed
   root is no graph entry. It is reported as at the authoring level, a `sequence-renamed` metadata
-  entry, so the diff is not `equal` and `oce diff` will exit 1 for it (owner ruling of
+  entry, so the diff is not `equal` and `oce diff` exits 1 for it (owner ruling of
   2026-11-21). That entry is the only metadata this level sees: `metadata_equal` is `false` beside
   it and `null` (unknown) without it, and the strict reader accepts a CXF diff in exactly those two
   shapes, with `parameters_equal` `null`.
@@ -233,7 +233,13 @@ A hash is written as `0x` and 16 lowercase hex digits, never a JSON number. `to_
   corrupted bytes, another engine version's blob (`EngineVersionMismatch`), an unregistered class.
   Base is read first, so a pair refused on both sides names base. `DiffError::UnexpectedRefusal`
   (`unexpected-refusal`) keeps a facade error that is not a blob refusal as itself, which
-  `inspect_blob` documents it never returns. Hostile bytes never panic.
+  `inspect_blob` documents it never returns. It exists only because `oce_api::OcError` is
+  `#[non_exhaustive]`, so the conversion needs an arm for every other error; no integration path
+  reaches it. Hostile bytes never panic.
+- **No schema tag yet.** `BlobComparison` is written, never read back, and carries no `schema`
+  key, as the note's sketch names none. Whether it gains one is decided by whoever first embeds
+  it in a receipt, a card or a command's output; `oce diff` does not, because the verb reads no
+  blob.
 
 ## The data: `oce-diff/1`
 
@@ -398,7 +404,10 @@ in place (`crates/oce-api/tests/fixtures/`), and edit a blob only by finding the
 facade's summary reports and rewriting the CRC-32C trailer; nothing parses a blob but the
 facade. `tests/blob_axes.rs` holds every ordered pair of the 46 blobs to a second implementation
 of the three rules over the facade's checked-in summaries, flips each class hash of a
-multi-class blob (exactly that class `signature-changed`, the side refused), and compiles the
+multi-class blob (exactly that class `signature-changed`, the side refused), adds a class no
+block uses after the last of a table (the one aligned pair whose class tables differ, so a block's
+class is read against two tables: `added`, `initial_state` still `same`, the side refused as
+`UnusedClass`), and compiles the
 authoring pair `tests/fixtures/blobs/initial_state.{base,head}.oce` (a changed `y_start`:
 `initial_state` and the content id differ, nothing else). `tests/blob_refusals.rs` holds empty,
 truncated, corrupted, unregistered and another version's bytes to the facade's own refusal on
@@ -410,10 +419,14 @@ and the two sides, and nothing else. The goldens record content ids and class ha
 move with the content id's encoding, a class signature, or what the pair compiles to; the same
 bless switch rewrites them.
 
-## Part 4
+## The `oce diff` verb
 
-- **`oce diff`** (#668) puts a `Diff` in the CLI's report. `Diff::to_json` writes the report's
-  spelling (sorted keys, two-space indentation), and `Diff` reads back with `serde`. For two
-  `.jsonld` files it loads each into a throwaway engine and calls `diff_topology_with_ids` with
-  the two topologies and content ids; a `DiffError` is an error (exit 2), like a load refusal.
-  It takes authoring models and CXF only, never blobs.
+`oce diff <base> <head>` ([`oce-cli`](../oce-cli/README.md#oce-diff), issue #668) puts a `Diff`
+in the CLI's report under `diff`, exactly `Diff::to_json`'s data, or prints `render_markdown`'s
+table with `--format markdown`, and writes `render_text` to stderr under `--render`. Two
+authoring files are parsed and diffed with `diff`; two CXF documents are each loaded into a
+throwaway engine and diffed with `diff_topology_with_ids` over the two topologies and content
+ids, a `DiffError` reported under its own code (exit 2), like a load refusal. Exit 0 only when
+the diff is `equal`, 1 for any difference. It takes authoring models and CXF only, never blobs.
+The CLI's tests hold the diff its report carries to this crate's goldens byte for byte, for the
+text and the CXF form of every worked example.

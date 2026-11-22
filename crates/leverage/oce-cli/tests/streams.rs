@@ -6,6 +6,11 @@ use std::io::{self, Write};
 
 use oce_cli::{Exit, Streams, run};
 
+/// A worked example of the diff note, as `oce-diff` keeps it; the run starts in the crate
+/// directory.
+const DIFF_BASE: &str = "../oce-diff/tests/fixtures/examples/pressure_request.base.oce";
+const DIFF_HEAD: &str = "../oce-diff/tests/fixtures/examples/pressure_request.head.oce";
+
 /// A writer that refuses every write, as a closed pipe does.
 struct Closed;
 
@@ -56,6 +61,10 @@ fn a_closed_stdout_is_an_error_whatever_the_answer() {
             "../oce-author/tests/fixtures/emit/econ_enable.cxf.json",
             "--wire",
         ][..],
+        &["oce", "diff", "missing.oce", "missing.oce"][..],
+        &["oce", "diff", DIFF_BASE, DIFF_BASE][..],
+        &["oce", "diff", DIFF_BASE, DIFF_HEAD][..],
+        &["oce", "diff", DIFF_BASE, DIFF_HEAD, "--format", "markdown"][..],
     ] {
         let (exit, _) = run_with(args, &mut Closed);
         assert_eq!(exit, Exit::Error, "{args:?}");
@@ -68,6 +77,33 @@ fn a_closed_stdout_is_named_in_the_rendering_when_asked() {
     let (exit, stderr) = run_with(&["oce", "vocab", "--render", "always"], &mut Closed);
     assert_eq!(exit, Exit::Error);
     assert_eq!(stderr, b"oce vocab: stdout could not be written\n");
+}
+
+#[test]
+fn a_diff_stdout_could_not_carry_is_not_rendered_as_an_answer() {
+    // The diff's text rendering describes an answer; when stdout fails the run answered nothing,
+    // so the rendering is the report's, with the failure as its verdict.
+    let (exit, stderr) = run_with(
+        &["oce", "diff", DIFF_BASE, DIFF_HEAD, "--render", "always"],
+        &mut Closed,
+    );
+    assert_eq!(exit, Exit::Error);
+    assert_eq!(
+        String::from_utf8(stderr).expect("UTF-8"),
+        format!("oce diff {DIFF_BASE}: stdout could not be written\n")
+    );
+    // With stdout open, the same run renders the diff's text.
+    let mut stdout = Vec::new();
+    let (exit, stderr) = run_with(
+        &["oce", "diff", DIFF_BASE, DIFF_HEAD, "--render", "always"],
+        &mut stdout,
+    );
+    assert_eq!(exit, Exit::No);
+    assert!(
+        String::from_utf8(stderr)
+            .expect("UTF-8")
+            .starts_with("# oce diff zone_pressure_request -> zone_pressure_request\n")
+    );
 }
 
 #[test]

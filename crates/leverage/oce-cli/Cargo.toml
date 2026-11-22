@@ -1,13 +1,14 @@
 # The `oce` command-line tool (authoring note docs/design/authoring-layer.md, "CLI", decisions 9 and
-# 20; issue #489): `emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`, `id` and `import` over
-# `oce-author`, `oce-verify` and the facade. The first binary above the facade: engine crates ship none
-# (docs/architecture.md). It depends on `oce-api` and the leverage crates `oce-author`, `oce-vocab`
-# and `oce-verify` only among the `oce-*` packages (crates/leverage/README.md; vocabulary note
-# decision 10, issue #500; vectors note decision 34, issue #522); `oce-bless` is a dev-dependency
-# for the golden switch (decision 19).
+# 20; issue #489): `emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`, `id`, `import` and `diff`
+# over `oce-author`, `oce-verify`, `oce-diff` and the facade. The first binary above the facade:
+# engine crates ship none (docs/architecture.md). It depends on `oce-api` and the leverage crates
+# `oce-author`, `oce-vocab`, `oce-verify` and `oce-diff` only among the `oce-*` packages
+# (crates/leverage/README.md; vocabulary note decision 10, issue #500; vectors note decision 34,
+# issue #522; diff note decision 9, issue #668); `oce-bless` is a dev-dependency for the golden
+# switch (decision 19).
 [package]
 name = "oce-cli"
-description = "The oce command-line tool: emit, validate, fmt, catalog, vocab, verify, id and import over the Open Control Engine authoring layer and vector verification."
+description = "The oce command-line tool: emit, validate, fmt, catalog, vocab, verify, id, import and diff over the Open Control Engine authoring layer, vector verification and structural diff."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -32,6 +33,9 @@ oce-author = { path = "../oce-author" }
 oce-vocab = { path = "../oce-vocab" }
 # Vector verification (`oce verify`, vectors note decision 34): the set, the run and the receipt.
 oce-verify = { path = "../oce-verify" }
+# Structural diff (`oce diff`, diff note decision 9): the authoring diff, the CXF adapter and the
+# two renderers. A leverage-to-leverage edge, allowed by crates/leverage/README.md's rule 1.
+oce-diff = { path = "../oce-diff" }
 # Argument parsing with derive (decision 20): M2's second new third-party dependency, confined to
 # crates/leverage/. No `color` feature, so `--help` and every usage error are plain bytes that do
 # not depend on the terminal.

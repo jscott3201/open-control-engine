@@ -1,0 +1,15 @@
+# Plant enable, the reference the diff verb's tests compare against.
+sequence plant_enable
+derived_from none
+
+in uReq : Boolean
+in uPlaEna : Boolean
+out yEna : Boolean
+
+block ena = CDL.Logical.And
+block hold = CDL.Logical.TrueDelay(delayTime = 300, delayOnInit = true)
+
+uPlaEna -> ena.u1
+uReq -> ena.u2
+ena.y -> hold.u
+hold.y -> yEna

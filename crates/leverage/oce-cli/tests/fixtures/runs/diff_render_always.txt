@@ -1,0 +1,34 @@
+exit: 1
+--- stdout
+| Change | Subject | Was | Now |
+| --- | --- | --- | --- |
+| renamed (exact) | `TMax` | `THigh` | `TMax` |
+| renamed (exact) | `TMin` | `TLow` | `TMin` |
+| removed | `ena` | `CDL.Logical.And` | |
+| removed | `hold` | `CDL.Logical.TrueDelay(delayTime = 300, delayOnInit = true)` | |
+| added | `onDelay` | | `CDL.Logical.TrueDelay(delayTime = 600, delayOnInit = true)` |
+| added | `plaOn` | | `CDL.Logical.And` |
+| renamed (high) | `sw` | `sel` | `sw` |
+| rewired | `sw.u2` | `hold.y` | `onDelay.y` |
+| comment-changed | `sequence` |  Chilled-water supply temperature reset, reference. |  agent draft |
+--- stderr
+# oce diff chw_plant_reset -> chw_plant_reset
+# graph differs; parameters equal; interface equal; metadata differs
+# names disjoint: no block kept its name and class; 3 of 5 base blocks matched by the rename pass, 2 removed, 2 added
+# graph
+> block TMax = CDL.Reals.Sources.Constant(k = 285.15)   # was THigh; renamed, exact
+> block TMin = CDL.Reals.Sources.Constant(k = 279.15)   # was TLow; renamed, exact
+- block ena = CDL.Logical.And
+- uPlaEna -> ena.u1
+- uReq -> ena.u2
+- block hold = CDL.Logical.TrueDelay(delayTime = 300, delayOnInit = true)
+- ena.y -> hold.u
++ block onDelay = CDL.Logical.TrueDelay(delayTime = 600, delayOnInit = true)
++ plaOn.y -> onDelay.u
++ block plaOn = CDL.Logical.And
++ uReq -> plaOn.u1
++ uPlaEna -> plaOn.u2
+> block sw = CDL.Reals.Switch   # was sel; renamed, high
+~ onDelay.y -> sw.u2   # was hold.y
+# metadata
+~ # comment on sequence changed

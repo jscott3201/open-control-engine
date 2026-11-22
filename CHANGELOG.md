@@ -948,6 +948,56 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **`oce diff` prints the structural diff of two sequences or two CXF documents** (GitHub
+  #738, issues #668, #725; design note `docs/design/diff.md`, "CLI", decisions 1, 10 and 16,
+  part 4 of 4). `oce diff <base> <head> [--from cxf|text|wire] [--no-renames] [--format
+  json|markdown]`, in `oce-cli` over `oce-diff` (a new leverage-to-leverage edge; `Cargo.lock`
+  moves by that one line).
+  - **Inputs.** Both sides are one form: `--from`, else each name by `oce id`'s rule (CXF for
+    `.jsonld` and `.cxf.json`, text for `.oce`, wire for any other `.json`; owner ruling of
+    2026-11-21). Two forms are the new tool code `mixed-forms`, `-` on both sides the new
+    `stdin-twice`. Each side is read at its form's bound from its metadata (4 MiB authored, 8 MiB
+    CXF). Authored sides are parsed and never validated, so an invalid draft is diffed; CXF sides
+    are each loaded into a throwaway engine (`not-loadable` with the engine's codes) and compared
+    with `diff_topology_with_ids`, whose refusals pass through under their own codes. Every
+    refusal about one side carries `at`, `base` or `head`.
+  - **Output and exit.** Exit 0 only when the diff is `equal`, 1 for any difference (a
+    `reordered`-only or comment-only diff included; `summary.graph_equal` answers "same
+    structure"), 2 for every refusal. Stdout is the `oce-report/1` report with the diff under
+    `diff`, exactly `Diff::to_json`'s data, or with `--format markdown` the Markdown table, for exit
+    0 and 1 alike; `render_text` goes to stderr under `--render`, each line escaped, and there is
+    no `--format human` (owner ruling of 2026-11-21). The verb writes no file. The report gains the
+    command keys `head`, `form` and `diff`; `oce vocab` gains `diff_codes`
+    (`oce_diff::DiffError::CODES`) and the two tool codes; the human rendering places a refusal at
+    its side's file.
+  - **Evidence.** 31 transcripts (`tests/diff_runs.rs`): an equal pair, each worked example's
+    envelope and table in the text form and its envelope as CXF, the stderr rendering, a
+    `reordered`-only pair, `--no-renames`, an invalid draft, stdin, every refusal class and two
+    usage errors, a refusal of each side rendered at that side's file among them. The oracle
+    (`tests/diff_files.rs`) holds the diff each report carries, with the envelope removed, to
+    `oce-diff`'s goldens byte for byte, and the table and stderr to its Markdown and text goldens,
+    for the text and the CXF form of every worked example; the wire form to the library's diff;
+    and each side's bound, `.cxf.json`, determinism, the base read, parsed, loaded and compared
+    before the head with each refusal naming its side, and the vocabulary. Hostile bytes on either
+    side, in each form and through stdin, are typed refusals about that side; a wire class's
+    format and separator characters, which `render_text` leaves as they are, are escaped on
+    stderr; and a failed stdout write renders the report, not the diff. Nineteen mutants of the
+    verb's logic, all killed (the review's four survivors by the tests of its round). The
+    review's four further items are issue #742. The transcripts `help_oce`, `usage_no_arguments`, `vocab_text` and `vocab_json`
+    move for the new command and codes, and `id_files`'s pinned fixture count for the three new
+    authored inputs.
+- **The review follow-ups of the blob comparison** (GitHub #738, issue #725).
+  `crates/leverage/README.md` names the CXF adapter and the blob comparison in `oce-diff`'s row.
+  A new aligned blob pair whose class tables differ (one class no block uses, after the last; the
+  facade's summary reads it and its decoder refuses it as `UnusedClass`) kills the mutant that
+  reads a block's class one place off within its table, which every earlier pair, sharing one
+  table, let survive. `DiffError::UnexpectedRefusal`'s rustdoc says it exists only because
+  `OcError` is `#[non_exhaustive]` and no integration path reaches it. `BlobComparison` stays
+  untagged: `oce diff` reads no blob, so whether it gains a `schema` key is left to whoever first
+  embeds it. The two slow CXF tests stay whole: in the `ci` profile under the full suite's load
+  they took 18.2 s (`cxf_cross_level`, every ordered pair) and 19.0 s (`cxf_corpus`, equal ids)
+  locally, and CI's leverage lane ran `oce-diff`'s whole suite in 18.7 s, well under half of the
+  120 s termination.
 - **`oce-diff` compares two compiled-schedule blobs as same or different** (GitHub #723, issue
   #667; design note `docs/design/diff.md`, decisions 3 and 15, part 3 of 4).
   `compare_blobs(base, head)` reads each side through `oce_api::inspect_blob`, base first, and
