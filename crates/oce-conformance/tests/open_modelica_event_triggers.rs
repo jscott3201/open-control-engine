@@ -36,8 +36,6 @@ use crate::block_harness::{
 
 const IMAGE: &str = "openmodelica/openmodelica@sha256:\
 79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864";
-const BUILDINGS_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-const MSL_COMMIT: &str = "7a4bf7de77a3986e8eb1e88cbb515d646f78f834";
 const FRAMES: usize = 10;
 
 const fn port(name: &'static str, kind: crate::block_harness::SignalKind) -> Port {
@@ -499,8 +497,17 @@ fn each_class_s_provenance_binds_its_pilot_tables_and_raw_result() {
         assert_eq!(field("omc"), "OpenModelica 1.25.1", "{label}");
         assert_eq!(field("image"), IMAGE, "{label}");
         assert_eq!(field("architecture"), "arm64", "{label}");
-        assert_eq!(field("buildings_commit"), BUILDINGS_COMMIT, "{label}");
-        assert_eq!(field("msl_commit"), MSL_COMMIT, "{label}");
+        // The library commits every other OpenModelica case of the repository records.
+        assert_eq!(
+            field("buildings_commit"),
+            "a131864e4c4df22ebcd52bb8da439de0087ac365",
+            "{label}"
+        );
+        assert_eq!(
+            field("msl_commit"),
+            "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
+            "{label}"
+        );
         assert_eq!(field("pilot_sha256"), sha256(evidence.pilot), "{label}");
         assert_eq!(field("raw_sha256"), sha256(evidence.raw), "{label}");
         for scenario in SCENARIOS {
