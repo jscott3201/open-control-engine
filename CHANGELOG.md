@@ -948,17 +948,17 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
-- **`oce-replay`'s `CsvSource` trims the padding around csv cells and header names and hands a
-  column over as text, so the commissioning trend reader reads OBC §12.7.3's padded files and a
-  `bool` cell `active` or `inactive`** (GitHub #739, issues #728, #733; replay note, "As built";
-  commissioning note, "As landed: the trend sources", rulings 1 and 5).
-  - **Padding (issue #733).** `CsvSource` trims ASCII spaces and tabs, and only those two bytes,
-    around every cell and header name `csv-core` reads unquoted, before the missing-token
-    comparison, the parse and the header match. A no-break space, a zero-width space, a
-    byte-order mark, a vertical tab and a form feed stay part of the cell. A quoted cell is kept
-    as `csv-core` unquotes it (`" a "` is ` a `); a byte outside the quotes is outside RFC 4180
-    and is kept as `csv-core` reads it (`"1" ` is `1 `, ` "1"` is `"1"`), so its parse refuses
-    it. `max_cell_bytes` counts a cell before it is trimmed, padding included.
+- **`oce-replay`'s `CsvSource` trims the spaces and tabs around a csv cell and a header name, so
+  the commissioning trend reader reads OBC §12.7.3's padded files as printed** (GitHub #739,
+  issue #733; replay note, "As built"; commissioning note, "As landed: the trend sources",
+  ruling 5).
+  - **The rule.** `CsvSource` trims ASCII spaces and tabs, and only those two bytes, around every
+    cell and header name `csv-core` reads unquoted, before the missing-token comparison, the
+    parse and the header match. A no-break space, a zero-width space, a byte-order mark, a
+    vertical tab and a form feed stay part of the cell. A quoted cell is kept as `csv-core`
+    unquotes it (`" a "` is ` a `); a byte outside the quotes is outside RFC 4180 and is kept as
+    `csv-core` reads it (`"1" ` is `1 `, ` "1"` is `"1"`), so its parse refuses it.
+    `max_cell_bytes` counts a cell before it is trimmed, padding included.
   - **Breaking in place, for padded input only.** Unpadded input reads bit for bit as before, and
     no golden moves. A padded unquoted cell, which was `BadCell` (a padded instant `BadInstant`),
     reads as its trimmed text; a cell of padding alone or a padded token (` NA `) is missing (a
@@ -967,38 +967,50 @@ so far, and no tag is cut by the bump.
     `MissingColumn`; two names equal once trimmed are `DuplicateColumn`; `ignored_columns`, and
     so a trace's ignored columns and canonical bytes, list trimmed names. A missing token that
     begins or ends with a space or a tab never matches.
-  - **Text columns (issue #728).** `CsvFormat::text_columns` (a new public field;
-    `CsvFormat::seconds` leaves it empty) names header columns whose cells
-    `CsvSource::text_cells()` hands over unparsed after each row, one `Option<&str>` per name in
-    order, under the same caps, padding rule and missing rule. A text column is resolved once
-    (`MissingColumn` after the time and the mapped columns), checked as UTF-8 after a row's time
-    and mapped cells (`NotUtf8`), never an input slot, so it stays among the ignored columns and
-    a replay trace is the same byte for byte with or without it. Replay gives no spelling a
-    meaning; reading a row of text cells allocates nothing once the buffers have grown.
-  - **A doubled byte-order mark reads one way.** The first fill reads seven bytes, or all there
-    are, so `csv-core`, which strips a second mark from its first input of three bytes or more,
-    is handed the same first input whatever the reader returns per call. Before, a reader of one
-    byte per call kept the second mark as a cell's bytes while a whole slice had it stripped;
-    the new split-independence test found it. Under a `max_source_bytes` below seven an
-    over-cap input is now refused at construction. Which refusal an over-cap input gets first
-    still depends on how far ahead the reader's calls buffered; it is refused either way.
-  - **`oce-verify`.** A `csv` file's `bool` device column is one of `CsvSource`'s text columns,
-    read by `boolean_from_text`: `true`, `false`, `active`, `inactive`, `1` and `0` read (as 0
-    and 1 into a CDL `int`), and every other text (`0.5`, `True`, `yes`) is `cell-refused`
-    caused by `not-boolean-text`, where it was `bad-cell`. The `expect(dead_code)` on
-    `boolean_from_text` and `NotBooleanText` is gone. OBC §12.7.3's `reference_input.csv`, added
-    verbatim as a fixture, reads as an input source and as a `controllerOutput`, and its
-    `indicator.csv` as an indicator source; a mapping device name written with the padding
-    (`" uHea"`) is now `column-missing` or `unmapped-point`. A `controllerOutput`'s first header,
-    which the reader takes from the bytes before replay confirms it, is trimmed as replay trims.
+  - **`oce-verify`.** OBC §12.7.3's `reference_input.csv`, added verbatim as a fixture, reads as
+    an input source and as a `controllerOutput`, and its `indicator.csv` as an indicator source.
+    A mapping device name written with the padding (`" uHea"`) is now `column-missing` or
+    `unmapped-point`. A `controllerOutput`'s first header, which the reader takes from the bytes
+    before replay confirms it, is trimmed as replay trims.
   - **Evidence.** Padded and unpadded twins of the §12.7.3 file; every edge of the rule (tabs,
-    padding alone, quoted padding, padding outside quotes, the five whitespace bytes that are
-    not padding, padded headers and duplicates, a tab-separated file); the cell cap one byte
-    either side of its edge with padding, at a lowered cap and at 256; every input of a corpus
-    read whole and split into pieces of 1 to 9 bytes; 4,000 seeded arbitrary inputs that never
-    panic and read the same split five ways; 500 seeded files whose cells an independent model
-    writes, read back as the model says; 20 hand mutants of the two crates, every one caught. The
-    formats `oce/vectors/v1` and `oce/receipt/v1` and replay's trace bytes are unchanged.
+    padding alone, quoted padding, padding outside quotes, the five whitespace bytes that are not
+    padding, padded headers and duplicates, a tab-separated file); the cell cap one byte either
+    side of its edge with padding, at a lowered cap and at 256; a corpus read whole and split into
+    pieces of 1 to 9 bytes; 4,000 seeded arbitrary inputs that never panic and read the same split
+    five ways; 500 seeded files whose cells an independent model writes, read back as the model
+    says; hand mutants, every one caught.
+
+- **`oce-replay`'s `CsvSource` hands a column over as text, so a commissioning `bool` cell reads
+  `active` and `inactive`** (GitHub #739, issue #728; commissioning note, "Point mapping" and
+  "As landed: the trend sources", ruling 1).
+  - **Replay.** `CsvFormat::text_columns` (a new public field; `CsvFormat::seconds` leaves it
+    empty) names header columns whose cells `CsvSource::text_cells()` hands over unparsed after
+    each row, one `Option<&str>` per name in order, under the same caps, padding rule and missing
+    rule. A text column is resolved once (`MissingColumn` after the time and the mapped columns),
+    checked as UTF-8 after a row's time and mapped cells (`NotUtf8`), and is never an input
+    slot, so it stays among the ignored columns and a replay trace is the same byte for byte with
+    or without it. Replay gives no spelling a meaning; reading a row of text cells allocates
+    nothing once the buffers have grown.
+  - **`oce-verify`.** A `csv` file's `bool` device column is one of the text columns, read by
+    `boolean_from_text`: `true`, `false`, `active`, `inactive`, `1` and `0` read (as 0 and 1 into
+    a CDL `int`), and every other text (`0.5`, `True`, `yes`) is `cell-refused` caused by
+    `not-boolean-text`, where it was `bad-cell` (breaking in place). The `expect(dead_code)` on
+    `boolean_from_text` and `NotBooleanText` is gone. The merged-inputs and `controllerOutput`
+    goldens and the independent oracle are unchanged.
+  - **Evidence.** The six spellings, refusals with file, row and column, a `bool` column into a
+    CDL `int`, the missing rule with and without tokens, the order of refusals, the cell cap, the
+    state before the first row and after the last and after an error, an allocation count, a
+    trace compared with and without a text column; hand mutants, every one caught.
+
+- **A doubled byte-order mark reads one way whatever a reader returns per call** (GitHub #739).
+  `CsvSource`'s first fill reads seven bytes, or all there are, so `csv-core`, which strips a
+  second mark from its first input of three bytes or more, is handed the same first input from
+  every reader. Before, a reader of one byte per call kept the second mark as a cell's bytes
+  while a whole slice had it stripped; issue #733's split-independence test found it. Under a
+  `max_source_bytes` below seven an over-cap input is now refused at construction. Which refusal
+  an over-cap input gets first still depends on how far ahead the reader's calls buffered; it is
+  refused either way. The formats `oce/vectors/v1` and `oce/receipt/v1` and replay's trace bytes
+  are unchanged by all three entries.
 
 - **`oce-diff` compares two compiled-schedule blobs as same or different** (GitHub #723, issue
   #667; design note `docs/design/diff.md`, decisions 3 and 15, part 3 of 4).
@@ -1053,7 +1065,7 @@ so far, and no tag is cut by the bump.
   cost frames times columns and are checked against the byte cap before they are allocated.
   OBC §12.7.3's padded example csv files are refused until replay trims cells (#733), and a
   `csv` Boolean reads `true`, `false`, `1` and `0` only until replay hands a text cell over
-  (#728). Both were lifted before a release by GitHub #739, the entry above.
+  (#728). Both were lifted before a release by GitHub #739, the entries above.
 
 - **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point
   mapping** (GitHub #716, issue #659, closes #714; commissioning note, "Point mapping", decisions
