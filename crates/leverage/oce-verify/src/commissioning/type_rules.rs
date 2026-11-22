@@ -20,12 +20,6 @@
 //! trend source that reads the cell (#660) adds its file, row and column. Nothing here allocates
 //! but a refusal, and nothing panics.
 
-// The trend sources (#660) are the first caller; until then only this module's tests are.
-#![cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the trend sources (#660) are the first caller")
-)]
-
 use std::fmt;
 
 use super::choices::PointType;
@@ -101,6 +95,14 @@ pub(crate) fn boolean_from_number(value: f64) -> Result<bool, CellError> {
 /// # Errors
 ///
 /// [`CellError::NotBooleanText`] for every other text, the empty one included.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "replay's CsvSource hands a csv cell over typed, never as text (owner ruling, \
+                  2026-11-21); the text rule waits for a replay reader that does"
+    )
+)]
 pub(crate) fn boolean_from_text(text: &str) -> Result<bool, CellError> {
     match text {
         "true" | "active" | "1" => Ok(true),
@@ -155,6 +157,14 @@ pub(crate) enum CellError {
         value: f64,
     },
     /// A text cell in a Boolean column that is none of the six spellings.
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "replay's CsvSource hands a csv cell over typed, never as text (owner ruling, \
+                      2026-11-21); the text rule waits for a replay reader that does"
+        )
+    )]
     NotBooleanText {
         /// The text, as an excerpt (printable ASCII, cut at 64 bytes).
         text: String,

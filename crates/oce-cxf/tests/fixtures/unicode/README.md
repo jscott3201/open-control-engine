@@ -29,8 +29,8 @@ Nothing reads it at run time, and no test fetches anything.
 3. Cross-check: Python 3.15.2's `unicodedata` (`unidata_version` `17.0.0`) assigns exactly the 235
    code points the excerpt lists to `Cc` (65) and `Cf` (170), and no others.
 
-A later Unicode version is a new excerpt cut the same way, the table in `format_controls.rs`
-updated to match, and this file's digests and line numbers with it.
+A later Unicode version is a new excerpt cut the same way, the table (`FORMAT_RANGES` in
+`crates/oce-diag/src/quoting.rs`, which `format_controls.rs` tests) updated to match, and this file's digests and line numbers with it.
 
 ## License
 

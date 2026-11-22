@@ -51,8 +51,8 @@ use std::collections::HashSet;
 use oce_diag::{DiagCode, Diagnostic};
 
 use super::term_shape::{self, BLANK_STRING, BLANK_VALUE, blank};
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfValue, Node};
+use oce_diag::DiagnosticList;
 
 /// The parameter nodes already checked in one resolve, keyed by their expanded `@id`, so a node
 /// read more than once is reported once. Lookup-only: never iterated, so it orders nothing.

@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 
 use oce_blocks::{ParamRule, lookup};
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{BlockInstance, ModelGraph, ParamTable, Value, ValueType, enum_descriptor};
 
 use super::{block_subject_of, params_arrays, params_flattened};
@@ -13,12 +13,12 @@ use super::{block_subject_of, params_arrays, params_flattened};
 ///
 /// Unknown classes are skipped here for parity with `check_port_types`: `oce-api` owns the typed
 /// load error for unresolved block implementations.
-pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut DiagnosticList) {
     for blk in &model.blocks {
         let mut names = HashSet::with_capacity(blk.params.values.len());
         for (name, _) in &blk.params.values {
             if !names.insert(name.as_ref()) {
-                diags.push(
+                diags.raise(|| {
                     Diagnostic::error(
                         DiagCode::DuplicateParameter,
                         format!(
@@ -26,8 +26,8 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut Vec<Diagnostic>
                             blk.class_iri
                         ),
                     )
-                    .with_subject(block_subject_of(blk)),
-                );
+                    .with_subject(block_subject_of(blk))
+                });
             }
         }
         super::params_element_names::check_element_name_spelling(blk, diags);
@@ -64,7 +64,7 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut Vec<Diagnostic>
     }
 }
 
-fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>) {
+fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut DiagnosticList) {
     match rule {
         ParamRule::Required { name, .. } if find_param(&blk.params, name).is_none() => {
             diags.push(
@@ -691,7 +691,7 @@ fn real_equal(left: f64, right: f64) -> bool {
     matches!(left.partial_cmp(&right), Some(Ordering::Equal))
 }
 
-fn push_range_error(blk: &BlockInstance, diags: &mut Vec<Diagnostic>, message: String) {
+fn push_range_error(blk: &BlockInstance, diags: &mut DiagnosticList, message: String) {
     diags.push(
         Diagnostic::error(DiagCode::ParameterOutOfRange, message)
             .with_subject(block_subject_of(blk)),

@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use oce_diag::DiagCode;
 
 use super::refuse_multiply_driven;
-use crate::diagnostic_list::DiagnosticList;
+use oce_diag::DiagnosticList;
 
 fn drivers(outputs: &[(&str, &[&str])]) -> HashMap<String, HashSet<String>> {
     outputs

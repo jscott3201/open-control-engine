@@ -28,8 +28,8 @@ than three minutes before; issue #480).
 Every composite and leaf is lowered at most once (`shared-instance` refuses a second reach), each
 composite's grounded declarations are shared by reference with its children rather than copied
 per leaf, and all preserved array parameters of one document share a 1,048,576-element budget
-(`resource-limit-exceeded`), so lowering work and inherited-scope memory grow linearly with the
-document (issue #365).
+and a 64 MiB budget of element paths (`resource-limit-exceeded`), so lowering work and
+inherited-scope memory grow linearly with the document (issues #365 and #710).
 
 ## How rejections are reported
 

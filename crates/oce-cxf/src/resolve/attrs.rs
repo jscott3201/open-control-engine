@@ -5,10 +5,10 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Attrs, IntAttrs, RealAttrs, Value, ValueType};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfValue, Node};
 use crate::ground::ground_value;
 use crate::scope_chain::ParamScope;
+use oce_diag::DiagnosticList;
 
 /// Parse a connector node's declared §7.4.1 attributes
 /// (`unit`/`quantity`/`displayUnit`/`min`/`max`/`nominal`) into the `Attrs` variant matching its

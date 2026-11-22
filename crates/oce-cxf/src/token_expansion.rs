@@ -12,7 +12,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use crate::excerpt::{EXCERPT_BYTES, excerpt};
+use oce_diag::{EXCERPT_BYTES, excerpt};
 
 /// Declared `@context` prefix/term substitutions: term → IRI.
 ///

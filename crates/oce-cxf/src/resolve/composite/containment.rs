@@ -17,9 +17,9 @@ use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
 use crate::scope_chain::ScopeFrame;
+use oce_diag::DiagnosticList;
 
 use super::super::composite_rules::CONTAINS_CYCLE;
 use super::super::declaration_scope::{Pass, evaluate_declarations};

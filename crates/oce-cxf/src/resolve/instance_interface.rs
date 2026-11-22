@@ -50,8 +50,8 @@ use std::collections::{HashMap, HashSet};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockId, Dir, ValueType};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
+use oce_diag::DiagnosticList;
 
 use super::composite::is_runtime_composite;
 use super::composite_rules::{

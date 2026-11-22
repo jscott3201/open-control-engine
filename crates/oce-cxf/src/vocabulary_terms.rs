@@ -43,9 +43,9 @@ use std::sync::OnceLock;
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use crate::diagnostic_list::DiagnosticList;
-use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
+use oce_diag::DiagnosticList;
+use oce_diag::excerpt;
 
 /// Where a term of [`TERMS`] stands in the vendored `CXF-Core.jsonld`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

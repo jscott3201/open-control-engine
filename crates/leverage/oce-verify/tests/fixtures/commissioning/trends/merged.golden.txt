@@ -1,0 +1,35 @@
+# merged inputs of tests/fixtures/commissioning/trends/spec.json
+origin	2018-06-07T00:00:00-07:00
+frames	9
+times	bff0000000000000	0000000000000000	4004000000000000	4014000000000000	4024000000000000	4024000000000000	4034000000000000	4039000000000000	4044000000000000
+column	ahu.T	device=AHU Temp	kind=Real	hold=4024000000000000
+cells	7ff8000000000000	4072526666666666	7ff8000000000000	407256d82d82d82d	40725b49f49f49f4	40725fbbbbbbbbbb	4072666666666666	7ff8000000000000	406d24cccccccccc
+column	b	device=Enable	kind=Boolean	hold=403e000000000000
+cells	0/0	1/1	1/1	0/0	0/1	0/0	0/0	0/1	0/0
+column	lim	device=Limit	kind=Real	hold=none
+cells	3fe0000000000000	3fe199999999999a	3fe3333333333333	7ff8000000000000	3fe4cccccccccccd	3fe6666666666666	7ff8000000000000	3fe8000000000000	3fe999999999999a
+column	n	device=Count	kind=Integer	hold=403e000000000000
+cells	0/0	3/1	4/1	0/0	5/1	0/0	0/0	0/0	0/0
+column	zone.T	device=Zone Temp	kind=Real	hold=4024000000000000
+cells	7ff8000000000000	4072526666666666	7ff8000000000000	40725a6666666666	4072626666666666	4072626666666666	4072666666666666	7ff8000000000000	40727a6666666666
+spec	ahu.T	Real
+spec	b	Boolean
+spec	lim	Real
+spec	n	Integer
+spec	zone.T	Real
+override	ahu.T	HoldLast { max_age: 10.0 }
+override	b	HoldLast { max_age: 30.0 }
+override	n	HoldLast { max_age: 30.0 }
+override	zone.T	HoldLast { max_age: 10.0 }
+map	ahu.T	ahu.T
+map	b	b
+map	lim	lim
+map	n	n
+map	zone.T	zone.T
+source	inputs	ahu.mos	table=ahu	fnv1a128:7954e8b171938cf51feb1376b877ffb5	rows=6
+source	inputs	status.csv	table=none	fnv1a128:1891a71fd7b822242aedf2db0692e7cc	rows=4
+source	inputs	limits.csv	table=none	fnv1a128:dec75a8d3a79a7376dd56832acbc9fc9	rows=8
+mapping	points.json	fnv1a128:a5bb17e9a2810ce7bad6081b9442e6c7
+units	AHU Temp	ahu.T	degF	K
+units	Limit	lim	percent	1
+units	Zone Temp	zone.T	degC	K

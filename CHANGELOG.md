@@ -810,8 +810,9 @@ so far, and no tag is cut by the bump.
     shared 64 KiB subject) peaks at 8.5 MB with a receipt where it peaked at 67.9 MB. The later
     stages' lists are not held to the bound, so #708 stays open for them.
   - **Not held to this bound:** the lists the later load stages return and an export's
-    diagnostics. `@context` expansion and an array parameter's element names amplify a document
-    without a diagnostic (issues #709 and #710).
+    diagnostics. `@context` expansion amplified a document without a diagnostic, until the
+    expansion bound below (issue #709), and an array parameter's element names did too, until
+    the path budget below (issue #710).
   - **Both readers.** `oce-author`'s importer answers with one refusal and already refuses a
     name longer than 64 bytes as `invalid-name`; the same document is pinned there as one
     refusal that names the `@id` once. Its source is unchanged.
@@ -819,6 +820,132 @@ so far, and no tag is cut by the bump.
     `ValidationReport::diagnostics` are the types they were; the list type is internal to
     `oce-cxf`. No format, content id, blob or golden moves, and the workspace version is not
     bumped.
+- **A sparse flattened table is one validation finding, and each validator pass's diagnostics
+  hold at most 8 MiB of text** (GitHub #732, issue #726).
+  A `CDL.Reals.Sources.TimeTable` takes its shape from the largest `table_<row>_<col>` it
+  carries, so one parameter `table_524288_2` declares 1,048,576 cells and binds one. The
+  validator raised a `parameter-out-of-range` for every absent cell and walked the whole shape to
+  find them: 3 such blocks, 1.6 KB of CXF, were 3,145,725 diagnostics, a 579 MB peak and
+  3,147,126 allocations, and 50 blocks, 26 KB, held 9.5 GB for 198 s. The 3-block document is now
+  refused with 3 diagnostics at an 8.5 MB peak (one constructor probe's 8.4 MB of it, issue #722)
+  and 1,425 allocations; 50 blocks peak at 9.2 MB.
+  - **One finding a table.** The absent cells of a table are one `parameter-out-of-range` error
+    on the block, with their count, the table's shape and the first four in row order, then how
+    many more. Was, one per cell: `table `table` on block `CDL.Reals.Sources.TimeTable` is
+    missing required cell table_1_1`, and so on for each. Now:
+    `table `table` on block `CDL.Reals.Sources.TimeTable` is missing 1048575 required cells of
+    its 524288x2 shape: table_1_1, table_1_2, table_2_1, table_2_2 and 1048571 more`. A table
+    short exactly one cell keeps the message it had, which names that cell. Every other finding
+    is raised as before: each bound cell is still judged, and the time-column checks (finite,
+    nondecreasing, periodic range, period) still run whenever every row has a numeric time, an
+    output cell absent or not.
+  - **Found, not walked.** The absent cells are counted from the cells the block binds and the
+    first four found between them, so the rule's work is the block's parameters, not its shape.
+    The same holds for an `ExtractSignal`'s omitted selectors, whose default is their index:
+    `nin` 1 and `nout` 2^20 raised 1,048,575 findings, and two or more out of range are now one,
+    `parameter `extract` on block `…` omits 5 elements whose default, the element's index, is
+    outside range 1..=1: extract_2, extract_3, extract_4, extract_5 and 1 more` (one keeps its
+    message); and for a `VectorFilter`'s omitted mask members, which are counted as `true`
+    rather than walked (one finding at most, as before). The audit of every other rule over a
+    parameter-declared shape (a matrix's `K_r_c`, a table's offsets, the vector element rules,
+    the finiteness and spelling rules) found each one per bound parameter already.
+  - **The validator's lists are held to the reader's budget.** `unify_attributes`, `validate` and
+    `validate_block_parameters` each collect their diagnostics in the list the CXF reader holds
+    (GitHub #713): at most 8,388,608 bytes of message and subject text, a subject counted for
+    every diagnostic; the first diagnostic that does not fit ends the list and one
+    `resource-limit-exceeded` error, after the pass's sorted diagnostics, counts it and every
+    later one and names the first. A duplicate parameter past the budget is counted and not
+    built. `unify_and_validate` returns its two passes' warnings together. The list type,
+    `DiagnosticList`, moved from `oce-cxf` to `oce-diag` and is public there, with the quoting
+    its closing error uses (`excerpt`, `visible`, `is_format_or_control` and the `Cf` table
+    `FORMAT_RANGES`, the last and `is_format` hidden from the documentation: they are public only
+    for `oce-cxf`'s Unicode-data test); `oce_cxf::is_format_or_control` and `oce_api::is_format_or_control` are
+    re-exports of it, so no caller changes.
+  - **Breaking, in place: warnings alone can refuse a model at validation,** as they can at the
+    reader since GitHub #713 (the owner's ruling there, mirrored): a pass whose warnings pass the
+    bound is refused, never passed with warnings missing. A document refused before is refused
+    still, and nothing that loaded before is refused by the one-finding change.
+  - **What is left on the issue's shape** is the constructor probes of the resolve and
+    validation passes (issue #722): 5,000 such blocks, a 2.6 MB document, are refused by
+    validation with 5,000 findings at a 75 MB peak but request 84 GB in total; the constructed
+    budget of GitHub #721 is charged only at instantiation, which validation's refusal comes
+    before.
+  - **Only a sparse table's or a vector's defaulted findings change.** Every diagnostic of the
+    257 tracked documents that hold an `@graph` and of the 139 CXF documents of
+    `open-control-library` (`main` at `d90f63b`), as written and with the retired namespace
+    rewritten, is byte-identical before and after (535 loads, 282 load and 253 are refused), and
+    so is `oce id --json` over the same 535; none of them has a sparse table. No format, content
+    id, blob or golden moves, and the workspace version is not bumped.
+  - **Tests:** `crates/oce-api/tests/validate_sparse_table_cost.rs` (the issue's three
+    documents: refusal, peak, allocations and requested bytes a block),
+    `crates/oce-api/tests/validate_diagnostic_list_bound.rs` (a validator list past the budget
+    through `Engine::load_cxf`, the closing error last), `crates/oce-validate/src/tests/`
+    `diagnostic_budget.rs` (both edges of the budget, warnings, errors, sorted order, one finding
+    larger than the budget, a block's parameters), `source_timetable_absent_cells.rs` and
+    `routing_defaulted_selectors.rs`, `rules/params_absent_tests.rs` (counting against walking
+    every range of a small shape) and one case in `rules/params_arrays_tests.rs` (a selector
+    range that is empty).
+- **An array parameter's element paths are held to 64 MiB a document, and its names are built
+  one at a time** (GitHub #724, issue #710). Every element of `k[n]` on an instance `c` is minted
+  under a name of its own, `k_1` to `k_n`, and `Engine::params()` keys each by its path, `c.k_1`
+  to `c.k_n`, with `c` the instance's full IRI; the reader also spells each path once to check
+  minted aliases. So an array's paths take `n` times the lengths of `c` and `k`, and the reader
+  built every name before it read the value. The per-document element budget counts elements,
+  not bytes, so a long name or a long instance IRI over a large declared size asked for
+  `elements × (IRI + name)` bytes whatever the value was: the issue's document (a 64 KiB name over
+  1,024 elements, 136,486 bytes) peaked at 202 MB, a 1 KiB name over 262,144 elements (7,464
+  bytes) at 860 MB, and a constant renamed to 4 KiB with an array of 65,536 (38,356 bytes) loaded
+  at 854 MB.
+  - **The bound.** The element paths of all preserved array parameters of one document take at
+    most 67,108,864 bytes together (`MAX_DOCUMENT_ARRAY_PATH_BYTES`, the element budget at 64
+    bytes an element). A path is counted as `params()` spells it, the instance IRI, `.`, the
+    element's name, exactly and without building a name. A parameter that crosses the budget is
+    refused as `resource-limit-exceeded`, subject the parameter, where the element budget is
+    checked and before its value is read: ``array parameter's 1024 element path(s) (instance
+    IRI, `.`, element name) need 67144621 byte(s) but the element paths of the document's array
+    parameters already use 0 of the 67108864-byte per-document budget``. The element budget is
+    checked first, so a parameter over both is refused for its elements as before, and a refused
+    parameter draws on neither. The three documents above are now refused with that one
+    diagnostic, at peaks of 0.70 MB, 0.12 MB and 0.26 MB, and the declared size of a refused
+    array costs nothing: the issue's name over 1,048,576 elements requests 15 bytes more than
+    over 1,024.
+  - **What it admits.** One array of the whole element budget, `k[1048576]`, only while the
+    instance IRI and the base name take at most 56 bytes together; 933,610 elements under 64
+    bytes of the two, and 494,264 under 128. Real instance IRIs are often longer than 56 bytes,
+    so for a million-element array this budget, not the element budget, binds. No model that the
+    257 tracked documents holding an `@graph` or the 139 CXF documents of
+    `open-control-library` load holds more than 12,217 bytes of parameter paths in all, or a path
+    longer than 137 bytes.
+  - **Names are built one at a time,** into one buffer, where each element is minted and once
+    the value's shape is known to fit. A list of the wrong length, a scalar or an expression of
+    the wrong length builds none (a 32 KiB name over 1,024 elements refused for its value peaked
+    at 67.5 MB and now at 0.41 MB), and nothing holds every name beside the minted entries. The
+    names and their order are unchanged.
+  - **What a load within the budget costs.** A load holds at most about four copies of the paths
+    at its peak: a document whose paths fill the budget with long names loads at 269 MB, as
+    before, and one whose paths a 4 KiB instance IRI fills, at 208 MB. The element budget
+    already admits a 5.6 KB document of 1,048,576 one-letter names that peaks at 786 MB.
+  - **Not bounded yet: an element's value.** The two budgets count elements and the bytes of
+    their paths. A broadcast array whose one value is a string literal grounds the string again
+    for each element, each a string of its own, and no budget counts those bytes: `q[1024]` with
+    a 60 KB string, a 66 KB document, loads at 124 MB (issue #736).
+  - **Breaking, in place:** a document whose array element paths total more than 64 MiB loaded
+    before, memory permitting, and is now refused, among them the 38 KB document above and a
+    65,000-byte name over 1,024 elements beside a one-element array named by 513,075 bytes,
+    which loaded at 269 MB. No tracked or library document comes near it. Their 535 loads (the
+    library's as written and again with the retired namespace rewritten) give byte-identical
+    outcomes, diagnostics, resolved models and content ids before and after. Tightening accepted
+    CXF input is not a format change (the unit-spellings ruling 7, the ruling on #647, and
+    GitHub #713 before this), so no format, content id, blob or golden moves and the workspace
+    version is not bumped.
+  - **Tests.** `oce-cxf`'s `arrays_tests.rs` (the names against a Cartesian-product oracle, the
+    counted path bytes against the paths built, what the budget admits, the budget at its exact
+    byte and one past, a refusal reserving nothing), two cases in `resolve_load_bounds.rs` (the
+    budget to the byte across two leaves, one under a multibyte 4 KB IRI with multibyte names,
+    and a parameter refused for its paths drawing no element), and `oce-api`'s
+    `cxf_array_element_names_cost.rs` (the three documents above and the 64 KiB instance,
+    the declared size, the three refused values, and the budget's edge under long names and
+    under a long IRI, measured with `allocation-counter`).
 - **`@context` expansion adds at most 8 MiB to a document, and reading a token copies nothing**
   (GitHub #730, issue #709). A token read through a prefix is as long as the IRI the prefix
   binds. The document sets that length and the number of tokens and pays a few bytes for each,
@@ -932,6 +1059,30 @@ so far, and no tag is cut by the bump.
     on each side, and every truncation and bit flip of one blob, held to the facade's own
     refusal; three golden comparisons; the mirror over every pair. `oce-api` and the blob format
     are untouched, and no blob golden moves.
+- **The commissioning verifier's trend sources: the `combiTimeTable` reader and frames at the
+  union of times** (GitHub #729, issue #660; commissioning note, "Sources, sampling and time",
+  decisions 15, 19, 25, 27, 28 and 42, and the owner's rulings of 2026-11-21). `oce-verify`
+  gains `TrendSources::read(spec, reference, &SpecInputs, &TrendLimits)`, which turns the bytes
+  of a reference's trend files into the merged inputs (`TrendInputs`, handed to replay as a
+  `ColumnarSource` with the spec's origin, `TimeBase::Recorded`, `DuplicateTime::Allow`, the
+  run-level `Refuse` and one `HoldLast { max_age }` override per column of a source with
+  `hold.maxAge`), the expected and indicator series (`TrendSeries`, finite samples in CDL units
+  and types, an indicator keeping its mapped name) and the receipt's `sources`, `mapping` and
+  `units.columns` records. `csv` is read by replay's `CsvSource`; `combiTimeTable` by a new
+  reader of OBC §12.5.1's `#1` text (C decimal numbers rounded correctly, `#` comments, several
+  matrices with `table`), not a `.mo` parser. Input sources merge on the union of their times,
+  the `i`-th row of a source at an instant filling the `i`-th frame there, independent of the
+  order of files and declarations. A `controllerOutput` with no `expected` is read as OBC
+  §12.7.3's csv. Every cell goes through its type rule and the unit table once; an infinity, a
+  decreasing time, a `0.5` in a Boolean column, an unknown or one-sided unit pair (before any row
+  is read) and two columns naming one device point in a role are typed `SourceError`s
+  (`SOURCE_ERROR_CODES`, 39 codes) with file, row and column. Bounded by `TrendLimits`: 256
+  sources, 1 GiB of a reference's files together (`too-many-total-bytes`, checked from the
+  lengths before any parse), and replay's caps on each file and on the merge, whose columns
+  cost frames times columns and are checked against the byte cap before they are allocated.
+  OBC §12.7.3's padded example csv files are refused until replay trims cells (#733), and a
+  `csv` Boolean reads `true`, `false`, `1` and `0` only until replay hands a text cell over
+  (#728).
 
 - **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point
   mapping** (GitHub #716, issue #659, closes #714; commissioning note, "Point mapping", decisions

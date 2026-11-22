@@ -26,7 +26,7 @@ use oce_diag::{DiagCode, Diagnostic, Severity};
 
 const MODEL: &str = include_str!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 
-/// The reader's budget of message and subject text (`oce-cxf`'s `MAX_DIAGNOSTIC_TEXT_BYTES`),
+/// The reader's budget of message and subject text (`oce_diag::MAX_DIAGNOSTIC_TEXT_BYTES`),
 /// restated so this test fails if the budget moves without review.
 const BUDGET: usize = 8 * 1024 * 1024;
 

@@ -1,0 +1,3 @@
+# status.csv is written with CRLF line ends, as the Building 33 trends are: keep its bytes, so its
+# digest is the same in every checkout.
+status.csv -text

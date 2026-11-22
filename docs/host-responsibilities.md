@@ -673,7 +673,10 @@ changes.
 | Composite **nesting** (`containsBlock` lowering) | 64 | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 | Composite boundary path | 64 non-top `isConnectedTo` hops | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 | Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
-| Diagnostic text of one CXF read | 8 MiB (8,388,608 bytes) of messages and subjects together, a subject counted for each diagnostic | `crates/oce-cxf/src/diagnostic_list.rs` | the list ends; one closing `resource-limit-exceeded` error counts what is not listed |
+| Diagnostic text of one CXF read | 8 MiB (8,388,608 bytes) of messages and subjects together, a subject counted for each diagnostic | `crates/oce-diag/src/diagnostic_list.rs` | the list ends; one closing `resource-limit-exceeded` error counts what is not listed |
+| Diagnostic text of one validator pass (unification, validation, a block's parameters) | the same 8 MiB, the same count | `crates/oce-diag/src/diagnostic_list.rs`, `crates/oce-validate/src/lib.rs` | the same: the pass ends with the closing error after its sorted diagnostics |
+| Absent elements of a parameter-declared shape (a `TimeTable`'s cells, an `ExtractSignal`'s defaulted selectors) | one finding a shape, naming the count and the first four | `crates/oce-validate/src/rules/params_absent.rs` | `parameter-out-of-range`, found from the elements bound, never by walking the shape |
+| Preserved array parameters of one document | 1,048,576 elements, and 64 MiB (67,108,864 bytes) of element paths together, each path the instance IRI, `.` and the element's name | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses either, before its value is read or any of its names is built; it draws on neither |
 | Constructed blocks, model-wide | 4,194,304 words (32 MiB) held by the blocks outside their state: tables, gain matrices, resolved port kinds | `crates/oce-graph/src/constructed.rs` | `OcError::Build(BuildError::ConstructedTooLarge { block, requested, limit })` at instantiation, recorded as `resource-limit-exceeded`; `BlobError::ConstructedTooLarge` from the blob decoder |
 | Run state, model-wide | 4,194,304 words (32 MiB) | `crates/oce-graph/src/lib.rs` | `OcError::Build(BuildError::StateTooLarge { block, requested, limit })`, recorded as `resource-limit-exceeded`; `BlobError::StateTooLarge` from the blob decoder |
 | What `@context` expansion adds to one document | 8 MiB (8,388,608 bytes) over every expanded token, an expansion counted as its length less the token's | `crates/oce-cxf/src/expansion_budget.rs` | `resource-limit-exceeded` on the node the first token that does not fit is written on; nothing after it is read |
@@ -683,6 +686,27 @@ traversal is iterative, so an accepted path does not consume one call-stack fram
 budgets also bound shallow fan-out and repeated long IRIs that a depth limit alone would miss.
 Direct leaf wiring is outside those budgets. Below the limits the walk keeps target order and
 duplicate paths intact for single-assignment validation.
+
+An array parameter `k[n]` of an instance `c` is minted as `n` scalar parameters named `k_1` to
+`k_n`, and `Engine::params()` keys each by its path, `c.k_1` to `c.k_n`, with `c` the instance's
+full IRI. So an array's paths take `n` times the lengths of `c` and `k` while the document writes
+them a few times (issue #710). The paths of one document are counted, as `params()` spells them,
+before any name is built, and held to 64 MiB. What that admits for one array: the whole element
+budget, `k[1048576]`, only while the instance IRI and the base name take at most 56 bytes
+together; 933,610 elements under 64 bytes of the two, and 494,264 under 128. Real instance IRIs
+are often longer than 56 bytes (the corpus's parameter paths run to 137 bytes), so for a
+million-element array this budget, not the element budget, is the one that binds. No tracked or
+`open-control-library` model holds more than 12,217 bytes of parameter paths in all. A load holds
+at most about four copies of the paths at its peak: measured, 269 MB for a document whose paths
+fill the budget with long names, and 208 MB when a long instance IRI fills it. Nothing is built for
+a parameter refused for its size or for its value's shape.
+
+The two budgets bound how many elements an array mints and the bytes of their names and paths, not
+their values. A broadcast array whose one value is a string literal is grounded again for each
+element, each a string of its own, and no budget counts those bytes yet (issue #736): `q[1024]`
+with a 60 KB string, a 66 KB document, loads at 124 MB, and the cost grows with the declared size.
+Until that is fixed, treat a document that declares a large array with a string value as one that
+can need memory in proportion to the declared size.
 
 ### A refusal list is a bounded answer
 
@@ -736,9 +760,27 @@ of a load, to 8 MiB of text (issue #695). What you can rely on:
   very many such findings is refused after as long as building them takes, where without the
   bound it failed on allocation first.
 
-The bound covers what `oce-cxf` raises while it reads. The later load stages (unification,
-validation, the schedule) return lists of their own, which this bound does not hold: a receipt
-copies their subjects too (issue #708). An export's diagnostics are not held to it either.
+The bound covers what `oce-cxf` raises while it reads, and, as its own list, what each validator
+pass raises (issue #726): attribute unification, validation, and a block's parameter checks
+behind `class_ports`. A validator pass sorts the diagnostics it listed and puts the closing error
+after them, so the error is last in `OcError::diagnostics()` there too; which diagnostics are
+listed follows the order the rules raise them in, which is fixed. Warnings alone can refuse at
+these stages as at the reader: a model whose unification warnings pass 8 MiB is refused. Each
+list is held on its own, so the warnings of a load that succeeds are at most the reader's 8 MiB
+and each validator pass's. The schedule and semantic stages return lists of their own, which no
+bound holds, and a receipt copies the subjects of every stage's records (issue #708). An export's
+diagnostics are not held to it either.
+
+A rule that judges the elements of a shape one parameter sets does not raise a finding an
+element. A `TimeTable` takes its shape from its largest `table_<row>_<col>`, so one parameter
+`table_524288_2` declares 1,048,576 cells and binds one; the validator raised one
+`parameter-out-of-range` a cell absent, 52 million diagnostics and 9.5 GB for 50 such blocks in
+26 KB of CXF. It now raises one finding for the table, ``table `table` on block `…` is missing
+1048575 required cells of its 524288x2 shape: table_1_1, table_1_2, table_2_1, table_2_2 and
+1048571 more``, and finds the absent cells from the bound ones, so its work is the block's
+parameters, not its shape. A table short one cell keeps its message, which names that cell. An
+`ExtractSignal`'s omitted selectors out of range are one finding the same way, and a
+`VectorFilter`'s omitted mask members are counted, not walked.
 
 ### Expansion adds a bounded amount to a document
 
@@ -807,11 +849,12 @@ The byte cap does not bound peak memory, CPU time, expansion, or total graph com
 a sandbox, cancellation/deadline guarantee, or evidence that every below-cap document is safe.
 Below the cap the pipeline refuses the known amplification shapes with typed diagnostics (issue
 #365): a `containsBlock` child reached twice (`shared-instance`), array parameters past a
-1,048,576-element per-document budget, run state past 4,194,304 words, since issue #700 what
-the constructed blocks hold outside their state (tables, gain matrices, resolved port kinds)
+1,048,576-element per-document budget or past 64 MiB of element paths (issue #710; a broadcast
+string value is not yet counted, issue #736), run state past 4,194,304 words, since issue #700
+what the constructed blocks hold outside their state (tables, gain matrices, resolved port kinds)
 past 4,194,304 words, and since issue #709 `@context` expansion that adds more than 8 MiB to a
-document (all four `resource-limit-exceeded`), and binding evaluation past
-2^24 deterministic work units per expression or 2^26 per document (`grounding-failed`). Those limits bound growth, not absolute footprint — a maximal admissible
+document (all four `resource-limit-exceeded`), and binding evaluation past 2^24 deterministic
+work units per expression or 2^26 per document (`grounding-failed`). Those limits bound growth, not absolute footprint — a maximal admissible
 document can still need hundreds of MiB — so isolation stays your obligation.
 Receipt admission refusals use the existing `Import` stage, with byte counts only and no input
 content, source error or structured diagnostics in the `OcError`; `OperationFailure` still exposes

@@ -393,7 +393,7 @@ rejected is under [Rulings](#rulings).
    - **Memory:** one `Arc<str>` a term, as today. Mapped strings are `&'static str`.
    - **No I/O:** no IRI is dereferenced, and nothing touches a network or a file.
    - **Messages:** a refusal quotes the IRI through the engine's shared excerpt bound
-     (`crates/oce-cxf/src/excerpt.rs`, 64 bytes, cut on a character boundary).
+     (`oce_diag::excerpt`, 64 bytes, cut on a character boundary).
      *Amended at finalisation: the draft proposed 128 bytes before GitHub #623 landed one bound
      for every quoted token. The ruling asks only that the message be truncated.*
    - **Near misses:** a key that names a new spelling only after trimming (`"qudt:hasUnit "`) is

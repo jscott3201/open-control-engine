@@ -109,10 +109,10 @@ use std::collections::BTreeSet;
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{Context, CxfDocument, IriRef, Node, OneOrMany, TermAttr};
 use crate::resolve::term_shape;
 use crate::unit_iri::unit_of_iri;
+use oce_diag::DiagnosticList;
 
 #[path = "context_scope.rs"]
 mod context_scope;

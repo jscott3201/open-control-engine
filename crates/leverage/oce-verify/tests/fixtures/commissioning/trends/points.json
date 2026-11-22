@@ -1,0 +1,12 @@
+[
+  { "cdl": { "name": "ahu.T", "unit": "K", "type": "float" },
+    "device": { "name": "AHU Temp", "unit": "degF", "type": "float" } },
+  { "cdl": { "name": "zone.T", "unit": "K", "type": "float" },
+    "device": { "name": "Zone Temp", "unit": "degC", "type": "float" } },
+  { "cdl": { "name": "n", "type": "int" },
+    "device": { "name": "Count", "type": "float" } },
+  { "cdl": { "name": "b", "type": "bool" },
+    "device": { "name": "Enable", "type": "bool" } },
+  { "cdl": { "name": "lim", "unit": "1", "type": "float" },
+    "device": { "name": "Limit", "unit": "percent", "type": "float" } }
+]

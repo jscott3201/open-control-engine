@@ -47,7 +47,7 @@
 //! matching signature position. Any other partial match still earns [`DiagCode::PortNameMismatch`]
 //! rather than a guess.
 
-use crate::diagnostic_list::DiagnosticList;
+use oce_diag::DiagnosticList;
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockInstance, ConnectorId};
 

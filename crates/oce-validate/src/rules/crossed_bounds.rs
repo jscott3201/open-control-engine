@@ -26,7 +26,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{Attrs, Dir, ModelGraph};
 
 use super::subject_of;
@@ -156,7 +156,7 @@ fn tighter(a: Option<f64>, b: Option<f64>, pick: fn(f64, f64) -> f64) -> Option<
 /// One diagnostic per crossed attribute set, subject = the connector's or declaration's authored
 /// identity; a combined-domain crossing adds one more on the boundary path only when none of its
 /// members was already reported. Reads attributes only; total and panic-free on any graph.
-pub(crate) fn check_crossed_bounds(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+pub(crate) fn check_crossed_bounds(model: &ModelGraph, diags: &mut DiagnosticList) {
     for connector in &model.connectors {
         report(&connector.attrs, "connector", &subject_of(connector), diags);
     }
@@ -169,7 +169,7 @@ pub(crate) fn check_crossed_bounds(model: &ModelGraph, diags: &mut Vec<Diagnosti
     check_combined_input_domains(model, diags);
 }
 
-fn report(attrs: &Attrs, owner: &str, subject: &Arc<str>, diags: &mut Vec<Diagnostic>) {
+fn report(attrs: &Attrs, owner: &str, subject: &Arc<str>, diags: &mut DiagnosticList) {
     let Some(bounds) = Bounds::of(attrs).filter(|bounds| bounds.crossed()) else {
         return;
     };
@@ -191,7 +191,7 @@ fn report(attrs: &Attrs, owner: &str, subject: &Arc<str>, diags: &mut Vec<Diagno
 /// boundary target carries the boundary's IRI), keep the groups that a host supplies (an external
 /// input among the members), fold in the matching boundary declaration, and refuse an empty
 /// intersection. Grouping is by `BTreeMap`, so the emission order is the path order.
-fn check_combined_input_domains(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+fn check_combined_input_domains(model: &ModelGraph, diags: &mut DiagnosticList) {
     let mut groups: BTreeMap<&str, (bool, Vec<&Attrs>)> = BTreeMap::new();
     for connector in &model.connectors {
         let (Dir::In, Some(iri)) = (connector.dir, connector.iri.as_deref()) else {
@@ -251,7 +251,7 @@ pub(crate) fn check_propagated_cluster(
     root: u32,
     connectors: usize,
     boundary_outputs: usize,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) {
     let Some(source) = model.connectors.get(root as usize) else {
         return;

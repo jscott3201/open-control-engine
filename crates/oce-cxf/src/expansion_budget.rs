@@ -24,9 +24,9 @@
 use oce_diag::{DiagCode, Diagnostic};
 
 use super::token_expansion::Iri;
-use crate::diagnostic_list::DiagnosticList;
-use crate::excerpt::excerpt;
-use crate::format_controls::visible;
+use oce_diag::DiagnosticList;
+use oce_diag::excerpt;
+use oce_diag::visible;
 
 /// The most bytes `@context` expansion adds to one document, over every token it expands: 8 MiB,
 /// the size of the largest document the facade admits. An expansion adds its length less the

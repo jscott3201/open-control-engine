@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use oce_diag::{DiagCode, Diagnostic};
 
 use super::declaration_scope::{TaggedFinding, WithheldFindings};
-use crate::diagnostic_list::DiagnosticList;
+use oce_diag::DiagnosticList;
 
 /// The finding that `iri` re-binds `k`, first declared at `first`.
 fn rebinding<'a>(iri: &'a str, first: &'a str) -> TaggedFinding<'a> {

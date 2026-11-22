@@ -25,7 +25,7 @@ fn block(class: &str, names: &[&str]) -> BlockInstance {
 }
 
 fn refused(class: &str, names: &[&str]) -> usize {
-    let mut diags = Vec::new();
+    let mut diags = oce_diag::DiagnosticList::new();
     check_element_name_spelling(&block(class, names), &mut diags);
     assert!(
         diags

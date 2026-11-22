@@ -6,8 +6,8 @@ use std::sync::Arc;
 use oce_model::{ConnectorId, Dir, ValueType};
 
 use super::{EndpointId, EndpointLookups, EndpointTable};
-use crate::diagnostic_list::DiagnosticList;
 use crate::resolve::specialize::Specialization;
+use oce_diag::DiagnosticList;
 
 struct Fixture<'a> {
     specialization: Specialization,

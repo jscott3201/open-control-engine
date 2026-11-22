@@ -3,8 +3,8 @@
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{ValueType, enum_class_id, is_g36_integer_constant_package};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
+use oce_diag::DiagnosticList;
 
 /// First `@type` term of a node, if any.
 pub(super) fn first_type(node: &Node) -> Option<&str> {

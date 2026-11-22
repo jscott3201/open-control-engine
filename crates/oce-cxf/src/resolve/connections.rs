@@ -16,8 +16,8 @@ use std::collections::{HashMap, HashSet};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Connection, Connector, ConnectorId, Dir};
 
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::Node;
+use oce_diag::DiagnosticList;
 
 use super::boundary_inputs::AssignmentTracker;
 use super::connection_endpoints::{EndpointId, EndpointLookups, EndpointTable};

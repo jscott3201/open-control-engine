@@ -72,11 +72,11 @@ use super::expansion_budget::{ExpansionBudget, Site};
 use super::token_expansion::{Expansion, Iri, PrefixTable, expand_token};
 use super::unread_qudt_has_unit::{UnreadHasUnit, unread_has_unit};
 use super::vocabulary_namespace::{FOREIGN_NAMESPACES, foreign_key};
-use crate::diagnostic_list::DiagnosticList;
 use crate::dto::{CxfDocument, Node};
-use crate::excerpt::excerpt;
 use crate::export::S231_CONTEXT_IRI;
 use crate::unit_iri::QUDT_SCHEMA_NAMESPACES;
+use oce_diag::DiagnosticList;
+use oce_diag::excerpt;
 
 /// Every property term the [`Node`] DTO models as a typed field, i.e. every `S231:<term>` serde
 /// rename. A unit test pins this list against the DTO in both directions.

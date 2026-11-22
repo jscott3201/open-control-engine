@@ -19,9 +19,24 @@
 //! ascending order per the plan §2 determinism rule) is achieved by the producing crate iterating
 //! its own arena in order — `Diagnostic` deliberately carries only a string `subject`, never a
 //! structured connector id, so this crate stays a zero-dependency leaf (no `oce-model` dep).
+//!
+//! Beside the vocabulary it holds what every producer needs to keep a refusal a bounded answer:
+//! [`DiagnosticList`], a list held to [`MAX_DIAGNOSTIC_TEXT_BYTES`] of message and subject text
+//! that closes with one [`DiagCode::ResourceLimitExceeded`] error (issues #695 and #726), and the
+//! quoting its closing error and the producers' messages share: [`excerpt`] cuts a quotation to
+//! [`EXCERPT_BYTES`] and [`visible`] escapes each Unicode format or control character
+//! ([`is_format_or_control`]).
 
 use std::fmt;
 use std::sync::Arc;
+
+mod diagnostic_list;
+mod quoting;
+
+pub use diagnostic_list::{DiagnosticList, MAX_DIAGNOSTIC_TEXT_BYTES};
+pub use quoting::{
+    EXCERPT_BYTES, FORMAT_RANGES, excerpt, is_format, is_format_or_control, visible,
+};
 
 /// How severe a [`Diagnostic`] is. Only [`Severity::Error`] fails a load; warnings and info are
 /// advisory (e.g. `displayUnit` divergence is a should-warning per §7.10, never a hard error).
@@ -253,13 +268,14 @@ pub enum DiagCode {
 
     // --- Hostile-input resource budgets (any ingest stage) ---
     /// A document or model crossed a documented, deterministic resource budget that bounds
-    /// input-derived memory: the per-document array-parameter element budget (`oce-cxf`), the
-    /// bytes `@context` expansion may add to one document (`oce-cxf`, GitHub issue #709: 8 MiB
-    /// over every expanded token, an expansion counted as its length less the token's; the
-    /// subject is the node the first token that does not fit is written on), the per-model
-    /// `[S]` state-word budget or the per-model budget of words the constructed blocks hold
-    /// outside their state (both `oce-graph`; GitHub issue #700 for the second). The refusal is typed and happens before the
-    /// over-budget allocation; the message names the budget and the requested amount.
+    /// input-derived memory: the per-document array-parameter element budget and its budget of
+    /// element-path bytes (`oce-cxf`, issue #710), the bytes `@context` expansion may add to one
+    /// document (`oce-cxf`, GitHub issue #709: 8 MiB over every expanded token, an expansion
+    /// counted as its length less the token's; the subject is the node the first token that does
+    /// not fit is written on), the per-model `[S]` state-word budget or the per-model budget of
+    /// words the constructed blocks hold outside their state (both `oce-graph`; GitHub issue #700
+    /// for the second). The refusal is typed and happens before the over-budget allocation; the
+    /// message names the budget and the requested amount.
     ///
     /// The same code closes a diagnostic list of the `oce-cxf` reader that reached its budget of
     /// text (GitHub issue #695): 8 MiB of messages and subjects, a subject counted for every

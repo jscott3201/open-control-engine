@@ -4,7 +4,7 @@ use oce_diag::DiagCode;
 use oce_model::{BlockId, Connection, Connector, ConnectorId, Dir, ValueType};
 
 use super::check;
-use crate::diagnostic_list::DiagnosticList;
+use oce_diag::DiagnosticList;
 
 /// Two outputs (0, 1) then two inputs (2, 3), all on one block.
 fn connectors() -> Vec<Connector> {
