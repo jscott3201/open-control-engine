@@ -1384,7 +1384,7 @@ so far, and no tag is cut by the bump.
 ### Leverage
 
 - **`oce-verify` compares a commissioning reference with no `sampling` by change of value**
-  (GitHub #PRNUM, issue #746; design note `docs/design/commissioning.md`, "As landed: the
+  (GitHub #790, issue #746; design note `docs/design/commissioning.md`, "As landed: the
   change-of-value comparison", ruled by the owner on 2026-11-22). Both series are step functions:
   the engine's output held from frame to frame, a trend's from sample to sample. An output's
   instants are the window's ends and every sample time in the window of the engine series, the
@@ -1406,12 +1406,12 @@ so far, and no tag is cut by the bump.
   bit for bit to `derive_run.py`'s independent derivation, three golden receipts, and mutants.
   A run with a `sampling` is unchanged, every golden and transcript byte-identical.
 - **A commissioning reference with no `sampling` runs: `sampling-required` is gone** (GitHub
-  #PRNUM, issue #746). The owner's ruling of 2026-11-21 refused such a reference until a
+  #790, issue #746). The owner's ruling of 2026-11-21 refused such a reference until a
   faithful comparison existed; it now runs by change of value. The code is removed from
   `VERIFY_ERROR_CODES` (48 codes; `too-many-indicators` follows `unit-refused`), and
   `TimeRecord::sampling` is an `Option<SpecNumber>`: a receipt with no `sampling` has no
   `time.sampling`.
-- **`oce verify --commission` runs a spec whose reference gives no `sampling`** (GitHub #PRNUM,
+- **`oce verify --commission` runs a spec whose reference gives no `sampling`** (GitHub #790,
   issue #746). The verb reads the reference's files and prints the library's receipt, where it
   printed the `sampling-required` report and exited 2; `oce vocab` no longer lists that code.
   The transcript `verify_commission_sampling_required` is replaced by three change-of-value

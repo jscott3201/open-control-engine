@@ -942,7 +942,7 @@ and the review of GitHub #744:
    Integer `2`) is `indicator-not-boolean`, exit 2, with no receipt. The refusal names the
    indicator, the time and the value. Every sample is checked, whether or not the window
    reaches it.
-6. **`sampling` is required for now.** *(Lifted by GitHub #PRNUM, issue #746: see "As landed:
+6. **`sampling` is required for now.** *(Lifted by GitHub #790, issue #746: see "As landed:
    the change-of-value comparison". The code `sampling-required` is gone.)* A reference whose own
    `sampling` and the spec's are both
    absent is refused as `sampling-required`, exit 2, with no receipt. Without a grid, the test
@@ -1104,7 +1104,7 @@ boundary).
 
 ### As landed: the change-of-value comparison
 
-*(GitHub #PRNUM, issue #746.)* A reference with no `sampling`, its own or the spec's, runs again:
+*(GitHub #790, issue #746.)* A reference with no `sampling`, its own or the spec's, runs again:
 its outputs are compared **by change of value**. The refusal `sampling-required` (ruling 6
 above) is lifted and its code removed. A reference with a `sampling` runs exactly as before, and
 every receipt and transcript of one is byte-identical, the Building 33 day's included. The code
