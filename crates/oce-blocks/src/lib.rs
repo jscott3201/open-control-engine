@@ -54,7 +54,7 @@ mod declared_parameters;
 mod element_extents;
 pub use catalog_rules::ParamRuleProjection;
 pub use class_signature::{class_is_target_bound, class_signature_hash};
-pub use constructed::MAX_CONSTRUCTION_PEAK_BYTES;
+pub use constructed::{ConstructedBudget, MAX_CONSTRUCTED_WORDS, MAX_CONSTRUCTION_PEAK_BYTES};
 mod conversions;
 mod discrete;
 mod discrete_sampled;
@@ -394,7 +394,7 @@ pub trait Block: Send + Sync {
     /// pointer width, so a 32-bit target reports what a 64-bit host does and holds no more.
     ///
     /// A loader sums this over a model as it constructs the blocks and refuses a model past its
-    /// budget (`oce_graph::MAX_CONSTRUCTED_WORDS`), so an implementation that owns a buffer sized
+    /// budget ([`MAX_CONSTRUCTED_WORDS`]), so an implementation that owns a buffer sized
     /// by a parameter **must** count it: a block that holds more than it reports defeats the
     /// budget. `tests/constructed_words.rs` measures every registered class against this value
     /// under hostile parameter tables. The default is zero, for a block that owns no buffer.

@@ -318,6 +318,7 @@ fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machiner
         &map,
         Pass::Specialize {
             composite_chain: true,
+            leaf_class: None,
         },
     );
     assert_eq!(
@@ -376,6 +377,7 @@ fn leaf_chain_cycle_and_duplicate_refuse_silently_at_the_specialize_invocation()
         &map,
         Pass::Specialize {
             composite_chain: false,
+            leaf_class: None,
         },
     );
     assert!(

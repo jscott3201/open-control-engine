@@ -125,3 +125,96 @@ fn an_integer_root_parameter_bound_to_an_integer_constant_loads_in_both() {
     let emitted = oce(&["emit", "-", "--from", "text"], &imported.stdout);
     assert_eq!(emitted.code, 0, "{}", emitted.transcript());
 }
+
+/// Issue #759's reproduction: a `PID` leaf whose own output is conditional on `reverseActing =
+/// "yMax + 1 > yMax"`, with `yMax` written `literal`.
+fn leaf_guard_document(literal: &str) -> Vec<u8> {
+    let ns = "http://example.org#";
+    let real = |id: &str, kind: &str, extra: &str| {
+        format!(
+            r#"{{ "@id": "{ns}{id}", "@type": "S231:Real{kind}", "S231:isOfDataType": {{ "@id": "S231:Real" }}{extra} }}"#
+        )
+    };
+    let nodes = [
+        format!(
+            r#"{{ "@id": "{ns}S", "@type": "S231:Block", "S231:containsBlock": {{ "@id": "{ns}S.pid" }},
+               "S231:hasInput": [ {{ "@id": "{ns}S.u_s" }}, {{ "@id": "{ns}S.u_m" }} ],
+               "S231:hasOutput": {{ "@id": "{ns}S.y" }} }}"#
+        ),
+        real(
+            "S.u_s",
+            "Input",
+            &format!(r#", "S231:isConnectedTo": {{ "@id": "{ns}S.pid.u_s" }}"#),
+        ),
+        real(
+            "S.u_m",
+            "Input",
+            &format!(r#", "S231:isConnectedTo": {{ "@id": "{ns}S.pid.u_m" }}"#),
+        ),
+        format!(
+            r#"{{ "@id": "{ns}S.pid", "@type": "{ns}Buildings.Controls.OBC.CDL.Reals.PID",
+               "S231:hasParameter": [ {{ "@id": "{ns}S.pid.controllerType" }}, {{ "@id": "{ns}S.pid.yMax" }},
+                                      {{ "@id": "{ns}S.pid.reverseActing" }} ],
+               "S231:hasInput": [ {{ "@id": "{ns}S.pid.u_s" }}, {{ "@id": "{ns}S.pid.u_m" }} ],
+               "S231:hasOutput": {{ "@id": "{ns}S.pid.y" }} }}"#
+        ),
+        format!(
+            r#"{{ "@id": "{ns}S.pid.controllerType", "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.P" }}"#
+        ),
+        format!(r#"{{ "@id": "{ns}S.pid.yMax", "S231:value": {literal} }}"#),
+        format!(r#"{{ "@id": "{ns}S.pid.reverseActing", "S231:value": "yMax + 1 > yMax" }}"#),
+        real("S.pid.u_s", "Input", ""),
+        real("S.pid.u_m", "Input", ""),
+        real(
+            "S.pid.y",
+            "Output",
+            &format!(
+                r#", "S231:isConditionalComponent": true, "S231:conditionalExpression": "reverseActing", "S231:isConnectedTo": {{ "@id": "{ns}S.y" }}"#
+            ),
+        ),
+        real("S.y", "Output", ""),
+    ];
+    format!(
+        r#"{{ "@context": {{ "S231": "http://data.ashrae.org/S231#" }}, "@graph": [ {} ] }}"#,
+        nodes.join(",\n")
+    )
+    .into_bytes()
+}
+
+#[test]
+fn a_leaf_guard_over_a_real_member_is_one_verdict_in_every_spelling_for_the_engine_and_oce() {
+    // Issue #759: over `yMax` at 2^53 the Real sum rounds back, the guard is false and the PID
+    // is left without its output. Before, the Integer spellings loaded (`oce id` printed an id)
+    // and the Real ones were refused. The authoring layer has no conditional components: `oce
+    // import` refuses every spelling alike, with one code.
+    let spellings = [
+        "9007199254740992",
+        "9007199254740992.0",
+        r#"{ "@value": "9007199254740992", "@type": "http://www.w3.org/2001/XMLSchema#integer" }"#,
+        r#"{ "@value": "9007199254740992.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }"#,
+    ];
+    let first = leaf_guard_document(spellings[0]);
+    let expected = engine(&first).expect_err("the guarded output is pruned");
+    assert!(
+        expected.iter().any(|code| code == "malformed-document"),
+        "{expected:?}"
+    );
+    let imported = oce(&["import", "-"], &first);
+    assert_eq!(imported.code, 2, "{}", imported.transcript());
+    let import_codes = imported.report()["errors"][0]["code"].clone();
+    assert_eq!(import_codes, "conditional-component");
+    for literal in spellings {
+        let cxf = leaf_guard_document(literal);
+        assert_eq!(engine(&cxf), Err(expected.clone()), "{literal}");
+        let id = oce(&["id", "-", "--from", "cxf", "--json"], &cxf);
+        assert_eq!(id.code, 2, "{literal}: {}", id.transcript());
+        assert_eq!(codes(&id.report()), expected, "{literal}");
+        let imported = oce(&["import", "-"], &cxf);
+        assert_eq!(imported.code, 2, "{literal}: {}", imported.transcript());
+        assert_eq!(
+            imported.report()["errors"][0]["code"],
+            import_codes,
+            "{literal}"
+        );
+    }
+}

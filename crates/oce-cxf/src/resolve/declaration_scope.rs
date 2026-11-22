@@ -56,7 +56,7 @@ use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::{EvalResult, ExprAst, Scope};
-use oce_model::{EnumClassId, enum_class_id, enum_member_ordinal};
+use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal};
 
 use crate::dto::{CxfValue, Node};
 use crate::ground::{ground_failure, ground_param_value};
@@ -67,7 +67,7 @@ use super::composite_rules::{ARRAY_PARAMETER, DECLARATION_CYCLE, DUPLICATE_DECLA
 use super::enumeration_parameters::validate_enumeration_parameter_value;
 use super::local_name;
 use super::parameter_attrs::CheckedParameters;
-use super::real_parameters::hold_in_declared_type;
+use super::real_parameters::{hold_in_declared_type, in_catalog_type};
 use super::specialize::Specialization;
 
 /// Which import pass is invoking the shared own-declaration evaluation.
@@ -100,6 +100,12 @@ pub(super) enum Pass<'a> {
         /// guards must ground — but its cycle/duplicate participants are refused silently, so
         /// they simply fail to ground and nothing lands in [`Evaluation::withheld`].
         composite_chain: bool,
+        /// A leaf chain's bridged class path, `None` for a composite chain. Each grounded member
+        /// of a leaf is held in the type that class's catalog gives it before a sibling or a
+        /// guard reads it (issue #759), as resolver Step 7 holds it for the parameter table, so
+        /// a guard over `2` and over `2.0` on a Real member reads one Real. An unregistered
+        /// class types nothing, and nothing moves.
+        leaf_class: Option<&'a str>,
     },
 }
 
@@ -425,9 +431,11 @@ fn record_tagged<'a>(
         Pass::Lowering { diags, .. } => diags.raise(|| finding.diagnostic()),
         Pass::Specialize {
             composite_chain: true,
+            ..
         } => withheld.push(finding),
         Pass::Specialize {
             composite_chain: false,
+            ..
         } => {}
     }
 }
@@ -510,6 +518,17 @@ fn evaluate_one(
                     emit_generic(pass, diagnostic);
                     value
                 }
+            };
+            // A leaf's member is held in its catalog type too (issue #759). An Integer past
+            // 2^53 stays as grounded: Step 7 refuses it on the same binding, so the document is
+            // refused whatever the guard reads.
+            let value = match pass {
+                Pass::Specialize {
+                    leaf_class: Some(class_path),
+                    ..
+                } => in_catalog_type(class_path, declaration.name, value)
+                    .unwrap_or_else(Value::Integer),
+                _ => value,
             };
             grounded.push(
                 index,

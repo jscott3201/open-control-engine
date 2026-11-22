@@ -278,7 +278,12 @@ also grounds *leaf* declaration chains that carry conditional members; on that p
 grounding machinery is non-emitting, and the two tagged rules above apply to **composite**
 chains only — a leaf chain's bindings are member modifications (the leaf level described
 above), so a cycle or duplicate among them produces no tagged finding there: the participants
-simply fail to ground in the guard scope. A composite-chain defect visible to both passes is
+simply fail to ground in the guard scope. Each grounded declaration is held in its type before a
+sibling or a guard reads it: a composite's in its declared `S231:isOfDataType` (issue #735), a
+leaf's in the type its class's catalog gives the member (issue #759), as the parameter table holds
+it, so a guard over a Real member written `2` and written `2.0` decides alike. A leaf chain is
+evaluated over the leaf's own declarations only: a member bound to an enclosing parameter does
+not ground in the guard scope, and a guard that reads it refuses (issue #784). A composite-chain defect visible to both passes is
 reported once, from the lowering view; a composite chain only the specialization pass grounds
 (for example one pruned by a false guard) still surfaces through the two tagged rules; and a
 guard that genuinely cannot evaluate refuses through the guard's own diagnostics — never as a

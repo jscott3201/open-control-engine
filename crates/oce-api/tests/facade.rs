@@ -118,6 +118,7 @@ mod g36_ventilation_zones_ashrae62_1_setpoints;
 mod hash_order_independence;
 mod integer_range_bindings;
 mod integer_respelling_identity;
+mod leaf_guard_types;
 mod library_rule_state_continuation;
 mod load_cxf_trace;
 mod native_pass_through;

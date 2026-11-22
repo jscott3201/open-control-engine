@@ -11,6 +11,8 @@
 //! crosses it in declaration order, the receipt records it at instantiation, and it comes before
 //! the schedule's loop check and the state budget. The graphs bind lone corner cells, which the
 //! constructor sizes from (a graph the load gate would refuse, as only a direct builder makes).
+//! The load gate's own signature probes are charged to a budget of their own (issue #722): the
+//! last test pins that refusal in front of this tail.
 
 use std::sync::Arc;
 
@@ -246,10 +248,50 @@ fn the_constructed_refusal_comes_before_the_loop_check_and_the_state_budget() {
 }
 
 #[test]
-fn the_structural_gate_in_front_refuses_a_lone_corner_before_any_block_is_built() {
+fn the_structural_gate_in_front_refuses_lone_corners_and_charges_its_own_probes() {
     // The load tail behind `build_model_in_memory` and `load_cxf` runs the load gate first: a
-    // lone corner cell leaves its table's rectangle unfilled, refused before construction.
+    // lone corner cell leaves its table's rectangle unfilled, refused before instantiation. The
+    // gate constructs each block to read its signature and charges those probes to a budget of
+    // its own (issue #722): past it, the fifth table is refused there, and no later block is
+    // constructed, so instantiation is never reached.
     let mut engine = Engine::new();
-    let refused = engine.build_model_in_memory(graph(&[QUARTER_BUDGET; 5]), None);
-    assert!(matches!(refused, Err(OcError::Validate(_))), "{refused:?}");
+    let refused = engine.build_model_in_memory(graph(&[QUARTER_BUDGET; 6]), None);
+    let Err(OcError::Validate(error)) = refused else {
+        panic!("expected the load gate's refusal, got {refused:?}");
+    };
+    let limits: Vec<_> = error
+        .diagnostics
+        .iter()
+        .filter(|d| d.code == oce_diag::DiagCode::ResourceLimitExceeded)
+        .map(|d| (d.subject.as_deref().unwrap_or_default(), d.message.as_str()))
+        .collect();
+    assert_eq!(
+        limits,
+        [(
+            "urn:test:table4",
+            "constructed blocks too large: 5242880 word(s) held by the blocks through this block \
+             exceed the supported maximum (4194304 words). Remedy: reduce table, matrix or vector \
+             sizes, or split the model."
+        )]
+    );
+    // The parameter rules construct nothing, and refuse every unfilled table.
+    let unfilled = error
+        .diagnostics
+        .iter()
+        .filter(|d| d.code == oce_diag::DiagCode::ParameterOutOfRange)
+        .count();
+    assert_eq!(unfilled, 6);
+
+    // Exactly the budget passes the gate's probes: only the unfilled tables are refused.
+    let refused = Engine::new().build_model_in_memory(graph(&[QUARTER_BUDGET; 4]), None);
+    let Err(OcError::Validate(error)) = refused else {
+        panic!("expected the load gate's refusal, got {refused:?}");
+    };
+    assert!(
+        error
+            .diagnostics
+            .iter()
+            .all(|d| d.code == oce_diag::DiagCode::ParameterOutOfRange),
+        "{error:?}"
+    );
 }
