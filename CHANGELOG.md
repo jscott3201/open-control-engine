@@ -1824,6 +1824,18 @@ so far, and no tag is cut by the bump.
 
 ### Documentation
 
+- **The gate script's row is batched, and one PR may close several related issues** (owner
+  decision of 2026-11-21; process text only, no behaviour, surface or published claim; GitHub #737).
+  `AGENTS.md`, `CONTRIBUTING.md`, `.agents/project-facts.md`, `docs/ci-and-the-gate.md` and the PR
+  template now say that the per-PR proof is fmt, clippy and rustdoc on the changed crates, their
+  nextest suites and doctests and the evidence the issue asks for, with `CI OK` on the head as the
+  gate. The `docs`, `leverage` and engine rows of `bash .agents/gate.sh` run first-hand on
+  `development` after every few merges and before a release PR, and the result goes on the
+  milestone's tracking issue. A pin advance or a change to `.agents/gate.sh`,
+  `.config/nextest.toml` or `scripts/ci/install-wasmtime.sh` still runs `full` on its own PR, and a
+  workflow change still dispatches `release-gate.yml`. A PR may name several issues with
+  `Closes #A`, `Closes #B` when they share a feature or files.
+
 - **Design note for the upstream unit spellings** (GitHub #628, issue #622), ruled by the owner on
   2026-11-12, with no code. `docs/design/unit-spellings.md` decides how the engine reads the unit
   spellings modelica-json writes. Today the OBC §7.10 unit gate reads only `S231:unit`,

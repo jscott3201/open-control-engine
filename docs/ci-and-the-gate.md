@@ -454,8 +454,22 @@ bash .agents/gate.sh roundtrip    # roundtrip   — the blob round trip: record 
 
 ### The local proof
 
-What an author runs first-hand, on the final head, and pastes the tail of into the pull request
-is matched to the lane the PR runs (issue #545, owner decision of 2026-11-10). Before it, every
+The gate script's row for a PR's paths is **batched** (owner decision of 2026-11-21). The proof a
+PR itself owes is fmt, clippy and rustdoc on the crates it changes, those crates' nextest suites
+and doctests, and the evidence its issue asks for, run first-hand on the final head with the real
+tails pasted, and `CI OK` on the head is the gate. The rows below are run first-hand on
+`development` by whoever is landing the batch, after every few merges and before a release PR, and
+the result is recorded on the milestone's tracking issue; a red batch run is fixed forward or
+reverted before the next merge, like a red merge-gate run. Still owed on the PR itself: the `full`
+row for a pin advance or a change to `.agents/gate.sh`, `.config/nextest.toml` or
+`scripts/ci/install-wasmtime.sh`, and the dispatch of `release-gate.yml` for a workflow change. The
+PR body states which commands ran and that the gate row is batched. The measurements behind it,
+from the owner's review: a warm local `bash .agents/gate.sh` run takes roughly 6 to 8 minutes,
+`pr-gate` reports `CI OK` in about 5.5 minutes per head, and with several PRs open each merge
+forced the others to rebase and re-run the whole local proof. One PR may also close several
+related issues.
+
+The rows are matched to the lane the PR runs (issue #545, owner decision of 2026-11-10). Before it, every
 PR owed `bash .agents/gate.sh full`: 30.1 minutes cold on an idle 10-core arm64 Mac, 21 of them
 building release-codegen test binaries, about three times per PR.
 
@@ -520,7 +534,7 @@ nothing more, and `proof-row.sh` never names `determinism`. The mode remains.
   `ci-release-workspace` profile lives in `.config/nextest.toml`, and the default destination of
   `scripts/ci/install-wasmtime.sh` is used only by `full` and `roundtrip`.
 - **A rebase onto `development` with no conflicts** needs `CI OK` reported on the new head, not a
-  local re-run. **A rebase with conflicts, or a fix round,** re-runs the row's proof.
+  local re-run. **A rebase with conflicts, or a fix round,** re-runs the changed crates' suites.
 - **No row runs every crate's suite.** The author still runs the tests of the crates the PR
   changes: `cargo nextest run -p <crate> --locked --profile ci --no-tests=fail`, and
   `cargo test -p <crate> --doc --locked` for its doctests. The engine row runs the `oce-api`,

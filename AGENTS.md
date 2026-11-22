@@ -62,14 +62,22 @@ review comment before building (`design-note-first`).
 **Branch.** From `development`: `<area>/<what-it-does>` (`facade/pure-engine`,
 `ci/native-arm64-runners`). Never a lane tag, milestone or issue number as the name.
 
-**Build.** One PR per issue unless two are inseparable (then say so). Keep the diff to the issue's
-scope; a fix you notice elsewhere is a new issue, not a drive-by.
+**Build.** One PR may close several issues when they are related or grouped around the same
+feature or the same files (owner decision of 2026-11-21): the body says `Closes #A`, `Closes #B`,
+and the PR keeps one `CHANGELOG.md` entry per behaviour. Keep the diff to the scope of the issues
+it closes; a fix you notice elsewhere is a new issue, not a drive-by.
 
-**Prove.** Before opening the PR run the local proof **matched to the lane the PR runs**,
-first-hand, on the final head, and **paste the tail of the real output** into the PR description. A
-summary of a gate is a claim about a gate, and this engine controls physical equipment.
+**Prove.** Before opening the PR run, first-hand and on the final head, fmt, clippy and rustdoc on
+the crates the PR changes, those crates' nextest suites and doctests, and whatever evidence the
+issue itself asks for, and **paste the tail of the real output** into the PR description. `CI OK`
+on the head is the gate. The gate script's row for the PR's paths (the table below) is batched
+(owner decision of 2026-11-21): whoever is landing runs it first-hand on `development` after every
+few merges and before a release PR, and records the result on the milestone's tracking issue. A
+red batch run is fixed forward or reverted before the next merge, like a red merge-gate run. A
+summary of a gate is a claim about a gate, and this engine controls physical equipment, so the PR
+body states plainly which commands ran and that the gate row is batched.
 
-| The PR's changed paths | Local proof |
+| The PR's changed paths | Gate row (batched) |
 | --- | --- |
 | docs only | `bash .agents/gate.sh docs`: the always-on checks, no cargo build |
 | `crates/leverage/**`, docs, the root `README.md` | `bash .agents/gate.sh leverage` |
@@ -88,15 +96,17 @@ checks: for a pin advance, `oce-conformance`'s `conformance` binary, three of wh
 the reference catalog, that crate's `clean_room` unit tests and `open_modelica_nand` binary, which
 pin the vendored `Nand.mo` by path, line and equation, and the doctests (the pin-guard tests themselves run per PR); and the
 script's own `full`-only steps, with the two files only they exercise. `full` is also
-what CI executes nightly; no other PR owes it. **A change to `release-gate.yml`, or to anything
+what CI executes nightly. **A pin advance, or a change to `.agents/gate.sh`, `.config/nextest.toml`
+or `scripts/ci/install-wasmtime.sh`, still owes the `full` row on the PR itself; no other PR owes
+it. A change to `release-gate.yml`, or to anything
 else only `full` or the nightly run executes, also dispatches that workflow on the branch
 (`gh workflow run release-gate.yml --ref <branch>`) and waits for it to finish green before
 merging;** no local run stands in for it. That run posts its own `CI OK` on the head, without the
 strict-bit matrix: the merge decision still reads `CI OK` from the `pr-gate` run on the head SHA.
-No row runs every crate's suite: also run the tests of each crate the PR changes
-(`cargo nextest run -p <crate> --locked --profile ci --no-tests=fail`). A rebase onto
-`development` **with no conflicts** needs `CI OK` reported on the new head, not a local re-run; a
-rebase with conflicts, or a fix round, re-runs the row's proof. Then confirm the 46 fixture goldens and 422 provenance goldens
+No row runs every crate's suite, and the PR owes the changed crates' suites itself
+(`cargo nextest run -p <crate> --locked --profile ci --no-tests=fail`). An update of the branch
+from `development` **with no conflicts** needs `CI OK` reported on the new head, not a local
+re-run; a rebase with conflicts, or a fix round, re-runs the changed crates' suites. Then confirm the 46 fixture goldens and 422 provenance goldens
 are byte-identical (`git status --porcelain -- tools/golden-gen/goldens` prints nothing) unless the
 issue says the PR exists to regenerate them — then the description says why and which.
 
@@ -241,7 +251,7 @@ directories — that is expected, and `git add -A` silently stages nothing under
   subset and the strict-bit step under release codegen, which CI runs per PR in native cells, so
   no PR owes it and it is the way to reproduce a red release cell locally; `full`
   adds the workspace suite and doctests, is owed by a pin advance or a change to the script, and
-  is what CI executes nightly ("Prove" above has the table). The script is the single source of truth for gate commands —
+  is what CI executes nightly ("Prove" above has the table and says which runs are batched). The script is the single source of truth for gate commands —
   do not restate them anywhere; its closing report names what it cannot cover locally, and a green
   local run is not a green CI. Prose copies of the command list have diverged in both directions
   before; when the script and CI disagree, check which one is behind.
