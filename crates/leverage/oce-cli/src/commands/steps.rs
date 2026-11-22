@@ -2,7 +2,7 @@
 //! handles (`contained.rs`, `directory.rs`, `atomic_write.rs`; issues #758 and #771), where a
 //! unit test's adversary acts. Outside the tests [`step`] does nothing.
 //!
-//! A test installs an adversary for its own thread with [`with_adversary`]; every [`step`] that
+//! A test installs an adversary for its own thread with `with_adversary`; every [`step`] that
 //! thread passes then calls it, so a test can count a walk's points and replay every schedule of
 //! swaps over them (`contained_tests.rs`, `atomic_write_tests.rs`).
 
