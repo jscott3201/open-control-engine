@@ -332,7 +332,7 @@ so they are only safe together with that check.
 
 *(Amended 2026-11-21, owner's ruling on #660:)* until replay's `CsvSource` can hand a text cell
 over, a `csv` Boolean is read by its Boolean parse, `true`, `false`, `1` and `0`; `active` and
-`inactive` are refused ("As landed: the trend sources"). *(Amended again by GitHub #NNN, issue
+`inactive` are refused ("As landed: the trend sources"). *(Amended again by GitHub #739, issue
 #728:)* `CsvSource` hands a text cell over, and a `csv` file's `bool` device column is read as
 text by the row above, so the row holds as written.
 
@@ -444,7 +444,7 @@ lower layer's code as its cause (a `UnitError`, a mapping's `SpecError`, a cell 
    A `bool` device column is read by its Boolean parse, so `true`, `false`, `1` and `0` are
    read and `active`, `inactive` and every other text are `bad-cell`, with file, row and column.
    A replay issue (#728) asks for the text, after which the row holds again. *Lifted by GitHub
-   #NNN:* a `bool` device column is one of `CsvSource`'s text columns
+   #739:* a `bool` device column is one of `CsvSource`'s text columns
    (`CsvFormat::text_columns`, `CsvSource::text_cells`), read by `boolean_from_text`: `true`,
    `false`, `active`, `inactive`, `1` and `0` are read, byte for byte once replay has trimmed
    the cell's padding, and every other text is `cell-refused` caused by `not-boolean-text`, with
@@ -475,7 +475,7 @@ Two more, **ruled by the owner on 2026-11-21** in the review of GitHub #729:
    (`unmapped-point`) unless the mapping writes its space. Trimming spaces and tabs around csv
    cells and headers belongs in replay's reader, issue #733; until it lands, such a file is
    refused. A `combiTimeTable` is not affected: its separators include spaces. *Lifted by GitHub
-   #NNN:* replay trims the ASCII spaces and tabs, and only those, around every csv cell and
+   #739:* replay trims the ASCII spaces and tabs, and only those, around every csv cell and
    header name it reads unquoted, so the printed `reference_input.csv` reads as an input source
    and, in "the same format", as a `controllerOutput`, and the printed `indicator.csv` as an
    indicator source (`tests/commissioning/trend_padded_files.rs`, over the files as printed). A
@@ -492,7 +492,7 @@ Two more, **ruled by the owner on 2026-11-21** in the review of GitHub #729:
   each `columns` key as a position from 1 in canonical decimal (`"3"`; `"03"`, `"+3"` and
   `"3.0"` are refused); a `csv` source gives both as header names, compared byte for byte (a
   header named `3` is a name; replay trims a header name's padding first, so OBC §12.7.3's
-  `time, uHea` header has a column `uHea`, GitHub #NNN). A
+  `time, uHea` header has a column `uHea`, GitHub #739). A
   `table` is a `combiTimeTable`'s, and the time column is never a point. Anything else is
   `column-reference-invalid`.
 - **One device point, one column per role.** Two columns that name one device point, in one

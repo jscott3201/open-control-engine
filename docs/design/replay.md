@@ -366,7 +366,7 @@ The decisions stand; where one could not be built as written, the gap is named.
 - **The trace byte cap** is checked before each frame against its row bytes (each output counted at
   8 bytes until the first accepted frame fixes the set) and after it for its sparse rows and
   snapshots, so it holds to within one frame's sparse output.
-- **Padding (GitHub #NNN, issue #733).** `CsvSource` trims the ASCII spaces and tabs, and only
+- **Padding (GitHub #739, issue #733).** `CsvSource` trims the ASCII spaces and tabs, and only
   those two bytes, around every cell and header name `csv-core` reads unquoted, before the
   missing-token comparison, the parse and the header match, so OBC §12.7.3's padded example files
   read as printed. A no-break space, a zero-width space, a byte-order mark, a vertical tab and a
@@ -378,7 +378,7 @@ The decisions stand; where one could not be built as written, the gap is named.
   trimmed are `DuplicateColumn`. `max_cell_bytes` counts a cell before it is trimmed: the cap is
   enforced as the bytes arrive, before trailing padding can be told from the cell, and it bounds
   memory with no second counter. Unpadded input reads as before, bit for bit.
-- **Text columns (GitHub #NNN, issue #728).** `CsvFormat::text_columns` names header columns whose
+- **Text columns (GitHub #739, issue #728).** `CsvFormat::text_columns` names header columns whose
   cells `CsvSource::text_cells` hands over unparsed, after each row, under the same caps, the
   same padding rule and the same missing rule (`None` for an empty cell or a token). A text
   column is no input slot: frames never carry it, so it stays among the ignored columns, and the
@@ -389,7 +389,7 @@ The decisions stand; where one could not be built as written, the gap is named.
 - **The first fill** reads seven bytes, or all there are, before the reader looks for a
   byte-order mark, so `csv-core`, which strips a second mark from its own first input of three
   bytes or more, reads a doubled mark the same way whatever a reader returns per call. Before
-  GitHub #NNN a reader of one byte per call kept the second mark as a cell's bytes while a whole
+  GitHub #739 a reader of one byte per call kept the second mark as a cell's bytes while a whole
   slice had it stripped. Which refusal an input over `max_source_bytes` gets first still depends
   on how far ahead the reader's calls buffered (a whole slice crosses the cap on its first fill),
   though such an input is refused however it is split.

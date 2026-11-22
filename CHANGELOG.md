@@ -950,7 +950,7 @@ so far, and no tag is cut by the bump.
 
 - **`oce-replay`'s `CsvSource` trims the padding around csv cells and header names and hands a
   column over as text, so the commissioning trend reader reads OBC §12.7.3's padded files and a
-  `bool` cell `active` or `inactive`** (GitHub #NNN, issues #728, #733; replay note, "As built";
+  `bool` cell `active` or `inactive`** (GitHub #739, issues #728, #733; replay note, "As built";
   commissioning note, "As landed: the trend sources", rulings 1 and 5).
   - **Padding (issue #733).** `CsvSource` trims ASCII spaces and tabs, and only those two bytes,
     around every cell and header name `csv-core` reads unquoted, before the missing-token
@@ -1053,7 +1053,7 @@ so far, and no tag is cut by the bump.
   cost frames times columns and are checked against the byte cap before they are allocated.
   OBC §12.7.3's padded example csv files are refused until replay trims cells (#733), and a
   `csv` Boolean reads `true`, `false`, `1` and `0` only until replay hands a text cell over
-  (#728). Both were lifted before a release by GitHub #NNN, the entry above.
+  (#728). Both were lifted before a release by GitHub #739, the entry above.
 
 - **The commissioning verifier's unit table, `units/v1`, and the discrete type rules of point
   mapping** (GitHub #716, issue #659, closes #714; commissioning note, "Point mapping", decisions
