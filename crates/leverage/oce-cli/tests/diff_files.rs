@@ -291,6 +291,57 @@ fn each_side_is_read_at_its_forms_bound_and_refused_one_byte_over() {
 }
 
 #[test]
+fn the_base_is_read_parsed_and_loaded_before_the_head_and_each_refusal_names_its_side() {
+    // Both sides refused in the same way: the base's refusal is the one reported. With one side
+    // refused, the refusal names that side, whichever it is.
+    let dir = scratch("diff_files_side_order");
+    let reference = emitted(&text_of(&own("reference.oce")));
+    let mut engine = oce_api::Engine::new();
+    engine.load_cxf(&reference).expect("the reference loads");
+    let exported = engine.export_cxf().expect("the model exports").bytes;
+    write(&dir, "reference.jsonld", &reference);
+    write(&dir, "exported.jsonld", &exported);
+    write(&dir, "junk1.jsonld", b"{}");
+    write(&dir, "junk2.jsonld", b"[]");
+    let malformed = text_of("tests/fixtures/inputs/malformed.oce");
+    write(&dir, "bad1.oce", malformed.as_bytes());
+    write(&dir, "bad2.oce", malformed.as_bytes());
+    let named = |code: &str, at: &str| (code.to_owned(), Value::from(at));
+    let cases = [
+        // Read: two missing files.
+        (["missing1.oce", "missing2.oce"], named("not-found", "base")),
+        // Parse: two unparsable texts.
+        (["bad1.oce", "bad2.oce"], named("bad-escape", "base")),
+        // Load: two documents the engine refuses.
+        (
+            ["junk1.jsonld", "junk2.jsonld"],
+            named("not-loadable", "base"),
+        ),
+        (
+            ["reference.jsonld", "junk2.jsonld"],
+            named("not-loadable", "head"),
+        ),
+        // Compare: a document the engine exported, outside its root, on either side.
+        (
+            ["exported.jsonld", "reference.jsonld"],
+            named("outside-root", "base"),
+        ),
+        (
+            ["reference.jsonld", "exported.jsonld"],
+            named("outside-root", "head"),
+        ),
+        (
+            ["exported.jsonld", "exported.jsonld"],
+            named("outside-root", "base"),
+        ),
+    ];
+    for ([base, head], expected) in cases {
+        let run = oce_in(&dir, &["diff", base, head], b"");
+        assert_eq!(refusal(&run), expected, "{base} {head}");
+    }
+}
+
+#[test]
 fn every_code_a_diff_run_reports_is_listed_by_vocab() {
     let vocab = oce(&["vocab", "--json"], b"").report();
     let listed: Vec<String> = ["error_codes", "parse_codes", "wire_codes", "diff_codes"]

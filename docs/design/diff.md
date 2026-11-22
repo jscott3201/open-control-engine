@@ -837,10 +837,11 @@ What building the `oce diff` verb (issue #668, GitHub #738) showed. Ruled by the
   `--render`. So `--format` chooses the stdout document, the JSON report by default or
   `render_markdown`'s table, and `render_text` is what `--render` writes to stderr, each line
   escaped as every other rendering of the CLI is.
-- **`rule.cxf.json` is CXF.** A side's name is read by the rule `oce id`, `verify --subject` and
-  the `-o` name guards read a name by (`id::form_by_name`): CXF for `.jsonld` or `.cxf.json`,
-  text for `.oce`, wire for any other `.json`. One file name means one form across verbs; the
-  in-repo mutants are named `.cxf.json` (vectors note, decision 34).
+- **`rule.cxf.json` is CXF.** A side's name is read by `id::form_by_name`, the function `oce id`
+  and the `-o` name guards call: CXF for `.jsonld` or `.cxf.json`, text for `.oce`, wire for any
+  other `.json`. `verify --subject` reads a name by the same rule through its own copy
+  (`verify_subject.rs`), which this verb leaves as it is. One file name means one form across
+  verbs; the in-repo mutants are named `.cxf.json` (vectors note, decision 34).
 
 Read by the implementer under the note's "closed envelope" sentence, following the other verbs
 (accepted by the coordinator on 2026-11-21); the [`oce` README](../../crates/leverage/oce-cli/README.md#oce-diff)

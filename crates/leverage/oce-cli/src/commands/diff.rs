@@ -69,8 +69,9 @@ impl Refusal {
     }
 }
 
-/// Run `diff`.
-pub(crate) fn run(args: &DiffArgs, streams: &mut Streams<'_>) -> Outcome {
+/// Run `diff`. `render` says whether a human-readable rendering goes to stderr; the diff's text
+/// is built only then.
+pub(crate) fn run(args: &DiffArgs, render: bool, streams: &mut Streams<'_>) -> Outcome {
     let mut report = Report::new("diff", Some(input::display_name(&args.base)));
     report.set("head", Value::from(input::display_name(&args.head)));
     report.set("form", Value::Null);
@@ -103,7 +104,7 @@ pub(crate) fn run(args: &DiffArgs, streams: &mut Streams<'_>) -> Outcome {
         IdForm::Wire => models(Form::Wire, &base, &head, &options, &mut report),
     };
     match made {
-        Ok(diff) => answer(args.format, &diff, report),
+        Ok(diff) => answer(args.format, render, &diff, report),
         Err(why) => refused(report, why),
     }
 }
@@ -293,8 +294,10 @@ fn side_name(side: Side) -> Option<&'static str> {
     }
 }
 
-/// The exit status, stdout and stderr rendering of a diff that was made.
-fn answer(format: DiffFormat, diff: &Diff, mut report: Report) -> Outcome {
+/// The exit status, stdout and stderr rendering of a diff that was made. The report gets no
+/// verdict: when the diff is rendered its text stands in for the report's rendering, and when
+/// stdout cannot be written `finish` renders the report with that failure as its verdict.
+fn answer(format: DiffFormat, render: bool, diff: &Diff, mut report: Report) -> Outcome {
     let exit = if diff.summary.equal {
         Exit::Yes
     } else {
@@ -304,16 +307,15 @@ fn answer(format: DiffFormat, diff: &Diff, mut report: Report) -> Outcome {
     // whatever key order the JSON map keeps; that text is always one JSON value.
     let data = serde_json::from_str(&diff.to_json()).unwrap_or(Value::Null);
     report.set("diff", data);
-    report.verdict(if diff.summary.equal {
-        "equal"
-    } else {
-        "different"
-    });
     let outcome = match format {
         DiffFormat::Json => Outcome::with_exit(exit, report),
         DiffFormat::Markdown => Outcome::verdict(exit, report, render_markdown(diff).into_bytes()),
     };
-    outcome.rendered_as(printable_lines(&render_text(diff)))
+    if render {
+        outcome.rendered_as(printable_lines(&render_text(diff)))
+    } else {
+        outcome
+    }
 }
 
 /// A run that made no diff: exit `2`, the report on stdout.
@@ -407,16 +409,18 @@ mod tests {
 
     #[test]
     fn a_diff_refusal_names_its_side() {
-        let error = DiffError::UnresolvedPorts {
-            side: Side::Head,
-            block: "b".to_owned(),
-            class: "C".to_owned(),
-        };
-        let mut report = Report::new("diff", None);
-        record_diff_error(&error, &mut report);
-        let json: Value = serde_json::from_str(&report.to_json(false)).expect("JSON");
-        assert_eq!(json["errors"][0]["code"], "unresolved-ports");
-        assert_eq!(json["errors"][0]["at"], "head");
-        assert_eq!(json["errors"][0]["detail"], error.to_string());
+        for (side, at) in [(Side::Base, "base"), (Side::Head, "head")] {
+            let error = DiffError::UnresolvedPorts {
+                side,
+                block: "b".to_owned(),
+                class: "C".to_owned(),
+            };
+            let mut report = Report::new("diff", None);
+            record_diff_error(&error, &mut report);
+            let json: Value = serde_json::from_str(&report.to_json(false)).expect("JSON");
+            assert_eq!(json["errors"][0]["code"], "unresolved-ports");
+            assert_eq!(json["errors"][0]["at"], at);
+            assert_eq!(json["errors"][0]["detail"], error.to_string());
+        }
     }
 }

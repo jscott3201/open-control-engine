@@ -636,15 +636,18 @@ For `diff`:
   checked in), the stderr rendering, a `reordered`-only pair, `--no-renames`, an invalid draft,
   stdin on one side, and every refusal: a mixed pair, stdin twice, an unparsable base and head,
   a CXF side the engine refuses, a document the engine exported (`outside-root`), stdin without
-  `--from`, a name with no form, a missing head, a refusal rendered at the head's name, and two
-  usage errors;
-- `tests/diff_files.rs` is the oracle: for every worked example and `oce-diff`'s `every_kind`
-  pair, the diff the report carries is `oce-diff`'s golden byte for byte once the envelope is
-  removed, the Markdown is its table golden and the stderr its text golden, in the text and the
-  CXF form; the wire form's diff is the library's. It also holds `.cxf.json` to CXF, exit `0`
-  to `equal`, `--no-renames` to its note, an invalid draft to the library's diff, two runs and
-  stdin to the same bytes, each side's bound (at the bound read, one byte over refused about
-  that side), and every code a run reports to `oce vocab`;
+  `--from`, a name with no form, a missing head, a refusal of each side rendered at that side's
+  name, and two usage errors;
+- `tests/diff_files.rs` is the oracle: the diff the report carries is `oce-diff`'s golden byte
+  for byte once the envelope is removed, the Markdown is its table golden and the stderr its
+  text golden, in the text form for every worked example and `oce-diff`'s `every_kind` pair, and
+  in the CXF form for every worked example (`every_kind` is not emitted); the wire form's diff is
+  the library's. It also holds `.cxf.json` to CXF, exit `0` to `equal`, `--no-renames` to its
+  note, an invalid draft to the library's diff, two runs and stdin to the same bytes, each side's
+  bound (at the bound read, one byte over refused about that side), the base read, parsed,
+  loaded and compared before the head (both sides refused alike name the base; one side refused,
+  by a read, a parse, a load or `outside-root`, names that side), and every code a run reports to
+  `oce vocab`;
 - `tests/hostile_inputs.rs` refuses junk, bad UTF-8, an empty file, a directory and a missing
   path on either side, in each form and through stdin, about that side; `tests/rendering.rs`
   escapes a wire class's format and separator characters in the diff's text on stderr, which

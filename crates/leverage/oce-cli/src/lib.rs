@@ -389,7 +389,7 @@ where
         Command::Verify(args) => commands::verify::run(&args),
         Command::Id(args) => commands::id::run(&args, streams),
         Command::Import(args) => commands::import::run(&args, streams),
-        Command::Diff(args) => commands::diff::run(&args, streams),
+        Command::Diff(args) => commands::diff::run(&args, render, streams),
     };
     commands::finish(outcome, render, streams)
 }

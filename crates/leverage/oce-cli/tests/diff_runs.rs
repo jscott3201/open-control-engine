@@ -279,6 +279,22 @@ fn a_refusal_of_the_head_is_rendered_at_the_heads_name() {
 }
 
 #[test]
+fn a_refusal_of_the_base_is_rendered_at_the_bases_name() {
+    case(
+        "diff_render_refusal_base",
+        2,
+        &[
+            "diff",
+            &input("malformed.oce"),
+            &reference(),
+            "--render",
+            "always",
+        ],
+        b"",
+    );
+}
+
+#[test]
 fn a_format_the_verb_does_not_have_is_a_usage_error() {
     case(
         "diff_usage_bad_format",

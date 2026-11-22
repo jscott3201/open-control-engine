@@ -970,19 +970,22 @@ so far, and no tag is cut by the bump.
     command keys `head`, `form` and `diff`; `oce vocab` gains `diff_codes`
     (`oce_diff::DiffError::CODES`) and the two tool codes; the human rendering places a refusal at
     its side's file.
-  - **Evidence.** 30 transcripts (`tests/diff_runs.rs`): an equal pair, each worked
-    example's envelope and table in the text form and its envelope as CXF, the stderr rendering, a
+  - **Evidence.** 31 transcripts (`tests/diff_runs.rs`): an equal pair, each worked example's
+    envelope and table in the text form and its envelope as CXF, the stderr rendering, a
     `reordered`-only pair, `--no-renames`, an invalid draft, stdin, every refusal class and two
-    usage errors. The oracle (`tests/diff_files.rs`) holds the diff each report carries, with the
-    envelope removed, to `oce-diff`'s goldens byte for byte, and the table and stderr to its
-    Markdown and text goldens, for the text and the CXF form of every worked example; the wire
-    form to the library's diff; and each side's bound, `.cxf.json`, determinism and the
-    vocabulary. Hostile bytes on either side, in each form and through stdin, are typed refusals
-    about that side; a wire class's format and separator characters, which `render_text` leaves
-    as they are, are escaped on stderr; and a failed stdout write renders the report, not the
-    diff. Thirteen mutants of the verb's logic, all killed. The transcripts `help_oce`, `usage_no_arguments`, `vocab_text` and
-    `vocab_json` move for the new command and codes, and `id_files`'s pinned fixture count for the
-    three new authored inputs.
+    usage errors, a refusal of each side rendered at that side's file among them. The oracle
+    (`tests/diff_files.rs`) holds the diff each report carries, with the envelope removed, to
+    `oce-diff`'s goldens byte for byte, and the table and stderr to its Markdown and text goldens,
+    for the text and the CXF form of every worked example; the wire form to the library's diff;
+    and each side's bound, `.cxf.json`, determinism, the base read, parsed, loaded and compared
+    before the head with each refusal naming its side, and the vocabulary. Hostile bytes on either
+    side, in each form and through stdin, are typed refusals about that side; a wire class's
+    format and separator characters, which `render_text` leaves as they are, are escaped on
+    stderr; and a failed stdout write renders the report, not the diff. Nineteen mutants of the
+    verb's logic, all killed (the review's four survivors by the tests of its round). The
+    review's four further items are issue #742. The transcripts `help_oce`, `usage_no_arguments`, `vocab_text` and `vocab_json`
+    move for the new command and codes, and `id_files`'s pinned fixture count for the three new
+    authored inputs.
 - **The review follow-ups of the blob comparison** (GitHub #738, issue #725).
   `crates/leverage/README.md` names the CXF adapter and the blob comparison in `oce-diff`'s row.
   A new aligned blob pair whose class tables differ (one class no block uses, after the last; the

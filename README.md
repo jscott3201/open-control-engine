@@ -268,8 +268,9 @@ cargo run -p oce-cli -- catalog CDL.Reals.MultiSum --param nin=3
 cargo run -p oce-cli -- catalog CDL.Reals.PID           # what each port and parameter means
 ```
 
-The importer has no verb yet: it is the library API `oce_author::import_cxf` and
-`oce_author::import_graph_v0`, and an `oce import` verb is planned (#514).
+The importer's verb is `oce import` (M3, #514): it reads a flat CXF document into canonical text
+or the wire form over `oce_author::import_cxf`. The frozen prototype's v0 graph JSON stays the
+library API `oce_author::import_graph_v0`.
 
 Vocabulary v1 is the reference text behind `oce catalog`: `oce-vocab`
 (`crates/leverage/oce-vocab`, [README](crates/leverage/oce-vocab/README.md)) carries, for each of
