@@ -70,7 +70,8 @@
 //! scalar output side skipped. Those 23 sides are real, checkable, and can fail. Array-ness is now
 //! derived per DECLARATION, from the subscript on the connector itself.
 //!
-//! Also unchecked: parameter names and defaults, and composite wiring.
+//! Parameter names are checked against the catalog by the second test here (issue #748), from
+//! the same scan; parameter defaults and composite wiring are unchecked.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -352,3 +353,72 @@ fn every_fixture_lists_ports_in_upstream_declaration_order() {
         failures.join("\n\n")
     );
 }
+
+/// The catalog's parameters of each class are the public parameters upstream declares for it
+/// (issue #748): the load gate refuses a parameter name the catalog does not list, so a public
+/// upstream parameter missing from the catalog would refuse a legitimate document, and a catalog
+/// name upstream does not declare would admit a binding no CDL tool writes.
+///
+/// Compared by base name (`k` for the catalog's `k_<i>`), class by class, over the 132 vendored
+/// classes. Upstream declares no `final` parameter in its public section and no `extends` clause
+/// (a base class could carry parameters), and both are pinned. The one difference is listed:
+/// `Reals.MatrixGain` declares `nin` and `nout` as protected `size(K, …)` parameters, which the
+/// catalog lists because a CXF document may state them (and the class rules hold them to `K`'s
+/// shape).
+#[test]
+fn every_upstream_public_parameter_is_a_catalog_parameter_and_no_other() {
+    use std::collections::BTreeSet;
+    // The catalog names upstream declares as protected parameters.
+    const PROTECTED_IN_CATALOG: &[(&str, &str)] = &[
+        ("CDL.Reals.MatrixGain", "nin"),
+        ("CDL.Reals.MatrixGain", "nout"),
+    ];
+    let table = load_table();
+    let mut failures = Vec::new();
+    let (mut public, mut compared) = (0usize, 0usize);
+    for (class, ports) in &table {
+        let Some(catalog) = oce_blocks::class_parameters(class) else {
+            failures.push(format!("{class}: vendored but not registered"));
+            continue;
+        };
+        compared += 1;
+        let catalog: BTreeSet<&str> = catalog
+            .iter()
+            .map(|p| oce_blocks::ParamNameTemplate::parse(p.name).base())
+            .collect();
+        let mut upstream = BTreeSet::new();
+        for (name, protected, is_final) in &ports.parameters {
+            if *is_final && !*protected {
+                failures.push(format!("{class}: public final parameter `{name}`"));
+            }
+            let listed = PROTECTED_IN_CATALOG
+                .iter()
+                .any(|(c, n)| c == class && n == name);
+            if !*protected || listed {
+                upstream.insert(name.as_str());
+                public += usize::from(!*protected);
+            }
+        }
+        if upstream != catalog {
+            failures.push(format!(
+                "{class}\n      upstream : {upstream:?}\n      catalog  : {catalog:?}"
+            ));
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{} class(es) whose catalog parameters are not upstream's public parameters:\n\n{}",
+        failures.len(),
+        failures.join("\n\n")
+    );
+    assert_eq!(compared, 132, "vendored classes compared");
+    // Pin the volume, as the port totals are pinned: a scanner that stops seeing parameters
+    // would otherwise compare empty sets against a catalog that lost them too.
+    assert_eq!(
+        public, PUBLIC_PARAMETERS,
+        "upstream public parameter count changed"
+    );
+}
+
+/// The public parameters the 132 vendored classes declare between them.
+const PUBLIC_PARAMETERS: usize = 186;

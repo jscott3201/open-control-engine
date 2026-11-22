@@ -20,6 +20,7 @@ mod finite_bounds;
 mod params;
 mod params_absent;
 mod params_arrays;
+mod params_declared;
 mod params_element_names;
 mod params_finite;
 mod params_flattened;

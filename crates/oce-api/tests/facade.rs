@@ -135,6 +135,7 @@ mod topology;
 mod topology_boundary;
 mod topology_boundary_corpus;
 mod topology_content_bytes;
+mod undeclared_parameters;
 mod unused_boundary_input;
 mod validate_diagnostic_list_bound;
 mod vendored_translation_units;

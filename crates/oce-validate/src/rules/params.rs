@@ -36,6 +36,8 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut DiagnosticList)
         let Some(entry) = lookup(&blk.class_iri) else {
             continue;
         };
+        // A name the class does not declare is read by no block (issue #748), whatever its value.
+        super::params_declared::check_declared_parameter_names(blk, entry.param_rules(), diags);
         for (name, value) in &blk.params.values {
             if let Value::Enum { class, ordinal } = value
                 && enum_descriptor(*class).is_none_or(|descriptor| {

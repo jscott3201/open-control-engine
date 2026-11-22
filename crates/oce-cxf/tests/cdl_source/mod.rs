@@ -1,5 +1,5 @@
-//! Derive each CDL class's interface, in upstream declaration order, from vendored Modelica
-//! source (`third_party/modelica-buildings-cdl/`).
+//! Derive each CDL class's interface, in upstream declaration order, and its parameter
+//! declarations from vendored Modelica source (`third_party/modelica-buildings-cdl/`).
 //!
 //! # The seam
 //!
@@ -40,6 +40,11 @@ pub struct ClassPorts {
     /// `MultiSum` has an array input but a scalar output `y`, which is verifiable.
     pub inputs_are_array: bool,
     pub outputs_are_array: bool,
+    /// The class's own parameters in declaration order, each as `(name, protected, final)`: a
+    /// depth-1 `parameter` declaration that is not a connector, with whether it sits in the
+    /// `protected` section and whether it is `final`. An array parameter is listed by its base
+    /// name (`k` for `k[nin]`).
+    pub parameters: Vec<(String, bool, bool)>,
 }
 
 fn repo_root() -> PathBuf {
@@ -329,6 +334,67 @@ fn mentions_connector(line: &str) -> bool {
     line.contains("Interfaces.") || CONNECTOR_TYPES.iter().any(|ty| line.contains(ty))
 }
 
+/// A parameter declaration: `(name, final)`, or `None` when `stmt` is not one.
+///
+/// Reads `[final] parameter <Type> <name>`, after any description string, where `<Type>` is a
+/// dotted name and not a connector type (a `parameter Interfaces.RealInput` is [`port_decl`]'s).
+/// Like [`port_decl`] it refuses a multi-component clause (`parameter Real a, b;`), which it could
+/// read only in part: the statement is then [`mentions_parameter`]-shaped and unparsed.
+fn param_decl(stmt: &str) -> Option<(String, bool)> {
+    let mut rest = stmt.trim_start();
+    while let Some(after) = rest.strip_prefix('"') {
+        rest = after[after.find('"')? + 1..].trim_start();
+    }
+    let is_final = match rest.strip_prefix("final ") {
+        Some(after) => {
+            rest = after.trim_start();
+            true
+        }
+        None => false,
+    };
+    let rest = rest.strip_prefix("parameter ")?.trim_start();
+    let type_end = rest
+        .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '.'))
+        .unwrap_or(rest.len());
+    let type_name = &rest[..type_end];
+    if type_name.is_empty()
+        || type_name.contains("Interfaces.")
+        || !rest[type_end..].starts_with(char::is_whitespace)
+    {
+        return None;
+    }
+    let (name, tail) = take_ident(rest[type_end..].trim_start())?;
+    let after = skip_balanced(tail.trim_start(), '[', ']')?.trim_start();
+    if skip_balanced(after, '(', ')')?
+        .trim_start()
+        .starts_with(',')
+    {
+        return None;
+    }
+    Some((name.to_owned(), is_final))
+}
+
+/// Does this statement declare, or seem to declare, a parameter: the word `parameter` in code?
+/// The backstop of [`param_decl`], as [`mentions_connector`] is of [`port_decl`].
+fn mentions_parameter(stmt: &str) -> bool {
+    stmt.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+        .any(|word| word == "parameter")
+}
+
+/// The section keyword (`protected` or `public`) a depth-1 line or statement opens with, if any,
+/// and the text after it: `Some(true)` for `protected`.
+fn section_keyword(text: &str) -> (Option<bool>, &str) {
+    let trimmed = text.trim_start();
+    for (keyword, protected) in [("protected", true), ("public", false)] {
+        if let Some(after) = trimmed.strip_prefix(keyword)
+            && (after.is_empty() || after.starts_with(char::is_whitespace))
+        {
+            return (Some(protected), after);
+        }
+    }
+    (None, text)
+}
+
 /// Derive one class's interface from vendored upstream source, in declaration order.
 ///
 /// **Only depth-1 declarations count.** CDL sources define nested helper blocks that declare their
@@ -350,13 +416,28 @@ fn parse_class(path: &Path, label: &str, unparsed: &mut Vec<String>) -> ClassPor
         output_kinds: Vec::new(),
         inputs_are_array: false,
         outputs_are_array: false,
+        parameters: Vec::new(),
     };
     let mut depth = 0usize;
+    // Whether depth-1 declarations are in the class's `protected` section. The keyword stands on
+    // a line of its own in every vendored file, so it is read by line as well as at the head of a
+    // statement, and a nested class that opens right after it does not swallow it.
+    let mut protected = false;
     let mut stmt = String::new();
     let mut stmt_line = 1usize;
     for (lineno, line) in src.lines().enumerate() {
+        if depth == 1
+            && let (Some(section), after) = section_keyword(line)
+            && after.trim().is_empty()
+        {
+            protected = section;
+            continue;
+        }
         if opens_class(line) {
             depth += 1;
+            if depth == 1 {
+                protected = false;
+            }
             stmt.clear();
             continue;
         }
@@ -375,6 +456,25 @@ fn parse_class(path: &Path, label: &str, unparsed: &mut Vec<String>) -> ClassPor
             }
             stmt.push(' ');
             stmt.push_str(&rest[..end]);
+            let body = match section_keyword(&stmt) {
+                (Some(section), after) if depth == 1 => {
+                    protected = section;
+                    after.to_owned()
+                }
+                _ => stmt.clone(),
+            };
+            if port_decl(&stmt).is_none() {
+                match param_decl(&body) {
+                    Some((name, is_final)) if depth == 1 => {
+                        ports.parameters.push((name, protected, is_final));
+                    }
+                    Some(_) => {}
+                    None if mentions_parameter(&body) => {
+                        unparsed.push(format!("{label}:{stmt_line}: {}", stmt.trim()));
+                    }
+                    None => {}
+                }
+            }
             match port_decl(&stmt) {
                 // The unparsed check runs at EVERY depth on purpose. Scope tracking is the part of
                 // this scanner with the worst history — three of the five predecessor defects were

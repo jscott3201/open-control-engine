@@ -171,6 +171,17 @@ document. No version bump is owed: no release has been tagged since 0.6.0 (stand
 no released artefact of the earlier meaning exists. No tracked document or `open-control-library`
 rule writes such a value.
 
+*Amended 2026-11-22 (issue #748, inside 0.6.0).* A block parameter under a name its class does
+not declare is refused at load (`unknown-parameter`) where it loaded before, ignored by the block
+and carried into the canonical bytes, so a misspelt `amplitud` ran the block on its default and
+still moved the id. No content id of a document that loads both before and after this change
+moves: such a document has no undeclared name, so its table is unchanged. A document that carried
+one is refused now, with no id, rather than given a new one with the name dropped. A 0.6.0 blob
+carrying one is refused by the decoder (`UndeclaredParameter`). No tracked document but four test
+fixtures, no vendored translation that loads and no `open-control-library` rule carries one; the
+fixtures were corrected to parameters their classes declare. No version bump is owed (standing
+rule 10: no release since 0.6.0).
+
 Sorting is sound only if no class reads two entries as the same parameter, and today one can.
 Duplicate detection is by exact name, but `TimeTable` walks `params.values` in table order and
 parses `table_<r>_<c>` and `offset_<i>` with `usize::parse` (`source_timetable.rs`

@@ -1,10 +1,11 @@
 blocks: 1
-  B0 decl=0 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#cc.leaf_array_parameter_conditional_member.con")
+  B0 decl=0 class=CDL.Reals.Sources.TimeTable instance_iri=Some("http://example.org#cc.leaf_array_parameter_conditional_member.con")
     inputs=[] outputs=[0]
-    param k=Real(0x3ff8000000000000)
-    param holdSet_1=Real(0x4000000000000000)
-    param holdSet_2=Real(0x4008000000000000)
-    param have_hol=Boolean(false)
+    param table_1_1=Real(0x0000000000000000)
+    param table_1_2=Real(0x4000000000000000)
+    param table_2_1=Real(0x3ff0000000000000)
+    param table_2_2=Real(0x4008000000000000)
+    param extrapolation=Enum(class=3,ordinal=1)
 connectors: 1
   C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#cc.leaf_array_parameter_conditional_member.con.y")
 connections: 0

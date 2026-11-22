@@ -44,7 +44,9 @@ use crate::{ConstructedBudget, MAX_STATE_WORDS, Schedule, allocate_state, build_
 /// 6. structure, each with a byte offset: section order and lengths, bounded counts, UTF-8, tags,
 ///    canonical list order and exact consumption ([`BlobError::Malformed`]);
 /// 7. each class in turn (registered, same signature hash); then each block in turn (class index,
-///    unique parameter names, each parameter in order a finite Real or a known enum class and
+///    unique parameter names, each parameter in order a name its class declares
+///    ([`BlobError::UndeclaredParameter`]: the load gate's own predicate,
+///    `oce_blocks::declares_parameter`, issue #748), a finite Real or a known enum class and
 ///    ordinal and then a value its class's catalog type admits
 ///    ([`BlobError::ParameterKindMismatch`]: the load gate's own predicate,
 ///    `oce_blocks::admits_parameter_value`, issue #734), then the constructed budget
@@ -178,8 +180,8 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
         }
         let (entry, class_path) = (*entry, Arc::clone(class_path));
 
-        // Parameters: unique names, finite Reals, resolvable enums, each of a kind its catalog
-        // type admits.
+        // Parameters: unique names, each declared by the class, finite Reals, resolvable enums,
+        // each of a kind its catalog type admits.
         let mut names = record.params.reader();
         names_scratch.clear();
         for _ in 0..record.params.count {
@@ -209,6 +211,15 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
         let mut params = Vec::with_capacity(record.params.count);
         for parameter_index in 0..record.params.count {
             let (name, raw, at) = parameter(&mut values)?;
+            // A name the class does not declare is read by no constructor, which would build the
+            // block on its default in its place (issue #748); the load gate refuses such a
+            // document, so no encoder writes one. Judged before the value, as the name is.
+            if oce_blocks::declares_parameter(&class_path, name) != Some(true) {
+                return Err(BlobError::UndeclaredParameter {
+                    block,
+                    parameter: index_u32(parameter_index),
+                });
+            }
             if let RawValue::Real(bits) = raw
                 && !f64::from_bits(bits).is_finite()
             {

@@ -207,18 +207,56 @@ fn nested_composite_flattens_to_leaf_blocks_and_expanded_connections() {
 
     let gain_k = &graph.blocks[0].params.values[0].1;
     assert!(gain_k.bit_eq(&Value::Real(0.5)));
-    let extra = graph.blocks[1]
-        .params
-        .values
-        .iter()
-        .find(|(name, _)| name.as_ref() == "extra")
-        .expect("enum propagation proof")
-        .1
-        .clone();
-    assert!(extra.bit_eq(&Value::Enum {
-        class: EnumClassId::G36_VENTILATION_STANDARD,
-        ordinal: 2,
-    }));
+}
+
+/// `base` (an edit of [`NESTED`]) with `sub.enumCarrier` a Boolean constant whose `k` compares the subsequence's G36
+/// enumeration parameter with `member`: the leaf reads the value the root's `venStd` hands down
+/// through `sub.venStdLocal`. A block carries no G36 enumeration parameter of its own (no CDL
+/// class declares one, issue #748), so the propagation is proven by what it decides.
+fn enumeration_reaching_a_leaf(base: &str, member: &str) -> String {
+    let mut document: JsonValue = serde_json::from_str(base).expect("nested fixture JSON");
+    let graph = document["@graph"].as_array_mut().expect("graph");
+    for node in graph.iter_mut() {
+        let id = node["@id"].as_str().unwrap_or_default().to_owned();
+        if id == format!("{MODEL}.sub.enumCarrier") {
+            node["@type"] =
+                json!("http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant");
+        } else if id == format!("{MODEL}.sub.enumCarrier.k") {
+            node["S231:value"] = json!(format!(
+                "venStdLocal == Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard.{member}"
+            ));
+        } else if id == format!("{MODEL}.sub.enumCarrier.y") {
+            node["@type"] = json!("S231:BooleanOutput");
+            node["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
+        }
+    }
+    document.to_string()
+}
+
+#[test]
+fn a_g36_enumeration_reaches_a_leaf_through_two_composite_scopes() {
+    // The root's value is the one read: a root naming another member flips every comparison.
+    let other_root = NESTED.replace(
+        "\"Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard.California_Title_24\"",
+        "\"Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard.ASHRAE62_1\"",
+    );
+    assert_ne!(other_root, NESTED);
+    for (base, member, expected) in [
+        (NESTED, "California_Title_24", true),
+        (NESTED, "ASHRAE62_1", false),
+        (other_root.as_str(), "California_Title_24", false),
+        (other_root.as_str(), "ASHRAE62_1", true),
+    ] {
+        let graph = import_ok(&enumeration_reaching_a_leaf(base, member));
+        let k = &graph.blocks[1]
+            .params
+            .values
+            .iter()
+            .find(|(name, _)| name.as_ref() == "k")
+            .expect("the leaf's k")
+            .1;
+        assert!(k.bit_eq(&Value::Boolean(expected)), "{member}: {k:?}");
+    }
 }
 
 #[test]

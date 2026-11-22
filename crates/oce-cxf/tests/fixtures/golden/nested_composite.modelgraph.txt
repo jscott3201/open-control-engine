@@ -5,7 +5,6 @@ blocks: 3
   B1 decl=1 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.profile.nested_composite.sub.enumCarrier")
     inputs=[] outputs=[2]
     param k=Real(0x3ff0000000000000)
-    param extra=Enum(class=110,ordinal=2)
   B2 decl=2 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.profile.nested_composite.post")
     inputs=[3] outputs=[4]
     param k=Real(0x4000000000000000)

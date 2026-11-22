@@ -340,10 +340,10 @@ fn an_invalid_mutant_is_refused_before_any_frame_of_any_scenario_runs() {
 }
 
 #[test]
-fn a_mutant_that_holds_an_edited_parameter_as_structural_is_invalid() {
-    // A block instance can carry a parameter its class does not declare. The subject's
-    // `Logical.Not` carries an Integer `nin`, which it admits as settable; the mutant's
-    // `gate` is a `Logical.MultiAnd`, where `nin` is the structural input count.
+fn a_subject_block_carrying_a_parameter_its_class_does_not_declare_fails_to_load() {
+    // The subject's `Logical.Not` carries an Integer `nin`, which `Not` does not declare. Before
+    // issue #748 the engine loaded it, ignored the value, and the subject admitted `gate.nin` as
+    // a settable parameter; the load gate now refuses the name.
     let set = r#"{"schema": "oce/vectors/v1", "clock": {"step_s": 60, "horizon_s": 1800},
         "mutants": [{"path": "m.cxf.json"}],
         "scenarios": [{"name": "s", "params": {"gate.nin": 1}, "inputs": {"u": 0.0}, "expect": []}]}"#;
@@ -351,14 +351,26 @@ fn a_mutant_that_holds_an_edited_parameter_as_structural_is_invalid() {
     let error = param_refusal(set, &subject("gate"), &mutants);
     assert_eq!(
         (error.code(), error.subject()),
-        ("mutant-param-refused", "mutants[0]")
+        ("subject-load-failed", "subject")
     );
+    assert!(
+        error.diagnostic_codes().contains(&"unknown-parameter"),
+        "{error:?}"
+    );
+}
+
+#[test]
+fn an_edit_of_a_structural_parameter_is_refused_on_the_subject() {
+    // On a `Logical.MultiAnd`, `nin` is the structural input count: the edit is refused with the
+    // cause `param-structural`. A mutant can no longer meet this cause on an edit its subject
+    // admits: no parameter name is settable on one registered class and structural on another,
+    // and a block carries only the parameters its class declares (issue #748).
+    let set = r#"{"schema": "oce/vectors/v1", "clock": {"step_s": 60, "horizon_s": 1800},
+        "scenarios": [{"name": "s", "params": {"gate.nin": 1}, "inputs": {"u": 0.0}, "expect": []}]}"#;
+    let error = param_refusal(set, &subject("gate_multiand"), &[]);
+    assert_eq!(error.code(), "param-refused", "{error:?}");
     assert_eq!(error.path(), Some("urn:verify:gate#top.gate.nin"));
     assert_eq!(error.cause(), Some("param-structural"));
-    // The subject admits the edit on its own, and the mutant is valid under a set without it.
-    let unedited = set.replace(r#""params": {"gate.nin": 1}, "#, "");
-    assert_ne!(unedited, set);
-    assert!(run_mutants(&unedited, &subject("gate"), &mutants).is_ok());
 }
 
 #[test]

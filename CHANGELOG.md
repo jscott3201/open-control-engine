@@ -191,6 +191,68 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
+- **A parameter name the block's class does not declare is refused, never dropped while the
+  block runs on its default** (GitHub #PRNUM, issue #748; the remaining half of #467).
+  **Breaking, in place:** a document or a blob that binds a block a parameter under a name its
+  class does not declare loaded before, carried the name and its value into the model, the content
+  id and the blob, and ran the block on its default; it is refused now. No format byte changes and
+  no version bump (no release has been tagged since 0.6.0, so standing rule 10 owes none), and no
+  content id of a document that still loads moves.
+  - **What was wrong.** A block reads its parameters by name and falls back to a default for a
+    name it does not find, and the load gate judged only the names a class rule or the catalog
+    types, so `Integers.Sources.Pulse { period = 4, amplitud = 3 }` loaded clean and output the
+    default amplitude 1, and the misspelt value still entered the content id: `holdSet = [2.0,
+    3.0]` and `[2, 3]` on a `Constant` were two ids. Only the authoring layer's stage 1 refused
+    such a name, so CXF from any other producer loaded with it. The engine's own test of the
+    `TrueHoldWithReset` state contract bound `trueHoldDuration`, which that class does not
+    declare (it declares `duration`), and so ran on the default; it binds `duration` now.
+  - **The rule.** `oce_blocks::declares_parameter` (new, with `spells_array_element`,
+    `nearest_declared_parameter`, `MAX_SUGGESTION_DISTANCE` and `MAX_COMPARED_NAME_BYTES`) says
+    whether a registered class declares a bound name: a scalar parameter's own name, or an element
+    of one of its arrays in the canonical flattened spelling (`k_2`, `table_1_2`). The load gate
+    (`oce-validate`, new rule `params_declared`) refuses every other binding on a registered class
+    as `unknown-parameter` (`DiagCode::UnknownParameter`, new; the authoring layer's stage-1 code,
+    so the parity table's row is now an engine row), one finding per binding, subject the block,
+    the message naming the parameter and, within a few edits, the declared one it probably meant:
+    ``parameter `amplitud` on block `CDL.Integers.Sources.Pulse` is not a parameter of its class;
+    did you mean `amplitude`?``. A case slip, a swap of two letters or one or two edits on a
+    longer name are suggested; an array's bare base or a misspelt element suggests its template
+    (`k` and `K_1` on `MultiSum` suggest `k_<i>`). Names other rules already refuse keep their
+    one finding: a signed or zero-padded element index (`non-canonical-element-name`), an index of
+    zero or past the extent, and a name under a matrix's or a `TimeTable` offset's prefix that is
+    no cell of its shape (`parameter-out-of-range`). `oce_api::class_ports` and
+    `validate_block_parameters` refuse the same names. A composite's or a sequence's own
+    parameters are declarations, not block bindings, and are unaffected.
+  - **The blob decoder** refuses a blob that carries a parameter its block's class does not
+    declare with `BlobError::UndeclaredParameter { block, parameter }` (new variant), judged
+    before the value, so a block is never built from a table holding a name it ignores. It is
+    stricter than the load gate's spelling rules: a non-canonical element (`k_01`) is undeclared
+    there too. `no_std + alloc` builds.
+  - **The catalog is complete.** Every public parameter the pinned upstream source declares for
+    each of the 132 vendored classes is a catalog parameter and no other is (186 between them;
+    `Reals.MatrixGain` lists its protected `nin` and `nout`, which a document may state), held
+    class by class by a new `fixture_port_order` test from the same scan of the vendored Modelica
+    that checks port order. So no parameter CDL defines is refused as unknown.
+  - **What moved.** No vendored translation that loads and no `open-control-library` rule (139,
+    with the retired `S231P#` namespace rewritten) binds an undeclared name. Four tracked test
+    fixtures did, and each was corrected to parameters its class declares: `composite_contract`'s
+    `leaf_array_parameter_conditional_member` (a `Constant` with `holdSet[2]` and `have_hol`, now
+    a `TimeTable` whose guard reads its own `extrapolation`) and
+    `leaf_identity_parameter_modification` (a `UnitDelay` guard on `have_hol`, now a
+    `LimitSlewRate` guarded by its `enable`), `nested_composite` (a G36 enumeration on a
+    `Constant`'s `extra`; the propagation through two composite scopes is now proven by a
+    comparison a Boolean constant decides) and `oce-verify`'s `gate` subject (`nin` on
+    `Logical.Not`, now its refusal case). Their `oce-cxf` model-graph goldens and import-hash
+    lines were re-blessed for that reason; no golden under `tools/golden-gen/goldens` moved. Seven
+    tracked reader fixtures already refused for a missing `k` now also report their undeclared
+    names. A mutant can no longer meet `param-structural` on an edit its subject admits, since no
+    parameter name is settable on one class and structural on another.
+  - **Bounded on hostile input.** The lookup allocates nothing; the suggestion rejects a name
+    whose length is far from every declared name's by its length alone and otherwise compares two
+    short strings in three rows on the stack; every finding is raised through the load gate's
+    bounded diagnostic list. 100,000 names of 64 bytes are refused for about 117 bytes and half an
+    allocation a further name, and 400 names of 64 KiB request what 200 do.
+
 - **A parameter of the wrong kind is refused, never run on the block's default** (GitHub #754,
   issues #734, #735; owner rulings R1 and R2 of 2026-11-21). **Breaking, in place:** a document
   or a blob that binds a block parameter a value of another kind than its class's catalog type

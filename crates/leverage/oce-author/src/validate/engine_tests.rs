@@ -4,8 +4,9 @@
 //! Each defect is emitted with stage 1 bypassed ([`emit_unchecked`]) and loaded in a throwaway
 //! engine; the engine's findings are mapped back through the same code stage 2 uses. A row whose
 //! owner is the engine asserts the engine reports the stage-1 code at the stage-1 subject; an
-//! author-only row that pre-empts an engine code asserts that code at the same subject; the
-//! `unknown-parameter` row pins that the engine reports nothing at all (GitHub #467). The
+//! author-only row that pre-empts an engine code asserts that code at the same subject; a
+//! `Silent` row pins that the engine reports nothing at all. The `unknown-parameter` row was one
+//! until issue #748, when the load gate began refusing a name the class does not declare. The
 //! `single-assignment` row (author and engine) is same-code only: stage 1 reports the repeating
 //! connection, the engine the input, which stage 2 maps to the first connection driving it.
 
@@ -108,7 +109,7 @@ const PARITY: &[(&str, EngineSays)] = &[
     ("empty-sequence", EngineSays::Preempts("malformed-document")),
     ("duplicate-name", EngineSays::Preempts("duplicate-id")),
     ("class-not-found", EngineSays::Same),
-    ("unknown-parameter", EngineSays::Silent),
+    ("unknown-parameter", EngineSays::Same),
     ("duplicate-parameter", EngineSays::Preempts("duplicate-id")),
     ("missing-required-parameter", EngineSays::Same),
     ("parameter-kind-mismatch", EngineSays::Same),
@@ -150,7 +151,7 @@ const NOTE_TABLE: &[(&str, &str, Option<&str>)] = &[
     ("duplicate-name", "author", Some("duplicate-id")),
     ("class-not-found", "engine", None),
     ("class-not-authorable", "author", None),
-    ("unknown-parameter", "author", Some("none")),
+    ("unknown-parameter", "engine", None),
     ("parameter-not-settable", "author", None),
     ("duplicate-parameter", "author", Some("duplicate-id")),
     ("missing-required-parameter", "engine", None),

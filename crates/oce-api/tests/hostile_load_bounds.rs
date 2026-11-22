@@ -174,6 +174,16 @@ fn load(bytes: &[u8]) -> (Result<oce_api::LoadReport, OcError>, AllocationInfo) 
     (result.unwrap().map(|(report, _)| report), info)
 }
 
+/// Whether the facade's refusal of `bytes` names no array-budget refusal of the reader.
+fn accepted_by_the_budget(bytes: &[u8]) -> bool {
+    match Engine::new().load_cxf(bytes) {
+        Ok(_) => true,
+        Err(error) => error
+            .all_diagnostics()
+            .all(|d| !d.message.starts_with("array parameter needs")),
+    }
+}
+
 fn error_codes(error: &OcError) -> Vec<DiagCode> {
     error.all_diagnostics().map(|d| d.code).collect()
 }
@@ -280,8 +290,23 @@ fn four_maximal_broadcast_arrays_refuse_on_the_document_budget_with_bounded_memo
 #[test]
 fn document_array_budget_admits_exactly_its_limit_and_refuses_one_element_more() {
     let half = MAX_DOCUMENT_ARRAY_ELEMENTS / 2;
-    let (accepted, _) = load(&array_document(&[half, half]));
-    accepted.expect("arrays totalling exactly the budget load");
+    // The budget is the reader's. The arrays are names the constant's class does not declare,
+    // which the facade's load gate refuses after the reader admits them (issue #748), so the
+    // admission is the reader's and the facade's refusal is for the names, not the budget.
+    let at_budget = array_document(&[half, half]);
+    oce_cxf::import_cxf(&at_budget, &oce_cxf::ResolveOptions::default())
+        .expect("arrays totalling exactly the budget are read");
+    let (accepted, _) = load(&at_budget);
+    let codes = error_codes(&accepted.expect_err("the undeclared names are refused"));
+    assert!(
+        codes.contains(&DiagCode::UnknownParameter),
+        "{:?}",
+        codes.first()
+    );
+    assert!(
+        accepted_by_the_budget(&at_budget),
+        "the reader's array budget refused it"
+    );
 
     let (refused, _) = load(&array_document(&[half, half + 1]));
     let error = refused.expect_err("one element past the budget refuses");
