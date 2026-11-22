@@ -38,6 +38,7 @@ fn report() -> OutputReport {
         masked_intervals_total: 70,
         masked_exceedance: Vec::new(),
         masked_exceedance_total: 0,
+        last_sample_t: None,
     }
 }
 

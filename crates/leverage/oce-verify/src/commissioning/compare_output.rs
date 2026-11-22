@@ -36,6 +36,7 @@ use super::report::{
 };
 use super::run_options::{OutputBounds, OutputCurves};
 use super::tolerances::PartialTolerances;
+use crate::compare_error::CompareError;
 use crate::compare_limits::CompareLimits;
 use crate::envelope::{Curve, Envelope, Series};
 use crate::verify_error::{VerifyError, VerifyErrorKind as Kind, compare_refusal_cause};
@@ -96,17 +97,26 @@ pub(crate) struct Comparing {
 
 /// What happened at each instant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Fate {
+pub(super) enum Fate {
+    /// In the verdict.
     Compared,
+    /// An indicator is false there.
     Masked,
+    /// In a refused stretch that no indicator masked.
     Uncovered,
 }
 
 /// The fate of each instant of `plan`: masked first, then uncovered.
 fn fates(plan: &OutputPlan<'_>) -> Vec<Fate> {
-    plan.active
+    fates_of(plan.active, plan.uncovered)
+}
+
+/// The fate of each instant from whether it is `active` and whether it is `uncovered`: masked
+/// first, then uncovered, else compared.
+pub(super) fn fates_of(active: &[bool], uncovered: &[bool]) -> Vec<Fate> {
+    active
         .iter()
-        .zip(plan.uncovered)
+        .zip(uncovered)
         .map(|(active, uncovered)| {
             if !active {
                 Fate::Masked
@@ -119,7 +129,7 @@ fn fates(plan: &OutputPlan<'_>) -> Vec<Fate> {
         .collect()
 }
 
-fn count(fates: &[Fate], fate: Fate) -> u64 {
+pub(super) fn count(fates: &[Fate], fate: Fate) -> u64 {
     u64::try_from(fates.iter().filter(|f| **f == fate).count()).unwrap_or(u64::MAX)
 }
 
@@ -134,16 +144,27 @@ fn output_type(value_type: ValueType) -> OutputType {
 
 /// A report of `plan` with nothing in it: its fields for its type, every count zero.
 fn empty_report(plan: &OutputPlan<'_>, role: FunnelReference) -> OutputReport {
-    let real = plan.value_type == ValueType::Real;
+    empty_output_report(plan.path, plan.value_type, plan.tolerances, role)
+}
+
+/// A report of the output at `path` with nothing in it: its fields for its type, every count
+/// zero.
+pub(super) fn empty_output_report(
+    path: &str,
+    value_type: ValueType,
+    tolerances: PartialTolerances,
+    role: FunnelReference,
+) -> OutputReport {
+    let real = value_type == ValueType::Real;
     OutputReport {
-        output: plan.path.to_owned(),
-        output_type: output_type(plan.value_type),
+        output: path.to_owned(),
+        output_type: output_type(value_type),
         status: OutputStatus::NoData,
         compared: 0,
         masked: 0,
         uncovered: 0,
         funnel_reference: real.then_some(role),
-        tolerances: real.then_some(plan.tolerances),
+        tolerances: real.then_some(tolerances),
         half_width: None,
         half_height: None,
         worst: None,
@@ -153,6 +174,7 @@ fn empty_report(plan: &OutputPlan<'_>, role: FunnelReference) -> OutputReport {
         masked_intervals_total: 0,
         masked_exceedance: Vec::new(),
         masked_exceedance_total: 0,
+        last_sample_t: None,
     }
 }
 
@@ -221,15 +243,15 @@ pub(crate) fn compare_output(
 }
 
 /// The figures of a verdict over the test instants `times`, their fates and their exceedances.
-struct Verdict {
-    status: OutputStatus,
-    worst: Option<Exceedance>,
-    first: Option<f64>,
-    exceedance_time_s: f64,
-    masked_intervals: (Vec<MaskedInterval>, u64),
+pub(super) struct Verdict {
+    pub(super) status: OutputStatus,
+    pub(super) worst: Option<Exceedance>,
+    pub(super) first: Option<f64>,
+    pub(super) exceedance_time_s: f64,
+    pub(super) masked_intervals: (Vec<MaskedInterval>, u64),
 }
 
-fn verdict(times: &[f64], fates: &[Fate], exceedances: &[f64]) -> Verdict {
+pub(super) fn verdict(times: &[f64], fates: &[Fate], exceedances: &[f64]) -> Verdict {
     let mut worst: Option<Exceedance> = None;
     let mut first = None;
     let mut time_s = 0.0;
@@ -285,7 +307,7 @@ fn verdict(times: &[f64], fates: &[Fate], exceedances: &[f64]) -> Verdict {
 
 /// A Boolean or Integer output's exceedances: `1` at a compared instant where the two differ,
 /// `0` at a masked one (zeroed in both), a NaN at an uncovered one.
-fn exact(fates: &[Fate], engine: &[i64], trend: &[i64]) -> Vec<f64> {
+pub(super) fn exact(fates: &[Fate], engine: &[i64], trend: &[i64]) -> Vec<f64> {
     fates
         .iter()
         .zip(engine.iter().zip(trend))
@@ -298,12 +320,54 @@ fn exact(fates: &[Fate], engine: &[i64], trend: &[i64]) -> Vec<f64> {
 }
 
 /// `values` with every instant that is not compared zeroed.
-fn zeroed(fates: &[Fate], values: Vec<f64>) -> Vec<f64> {
+pub(super) fn zeroed(fates: &[Fate], values: Vec<f64>) -> Vec<f64> {
     values
         .into_iter()
         .zip(fates)
         .map(|(y, fate)| if *fate == Fate::Compared { y } else { 0.0 })
         .collect()
+}
+
+/// The engine series (zeroed where not compared) at `instants` checked for a non-finite or
+/// out-of-range sample: at the first, `report.worst` is that instant with the exceedance positive
+/// infinity, and the exceedances are positive infinity at every compared instant and a NaN at
+/// every other. `None` when every sample is in range.
+pub(super) fn non_finite_engine(
+    instants: &[f64],
+    fates: &[Fate],
+    engine: &[f64],
+    report: &mut OutputReport,
+) -> Option<Vec<f64>> {
+    let t = instants
+        .iter()
+        .zip(engine)
+        .find(|(_, y)| !(y.is_finite() && y.abs() <= MAX_ENGINE_MAGNITUDE))
+        .map(|(t, _)| *t)?;
+    report.worst = Some(Exceedance {
+        t,
+        exceedance: f64::INFINITY,
+    });
+    Some(
+        fates
+            .iter()
+            .map(|fate| match fate {
+                Fate::Compared => f64::INFINITY,
+                Fate::Masked | Fate::Uncovered => f64::NAN,
+            })
+            .collect(),
+    )
+}
+
+/// The envelope's refusal of the output at `path` as the run's `compare-refused`, the envelope's
+/// code its cause.
+pub(super) fn compare_refused(path: &str, envelope: Envelope, error: &CompareError) -> VerifyError {
+    VerifyError::new(
+        Kind::CompareRefused,
+        path,
+        format!("the {envelope} envelope gave no result: {error}"),
+    )
+    .with_path(path)
+    .with_cause(compare_refusal_cause(error))
 }
 
 /// A Real output, through the envelope: its exceedances and, when kept, its bound curves. Fills
@@ -322,24 +386,7 @@ fn compare_real(
         // No envelope is built for an output with nothing compared.
         return Ok((vec![f64::NAN; plan.instants.len()], None));
     }
-    let out_of_range = plan
-        .instants
-        .iter()
-        .zip(&engine)
-        .find(|(_, y)| !(y.is_finite() && y.abs() <= MAX_ENGINE_MAGNITUDE))
-        .map(|(t, _)| *t);
-    if let Some(t) = out_of_range {
-        report.worst = Some(Exceedance {
-            t,
-            exceedance: f64::INFINITY,
-        });
-        let exceedances = fates
-            .iter()
-            .map(|fate| match fate {
-                Fate::Compared => f64::INFINITY,
-                Fate::Masked | Fate::Uncovered => f64::NAN,
-            })
-            .collect();
+    if let Some(exceedances) = non_finite_engine(plan.instants, fates, &engine, report) {
         return Ok((exceedances, None));
     }
     let (reference, test) = match comparing.role {
@@ -354,18 +401,7 @@ fn compare_real(
             &plan.tolerances.resolved(),
             &comparing.limits,
         )
-        .map_err(|error| {
-            VerifyError::new(
-                Kind::CompareRefused,
-                plan.path,
-                format!(
-                    "the {} envelope gave no result: {error}",
-                    comparing.envelope
-                ),
-            )
-            .with_path(plan.path)
-            .with_cause(compare_refusal_cause(&error))
-        })?;
+        .map_err(|error| compare_refused(plan.path, comparing.envelope, &error))?;
     report.half_width = Some(result.half_width());
     report.half_height = Some(result.half_height());
     let mut masked_exceedance = Vec::new();

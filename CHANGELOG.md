@@ -1551,6 +1551,58 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **`oce-verify` compares a commissioning reference with no `sampling` by change of value**
+  (GitHub #790, issue #746; design note `docs/design/commissioning.md`, "As landed: the
+  change-of-value comparison", ruled by the owner on 2026-11-22). Both series are step functions:
+  the engine's output held from frame to frame, a trend's from sample to sample. An output's
+  instants are the window's ends and every sample time in the window of the engine series, the
+  trend series and its indicators, and every uncovered-stretch end. A Boolean or Integer output
+  is compared exactly at each, which is exact in time, with no time tolerance (issue #794). A
+  Real output's funnel is built around the reference's step series (the held value carried to
+  each change, then the new value, so the funnel draws a step and not a ramp), the band's
+  corners inside the window join the instants, and each instant's exceedance is the largest
+  error over the stretch to the next. A corner within `4 ε (m + w)` of a series instant is read
+  as lying on it, so a step exactly one `x` tolerance late is decided by the inputs, never by
+  the funnel's normalisation (the review of GitHub #790 found 132 such false failures in 1,950
+  cases before it). `exceedance_time_s` is exact for a staircase band and an upper bound
+  otherwise; a step's vertical segment counts no time, and a value at exactly `stop` is judged
+  and adds none. A masked run reads from its first instant to where its last stretch ends. The
+  zero fill of masked instants is unchanged (#745). The band and the `--bounds` files are the
+  funnel port's (pyfunnel 2.1.1 accepts repeated `x`; the hostile differential case
+  `equal_times` is the evidence); the per-instant errors are not pyfunnel's. The two false
+  passes the review of GitHub #744 reproduced now fail: a trend step 3 s late under a 1 s `x`
+  tolerance (outside 0.95 K for 2.0 s from 11 s) and a Boolean toggling between two logged
+  points (a mismatch for 10.0 s from 10 s); so does a pulse the trend never logged. Each
+  output's points are bounded before the replay from the frames, trend samples and
+  indicator-file samples in the window, under the existing caps, so the funnel's own
+  `too-many-points` stays unreachable. Evidence: nineteen synthetic runs equal bit for bit to
+  `derive_run.py`'s independent derivation, a seeded differential of 400 cases against a 1/64 s
+  grid, three golden receipts, and mutants. A run with a `sampling` is unchanged, every golden and
+  transcript byte-identical.
+- **A commissioning receipt with no `sampling` says when each trend last logged:
+  `last_sample_t`** (GitHub #790, issue #746; owner ruling of 2026-11-22). Under change of value
+  a trend that stops logging is held to `stop`, so a dead logger reads as a value that did not
+  change; each output now records the time of the trend's last sample at or before `stop` that
+  the comparison held (earlier than `start` for a sample held from before it; absent for an
+  output with no instant). Written only without a `sampling`, so no receipt with one moves. A
+  limit on the gap is issue #793.
+- **`sampling-required` now refuses only an `aligned-grid` reference with no `sampling`**
+  (GitHub #790, issue #746; owner rulings of 2026-11-21 and 2026-11-22). A `funnel` reference
+  with no `sampling` runs by change of value. Under `aligned-grid` the band is the extremes at
+  its grid points joined by straight lines, which around a sparse step series covers a step's
+  old level across the gap and passed a pulse the trend never logged; such a reference is
+  refused before any file is read until a step-shaped grid band lands (issue #792).
+  **Breaking, in place:** `TimeRecord::sampling` is an `Option<SpecNumber>` (a receipt with no
+  `sampling` has no `time.sampling`), `OutputReport` gains `last_sample_t`, and
+  `VerifyErrorKind::SamplingRequired` keeps its place and code in `VERIFY_ERROR_CODES` with its
+  meaning narrowed to the `aligned-grid` case.
+- **`oce verify --commission` runs a spec whose `funnel` reference gives no `sampling`** (GitHub
+  #790, issue #746). The verb reads the reference's files and prints the library's receipt,
+  where it printed the `sampling-required` report and exited 2; an `aligned-grid` reference with
+  no `sampling` is still refused before any file is read, its transcript
+  `verify_commission_sampling_required` now that case. `oce vocab` describes the narrowed code.
+  Three new transcripts run references with no `sampling`, each stdout the library's golden
+  receipt byte for byte.
 - **`oce` reads and writes through directory handles everywhere** (GitHub #777, issue #771;
   Unix). Three places in `crates/leverage/oce-cli` still reached a directory or a file by path
   after their checks, so whoever could change the directories during a run could redirect them;
@@ -1984,7 +2036,7 @@ so far, and no tag is cut by the bump.
   a `CommissionRun`: the receipt, the trace (inputs retained) and the exceedance columns
   (`OutputCurves`, with the bound curves under `CommissionOptions::bounds`).
   - **Bind**, every refusal before any frame. A reference needs a `sampling` (owner ruling of
-    2026-11-21, `sampling-required`, lifted by #746). Names resolve by replay's rule with no
+    2026-11-21, `sampling-required`; narrowed to `aligned-grid` by #746). Names resolve by replay's rule with no
     prefix on mapping names. Each mapped point's CDL type, `cdl.unit` and unit row are held to
     its port (owner rulings of 2026-11-21): `cdl.unit` must be the port's unit; a quantity
     matches by its local name; a `ThermodynamicTemperature` port takes absolute rows and a

@@ -173,9 +173,12 @@ pub enum VerifyErrorKind {
     /// the [`crate::UnitError`] code (`port-unit-mismatch`, `absolute-for-difference`,
     /// `difference-for-absolute`).
     UnitRefused,
-    /// A commissioning reference with no `sampling`, its own or the spec's (owner ruling of
-    /// 2026-11-21): without a grid the envelope would judge a value the engine held between two
-    /// samples as a ramp. Lifted when a change-of-value comparison lands.
+    /// A commissioning reference under the `aligned-grid` envelope with no `sampling`, its own or
+    /// the spec's (owner ruling of 2026-11-22, narrowing the ruling of 2026-11-21). Without a
+    /// grid the reference is compared by change of value, and that envelope's band, a straight
+    /// line between its grid points, would cover a step's old level across a gap and pass a
+    /// pulse the trend never logged. A `funnel` reference needs no `sampling`. Issue #792 asks
+    /// for a step-shaped grid band, which lifts it.
     SamplingRequired,
     /// A commissioning reference whose indicator rules give more than
     /// [`crate::MAX_INDICATORS`] distinct names.

@@ -297,7 +297,7 @@ pub(crate) const VERIFY_MEANINGS: &[(&str, &str)] = &[
     ),
     (
         "sampling-required",
-        "the commissioning reference gives no sampling, which a run needs for now",
+        "the commissioning reference uses the aligned-grid envelope and gives no sampling, which that envelope needs",
     ),
     (
         "too-many-indicators",

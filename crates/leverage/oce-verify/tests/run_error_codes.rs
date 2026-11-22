@@ -124,7 +124,7 @@ const PINNED_BESIDE_THE_CODE: &[(&str, &str)] = &[
     ),
     (
         "sampling-required",
-        "tests/commissioning/run_comparison.rs: a commissioning reference with no sampling",
+        "tests/commissioning/run_change_edges.rs: an aligned-grid commissioning reference with no sampling",
     ),
     (
         "too-many-indicators",

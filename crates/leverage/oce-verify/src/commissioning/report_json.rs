@@ -129,7 +129,9 @@ fn time_record(time: &TimeRecord) -> Json {
     if let Some(origin) = &time.origin {
         entries.push(entry("origin", Json::str(origin.as_str())));
     }
-    entries.push(entry("sampling", Json::Raw(time.sampling.canonical())));
+    if let Some(sampling) = &time.sampling {
+        entries.push(entry("sampling", Json::Raw(sampling.canonical())));
+    }
     Json::object(entries)
 }
 
@@ -244,6 +246,9 @@ fn output(report: &OutputReport) -> Json {
     }
     if let Some(first) = report.first_exceedance_t {
         entries.push(entry("first_exceedance_t", time(first)));
+    }
+    if let Some(last) = report.last_sample_t {
+        entries.push(entry("last_sample_t", time(last)));
     }
     Json::object(entries)
 }

@@ -2,10 +2,10 @@
 //! "Comparison" under "Sources, sampling and time"; decisions 14 and 16; the owner's rulings of
 //! 2026-11-21 in "As landed: the run, the comparison and the receipt").
 //!
-//! A run needs a `sampling` (`sampling-required` otherwise), so both series of every output are
-//! compared at one set of instants: `start + k * s` for every `k >= 0` with `start + k * s <=
-//! stop`, by multiply as replay's grid, and then `stop` itself when the grid does not reach it
-//! ("each series gets a sample exactly at `start` and `stop`"). Every value is taken by
+//! With a `sampling`, both series of every output are compared at one set of instants (without
+//! one, [`super::compare_change`] compares by change of value): `start + k * s` for every
+//! `k >= 0` with `start + k * s <= stop`, by multiply as replay's grid, and then `stop` itself
+//! when the grid does not reach it ("each series gets a sample exactly at `start` and `stop`"). Every value is taken by
 //! **zero-order hold**: the last sample at or before an instant, the last of an equal-time pair
 //! included. Never linear interpolation.
 //!
