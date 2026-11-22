@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::Attrs;
 
 use crate::dto::{CxfValue, Node, TermAttr};
@@ -42,20 +42,20 @@ pub(super) enum PortAttrs {
 pub(super) fn classify_attrs(
     attrs: &Attrs,
     subject: &str,
-    diags: &mut Vec<Diagnostic>,
+    diags: &mut DiagnosticList,
 ) -> PortAttrs {
     match attrs {
         Attrs::Real(attrs) => {
             // Imported since issue #379, so a finite nominal round-trips like a bound.
             let nominal = match attrs.nominal {
                 Some(nominal) if !nominal.is_finite() => {
-                    diags.push(reject(MSG_ATTR_NONFINITE_NOMINAL, subject));
+                    diags.raise(|| reject(MSG_ATTR_NONFINITE_NOMINAL, subject));
                     None
                 }
                 other => other,
             };
             if attrs.unbounded.is_some() {
-                diags.push(reject(MSG_ATTR_UNBOUNDED, subject));
+                diags.raise(|| reject(MSG_ATTR_UNBOUNDED, subject));
             }
             let min = finite_real_bound(attrs.min, subject, diags);
             let max = finite_real_bound(attrs.max, subject, diags);
@@ -77,15 +77,11 @@ pub(super) fn classify_attrs(
 }
 
 /// Keep finite Real bounds and reject values that JSON would serialize as `null`.
-fn finite_real_bound(
-    value: Option<f64>,
-    subject: &str,
-    diags: &mut Vec<Diagnostic>,
-) -> Option<f64> {
+fn finite_real_bound(value: Option<f64>, subject: &str, diags: &mut DiagnosticList) -> Option<f64> {
     match value {
         Some(bound) if bound.is_finite() => Some(bound),
         Some(_) => {
-            diags.push(reject(MSG_ATTR_NONFINITE_BOUND, subject));
+            diags.raise(|| reject(MSG_ATTR_NONFINITE_BOUND, subject));
             None
         }
         None => None,

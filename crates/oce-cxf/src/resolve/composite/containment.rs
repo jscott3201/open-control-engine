@@ -17,6 +17,7 @@ use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
 
+use crate::document_groundings::DocumentGroundings;
 use crate::dto::Node;
 use crate::scope_chain::ScopeFrame;
 use oce_diag::DiagnosticList;
@@ -40,6 +41,8 @@ pub(super) struct Containment<'a, 'd> {
     diags: &'d mut DiagnosticList,
     /// The parameter nodes already shape-checked in this resolve (issue #559).
     checked: &'d mut CheckedParameters,
+    /// The groundings the composites of this walk share (issue #749).
+    groundings: &'d mut DocumentGroundings,
     /// O(1) membership for the current traversal spine (cycle detection).
     stack: HashSet<String>,
     /// The traversal spine in path order, so a detected cycle names every participant.
@@ -61,12 +64,14 @@ impl<'a, 'd> Containment<'a, 'd> {
         specialization: &'a Specialization,
         diags: &'d mut DiagnosticList,
         checked: &'d mut CheckedParameters,
+        groundings: &'d mut DocumentGroundings,
     ) -> Self {
         Self {
             by_id,
             specialization,
             diags,
             checked,
+            groundings,
             stack: HashSet::new(),
             path: Vec::new(),
             reached: HashSet::new(),
@@ -135,6 +140,7 @@ impl<'a, 'd> Containment<'a, 'd> {
             &[],
             parent_scope,
             by_id,
+            self.groundings,
             Pass::Lowering {
                 specialization: self.specialization,
                 diags: self.diags,

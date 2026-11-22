@@ -680,6 +680,7 @@ changes.
 | Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 | Diagnostic text of one CXF read | 8 MiB (8,388,608 bytes) of messages and subjects together, a subject counted for each diagnostic | `crates/oce-diag/src/diagnostic_list.rs` | the list ends; one closing `resource-limit-exceeded` error counts what is not listed |
 | Diagnostic text of one validator pass (unification, validation, a block's parameters) | the same 8 MiB, the same count | `crates/oce-diag/src/diagnostic_list.rs`, `crates/oce-validate/src/lib.rs` | the same: the pass ends with the closing error after its sorted diagnostics |
+| Diagnostic text of one CXF export, its deferral warnings included | the same 8 MiB, the same count | `crates/oce-diag/src/diagnostic_list.rs`, `crates/oce-cxf/src/export.rs` | the same: the list ends with the closing error, and the export is refused (`CxfError::Validation`) even when everything left out was a warning |
 | Absent elements of a parameter-declared shape (a `TimeTable`'s cells, an `ExtractSignal`'s defaulted selectors) | one finding a shape, naming the count and the first four | `crates/oce-validate/src/rules/params_absent.rs` | `parameter-out-of-range`, found from the elements bound, never by walking the shape |
 | Preserved array parameters of one document | 1,048,576 elements, and 64 MiB (67,108,864 bytes) of element paths together, each path the instance IRI, `.` and the element's name | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses either, before its value is read or any of its names is built; it draws on neither |
 | String parameter values of one document | 8 MiB (8,388,608 bytes) over every parameter table, each entry counted whether or not entries share one allocation | `crates/oce-cxf/src/parameter_reads.rs` | `resource-limit-exceeded` diagnostic on the parameter whose value does not fit, before the value enters the table; an array mints none of its later elements |
@@ -736,6 +737,24 @@ instances list takes the whole budget. The string parameters of the catalog are 
 (`Utilities.Assert`), and no tracked or `open-control-library` model holds more than 176 bytes of
 them.
 
+A value that many owners read is grounded once for the document (issue #749). A parameter node
+that many leaves list was grounded again by each, and so was a declaration many composites list,
+in lowering and again in the guard scope of each composite with a conditional child: each
+grounding lexed the value's text and built its result anew, so 1,024 leaves listing one 60 KB
+string, a 702 KB document, requested 1.31 GB before the string budget refused them. Now the value
+of a node two owners or more list, written as an expression or a typed literal, is grounded once in
+each pass when its grounding looks up no name, and every owner shares the result (and the parse
+that orders a composite's declarations); 1,024 such leaves request what reading their own nodes
+costs, 26.5 KB a leaf, and the value a fixed number of times. This is exact: a grounding that
+looks no name up gives the same value under every scope. The evaluation budget sees no
+difference: each owner that takes the shared result is charged the fuel the one grounding spent,
+which is what grounding it again would spend, and an owner whose fuel left does not cover that
+grounds the value itself. So sharing changes no outcome. What the document keeps for its owners is
+built from the values' own text, and an array evaluation is kept only at the element count the
+element budget charged. A value that reads a name (`k + 1`) is still grounded under each owner's
+scope, since each may give it a different value, and such a value with long text still costs its
+text once an owner (issue #798 charges lexing to the evaluation budget).
+
 The set of sibling names an array's minted names are checked against is built once per leaf
 (issue #731); it was built again for each array parameter, so 2,000 empty arrays on one leaf, a
 415 KB document, took 1.6 s and requested 293 MB, where every further array now costs what reading
@@ -791,7 +810,10 @@ of a load, to 8 MiB of text (issue #695). What you can rely on:
   again, the operands of a conditional guard, the back-references that close a `containsBlock`
   cycle, the pass-through pairs onto one boundary output), a finding past the bound is counted
   and nothing is built for it (issue #711). A failed grounding the elements of one broadcast or
-  the listings of one parameter share is one error, made once. Other findings past the bound are
+  the listings of one parameter share is one error, made once. The pass-through pairs onto one
+  boundary output share one reading of its attributes, so a long `quantity` is held once
+  however many pairs read it, and the reading's findings are raised again for each pair
+  (issue #750). Other findings past the bound are
   built and dropped, so they cost their copying but hold nothing.
 
 The bound covers what `oce-cxf` raises while it reads, and, as its own list, what each validator
@@ -802,8 +824,12 @@ listed follows the order the rules raise them in, which is fixed. Warnings alone
 these stages as at the reader: a model whose unification warnings pass 8 MiB is refused. Each
 list is held on its own, so the warnings of a load that succeeds are at most the reader's 8 MiB
 and each validator pass's. The schedule and semantic stages return lists of their own, which no
-bound holds, and a receipt copies the subjects of every stage's records (issue #708). An export's
-diagnostics are not held to it either.
+bound holds, and a receipt copies the subjects of every stage's records (issue #708). An export's list is
+held to the same bound (issue #753): each finding copies its block's instance IRI, and a
+hand-built graph could raise one per parameter, connector or connection of a block with a long IRI
+(1,024 non-finite parameters on a 64 KiB IRI were 64 MiB of diagnostics). The deferral warnings
+are in that list, so an export whose warnings pass the bound is refused, never returned with
+warnings missing.
 
 A rule that judges the elements of a shape one parameter sets does not raise a finding an
 element. A `TimeTable` takes its shape from its largest `table_<row>_<col>`, so one parameter

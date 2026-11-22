@@ -18,6 +18,7 @@ use oce_diag::DiagnosticList;
 use super::declaration_scope::{Pass, TaggedFinding, evaluate_declarations, identifier_heads};
 use super::parameter_attrs::CheckedParameters;
 use super::specialize::Specialization;
+use crate::document_groundings::DocumentGroundings;
 
 fn node(json: serde_json::Value) -> Node {
     serde_json::from_value(json).expect("test node parses")
@@ -80,6 +81,7 @@ fn evaluate_root(
         &[],
         &ScopeFrame::root(),
         &map,
+        &mut DocumentGroundings::of(std::iter::empty(), &map),
         Pass::Lowering {
             specialization: &Specialization::default(),
             diags: &mut diags,
@@ -163,6 +165,7 @@ fn own_name_masks_enclosing_binding_even_when_the_own_declaration_cannot_ground(
         &[],
         &ScopeFrame::extend(&ScopeFrame::root(), enclosing.into_iter().collect()),
         &map,
+        &mut DocumentGroundings::of(std::iter::empty(), &map),
         Pass::Lowering {
             specialization: &Specialization::default(),
             diags: &mut diags,
@@ -256,6 +259,7 @@ fn self_reference_refuses_as_a_length_one_cycle_never_reading_the_enclosing_bind
         &[],
         &ScopeFrame::extend(&ScopeFrame::root(), enclosing.into_iter().collect()),
         &map,
+        &mut DocumentGroundings::of(std::iter::empty(), &map),
         Pass::Lowering {
             specialization: &Specialization::default(),
             diags: &mut diags,
@@ -316,6 +320,7 @@ fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machiner
         &[],
         &ScopeFrame::root(),
         &map,
+        &mut DocumentGroundings::of(std::iter::empty(), &map),
         Pass::Specialize {
             composite_chain: true,
             leaf_class: None,
@@ -375,6 +380,7 @@ fn leaf_chain_cycle_and_duplicate_refuse_silently_at_the_specialize_invocation()
         &[],
         &ScopeFrame::root(),
         &map,
+        &mut DocumentGroundings::of(std::iter::empty(), &map),
         Pass::Specialize {
             composite_chain: false,
             leaf_class: None,

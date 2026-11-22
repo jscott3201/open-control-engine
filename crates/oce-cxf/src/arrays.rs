@@ -308,20 +308,23 @@ impl<'a> ElementNames<'a> {
 /// construction cap — a hostile `fill(1, 2000000000)` returns `ExprError::ArrayTooLarge`, surfaced
 /// here as the error message. A non-finite element or intermediate is a typed
 /// [`GroundErr::NonFinite`] (issue #362). Total; never panics.
-fn eval_array_expression(
-    text: &str,
+///
+/// The evaluation is made by the caller, through the document's groundings, so a shared node's
+/// expression that reads no name is evaluated once per document (issue #749); `evaluated` is
+/// `None` for declared dims of rank 2 or more, which are refused before anything is evaluated.
+fn array_expression_elements<'e>(
+    evaluated: Option<&'e Result<EvalResult, oce_expr::ExprError>>,
     dims: &[usize],
     expected: usize,
-    scope: &dyn oce_expr::Scope,
-) -> Result<ArrayValue, GroundErr> {
-    if dims.len() > 1 {
+) -> Result<&'e ArrayValue, GroundErr> {
+    let Some(evaluated) = evaluated.filter(|_| dims.len() <= 1) else {
         return Err(GroundErr::ArrayShape(format!(
             "array expression value on a {}-dimensional array parameter is not supported \
              (multi-dimensional array expressions are deferred; oce-expr arrays are 1-D)",
             dims.len()
         )));
-    }
-    match oce_expr::eval_str_finite(text, scope) {
+    };
+    match evaluated {
         Ok(EvalResult::Array(av)) => {
             if av.len() != expected {
                 return Err(GroundErr::ArrayShape(format!(
@@ -337,7 +340,7 @@ fn eval_array_expression(
         Ok(_) => Err(GroundErr::ArrayShape(
             "array parameter expression must evaluate to an array".to_owned(),
         )),
-        Err(e) => Err(crate::ground::expr_failure(e)),
+        Err(e) => Err(crate::ground::expr_failure(e.clone())),
     }
 }
 
@@ -414,7 +417,7 @@ fn mint_element(
 /// - A [`CxfValue::Expr`] array expression (`fill(1, nin)`, `{1, 2}`, `1:3`): evaluated through
 ///   `oce-expr` against the same incremental scope the list path uses (earlier-declared sibling
 ///   parameters are visible; a *later*-declared one is not — the Step-7 forward-reference
-///   limitation), then shape-checked per [`eval_array_expression`]. The evaluated elements are
+///   limitation), then shape-checked per [`array_expression_elements`]. The evaluated elements are
 ///   minted exactly as list elements are, already canonicalized by `oce-expr`.
 /// - Any other shape (a bare/typed scalar literal) is `GroundingFailed`.
 ///
@@ -539,7 +542,10 @@ pub(crate) fn expand_array_param(
                 }
                 let elem = if m == 1 { &elems[0] } else { &elems[k] };
                 let scope = ParamScope::with_enclosing(enclosing, siblings);
-                let value = match &*reads.groundings.ground(elem, &scope, m == 1 || repeated) {
+                let grounded = reads
+                    .groundings
+                    .ground(pnode, elem, &scope, m == 1 || repeated);
+                let value = match &*grounded {
                     Ok(value) => value.clone(),
                     Err(e) => {
                         diags.raise(|| crate::ground::ground_failure(e, piri, owner));
@@ -561,8 +567,17 @@ pub(crate) fn expand_array_param(
         // separately).
         CxfValue::Expr(text) => {
             let scope = ParamScope::with_enclosing(enclosing, siblings);
-            let evaluated = eval_array_expression(text, &dims, n, &scope);
-            match evaluated {
+            let evaluated = if dims.len() > 1 {
+                None
+            } else {
+                Some(
+                    reads
+                        .groundings
+                        .document()
+                        .evaluate_array(pnode, cxf_val, text, n, &scope),
+                )
+            };
+            match array_expression_elements(evaluated.as_deref(), &dims, n) {
                 Ok(av) => {
                     // av.len() == n (shape-checked above), so one name is read per element;
                     // elements are already canonicalized by oce-expr, so they are pushed as-is.

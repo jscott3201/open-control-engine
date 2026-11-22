@@ -4,12 +4,14 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ParamTable, ValueType};
+use oce_model::{
+    Attrs, BlockId, BlockInstance, Connector, ConnectorId, Dir, ParamTable, ValueType,
+};
 
 use crate::dto::{CxfDocument, Node};
 use oce_diag::DiagnosticList;
 
-use super::attrs::connector_attrs;
+use super::attrs::{FindingCount, connector_attrs};
 use super::value_types::{first_type, term_of, try_derive_value_type};
 
 /// Derive boundary types, retaining `String` only for endpoints of a native pass-through edge.
@@ -84,6 +86,17 @@ fn try_derive_pass_through_value_type(
 /// Append reserved identity blocks after authored nodes have received their stable positions.
 /// `by_id` locates each declared output's node so its authored §7.4.1 attributes ride the
 /// minted output connector instead of being silently replaced by the type's empty defaults.
+///
+/// A declared output's attributes are read once for each type a pair reads them as, and every
+/// pair that reads them shares that reading (issue #750): its terms (`Arc<str>`) are one
+/// allocation however many pairs a boundary output is wired from, and its findings, recorded
+/// once, are raised again for each pair in the order the read raised them, so the list is the
+/// one a read per pair makes. Before, each pair copied the output's `quantity`, `unit` and
+/// `displayUnit` again: a 64 KiB `quantity` wired from 1,024 boundary inputs, a 232 KB
+/// document, peaked at 74 MB before the multiply driven output was refused. A reading made once
+/// the import's list has ended builds no finding and keeps only their count, so the findings the
+/// readings hold are those of readings made while the list was open: at most what the list
+/// holds and one reading's more. The readings are looked up, never iterated.
 pub(super) fn materialize(
     pairs: Vec<(String, String)>,
     boundary_types: &HashMap<&str, Option<ValueType>>,
@@ -93,6 +106,7 @@ pub(super) fn materialize(
     external_inputs: &mut Vec<ConnectorId>,
     diags: &mut DiagnosticList,
 ) {
+    let mut readings: HashMap<(&str, ValueType), (Attrs, Raised)> = HashMap::new();
     for (input_iri, output_iri) in pairs {
         let value_type = boundary_types
             .get(input_iri.as_str())
@@ -126,8 +140,13 @@ pub(super) fn materialize(
         // §7.10 cluster; declared boundary aliases are joined to their source separately.
         // A missing node cannot happen on a surviving graph (Step 2 refuses it); the default
         // attrs it would leave behind are withheld with the graph.
-        if let Some(node) = by_id.get(output_iri.as_str()) {
-            output.attrs = connector_attrs(node, value_type, diags);
+        if let Some(node) = by_id.get(output_iri.as_str()).copied() {
+            let ended = diags.has_ended();
+            let (attrs, raised) = readings
+                .entry((node.id.as_str(), value_type))
+                .or_insert_with(|| read_output(node, value_type, ended));
+            raised.raise_again(diags);
+            output.attrs = attrs.clone();
         }
         output.iri = Some(Arc::from(output_iri));
         connectors.push(input);
@@ -142,6 +161,49 @@ pub(super) fn materialize(
             decl_order: block_id.0,
             instance_iri: None,
         });
+    }
+}
+
+/// What one reading of a declared output raised: every finding, in order, while the import's
+/// list may still keep one; their count once it has ended, when each will only be counted.
+enum Raised {
+    /// Every finding of the reading, in the order it raised them.
+    Listed(Vec<Diagnostic>),
+    /// How many findings the reading raised.
+    Counted(usize),
+}
+
+impl Raised {
+    /// Raise every finding again into `diags`, in order, as a read of its own would.
+    fn raise_again(&mut self, diags: &mut DiagnosticList) {
+        match self {
+            Raised::Listed(findings) => {
+                for finding in &*findings {
+                    diags.raise(|| finding.clone());
+                }
+            }
+            Raised::Counted(count) => {
+                for _ in 0..*count {
+                    // The list has ended, so it counts the finding and never calls this.
+                    diags.raise(|| Diagnostic::error(DiagCode::MalformedDocument, String::new()));
+                }
+            }
+        }
+    }
+}
+
+/// Read the declared output `node` as `value_type` once for every pair that reads it: its
+/// attributes, and its findings recorded whole, or only counted when the import's list has
+/// already `ended`.
+fn read_output(node: &Node, value_type: ValueType, ended: bool) -> (Attrs, Raised) {
+    if ended {
+        let mut count = FindingCount::default();
+        let attrs = connector_attrs(node, value_type, &mut count);
+        (attrs, Raised::Counted(count.0))
+    } else {
+        let mut findings = Vec::new();
+        let attrs = connector_attrs(node, value_type, &mut findings);
+        (attrs, Raised::Listed(findings))
     }
 }
 

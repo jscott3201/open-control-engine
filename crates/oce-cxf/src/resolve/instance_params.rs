@@ -22,7 +22,8 @@
 //! accumulate in a hash-indexed region, and every preserved array parameter in the document draws
 //! on one [`ArrayElementBudget`]. A value the instance reads more than once (a node it lists
 //! again, a broadcast array's one value) is grounded once ([`InstanceReads`], issues #711 and
-//! #736), every string value a table holds is counted against one [`StringParameterBudget`] for
+//! #736), a value of a node many leaves list is grounded once for the document when it reads no
+//! name ([`DocumentGroundings`], issue #749), every string value a table holds is counted against one [`StringParameterBudget`] for
 //! the document, and each diagnostic is raised, so none is built once the list has ended.
 
 use std::collections::HashMap;
@@ -33,6 +34,7 @@ use oce_expr::EvalResult;
 use oce_model::{BlockId, BlockInstance, ParamTable, Value};
 
 use crate::arrays::{ArrayElementBudget, expand_array_param};
+use crate::document_groundings::DocumentGroundings;
 use crate::dto::Node;
 use crate::parameter_reads::{InstanceReads, StringParameterBudget};
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
@@ -74,6 +76,8 @@ pub(super) fn ground_instance_params(
 ) {
     let mut array_budget = ArrayElementBudget::per_document();
     let mut string_budget = StringParameterBudget::per_document();
+    // A value many leaves list is grounded once for all of them when it reads no name (#749).
+    let mut document = DocumentGroundings::of(insts.iter().map(|inst| inst.node), by_id);
     for inst in insts {
         let mut table: Vec<(Arc<str>, Value)> = Vec::new();
         let class_path = Arc::clone(&blocks[inst.id.0 as usize].class_iri);
@@ -96,7 +100,7 @@ pub(super) fn ground_instance_params(
                     .map(String::as_str),
             )
             .collect();
-        let mut reads = InstanceReads::of(&param_iris);
+        let mut reads = InstanceReads::of(&param_iris, &mut document);
         for &piri in &param_iris {
             let Some(pnode) = by_id.get(piri).copied() else {
                 diags.raise(|| {
@@ -144,7 +148,7 @@ pub(super) fn ground_instance_params(
                 // Scalar parameter: grounded once however often the instance lists it.
                 let scope = ParamScope::with_enclosing(enclosing, &siblings);
                 let repeated = reads.groundings.is_repeated(piri);
-                match &*reads.groundings.ground(cxf_val, &scope, repeated) {
+                match &*reads.groundings.ground(pnode, cxf_val, &scope, repeated) {
                     Ok(v) => match string_budget.take(v) {
                         Ok(()) => {
                             // The shared grounding stays as grounded; each listing holds its

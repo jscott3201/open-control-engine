@@ -9,9 +9,10 @@ use oce_expr::EvalResult;
 use oce_model::{ModelGraph, Value};
 
 use super::{
-    Groundings, MAX_DOCUMENT_STRING_PARAMETER_BYTES, StringParameterBudget, reads_counted_by,
+    DocumentGroundings, Groundings, MAX_DOCUMENT_STRING_PARAMETER_BYTES, StringParameterBudget,
+    reads_counted_by,
 };
-use crate::dto::CxfValue;
+use crate::dto::{CxfValue, Node};
 use crate::ground::{ground_failure, ground_param_value};
 use crate::resolve::local_name;
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
@@ -25,6 +26,11 @@ const CON: &str = "http://example.org#MinLoop.con";
 
 /// A parameter table as the reader builds it.
 type Table = Vec<(Arc<str>, Value)>;
+
+/// The groundings [`MODEL`]'s own parameters take, which the grounding count counts beside the
+/// values a test adds: the constant's `k`, the delay's `y_start` and `samplePeriod`, the gain's
+/// `k`.
+const MODEL_GROUNDINGS: u64 = 4;
 
 /// The string budget, restated: a change to the constant fails here until it is reviewed.
 const STRING_BUDGET: usize = 8 * 1024 * 1024;
@@ -148,9 +154,20 @@ fn the_string_budget_counts_bytes_not_characters() {
     assert!(budget.take(&Value::String(Arc::from("s"))).is_err());
 }
 
+/// The groundings of a document whose nodes no two owners list: nothing is shared.
+fn unshared() -> DocumentGroundings {
+    DocumentGroundings::of(std::iter::empty(), &std::collections::HashMap::new())
+}
+
+/// A parameter node `urn:q` with no value, standing for the node a value belongs to.
+fn node() -> Node {
+    serde_json::from_str("{ \"@id\": \"urn:q\" }").expect("a node")
+}
+
 #[test]
 fn every_parameter_listed_more_than_once_is_found_once() {
-    let reads = Groundings::of(&["b", "a", "c", "a", "b", "a", "d"]);
+    let mut document = unshared();
+    let reads = Groundings::of(&["b", "a", "c", "a", "b", "a", "d"], &mut document);
     assert_eq!(reads.repeated, ["a", "b"]);
     for (iri, repeated) in [
         ("a", true),
@@ -161,29 +178,34 @@ fn every_parameter_listed_more_than_once_is_found_once() {
     ] {
         assert_eq!(reads.is_repeated(iri), repeated, "{iri}");
     }
-    assert!(Groundings::of(&[]).repeated.is_empty());
-    assert!(Groundings::of(&["a"]).repeated.is_empty());
-    assert_eq!(Groundings::of(&["a", "a"]).repeated, ["a"]);
-    assert!(Groundings::of(&["a", "b"]).repeated.is_empty());
+    assert!(Groundings::of(&[], &mut unshared()).repeated.is_empty());
+    assert!(Groundings::of(&["a"], &mut unshared()).repeated.is_empty());
+    assert_eq!(Groundings::of(&["a", "a"], &mut unshared()).repeated, ["a"]);
+    assert!(
+        Groundings::of(&["a", "b"], &mut unshared())
+            .repeated
+            .is_empty()
+    );
 }
 
 #[test]
 fn only_a_kept_read_is_grounded_once() {
-    let mut reads = Groundings::of(&[]);
-    let value = CxfValue::Expr("\"s\"".to_owned());
+    let mut document = unshared();
+    let mut reads = Groundings::of(&[], &mut document);
+    let (node, value) = (node(), CxfValue::Expr("\"s\"".to_owned()));
     let scope = ParamScope::empty();
     let (_, grounded, ()) = reads_counted_by(|| {
         for _ in 0..3 {
-            assert!(reads.ground(&value, &scope, false).is_ok());
+            assert!(reads.ground(&node, &value, &scope, false).is_ok());
         }
     });
     assert_eq!(
-        grounded, 0,
-        "only kept reads are counted, and none was kept"
+        grounded, 3,
+        "a read that is not kept grounds the value again"
     );
     let (_, grounded, ()) = reads_counted_by(|| {
         for _ in 0..3 {
-            assert!(reads.ground(&value, &scope, true).is_ok());
+            assert!(reads.ground(&node, &value, &scope, true).is_ok());
         }
     });
     assert_eq!(grounded, 1);
@@ -285,7 +307,7 @@ fn a_positional_array_listed_again_grounds_each_of_its_values_once() {
         &[array(&q, &[2], "[ \"\\\"a\\\"\", \"\\\"b\\\"\" ]")],
     );
     let (_, grounded, table) = reads_counted_by(|| constant_table(&bytes));
-    assert_eq!(grounded, 2);
+    assert_eq!(grounded, MODEL_GROUNDINGS + 2);
     let names: Vec<&str> = table.iter().map(|(name, _)| name.as_ref()).collect();
     assert_eq!(names, ["k", "q_1", "q_2", "q_1", "q_2", "q_1", "q_2"]);
 }
@@ -335,7 +357,7 @@ fn a_broadcast_value_is_grounded_once_and_every_element_shares_it() {
         &[array(&q, &[1_024], "[ \"\\\"shared\\\"\" ]")],
     );
     let (_, grounded, table) = reads_counted_by(|| constant_table(&bytes));
-    assert_eq!(grounded, 1);
+    assert_eq!(grounded, MODEL_GROUNDINGS + 1);
     let elements: Vec<&Arc<str>> = table[1..]
         .iter()
         .map(|(_, value)| match value {
@@ -346,13 +368,13 @@ fn a_broadcast_value_is_grounded_once_and_every_element_shares_it() {
     assert_eq!(elements.len(), 1_024);
     assert!(elements.iter().all(|text| text.as_ref() == "shared"));
     assert!(elements.iter().all(|text| Arc::ptr_eq(text, elements[0])));
-    // A positional list grounds each of its values, keeping none.
+    // A positional list grounds each of its values once, keeping none.
     let bytes = document(
         std::slice::from_ref(&q),
         &[array(&q, &[3], "[ 1.0, \"\\\"b\\\"\", 3 ]")],
     );
     let (_, grounded, table) = reads_counted_by(|| constant_table(&bytes));
-    assert_eq!((grounded, table.len()), (0, 4));
+    assert_eq!((grounded, table.len()), (MODEL_GROUNDINGS + 3, 4));
 }
 
 #[test]
@@ -363,7 +385,7 @@ fn a_broadcast_value_that_fails_is_reported_once_an_element() {
         "[ { \"@value\": \"nope\", \"@type\": \"http://www.w3.org/2001/XMLSchema#double\" } ]";
     let bytes = document(std::slice::from_ref(&q), &[array(&q, &[4], value)]);
     let (_, grounded, diagnostics) = reads_counted_by(|| refused(&bytes));
-    assert_eq!(grounded, 1);
+    assert_eq!(grounded, MODEL_GROUNDINGS + 1);
     let one = Diagnostic::error(
         DiagCode::GroundingFailed,
         "typed literal \"nope\" (datatype http://www.w3.org/2001/XMLSchema#double) is not a \
@@ -382,7 +404,7 @@ fn a_parameter_listed_again_is_grounded_once_and_still_listed_each_time() {
     let ids = vec![q.clone(); 10];
     let bytes = document(&ids, &[scalar(&q, "\"\\\"text\\\"\"")]);
     let (_, grounded, table) = reads_counted_by(|| constant_table(&bytes));
-    assert_eq!(grounded, 1);
+    assert_eq!(grounded, MODEL_GROUNDINGS + 1);
     assert_eq!(table.len(), 11);
     let Value::String(first) = &table[1].1 else {
         panic!("a string")

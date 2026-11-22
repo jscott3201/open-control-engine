@@ -23,6 +23,7 @@ use oce_model::ModelGraph;
 
 mod arrays;
 mod bridge;
+mod document_groundings;
 pub mod dto;
 mod excerpt;
 mod expand;
@@ -83,7 +84,8 @@ pub enum CxfError {
     /// diagnostic that does not fit ends the list, and its last entry is then one
     /// [`oce_diag::DiagCode::ResourceLimitExceeded`] error, with no subject, whose message
     /// starts with how many diagnostics were raised and are not listed and names the first of
-    /// them. An export's list is not held to that bound.
+    /// them. An export's list is held to the same bound, its deferral warnings included
+    /// (issue #753).
     #[error("CXF validation failed with {} diagnostic(s)", .0.len())]
     Validation(Vec<oce_diag::Diagnostic>),
 }
@@ -257,8 +259,15 @@ pub fn import_cxf(
 ///   and a connection that is not output→input reject either way, being attributable to no single
 ///   block's presence in the document. Deferred ordinary blocks —
 ///   enum-carrying ones and the cascade they reach alike — are a warning, not a rejection, and do
-///   NOT trigger this variant unless deferral is *total*, which leaves no block to emit. A reserved
-///   block carrying hidden state rejects independently of deferral. Never panics.
+///   NOT trigger this variant unless deferral is *total*, which leaves no block to emit, or their
+///   warnings end the list (below). A reserved block carrying hidden state rejects independently
+///   of deferral. Never panics.
+/// - [`CxfError::Validation`] whose last diagnostic is one
+///   [`oce_diag::DiagCode::ResourceLimitExceeded`] error, with no subject, when the export's
+///   findings and deferral warnings together pass 8 MiB of message and subject text (the
+///   [`oce_diag::DiagnosticList`] budget, issue #753): the findings and warnings that fit are
+///   listed before it in the order raised, and it counts the rest, which are never built. That
+///   error makes the export a refusal even when everything left out was a warning.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
     let (doc, _warnings) = export::document(model)?;
@@ -288,7 +297,8 @@ pub struct ExportReport {
     /// for the enum-free survivor cone).
     pub bytes: Vec<u8>,
     /// The [`oce_diag::DiagCode::ExportDeferred`] warnings naming every deferred block (empty
-    /// when the whole graph was inside the export subset). Always `Warning` severity — never an
+    /// when the whole graph was inside the export subset), all of them: warnings past the list's
+    /// 8 MiB of text make the export an error instead. Always `Warning` severity — never an
     /// error, so a non-`Err` result here does not imply a clean graph.
     pub warnings: Vec<oce_diag::Diagnostic>,
 }
@@ -301,8 +311,12 @@ pub struct ExportReport {
 ///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
-///   for any error-severity subset failure (same surface as [`export()`]); ordinary enum deferrals
-///   are warnings and do NOT trigger this variant, while reserved hidden state rejects.
+///   for any error-severity subset failure (same surface as [`export()`]), with the deferral
+///   warnings raised before them; ordinary enum deferrals are warnings and on their own do NOT
+///   trigger this variant, while reserved hidden state rejects.
+/// - [`CxfError::Validation`] ending in one [`oce_diag::DiagCode::ResourceLimitExceeded`]
+///   error when the findings and warnings pass the list's 8 MiB of text (issue #753), as for
+///   [`export()`]: so this never returns `Ok` with warnings left out.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export_with_report(model: &ModelGraph) -> Result<ExportReport, CxfError> {
     let (doc, warnings) = export::document(model)?;

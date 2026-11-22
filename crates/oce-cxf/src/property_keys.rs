@@ -226,10 +226,75 @@ pub(super) fn normalize(
             return;
         }
         if !aliases.is_empty() {
-            let mut explicit = |key: &str| keys.iter().any(|authored| authored == key);
-            rewrite(node, &aliases, &subject, &mut explicit, diags);
+            let authored = AuthoredKeySet::of(keys);
+            rewrite(
+                node,
+                &aliases,
+                &subject,
+                &mut |key| authored.contains(key),
+                diags,
+            );
         }
     }
+}
+
+/// The keys one node was authored with, sorted once and then looked up by binary search (issue
+/// #751). Each alias of a node asks whether the node was also authored with its compact key;
+/// scanning the keys for each alias cost `aliases × keys` comparisons, and each alias costs the
+/// document only a `@context` term and a key. Built only for a node with an alias, the set costs
+/// `keys × log keys` comparisons to sort and `log keys` a lookup, and it keeps no unsorted copy
+/// to scan. Looked up, never iterated, so the order of the sort reaches nothing.
+struct AuthoredKeySet<'k> {
+    sorted: Vec<&'k str>,
+}
+
+impl<'k> AuthoredKeySet<'k> {
+    /// The keys `keys`, sorted.
+    fn of(keys: &'k [String]) -> Self {
+        let mut sorted: Vec<&str> = keys.iter().map(String::as_str).collect();
+        sorted.sort_unstable_by(|a, b| compare_keys(a, b));
+        Self { sorted }
+    }
+
+    /// Whether the node was authored with the key `key`.
+    fn contains(&self, key: &str) -> bool {
+        #[cfg(test)]
+        KEY_LOOKUPS.with(|count| count.set(count.get() + 1));
+        self.sorted
+            .binary_search_by(|authored| compare_keys(authored, key))
+            .is_ok()
+    }
+}
+
+/// Compare two keys, counted in test builds (`key_comparisons_counted_by`).
+fn compare_keys(a: &str, b: &str) -> std::cmp::Ordering {
+    #[cfg(test)]
+    KEY_COMPARISONS.with(|count| count.set(count.get() + 1));
+    a.cmp(b)
+}
+
+#[cfg(test)]
+thread_local! {
+    /// The key comparisons [`AuthoredKeySet`] made on this thread, counted in test builds only.
+    static KEY_COMPARISONS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    /// The lookups [`AuthoredKeySet::contains`] answered on this thread, counted in test builds
+    /// only.
+    static KEY_LOOKUPS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// Run `run` and return how many key comparisons [`AuthoredKeySet`] made and how many lookups it
+/// answered on this thread, with its result: counts, the same on every run and every host, never
+/// elapsed time.
+#[cfg(test)]
+fn key_comparisons_counted_by<R>(run: impl FnOnce() -> R) -> (u64, u64, R) {
+    KEY_COMPARISONS.with(|count| count.set(0));
+    KEY_LOOKUPS.with(|count| count.set(0));
+    let result = run();
+    (
+        KEY_COMPARISONS.with(std::cell::Cell::get),
+        KEY_LOOKUPS.with(std::cell::Cell::get),
+        result,
+    )
 }
 
 /// The modeled term an expanded key `iri` names in the S231 vocabulary bound to `namespace`, if
@@ -476,6 +541,10 @@ fn rename(object: &mut Map<String, Json>, key: &str, term: &str) {
 fn malformed(subject: &str, message: String) -> Diagnostic {
     Diagnostic::error(DiagCode::MalformedDocument, message).with_subject(subject.to_owned())
 }
+
+#[cfg(test)]
+#[path = "property_keys_cost_tests.rs"]
+mod cost_tests;
 
 #[cfg(test)]
 mod tests {

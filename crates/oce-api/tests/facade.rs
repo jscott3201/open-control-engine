@@ -71,6 +71,7 @@ mod crossed_bounds;
 mod cxf_diagnostic_list_bound;
 mod cxf_namespace_and_label;
 mod cxf_property_key_spellings;
+mod cxf_shared_parameter_identity;
 mod cxf_unit_spellings;
 mod declared_output_lookup;
 mod derived_connector_types;

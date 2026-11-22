@@ -34,7 +34,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{EnumClassId, ModelGraph, Value, ValueType};
 
 /// A deferral warning: an `ExportDeferred` (Warning, non-aborting) diagnostic mirroring
@@ -138,11 +138,14 @@ fn has_enum_param(g: &ModelGraph, bi: usize) -> Option<(&str, EnumClassId)> {
 
 /// Compute the deferral set and its warnings: `enum_blocks` detected and warned, then the
 /// transitive cascade grown to its fixpoint with a cascade warning per newly-deferred block.
-/// Returns `(deferred, warnings)` in block-then-cascade order. The `deferred` set is the set of
-/// block **indices** (`bi`) to omit from the emitted document; `warnings` are all
+/// Returns `deferred` and raises the warnings in block-then-cascade order. The `deferred` set is
+/// the set of block **indices** (`bi`) to omit from the emitted document; the warnings are all
 /// `ExportDeferred` (Warning) — never an error, so the three-state gate's Defer row is reachable.
-pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>) {
-    let mut warnings: Vec<Diagnostic> = Vec::new();
+///
+/// The warnings are raised into `warnings`, the export's list, held to its 8 MiB of text (issue
+/// #753): each copies its block's `instance_iri` twice, and a hand-built graph may give many
+/// blocks one long IRI. Once the list has ended a warning is counted and nothing is built for it.
+pub(crate) fn deferral_set(g: &ModelGraph, warnings: &mut DiagnosticList) -> BTreeSet<usize> {
     let mut deferred: BTreeSet<usize> = BTreeSet::new();
 
     // Phase 1a: enum_blocks = blocks carrying any enum connector OR any enum param.
@@ -160,13 +163,10 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
         let subject = block_subject(g, bi);
         if let Some(id) = has_enum_connector(g, bi) {
             let class = enum_class_label(id);
-            warnings.push(defer(msg_enum_defer_connector(&subject, &class), &subject));
+            warnings.raise(|| defer(msg_enum_defer_connector(&subject, &class), &subject));
         } else if let Some((name, id)) = has_enum_param(g, bi) {
             let class = enum_class_label(id);
-            warnings.push(defer(
-                msg_enum_defer_param(&subject, name, &class),
-                &subject,
-            ));
+            warnings.raise(|| defer(msg_enum_defer_param(&subject, name, &class), &subject));
         }
         deferred.insert(bi);
     }
@@ -239,7 +239,7 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
         deferred.insert(bi);
         let subject = block_subject(g, bi);
         let conn = format!("in{k}");
-        warnings.push(defer(msg_enum_defer_cascade(&subject, &conn), &subject));
+        warnings.raise(|| defer(msg_enum_defer_cascade(&subject, &conn), &subject));
 
         for &state_index in &dependents[bi] {
             let state = &mut states[state_index];
@@ -263,7 +263,7 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
         }
     }
 
-    (deferred, warnings)
+    deferred
 }
 
 /// A short, stable label for an enum connector's class (the `EnumClassId` numeric id), used in the
@@ -285,6 +285,15 @@ mod tests {
     use std::sync::Arc;
 
     use oce_model::{BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ParamTable};
+
+    /// The deferral set of `g` and every warning it raised, in order.
+    fn deferral(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>) {
+        let mut warnings = DiagnosticList::new();
+        let deferred = deferral_set(g, &mut warnings);
+        let (listed, closing) = warnings.into_parts();
+        assert!(closing.is_none());
+        (deferred, listed)
+    }
 
     fn repeated_scan_reference(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>) {
         let mut warnings = Vec::new();
@@ -401,7 +410,7 @@ mod tests {
             for reverse in [false, true] {
                 let graph = chain_graph(block_count, reverse);
                 assert_eq!(
-                    deferral_set(&graph),
+                    deferral(&graph),
                     repeated_scan_reference(&graph),
                     "block_count={block_count}, reverse={reverse}"
                 );
@@ -438,7 +447,7 @@ mod tests {
                     }
                 }
                 assert_eq!(
-                    deferral_set(&graph),
+                    deferral(&graph),
                     repeated_scan_reference(&graph),
                     "enum_mask={enum_mask:03b}, edge_mask={edge_mask:06b}"
                 );
@@ -469,7 +478,7 @@ mod tests {
             },
         ];
 
-        assert_eq!(deferral_set(&graph), repeated_scan_reference(&graph));
+        assert_eq!(deferral(&graph), repeated_scan_reference(&graph));
     }
 
     #[test]
@@ -485,7 +494,7 @@ mod tests {
             })
             .collect();
 
-        assert_eq!(deferral_set(&graph), repeated_scan_reference(&graph));
+        assert_eq!(deferral(&graph), repeated_scan_reference(&graph));
     }
 
     /// The three rendered messages are pinned verbatim — a host greps logs/exports for the stable

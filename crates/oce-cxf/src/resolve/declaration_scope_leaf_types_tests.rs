@@ -14,6 +14,7 @@ use crate::scope_chain::ScopeFrame;
 
 use super::declaration_scope::{Pass, evaluate_declarations};
 use super::real_parameters::in_catalog_type;
+use crate::document_groundings::DocumentGroundings;
 
 const TWO_POW_53: i64 = 1 << 53;
 
@@ -46,6 +47,7 @@ fn scope(
         &[],
         &ScopeFrame::root(),
         &map,
+        &mut DocumentGroundings::of(std::iter::empty(), &map),
         Pass::Specialize {
             composite_chain: false,
             leaf_class,

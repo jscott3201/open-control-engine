@@ -292,3 +292,26 @@ fn a_list_formats_for_debugging_as_the_diagnostics_it_holds() {
     let held = vec![warning(1).with_subject("s"), closing(1, A_WARNING)];
     assert_eq!(format!("{list:?}"), format!("{held:?}"));
 }
+
+#[test]
+fn a_list_has_ended_exactly_once_a_diagnostic_did_not_fit_and_stays_ended() {
+    let mut list = DiagnosticList::new();
+    assert!(!list.has_ended());
+    list.push(warning(BUDGET));
+    assert!(
+        !list.has_ended(),
+        "text that fills the budget exactly is listed"
+    );
+    list.push(warning(1));
+    assert!(list.has_ended(), "one byte more ends the list");
+    let built = Cell::new(false);
+    list.raise(|| {
+        built.set(true);
+        warning(0)
+    });
+    assert!(
+        list.has_ended() && !built.get(),
+        "an ended list builds nothing and stays ended"
+    );
+    assert_eq!(list.raised(), 3);
+}

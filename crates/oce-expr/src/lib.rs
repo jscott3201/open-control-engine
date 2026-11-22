@@ -145,7 +145,7 @@ mod parse_tests;
 #[cfg(test)]
 mod tests;
 
-pub use fuel::{MAX_EVAL_FUEL, with_eval_budget};
+pub use fuel::{MAX_EVAL_FUEL, eval_fuel_remaining, spend_eval_fuel, with_eval_budget};
 
 /// Maximum supported parser-entry and AST nesting depth.
 ///

@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::bridge;
+use crate::document_groundings::DocumentGroundings;
 use crate::dto::{CxfDocument, IriRef, Node, OneOrMany};
 use oce_diag::DiagnosticList;
 use oce_diag::{DiagCode, Diagnostic};
@@ -112,7 +113,10 @@ pub(super) fn lower(
 
     reject_unsupported_constructs(doc, specialization, diags);
 
-    let mut walk = Containment::new(by_id, specialization, diags, checked);
+    // A declaration many composites list is grounded once for all of them when it reads no
+    // name (issue #749).
+    let mut groundings = DocumentGroundings::of(&doc.graph, by_id);
+    let mut walk = Containment::new(by_id, specialization, diags, checked, &mut groundings);
     let nesting_exceeded = walk.walk_root(root);
     let Containment {
         leaf_order,

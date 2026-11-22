@@ -19,6 +19,13 @@
 //!   grounds such a value once per instance and hands every later read the same result: a string
 //!   value is one shared allocation, and a failure is one error whose diagnostic is built again
 //!   only while the diagnostic list keeps it.
+//! - **A value many owners read.** A parameter node that many leaves (or composites, or guard
+//!   scopes) list was grounded again by each, so a long string value cost `owners × text` of
+//!   lexing and allocation while each further owner cost the document a reference (issue #749:
+//!   1,024 leaves listing one 60 KB value requested 1.31 GB). [`DocumentGroundings`] grounds such
+//!   a value once per pass when its grounding looks up no name, and charges every owner the fuel
+//!   grounding it again would spend, so no outcome changes (`crate::document_groundings` says
+//!   why it is exact). A value that reads a name is grounded under each owner's scope, as before.
 //! - **String values per table entry.** A string value shared by many table entries is still
 //!   copied once per entry by every consumer that writes each entry out (the content id's
 //!   canonical bytes, a compiled blob, a parameter listing). So the string bytes the tables of one
@@ -51,8 +58,9 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::Scope;
 use oce_model::Value;
 
-use crate::dto::CxfValue;
-use crate::ground::{GroundErr, ground_param_value};
+use crate::document_groundings::{DocumentGroundings, evaluated};
+use crate::dto::{CxfValue, Node};
+use crate::ground::GroundErr;
 use crate::resolve::local_name;
 
 /// The most bytes the string values of every parameter table of one document may hold together,
@@ -161,16 +169,17 @@ impl<'a> SiblingNames<'a> {
     }
 }
 
-/// The grounding of a value, kept by [`Groundings`] or made for one read.
-pub(crate) enum Grounded<'m> {
-    /// A result kept for every read of the value on this instance.
-    Kept(&'m Result<Value, GroundErr>),
+/// The grounding of a value, kept by [`Groundings`] or [`DocumentGroundings`] or made for one
+/// read: a grounded scalar, or (for an array expression) what the evaluator returned.
+pub(crate) enum Grounded<'m, T = Result<Value, GroundErr>> {
+    /// A result kept for every later read of the value.
+    Kept(&'m T),
     /// A result made for this read alone.
-    Fresh(Result<Value, GroundErr>),
+    Fresh(T),
 }
 
-impl Deref for Grounded<'_> {
-    type Target = Result<Value, GroundErr>;
+impl<T> Deref for Grounded<'_, T> {
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
         match self {
@@ -182,18 +191,25 @@ impl Deref for Grounded<'_> {
 
 /// The values one instance reads more than once, each grounded on its first read and kept for
 /// the later ones (issues #736 and #711): the one value of a broadcast array, and every value of
-/// a parameter node the instance lists more than once.
+/// a parameter node the instance lists more than once. The instance pays for such a value once,
+/// as before. A value of a node other owners list too is read through the document's
+/// [`DocumentGroundings`] (issue #749), which charges each owner what grounding it again would.
 pub(crate) struct Groundings<'a> {
     /// The parameter IRIs the instance lists more than once, sorted, each once.
     repeated: Vec<&'a str>,
-    /// The kept results, keyed by the address of the value in the document, which outlives the
-    /// instance's reads.
+    /// The kept results of this instance's own groundings, keyed by the address of the value in
+    /// the document, which outlives the instance's reads.
     kept: BTreeMap<*const CxfValue, Result<Value, GroundErr>>,
+    /// The values whose kept read this instance took from the document's groundings, and paid for.
+    from_document: BTreeSet<*const CxfValue>,
+    /// The groundings every owner of the document shares.
+    document: &'a mut DocumentGroundings,
 }
 
 impl<'a> Groundings<'a> {
-    /// Nothing kept yet, for an instance listing the parameters `iris`.
-    pub(crate) fn of(iris: &[&'a str]) -> Self {
+    /// Nothing kept yet, for an instance listing the parameters `iris`, sharing `document`'s
+    /// groundings.
+    pub(crate) fn of(iris: &[&'a str], document: &'a mut DocumentGroundings) -> Self {
         let mut repeated = Vec::new();
         if iris.len() > 1 {
             let mut sorted = iris.to_vec();
@@ -207,7 +223,14 @@ impl<'a> Groundings<'a> {
         Self {
             repeated,
             kept: BTreeMap::new(),
+            from_document: BTreeSet::new(),
+            document,
         }
+    }
+
+    /// The groundings the document's owners share.
+    pub(crate) fn document(&mut self) -> &mut DocumentGroundings {
+        self.document
     }
 
     /// Whether the instance lists the parameter `iri` more than once.
@@ -215,26 +238,42 @@ impl<'a> Groundings<'a> {
         self.repeated.binary_search(&iri).is_ok()
     }
 
-    /// Ground `value` against `scope`, or hand back the result kept from its first read. Only a
-    /// read with `keep` set keeps its result or reads a kept one.
+    /// Ground `value`, a value of the parameter node `node`, against `scope`, or hand back the
+    /// result kept from an earlier read. A read with `keep` set keeps its result for this
+    /// instance's later reads, which cost nothing more; every other read is a reading of its own,
+    /// through the document's groundings.
     pub(crate) fn ground(
         &mut self,
+        node: &Node,
         value: &CxfValue,
         scope: &dyn Scope,
         keep: bool,
     ) -> Grounded<'_> {
-        if !keep {
-            return Grounded::Fresh(ground_param_value(value, scope));
+        let key = std::ptr::from_ref(value);
+        if keep && self.from_document.contains(&key) {
+            return match self.document.kept(value) {
+                Some(result) => Grounded::Kept(result),
+                None => Grounded::Fresh(evaluated(value, scope)),
+            };
         }
-        Grounded::Kept(
-            self.kept
-                .entry(std::ptr::from_ref(value))
-                .or_insert_with(|| {
-                    #[cfg(test)]
-                    GROUNDED.with(|grounded| grounded.set(grounded.get() + 1));
-                    ground_param_value(value, scope)
-                }),
-        )
+        if keep && self.kept.contains_key(&key) {
+            return match self.kept.get(&key) {
+                Some(result) => Grounded::Kept(result),
+                None => Grounded::Fresh(evaluated(value, scope)),
+            };
+        }
+        match self.document.ground(node, value, scope) {
+            Grounded::Kept(result) => {
+                if keep {
+                    self.from_document.insert(key);
+                }
+                Grounded::Kept(result)
+            }
+            Grounded::Fresh(result) if keep => {
+                Grounded::Kept(self.kept.entry(key).or_insert(result))
+            }
+            fresh @ Grounded::Fresh(_) => fresh,
+        }
     }
 }
 
@@ -248,11 +287,12 @@ pub(crate) struct InstanceReads<'a> {
 }
 
 impl<'a> InstanceReads<'a> {
-    /// Nothing built or kept yet, for an instance listing the parameters `iris`.
-    pub(crate) fn of(iris: &'a [&'a str]) -> Self {
+    /// Nothing built or kept yet, for an instance listing the parameters `iris`, sharing
+    /// `document`'s groundings.
+    pub(crate) fn of(iris: &'a [&'a str], document: &'a mut DocumentGroundings) -> Self {
         Self {
             sibling_names: SiblingNames::of(iris),
-            groundings: Groundings::of(iris),
+            groundings: Groundings::of(iris, document),
         }
     }
 }
@@ -262,14 +302,20 @@ thread_local! {
     /// The names [`SiblingNames`] inserted into its sets on this thread, counted in test builds
     /// only.
     static NAMES_INSERTED: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
-    /// The kept values [`Groundings::ground`] grounded on this thread, counted in test builds
-    /// only.
+    /// The values [`Groundings`] and [`DocumentGroundings`] grounded on this thread, kept or
+    /// not, counted in test builds only.
     static GROUNDED: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
 }
 
-/// Run `run` and return how many names it inserted into sibling-name sets and how many kept
-/// values it grounded on this thread, with its result: counts, the same on every run and every
-/// host, never elapsed time.
+/// Count one grounding on this thread (test builds only).
+#[cfg(test)]
+pub(crate) fn count_grounding() {
+    GROUNDED.with(|grounded| grounded.set(grounded.get() + 1));
+}
+
+/// Run `run` and return how many names it inserted into sibling-name sets and how many values
+/// it grounded through [`Groundings`] and [`DocumentGroundings`] on this thread, with its
+/// result: counts, the same on every run and every host, never elapsed time.
 #[cfg(test)]
 pub(crate) fn reads_counted_by<R>(run: impl FnOnce() -> R) -> (u64, u64, R) {
     NAMES_INSERTED.with(|inserted| inserted.set(0));

@@ -58,6 +58,7 @@ mod connection_endpoints;
 mod connection_orientation;
 mod connections;
 mod declaration_scope;
+pub(crate) use declaration_scope::identifier_heads;
 #[cfg(test)]
 mod declaration_scope_leaf_types_tests;
 #[cfg(test)]
