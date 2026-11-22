@@ -427,7 +427,7 @@ fn a_document_that_adds_the_budget_exactly_loads_and_one_byte_more_is_refused() 
     let (info, outcome) = load(&document_at_the_budget(""));
     assert_eq!(outcome, Ok(Vec::new()), "the budget is met, not passed");
     // What a load that fills the budget holds: the expanded working copy and the copy lowering
-    // makes of it, so twice the budget. [measured: 17,295,182 held and 17,569,298 requested,
+    // makes of it, so twice the budget. [measured: 17,295,182 held and 17,569,522 requested,
     // for a document of 136,816 bytes]
     assert!(
         info.bytes_max <= 9 * bytes(BUDGET) / 4,
