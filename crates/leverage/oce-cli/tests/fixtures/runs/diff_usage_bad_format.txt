@@ -1,0 +1,7 @@
+exit: 2
+--- stdout
+--- stderr
+error: invalid value 'human' for '--format <FORMAT>'
+  [possible values: json, markdown]
+
+For more information, try '--help'.

@@ -1,0 +1,21 @@
+exit: 2
+--- stdout
+{
+  "command": "diff",
+  "errors": [
+    {
+      "at": "head",
+      "code": "not-found",
+      "detail": "no such file",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": "text",
+  "head": "missing.oce",
+  "input": "tests/fixtures/inputs/diff/reference.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

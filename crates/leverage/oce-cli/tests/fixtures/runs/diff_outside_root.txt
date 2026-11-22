@@ -1,0 +1,21 @@
+exit: 2
+--- stdout
+{
+  "command": "diff",
+  "errors": [
+    {
+      "at": "head",
+      "code": "outside-root",
+      "detail": "head: `urn:oce:author:plant_enable.ena` is not named under the root `urn:open-control:cxf-export:root`",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "form": "cxf",
+  "head": "exported.jsonld",
+  "input": "reference.jsonld",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

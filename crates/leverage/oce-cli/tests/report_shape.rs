@@ -98,8 +98,9 @@ fn every_golden_report_keeps_the_contract() {
                     .iter()
                     .any(|f| f["severity"] == "error")
                     || report.get("canonical") == Some(&Value::Bool(false))
-                    || (report["command"] == "verify" && report.get("passed").is_some()),
-                "{name}: exit 1 without an error finding, a non-canonical file or a verdict"
+                    || (report["command"] == "verify" && report.get("passed").is_some())
+                    || (report["command"] == "diff" && report["diff"]["summary"]["equal"] == false),
+                "{name}: exit 1 without an error finding, a non-canonical file, a verdict or a difference"
             );
         }
     }

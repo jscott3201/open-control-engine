@@ -143,3 +143,70 @@ pub fn with_initial_state_crc_flipped(blob: &[u8], block: usize) -> Option<Vec<u
     reseal(&mut changed);
     Some(changed)
 }
+
+/// One class record as the class section writes it: the path's length (`u32`, little-endian),
+/// the path's bytes, the signature hash (`u64`, little-endian).
+fn class_record(path: &str, hash: u64) -> Vec<u8> {
+    let mut record = u32::try_from(path.len())
+        .expect("a short path")
+        .to_le_bytes()
+        .to_vec();
+    record.extend_from_slice(path.as_bytes());
+    record.extend_from_slice(&hash.to_le_bytes());
+    record
+}
+
+fn u32_at(bytes: &[u8], at: usize) -> u32 {
+    u32::from_le_bytes(bytes[at..at + 4].try_into().expect("four bytes"))
+}
+
+/// The blob with one more class in its table, `path` under `hash`, after every class it holds,
+/// and no block of that class: the class count, the class section's length and the blob's total
+/// length (header offset 16) are updated and the trailer is rewritten. The encoder never writes
+/// such a table (it lists the classes the blocks use), so the decoder refuses the blob
+/// (`UnusedClass`) while the summary reads it. No block's class index moves, because the class
+/// goes at the end of a table sorted by path.
+///
+/// The class section is found by what the summary says it records: its first record by value,
+/// the count and the section's length in the eight bytes before it, the section's tag (`1`)
+/// before those; each is checked against the summary before anything is written.
+pub fn with_unused_class(blob: &[u8], path: &str, hash: u64) -> Vec<u8> {
+    let recorded = summary(blob);
+    let (first, last) = (
+        recorded.classes.first().expect("a class"),
+        recorded.classes.last().expect("a class"),
+    );
+    assert!(
+        path.as_bytes() > last.class_path.as_bytes(),
+        "{path} sorts after every class of the table"
+    );
+    let start = only_occurrence(
+        blob,
+        &class_record(&first.class_path, first.signature_hash),
+        "the first class record",
+    );
+    let (tag_at, length_at, count_at) = (start - 12, start - 8, start - 4);
+    assert_eq!(u32_at(blob, tag_at), 1, "the class section's tag");
+    let count = u32_at(blob, count_at);
+    assert_eq!(count as usize, recorded.classes.len(), "the class count");
+    let length = u32_at(blob, length_at) as usize;
+    let end = count_at + length;
+    let last_record = class_record(&last.class_path, last.signature_hash);
+    assert_eq!(
+        only_occurrence(blob, &last_record, "the last class record") + last_record.len(),
+        end,
+        "the class section ends after its last record"
+    );
+    assert_eq!(u32_at(blob, 16) as usize, blob.len(), "the total length");
+    let added = class_record(path, hash);
+    let mut changed = blob[..blob.len() - 4].to_vec();
+    changed.splice(end..end, added.iter().copied());
+    changed[count_at..count_at + 4].copy_from_slice(&(count + 1).to_le_bytes());
+    let grown = u32::try_from(length + added.len()).expect("a section length");
+    changed[length_at..length_at + 4].copy_from_slice(&grown.to_le_bytes());
+    let total = u32::try_from(changed.len() + 4).expect("a blob length");
+    changed[16..20].copy_from_slice(&total.to_le_bytes());
+    changed.extend_from_slice(&[0; 4]);
+    reseal(&mut changed);
+    changed
+}

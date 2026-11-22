@@ -32,6 +32,24 @@ exit: 0
     "kat"
   ],
   "command": "vocab",
+  "diff_codes": [
+    {
+      "code": "outside-root",
+      "meaning": "a CXF block or boundary is not named under its document's root (one the engine exported included); at names the side"
+    },
+    {
+      "code": "unresolved-ports",
+      "meaning": "the ports of a CXF block cannot be named from its class and ground parameters (never expected for a loaded document)"
+    },
+    {
+      "code": "unreadable-blob",
+      "meaning": "the facade reads no summary from a blob (the blob comparison; diff reads no blob)"
+    },
+    {
+      "code": "unexpected-refusal",
+      "meaning": "the facade refused a blob with an error that is not a blob refusal (never expected; diff reads no blob)"
+    }
+  ],
   "enumerations": [
     {
       "class_path": "CDL.Types.SimpleController",
@@ -693,7 +711,7 @@ exit: 0
     },
     {
       "code": "unknown-form",
-      "meaning": "the name ends in neither .oce nor .json (for id, nor .jsonld) and --from was not given"
+      "meaning": "the name ends in neither .oce nor .json (for id and diff, nor .jsonld or .cxf.json) and --from was not given"
     },
     {
       "code": "not-found",
@@ -769,7 +787,7 @@ exit: 0
     },
     {
       "code": "not-loadable",
-      "meaning": "id: the engine refused the document, or the sequence has error findings; it has no content id"
+      "meaning": "id or a CXF side of diff: the engine refused the document; id: or the sequence has error findings; there is no content id or diff"
     },
     {
       "code": "no-content-id",
@@ -782,21 +800,29 @@ exit: 0
     {
       "code": "output-is-input",
       "meaning": "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; nothing is written"
+    },
+    {
+      "code": "mixed-forms",
+      "meaning": "diff: the two names read as two forms (text, wire, CXF) and --from was not given; both sides are one form"
+    },
+    {
+      "code": "stdin-twice",
+      "meaning": "diff: both sides are stdin (-), which is read once"
     }
   ],
   "errors": [],
   "exit_codes": [
     {
       "code": 0,
-      "meaning": "yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported"
+      "meaning": "yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported, nothing differs"
     },
     {
       "code": 1,
-      "meaning": "no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict"
+      "meaning": "no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict, any difference (diff)"
     },
     {
       "code": 2,
-      "meaning": "error: a usage, read, parse, size or I/O failure, a run with no verdict, an input with no content id (id), or a document the importer refuses or the output form cannot spell (import); the question was not answered"
+      "meaning": "error: a usage, read, parse, size or I/O failure, a run with no verdict, an input with no content id (id), a document the importer refuses or the output form cannot spell (import), or a side that does not load or cannot be named (diff); the question was not answered"
     }
   ],
   "finding_codes": [

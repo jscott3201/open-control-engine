@@ -4,9 +4,10 @@
 //! (`oce_author::BASE_UNIT_SYMBOLS`); the parse codes (`oce_author::PARSE_CODES`), the stage-1
 //! finding codes (`oce_author::STAGE_ONE_CODES`), the stage-2 codes, the wire codes
 //! (`oce_author::WIRE_CODES`), the importer's codes (`oce_author::IMPORT_ERROR_CODES`), the tool's
-//! own error codes, and the vector file's and the verifier's codes `verify` passes through
-//! (`oce_verify::VECTOR_ERROR_CODES`, `oce_verify::VERIFY_ERROR_CODES`), each with one line of
-//! meaning; and the exit statuses.
+//! own error codes, the vector file's and the verifier's codes `verify` passes through
+//! (`oce_verify::VECTOR_ERROR_CODES`, `oce_verify::VERIFY_ERROR_CODES`) and the diff's codes `diff`
+//! passes through (`oce_diff::DiffError::CODES`), each with one line of meaning; and the exit
+//! statuses.
 //!
 //! `scale_factors` is the vocabulary's unit scale-factor table (`oce_vocab::SCALE_FACTORS`,
 //! vocabulary note decision 14, GitHub issue #500), in table order: the symbols that are an
@@ -31,6 +32,7 @@ use crate::codes::{
     EXIT_MEANINGS, IMPORT_MEANINGS, PARSE_MEANINGS, STAGE_ONE_MEANINGS, STAGE_TWO_MEANINGS,
     TEXT_FORM_TAGS, TOOL_CODES, WIRE_MEANINGS,
 };
+use crate::diff_codes::DIFF_MEANINGS;
 use crate::report::Report;
 use crate::verify_codes::{VECTOR_MEANINGS, VERIFY_MEANINGS};
 
@@ -52,6 +54,7 @@ pub(crate) fn run(json: bool) -> Outcome {
     report.set("error_codes", table(TOOL_CODES));
     report.set("vector_codes", table(VECTOR_MEANINGS));
     report.set("verify_codes", table(VERIFY_MEANINGS));
+    report.set("diff_codes", table(DIFF_MEANINGS));
     report.set(
         "exit_codes",
         Value::Array(
@@ -201,6 +204,7 @@ fn render_text() -> String {
         "bind and run codes (verify, exit 2)",
         VERIFY_MEANINGS,
     );
+    rows(&mut out, "diff codes (diff, exit 2)", DIFF_MEANINGS);
     out.push_str("exit codes:\n");
     for (code, meaning) in EXIT_MEANINGS {
         out.push_str(&format!("  {code}  {meaning}\n"));

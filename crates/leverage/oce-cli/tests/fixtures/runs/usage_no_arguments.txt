@@ -14,6 +14,7 @@ Commands:
   verify    Replay a vector set against a subject and print the receipt
   id        Print the canonical content id of a CXF document or an authored sequence
   import    Read a flat CXF document into the authoring form
+  diff      Compare two sequences, or two CXF documents, and print the structural diff
   help      Print this message or the help of the given subcommand(s)
 
 Options:

@@ -435,3 +435,55 @@ fn every_wire_refusal_is_reported_under_its_published_code_detail_and_span() {
         }
     }
 }
+
+#[test]
+fn diff_refuses_hostile_bytes_on_either_side_about_that_side() {
+    // GitHub issue #668: each side of `oce diff` is read and parsed or loaded as the other verbs
+    // read their input, and a refusal names its side.
+    let dir = scratch("diff_hostile");
+    let junk: Vec<u8> = (0..4096u32)
+        .map(|i| (i.wrapping_mul(2_654_435_761) >> 24) as u8)
+        .collect();
+    let good = "sequence s\nderived_from none\nin u : Real\nout y : Real\nblock abs = CDL.Reals.Abs\nu -> abs.u\nabs.y -> y\n";
+    let parsed = oce_author::parse_text(good).expect("parses");
+    let wire = oce_author::to_wire_string(&parsed);
+    let cxf = oce_author::emit(&parsed, &oce_author::EmitOptions::default()).expect("emits");
+    std::fs::write(dir.join("good.oce"), good).expect("write");
+    std::fs::write(dir.join("good.json"), &wire).expect("write");
+    std::fs::write(dir.join("good.jsonld"), &cxf).expect("write");
+    for extension in ["oce", "json", "jsonld"] {
+        let name = |stem: &str| format!("{stem}.{extension}");
+        std::fs::write(dir.join(name("junk")), &junk).expect("write");
+        std::fs::write(dir.join(name("utf8")), b"{\"a\": \"\xc3\x28\"}").expect("write");
+        std::fs::write(dir.join(name("empty")), b"").expect("write");
+        std::fs::create_dir_all(dir.join(name("folder"))).expect("mkdir");
+        let good = name("good");
+        for stem in ["junk", "utf8", "empty", "folder", "missing"] {
+            let bad = name(stem);
+            for (base, head, side) in [(&bad, &good, "base"), (&good, &bad, "head")] {
+                let run = oce_in(&dir, &["diff", base, head], b"");
+                let code = refusal(&run);
+                assert_eq!(run.report()["errors"][0]["at"], side, "{base} {head}");
+                assert!(run.report().get("diff").is_none());
+                match stem {
+                    "folder" => assert_eq!(code, "not-a-file"),
+                    "missing" => assert_eq!(code, "not-found"),
+                    _ if extension == "jsonld" => assert_eq!(code, "not-loadable"),
+                    _ => assert!(!code.is_empty()),
+                }
+            }
+            // Through stdin as well, on the head side.
+            if !matches!(stem, "folder" | "missing") {
+                let bytes = std::fs::read(dir.join(&bad)).expect("read");
+                let from = match extension {
+                    "oce" => "text",
+                    "json" => "wire",
+                    _ => "cxf",
+                };
+                let run = oce_in(&dir, &["diff", &good, "-", "--from", from], &bytes);
+                refusal(&run);
+                assert_eq!(run.report()["errors"][0]["at"], "head");
+            }
+        }
+    }
+}

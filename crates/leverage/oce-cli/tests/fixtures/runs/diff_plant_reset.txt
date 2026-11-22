@@ -1,0 +1,183 @@
+exit: 1
+--- stdout
+{
+  "command": "diff",
+  "diff": {
+    "base": {
+      "derived_from": null,
+      "sequence": "chw_plant_reset"
+    },
+    "catalog": "catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892",
+    "graph": [
+      {
+        "class": "CDL.Reals.Sources.Constant",
+        "confidence": "exact",
+        "from": "THigh",
+        "kind": "renamed",
+        "params": [
+          {
+            "name": "k",
+            "value": {
+              "bits": "0x4071d26666666666",
+              "real": "285.15"
+            }
+          }
+        ],
+        "subject": "TMax"
+      },
+      {
+        "class": "CDL.Reals.Sources.Constant",
+        "confidence": "exact",
+        "from": "TLow",
+        "kind": "renamed",
+        "params": [
+          {
+            "name": "k",
+            "value": {
+              "bits": "0x4071726666666666",
+              "real": "279.15"
+            }
+          }
+        ],
+        "subject": "TMin"
+      },
+      {
+        "class": "CDL.Logical.And",
+        "inputs": [
+          {
+            "port": "u1",
+            "source": "uPlaEna"
+          },
+          {
+            "port": "u2",
+            "source": "uReq"
+          }
+        ],
+        "kind": "removed",
+        "params": [],
+        "subject": "ena"
+      },
+      {
+        "class": "CDL.Logical.TrueDelay",
+        "inputs": [
+          {
+            "port": "u",
+            "source": "ena.y"
+          }
+        ],
+        "kind": "removed",
+        "params": [
+          {
+            "name": "delayTime",
+            "value": {
+              "integer": 300
+            }
+          },
+          {
+            "name": "delayOnInit",
+            "value": {
+              "boolean": true
+            }
+          }
+        ],
+        "subject": "hold"
+      },
+      {
+        "class": "CDL.Logical.TrueDelay",
+        "inputs": [
+          {
+            "port": "u",
+            "source": "plaOn.y"
+          }
+        ],
+        "kind": "added",
+        "params": [
+          {
+            "name": "delayTime",
+            "value": {
+              "integer": 600
+            }
+          },
+          {
+            "name": "delayOnInit",
+            "value": {
+              "boolean": true
+            }
+          }
+        ],
+        "subject": "onDelay"
+      },
+      {
+        "class": "CDL.Logical.And",
+        "inputs": [
+          {
+            "port": "u1",
+            "source": "uReq"
+          },
+          {
+            "port": "u2",
+            "source": "uPlaEna"
+          }
+        ],
+        "kind": "added",
+        "params": [],
+        "subject": "plaOn"
+      },
+      {
+        "class": "CDL.Reals.Switch",
+        "confidence": "high",
+        "from": "sel",
+        "kind": "renamed",
+        "params": [],
+        "subject": "sw"
+      },
+      {
+        "kind": "rewired",
+        "new": "onDelay.y",
+        "old": "hold.y",
+        "subject": "sw.u2"
+      }
+    ],
+    "head": {
+      "derived_from": null,
+      "sequence": "chw_plant_reset"
+    },
+    "interface": [],
+    "metadata": [
+      {
+        "kind": "comment-changed",
+        "new": " agent draft",
+        "old": " Chilled-water supply temperature reset, reference.",
+        "subject": "sequence"
+      }
+    ],
+    "notes": [
+      "names-disjoint"
+    ],
+    "parameters": [],
+    "schema": "oce-diff/1",
+    "source": "authoring",
+    "summary": {
+      "blocks": {
+        "base_only": 2,
+        "by_name": 0,
+        "head_only": 2,
+        "renamed": 3
+      },
+      "equal": false,
+      "graph_equal": false,
+      "interface_equal": true,
+      "metadata_equal": false,
+      "parameters_equal": true
+    }
+  },
+  "errors": [],
+  "findings": [],
+  "form": "text",
+  "head": "../oce-diff/tests/fixtures/examples/plant_reset.head.oce",
+  "input": "../oce-diff/tests/fixtures/examples/plant_reset.base.oce",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

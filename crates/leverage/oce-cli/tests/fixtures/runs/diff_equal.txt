@@ -1,0 +1,45 @@
+exit: 0
+--- stdout
+{
+  "command": "diff",
+  "diff": {
+    "base": {
+      "derived_from": null,
+      "sequence": "ahu_dehum_override"
+    },
+    "catalog": "catalog:1:fnv1a128:96724061ffda5d6a7cb9d4019c440892",
+    "graph": [],
+    "head": {
+      "derived_from": null,
+      "sequence": "ahu_dehum_override"
+    },
+    "interface": [],
+    "metadata": [],
+    "notes": [],
+    "parameters": [],
+    "schema": "oce-diff/1",
+    "source": "authoring",
+    "summary": {
+      "blocks": {
+        "base_only": 0,
+        "by_name": 1,
+        "head_only": 0,
+        "renamed": 0
+      },
+      "equal": true,
+      "graph_equal": true,
+      "interface_equal": true,
+      "metadata_equal": true,
+      "parameters_equal": true
+    }
+  },
+  "errors": [],
+  "findings": [],
+  "form": "text",
+  "head": "../oce-diff/tests/fixtures/examples/site_retune.base.oce",
+  "input": "../oce-diff/tests/fixtures/examples/site_retune.base.oce",
+  "ok": true,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr
