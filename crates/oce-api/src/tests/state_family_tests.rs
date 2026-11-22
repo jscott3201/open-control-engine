@@ -401,14 +401,14 @@ fn event_at_the_frame_classes_continue_bit_exactly_across_an_event_frame() {
     }
 }
 
-/// `TriggeredSampler`'s "no frame yet" marker (the third value of its previous-trigger word) is
-/// visible to a snapshot only before the first frame, where restore compares the words with the
-/// `init_state` output and so restores it exactly; a restored engine then treats frame 0 as
-/// initialisation. After any frame the word is a canonical Boolean, and a state carrying the
-/// marker there is refused by the block's state contract, which capture and restore both run
+/// `TriggeredSampler` seeds `pre(trigger) = true`, so frame 0 samples nothing whatever its
+/// trigger. A snapshot taken before the first frame (restore compares its words with the
+/// `init_state` output) round-trips exactly, and the restored engine treats its next frame as
+/// frame 0. After a frame the word is still a canonical Boolean, and a word outside that domain is
+/// refused by the block's state contract, which capture and restore both run
 /// (`validate_payload`); the capture side is exercised here.
 #[test]
-fn triggered_sampler_no_frame_marker_round_trips_only_before_the_first_frame() {
+fn triggered_sampler_pre_frame_snapshot_round_trips_and_frame_zero_samples_nothing() {
     let graph = model(
         "CDL.Discrete.TriggeredSampler",
         params(&[("y_start", Value::Real(7.0))]),
@@ -416,15 +416,12 @@ fn triggered_sampler_no_frame_marker_round_trips_only_before_the_first_frame() {
     let fresh = || {
         let mut engine = Engine::new();
         engine
-            .build_model_in_memory(graph.clone(), Some("urn:test:marker-model"))
+            .build_model_in_memory(graph.clone(), Some("urn:test:sampler-model"))
             .unwrap();
         engine
     };
     let original = fresh();
-    assert_eq!(
-        original.state.words[1], 2,
-        "init writes the no-frame marker"
-    );
+    assert_eq!(original.state.words[1], 1, "init seeds pre(trigger) true");
     let snapshot = original
         .state_snapshot()
         .expect("a pre-frame state is capturable");
@@ -463,7 +460,7 @@ fn triggered_sampler_no_frame_marker_round_trips_only_before_the_first_frame() {
         assert!(matches!(restored.state.words[1], 0 | 1));
     }
 
-    // After a frame the marker is not a state any frame produces: capture refuses it.
+    // After a frame a non-Boolean word is not a state any frame produces: capture refuses it.
     let mut advanced = fresh();
     output(&mut advanced, 0.0, 3.0, false);
     advanced.state.words[1] = 2;

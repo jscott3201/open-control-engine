@@ -108,8 +108,8 @@ reset back-solves the integrator to `y_reset - (P + D)` from the frame's terms, 
 through the normal path, `P + D + (y_reset - (P + D))`, which can differ from `y_reset` by an ulp),
 `Reals.IntegratorWithReset` (`trigger` and `y_reset_in` feed through; `u` stays a loop cut),
 `Integers.OnCounter` (`trigger` and `reset` feed through), and `Discrete.TriggeredSampler` and
-`Discrete.TriggeredMax` (no event at frame 0; both already fed through). `PIDWithReset` in P mode
-has no integrator, ignores `trigger` and does not feed it through. `Logical.Change`, `Edge` and
+`Discrete.TriggeredMax` (no event at frame 0; both already fed through). `PIDWithReset` in the P
+and PD modes has no integrator, ignores `trigger` and does not feed it through. `Logical.Change`, `Edge` and
 `FallingEdge` keep their initialisation value at frame 0, true when `u` differs from
 `pre_u_start`; a downstream `when` ignores that pulse either way. Every other class with a `when`
 in its source already matched this rule.
@@ -130,11 +130,15 @@ the event, which the reset frame does not take. An event input true at frame 0 i
 the previous engine ignored it, and behind a `Pre` (`pre_u_start = false`) it is an event at
 frame 1.
 
-`TriggeredSampler` marks "no frame yet" with a third value of its previous-trigger word, so
-`state_len` is unchanged. Only `init_state` writes it. A snapshot taken before the first frame is
-validated by comparison with the `init_state` output, so it carries and restores the marker exactly;
-a snapshot taken after any frame is validated by the block's state contract, which accepts only a
-canonical Boolean there, so the marker is refused in it.
+Because `PIDWithReset.trigger` feeds through only with an integrator, its `controllerType` decides
+the block's schedule shape, and `resume` does not reschedule: `Engine::set_param` refuses, with
+`ParamStructural`, a value that (with the block's other pending edits) changes the scheduled
+instance's feedthrough, the inputs it reads when it fires or an input's event role. That refuses
+a switch between {P, PD} and {PI, PID}, and between P and PD; PI and PID stay interchangeable.
+
+`TriggeredSampler` seeds its previous-trigger word `true` in `init_state`, so no false-to-true
+transition can be seen at frame 0, whatever `trigger` is there; the frame-0 update stores frame
+0's `trigger`. The word stays a canonical Boolean in every state, and `state_len` is unchanged.
 
 ## Host observation
 

@@ -223,6 +223,7 @@ of them, and the implementation PR follows them until then.
    whose input starts true for no reset-timing gain. Differential runs against OpenModelica compare
    frame 0 with the initialisation row.
 7. **`TriggeredSampler` marks "no frame yet" with a third value of its trigger word**
+   (replaced in the review round by seeding `pre(trigger) = true`; see [As landed](#as-landed))
    (orchestrator's call). `state_len` does not change; the initial-state CRC of 2 blobs moves. The
    validator accepts the marker only in a state no frame has touched. The implementation must
    confirm that capture cannot see such a state (`TriggeredMax`'s `has_history == 1` check,
@@ -269,13 +270,21 @@ to decide something the note left open, the record is here; the decided text abo
   declare one (`TriggeredSampler` and `TriggeredMax` keep the generic loop message, which already
   names `Pre`). `BuildError::AlgebraicLoop` carries the cycle's event-input members, and the
   `algebraic-loop` record of each such member appends `oce_graph::event_input_remedy`.
-- **Decision 7: capture can see the marker, before the first frame only.** The note suggested
-  capture cannot see an untouched state. It can: a snapshot taken after load and before any
-  frame (`prev_t` absent) is valid, and restore checks its words against the `init_state` output,
-  not against the state contract, so the "no frame yet" marker (word value 2) round-trips
-  exactly and the restored engine treats its next frame as frame 0. After any frame every update
-  has written a canonical Boolean, and the state contract (`bool_word`), which capture and
-  restore both run, refuses the marker. Both are tested (`state_family_tests.rs`).
+- **Decision 7 replaced: `TriggeredSampler` seeds `pre(trigger) = true`** (orchestrator's call
+  of 2026-11-22, in the review round of GitHub #789). The third word value decision 7 chose is
+  behaviourally identical to seeding the previous-trigger bit `true`: the block reads the word
+  only to decide "trigger true now and false before", and both a marker and `true` answer "no
+  event" for either frame-0 trigger; the frame-0 update overwrites the word either way; the block
+  has no `prev_t`. Every path that reads the word before the first update reads exactly the
+  `init_state` output: the frame-0 emit, a restore of a snapshot taken before any frame (restore
+  compares such a snapshot with `init_state`), `resume` after `set_param` (it re-allocates every
+  state region from `init_state` and clears `prev_t`), and a blob load (the initial-state CRC is
+  of `init_state`). A mutant that removed the marker check survived for that reason. With
+  `true`, the word stays in the state contract's Boolean domain in every state, so the validator
+  needs no special case. The note had also suggested capture cannot see an untouched state; it
+  can (a snapshot after load and before any frame is valid), which no longer matters. Blobs
+  compiled before this change that hold `TriggeredSampler` are refused with
+  `BlobError::InitialStateMismatch`.
 - **Building 33: four frames appended** (orchestrator's call of 2026-11-22). With the reset at
   the event, the mutant that triggers the reset from the enable's level instead of its change
   survived both behavioural checks: every disable in the 74-frame scenario lasted at least two
@@ -293,6 +302,16 @@ to decide something the note left open, the record is here; the decided text abo
   self-check at row 49 (heating re-enabled after a one-tick disable) now asserts that the
   re-enable row emits `y_reset = 0` inside the near-zero band, ungated because the loop is
   enabled; it asserted the pre-reset value before.
+- **`set_param` and the mode switch** (orchestrator's call of 2026-11-22, review round).
+  Decision 10 makes `PIDWithReset.controllerType` decide whether `trigger` feeds through, and
+  `resume` does not reschedule, so a halted engine could switch a PD controller to PI and run a
+  schedule built for PD. A `Structural` registry rule was rejected: it would move the reference
+  catalog (a `full`-row path) and break the invariant that a parameter name is structural in
+  every class that declares it or in none (`CDL.Reals.PID` declares `controllerType` too).
+  Instead `Engine::set_param` instantiates the edited block with every pending edit applied and
+  refuses with `ParamStructural` when its schedule shape (port counts, feedthrough, inputs read
+  at emit, event roles) differs from the scheduled instance's. A registry sweep finds no other
+  value-dependent shape.
 - **Blast radius as measured.** As section 4 predicted, with these exact counts: 7 of 46 G36
   traces and their 7 `.prov.json`; golden-gen's 7 CDL scenarios (21 files) and 22 files in the 7
   G36 directories (`MANIFEST.txt` does not move: it lists paths); 3 `.oceb` blobs, byte total
@@ -301,4 +320,10 @@ to decide something the note left open, the record is here; the decided text abo
   fixtures holding `PIDWithReset`); `valve_oracle.txt` as above. The pre-change
   `thermal_zones_control_loops` blob is kept as
   `crates/oce-api/tests/fixtures/blob_trigger_scheduled_after_its_reader.oceb` and refused with
-  `InvalidSchedule { position: 0, fault: EmitBefore }`.
+  `InvalidSchedule { position: 0, fault: EmitBefore }`, and the pre-change
+  `generic_time_suppression` blob as `blob_triggered_sampler_pre_trigger_false.oceb`, refused with
+  `InitialStateMismatch`. Section 4 missed two artefacts, found in review: `oce-replay`'s
+  `controller_minute_day.trace` and `controller_grid_hold.trace`, which run
+  `cooling_only_controller` (its supply-fan status is true at frame 0, so the frame-0 reset the
+  previous engine fired shows from the second frame on, as in the G36 trace), and the
+  authority-claims projection (`docs/authority-claims.md`), which hashes the golden corpora.

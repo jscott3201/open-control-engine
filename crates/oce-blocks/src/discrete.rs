@@ -19,10 +19,6 @@ use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_boo
 
 const TRIGGERED_SAMPLER_HELD_WORD: usize = 0;
 const TRIGGERED_SAMPLER_PREV_TRIGGER_WORD: usize = 1;
-/// The third value of `TriggeredSampler`'s previous-trigger word: no frame has run yet. Only
-/// [`Block::init_state`] writes it; every update overwrites it with a canonical Boolean, so a
-/// post-frame state never holds it and the post-frame validator refuses it.
-const TRIGGERED_SAMPLER_NO_FRAME: u64 = 2;
 const TRIGGERED_MAX_HELD_WORD: usize = 0;
 const TRIGGERED_MAX_PREV_TRIGGER_WORD: usize = 1;
 const TRIGGERED_MAX_HAS_HISTORY_WORD: usize = 2;
@@ -186,9 +182,10 @@ impl Block for UnitDelay {
 /// inactive, so frame 0 emits `y_start` whatever `trigger` is, and its `trigger` becomes
 /// `pre(trigger)` for frame 1; the first sample is the first false-to-true transition after
 /// frame 0. The block owns two `[S]` words: the held `Real` output (`f64::to_bits`) and the
-/// previous trigger word, which holds a canonical Boolean after any frame and a third value,
-/// "no frame yet", only in the state [`Block::init_state`] writes. It feeds through from both
-/// inputs to `y` because a same-tick rising trigger emits the current `u`. Real outputs and stored samples are NaN-canonicalized for deterministic
+/// previous trigger bit. [`Block::init_state`] seeds that bit `true`, so no false-to-true
+/// transition can be seen at frame 0 whatever `trigger` is there, and the frame-0 update
+/// overwrites it with frame 0's `trigger`. It feeds through from both inputs to `y` because a
+/// same-tick rising trigger emits the current `u`. Real outputs and stored samples are NaN-canonicalized for deterministic
 /// traces. The block does not panic for finite or non-finite `Real` values; validated callers must
 /// provide a `Real` then a `Boolean` input.
 #[derive(Clone, Copy, Debug, Default)]
@@ -200,8 +197,8 @@ impl TriggeredSampler {
     fn output(inputs: &[Value], region: &[u64]) -> f64 {
         let u = read_real(inputs, 0);
         let trigger = read_bool(inputs, 1);
-        let prev_word = region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD];
-        if trigger && prev_word != TRIGGERED_SAMPLER_NO_FRAME && !word_bool(prev_word) {
+        let prev_trigger = word_bool(region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD]);
+        if trigger && !prev_trigger {
             u
         } else {
             f64::from_bits(region[TRIGGERED_SAMPLER_HELD_WORD])
@@ -234,7 +231,8 @@ impl Block for TriggeredSampler {
 
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
         region[TRIGGERED_SAMPLER_HELD_WORD] = canonicalize_real(self.y_start).to_bits();
-        region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD] = TRIGGERED_SAMPLER_NO_FRAME;
+        // Seeded `true`: frame 0 is initialisation, where the `when trigger` clause is inactive.
+        region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD] = bool_word(true);
     }
 
     fn emit_from_state(

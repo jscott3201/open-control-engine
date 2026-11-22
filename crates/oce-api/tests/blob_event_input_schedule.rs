@@ -15,11 +15,23 @@
 //! after the v0.5.0 tag, so standing rule 10's bump was done and the version does not separate
 //! the two meanings); the schedule check is what refuses it.
 
+//!
+//! `fixtures/blob_triggered_sampler_pre_trigger_false.oceb` is the `generic_time_suppression`
+//! golden as `development` encoded it before the change (at 56c81a85, path
+//! `crates/oce-api/tests/fixtures/blob/generic_time_suppression.oceb`; SHA-256
+//! `09bb813f8f4b30afd954f43a47810f86432399f58fc439ab3643384db7dfd2d3`). Its `TriggeredSampler`
+//! carries the initial previous-trigger word `false`; this build seeds it `true` (no event at frame
+//! 0), so the initial-state CRC differs and the decoder refuses the blob with
+//! `InitialStateMismatch`. It is never re-blessed.
+
 use oce_api::BlobError;
 use oce_graph::blob::{ENGINE_VERSION, ScheduleFault, decode};
 
 const OLD_SCHEDULE: &[u8] = include_bytes!("fixtures/blob_trigger_scheduled_after_its_reader.oceb");
 const CURRENT: &[u8] = include_bytes!("fixtures/blob/thermal_zones_control_loops.oceb");
+const SAMPLER_SEEDED_FALSE: &[u8] =
+    include_bytes!("fixtures/blob_triggered_sampler_pre_trigger_false.oceb");
+const SAMPLER_CURRENT: &[u8] = include_bytes!("fixtures/blob/generic_time_suppression.oceb");
 
 #[test]
 fn a_blob_scheduling_a_reset_pid_before_its_trigger_producer_is_refused() {
@@ -66,4 +78,22 @@ fn the_refused_blob_differs_from_the_current_golden_only_by_its_schedule() {
     );
     assert_eq!(current.decode_refusal, None);
     decode(CURRENT).expect("the re-blessed golden decodes");
+}
+
+#[test]
+fn a_blob_whose_triggered_sampler_starts_with_pre_trigger_false_is_refused() {
+    match decode(SAMPLER_SEEDED_FALSE) {
+        Err(BlobError::InitialStateMismatch { .. }) => {}
+        Err(other) => panic!("expected InitialStateMismatch, got {other:?}"),
+        Ok(_) => panic!("a TriggeredSampler seeded with pre(trigger) = false was accepted"),
+    }
+    assert_eq!(SAMPLER_SEEDED_FALSE.len(), SAMPLER_CURRENT.len());
+    let old = oce_api::inspect_blob(SAMPLER_SEEDED_FALSE).expect("well formed");
+    let current = oce_api::inspect_blob(SAMPLER_CURRENT).expect("well formed");
+    assert_eq!(old.content_id, current.content_id);
+    assert!(matches!(
+        old.decode_refusal,
+        Some(BlobError::InitialStateMismatch { .. })
+    ));
+    assert_eq!(current.decode_refusal, None);
 }

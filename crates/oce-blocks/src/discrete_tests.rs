@@ -251,10 +251,7 @@ fn trigger_true_at_frame_zero_emits_y_start_and_samples_at_the_next_rise() {
     let sampler = TriggeredSampler { y_start: -7.0 };
     let mut region = vec![0u64; sampler.state_len()];
     sampler.init_state(&mut region, &ParamTable::default());
-    assert_eq!(
-        region[1], 2,
-        "the trigger word starts at the no-frame marker"
-    );
+    assert_eq!(region[1], 1, "pre(trigger) is seeded true");
 
     let trace = [
         sample_tick(&sampler, &mut region, 9.0, true),
@@ -270,23 +267,32 @@ fn trigger_true_at_frame_zero_emits_y_start_and_samples_at_the_next_rise() {
 }
 
 #[test]
-fn no_frame_marker_is_written_only_by_init_and_refused_after_a_frame() {
+fn seeded_true_trigger_word_stays_a_canonical_boolean_and_frame_zero_samples_nothing() {
+    // The initial state is `[y_start, true]`: in the state contract's Boolean domain before and
+    // after every frame. Frame 0 samples nothing whatever the trigger; the frame-0 update stores
+    // frame 0's trigger, and only a later false-to-true transition samples.
     let sampler = TriggeredSampler { y_start: 3.0 };
     let mut region = vec![0u64; sampler.state_len()];
     sampler.init_state(&mut region, &ParamTable::default());
-    assert_eq!(region, vec![3.0f64.to_bits(), 2]);
-    // Every update leaves a canonical Boolean, whatever the trigger and whatever came before.
+    assert_eq!(region, vec![3.0f64.to_bits(), 1]);
+    sampler
+        .validate_state(&region, 0.0, 0.0)
+        .expect("the seeded word is a canonical Boolean");
     for trigger in [false, true] {
         let mut fresh = region.clone();
-        sample_tick(&sampler, &mut fresh, 5.0, trigger);
+        assert!(sample_tick(&sampler, &mut fresh, 5.0, trigger).bit_eq(&Value::Real(3.0)));
         assert_eq!(fresh[1], u64::from(trigger));
         sampler
             .validate_state(&fresh, 0.0, 0.0)
             .expect("a post-frame state validates");
-        // A post-frame state carrying the marker is not one any frame produces: refused.
-        fresh[1] = 2;
-        assert!(sampler.validate_state(&fresh, 0.0, 0.0).is_err());
+        // false -> true at frame 1 samples; true held does not.
+        let next = sample_tick(&sampler, &mut fresh, 6.0, true);
+        let want = if trigger { 3.0 } else { 6.0 };
+        assert!(next.bit_eq(&Value::Real(want)), "after {trigger}: {next:?}");
     }
+    let mut corrupt = region.clone();
+    corrupt[1] = 2;
+    assert!(sampler.validate_state(&corrupt, 0.0, 0.0).is_err());
 }
 
 #[test]
@@ -297,7 +303,7 @@ fn emit_pass_is_pure_for_rising_trigger() {
     // At frame 0 a true trigger is no event: the emit reads y_start and mutates nothing.
     let inputs = [Value::Real(4.0), Value::Boolean(true)];
     assert!(emit_once(&sampler, &inputs, &region)[0].bit_eq(&Value::Real(1.0)));
-    assert_eq!(region, vec![1.0f64.to_bits(), 2]);
+    assert_eq!(region, vec![1.0f64.to_bits(), 1]);
     sample_tick(&sampler, &mut region, 0.0, false);
 
     let a = emit_once(&sampler, &inputs, &region);
