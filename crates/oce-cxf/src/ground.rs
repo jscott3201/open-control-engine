@@ -94,9 +94,13 @@ impl fmt::Display for GroundErr {
             GroundErr::Expr(oce_expr::ExprError::NonCanonicalEnumeration {
                 written,
                 canonical,
+                member,
             }) => f.write_str(&non_canonical_enumeration_message(
                 written,
-                &format!("{canonical}.<member>"),
+                &format!(
+                    "{canonical}.{}",
+                    oce_expr::expected_member(canonical, member)
+                ),
             )),
             GroundErr::Expr(e) => write!(f, "expression binding did not ground: {e}"),
             GroundErr::NonScalar => f.write_str("binding did not ground to a scalar value"),

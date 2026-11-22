@@ -40,6 +40,19 @@ leak-timeout = { period = "2s", result = "fail" }
 # Bounds a pathological run even when no one test reaches its individual timeout.
 global-timeout = "15m"
 
+# The constructed-budget tests (issue #700, rebuilt for issue #772) decode blobs of shape-valid
+# blocks holding the whole 2^22-word budget behind about 3.7 million connectors: each holds up to
+# about 0.85 GB at its peak and runs 4 to 21 s in debug codegen. At most two run at once, in every
+# profile (a profile inherits the default profile's overrides), so a runner with few CPUs and
+# little memory (pr-gate's macOS cell: 3 CPUs, about 7 GB) never holds four. Matched by test
+# name; the tests live in `oce-api`'s `facade` and `facade_allocation_census` binaries.
+[test-groups]
+constructed-budget = { max-threads = 2 }
+
+[[profile.default.overrides]]
+filter = 'package(oce-api) & (test(/^blob_constructed_budget::/) | test(/^blob_peak_allocation::/) | test(/^blob_summary_allocations::/) | test(/^cxf_constructed_budget::/) | test(/^blob_hostile_parameter_models::/) | test(=blob_element_shapes::a_complete_matrix_past_the_port_width_is_outside_its_shape))'
+test-group = 'constructed-budget'
+
 [profile.ci]
 # Run the whole suite even when something fails, so a single run reports every failure
 # instead of stopping at the first.

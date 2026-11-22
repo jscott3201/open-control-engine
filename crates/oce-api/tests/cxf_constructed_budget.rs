@@ -5,13 +5,15 @@
 //! thousand ports: a `CDL.Reals.MatrixGain` with `nin = nout = 1024` and no `K` held a dense
 //! identity of 2^20 gains. Since issue #773 the counts are `K`'s own shape, so a dense matrix
 //! writes its cells, and the document limits bound what cells cost: at most
-//! `oce_api::MAX_CXF_BYTES` (8 MiB) of document and 2^20 array elements in all. The largest
-//! construction a valid document reaches is measured here: one dense `K` of 2^20 cells (a
-//! quarter of the budget) and what the rest of the bytes buy as ports, under half the budget; the cells past the element limit are refused before any block is built, and a
+//! `oce_api::MAX_CXF_BYTES` (8 MiB) of document and 2^20 array elements in all (that limit is
+//! pinned at its boundary by `hostile_load_bounds.rs`,
+//! `document_array_budget_admits_exactly_its_limit_and_refuses_one_element_more`). The largest
+//! construction a valid document reaches is bounded here from those limits and two measured
+//! costs, a dense `K`'s words per cell and a port's bytes per word: under half the budget. A
 //! table sized by a lone corner cell is refused by the load gate (issue #772). The budget is
 //! defence in depth for blobs and for hosts that build graphs directly: its refusal, the
 //! receipt record and its place among the load's refusals are pinned on hand-built graphs in
-//! `crates/oce-api/src/tests/load_constructed_budget_tests.rs`, and on blobs in
+//! `crates/oce-api/src/engine_constructed_budget_tests.rs`, and on blobs in
 //! `blob_constructed_budget.rs`.
 //!
 //! Peaks are `allocation_counter`'s `bytes_max`, never wall-clock time.
@@ -175,51 +177,36 @@ fn load(bytes: &[u8]) -> (Engine, Result<oce_api::LoadReport, OcError>, Allocati
     (engine, result.unwrap().map(|(report, _)| report), info)
 }
 
+/// The document limit on array elements (`hostile_load_bounds.rs` pins it), restated.
+const MAX_DOCUMENT_ARRAY_ELEMENTS: u64 = 1 << 20;
+
 #[test]
 fn the_largest_construction_a_valid_document_reaches_is_far_below_the_budget() {
-    // The densest cells a document can write: one `K` of 2^20 elements, the whole array budget.
-    let one = document(&[gain("g0", 1024, 1024)]);
-    assert!(one.len() < MAX_CXF_BYTES, "{} bytes", one.len());
-    let (_, loaded, info) = load(&one);
-    assert_eq!(loaded.expect("a 1024 x 1024 K loads").block_count, 1);
-    // The reader's cost of 2^20 elements is the array budget's (issue #710), under 1 GiB.
-    assert!(info.bytes_max < 1 << 30, "load peak {}", info.bytes_max);
-    let densest = gain_words(1024, 1024);
-    assert_eq!(densest, 1_048_832);
+    // A dense `K` written whole loads, holding one word per cell and its port kinds.
+    let dense = document(&[gain("g0", 256, 256)]);
+    let (_, loaded, info) = load(&dense);
+    assert_eq!(loaded.expect("a 256 x 256 K loads").block_count, 1);
+    assert!(info.bytes_max < 1 << 28, "load peak {}", info.bytes_max);
+    // The most cells a document holds are the array limit's; the shape that holds the most words
+    // for them is one row (the most port kinds): 1,179,649 words.
+    let cells_bound = gain_words(1, MAX_DOCUMENT_ARRAY_ELEMENTS)
+        .max(gain_words(MAX_DOCUMENT_ARRAY_ELEMENTS, 1))
+        .max(gain_words(1024, 1024));
+    assert_eq!(cells_bound, 1_179_649);
 
-    // What the document's remaining bytes buy as ports: a `MultiSum` costs one port node and
-    // two references per input, about 180 bytes a word, so the rest of 8 MiB buys tens of
-    // thousands of words, not millions.
-    let with_sum = document(&[gain("g0", 1024, 1024), sum("s", 16_384)]);
-    let per_input = (with_sum.len() - one.len()) as u64 / 16_384;
+    // What the document's bytes buy as ports: a `MultiSum` costs one port node and two
+    // references per input, well over 100 bytes a word, so 8 MiB buys tens of thousands of words.
+    let with_sum = document(&[gain("g0", 256, 256), sum("s", 16_384)]);
+    let per_input = (with_sum.len() - dense.len()) as u64 / 16_384;
     assert!(per_input >= 100, "{per_input} bytes per input");
-    assert!(with_sum.len() < MAX_CXF_BYTES, "{} bytes", with_sum.len());
     let (_, loaded, _) = load(&with_sum);
     assert_eq!(loaded.expect("the gain and the sum load").block_count, 2);
-    let reached = densest + sum_words(16_384);
-    let room = (MAX_CXF_BYTES - with_sum.len()) as u64;
-    let bound = reached + sum_words(room / per_input + 1);
+    let ports_bound = sum_words(MAX_CXF_BYTES as u64 / per_input + 1);
+    let bound = cells_bound + ports_bound;
     assert!(
-        4 * bound < 2 * MAX_CONSTRUCTED_WORDS,
+        2 * bound < MAX_CONSTRUCTED_WORDS,
         "a maximal valid document holds at most {bound} words, under half the budget"
     );
-
-    // A second dense `K` is past the document's array elements and refused before any block is
-    // built, holding about what the document text costs.
-    let two = document(&[gain("g0", 1024, 1024), gain("g1", 1024, 1024)]);
-    assert!(two.len() < MAX_CXF_BYTES, "{} bytes", two.len());
-    let (_, refused, info) = load(&two);
-    let error = refused.expect_err("2^21 array elements are refused");
-    assert!(
-        error
-            .all_diagnostics()
-            .any(|d| d.code == DiagCode::ResourceLimitExceeded),
-        "{error:?}"
-    );
-    assert!(!matches!(error, OcError::Build(_)), "{error:?}");
-    // The reader's own cost of expanding 2^20 elements is the array budget's (issue #710), not
-    // the constructed one's; it is reported, not bounded, here.
-    assert!(info.bytes_max < 1 << 30, "reader peak {}", info.bytes_max);
 }
 
 #[test]

@@ -181,6 +181,47 @@ fn the_shape_check_names_the_first_element_outside_and_comes_before_the_build() 
 }
 
 #[test]
+fn a_mask_of_a_vector_filter_with_no_length_is_outside_its_shape() {
+    // `nin` is required, so the load gate refuses its omission; the decoder refuses the mask
+    // elements it would otherwise build the block without (the review of GitHub #779).
+    let filter = single(
+        "CDL.Routing.RealVectorFilter",
+        &[
+            ("nout", int(0)),
+            ("msk_1", Value::Boolean(true)),
+            ("msk_2", Value::Boolean(true)),
+        ],
+        0,
+        0,
+    );
+    let at = filter.instances[0]
+        .params
+        .iter()
+        .position(|(name, _)| name == b"msk_1")
+        .unwrap();
+    assert_eq!(refusal(&filter), outside(u32::try_from(at).unwrap()));
+}
+
+/// A complete `K` of one row and one cell past the port width: the load gate refuses its width,
+/// and so does the decoder (the review of GitHub #779), naming the last cell, before any port
+/// is compared. About 25 MB of blob, built here (heavy test group).
+#[test]
+fn a_complete_matrix_past_the_port_width_is_outside_its_shape() {
+    let cols = oce_blocks::MAX_RESOLVED_PORT_WIDTH + 1;
+    let mut image = single("CDL.Reals.MatrixGain", &[], 0, 0);
+    let mut cells: Vec<(Vec<u8>, Val)> = (1..=cols)
+        .map(|col| (format!("K_1_{col}").into_bytes(), Val::real(0.0)))
+        .collect();
+    cells.sort_by(|a, b| a.0.cmp(&b.0));
+    let last = cells
+        .iter()
+        .position(|(name, _)| name == format!("K_1_{cols}").as_bytes())
+        .unwrap();
+    image.instances[0].params = cells;
+    assert_eq!(refusal(&image), outside(u32::try_from(last).unwrap()));
+}
+
+#[test]
 fn matrix_gain_nin_and_nout_are_undeclared_in_a_blob() {
     let gain = single(
         "CDL.Reals.MatrixGain",

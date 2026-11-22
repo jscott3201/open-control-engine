@@ -1,8 +1,10 @@
 //! The blob decoder's shape check agrees with the load gate (issue #772): over random parameter
-//! tables of every class with a shape rule, every table the load gate refuses for an element
-//! outside its extent, or for a matrix its cells do not fill, `oce_blocks::element_outside_extent`
-//! refuses too; and every table that check refuses, the load gate refuses (for that or for the
-//! length that set the extent). So a blob carries no element a loaded document could not.
+//! tables of both `MultiSum` classes, an `ExtractSignal`, a `VectorFilter`, `MatrixGain` and the
+//! three `TimeTable` sources, every table the load gate refuses for an element outside its
+//! extent, a matrix its cells do not fill or one wider than the port width,
+//! `oce_blocks::element_outside_extent` refuses too; and every table that check refuses, the load
+//! gate refuses (for that, or for the length that set the extent: a required length left out, a
+//! negative one). So a blob carries no element a loaded document could not.
 
 use super::common::*;
 
@@ -23,13 +25,15 @@ impl XorShift {
 }
 
 /// The phrases of the load gate's extent and completeness findings.
-const EXTENT_PHRASES: [&str; 6] = [
+const EXTENT_PHRASES: [&str; 8] = [
     "is outside resolved",
     "is outside its matrix",
     "leaves",
     "must use positive one-based indexes",
     "is missing required cell",
     "required cells of its",
+    "more than the maximum flattened cell count",
+    "exceeds maximum flattened cell count",
 ];
 
 /// A random table for `class`: its length parameters (sometimes absent, negative or zero) and
@@ -72,6 +76,10 @@ fn table(rng: &mut XorShift, class: &str) -> Vec<(Arc<str>, Value)> {
             len(rng, "nin", &mut out);
             vector(rng, "k", &|_| Value::Real(1.0), &mut out);
         }
+        "CDL.Integers.MultiSum" => {
+            len(rng, "nin", &mut out);
+            vector(rng, "k", &|_| Value::Integer(1), &mut out);
+        }
         "CDL.Routing.RealExtractSignal" => {
             len(rng, "nin", &mut out);
             len(rng, "nout", &mut out);
@@ -95,14 +103,17 @@ fn table(rng: &mut XorShift, class: &str) -> Vec<(Arc<str>, Value)> {
 fn the_decoders_shape_check_refuses_exactly_what_the_load_gate_refuses_for_shape() {
     let classes = [
         "CDL.Reals.MultiSum",
+        "CDL.Integers.MultiSum",
         "CDL.Routing.RealExtractSignal",
         "CDL.Routing.RealVectorFilter",
         "CDL.Reals.MatrixGain",
         "CDL.Reals.Sources.TimeTable",
+        "CDL.Integers.Sources.TimeTable",
+        "CDL.Logical.Sources.TimeTable",
     ];
     let mut rng = XorShift(0x0772_0772_2026_1122);
     let (mut agreed_refused, mut agreed_clean) = (0, 0);
-    for case in 0..6_000 {
+    for case in 0..8_000 {
         let class = classes[usize::try_from(rng.below(classes.len() as u64)).unwrap()];
         let params = table(&mut rng, class);
         let model = one_block_model(class, &[], &[], params.clone());

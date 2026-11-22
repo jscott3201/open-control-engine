@@ -383,7 +383,8 @@ fn hostile_models_decode_or_refuse_typed_within_the_documented_peak() {
             "largest peak {largest}: no corner cell built a table"
         );
         // No model of these blocks holds the budget any more: shape-valid tables of at most
-        // 3,000 cells, and corners refused before they are built.
+        // 3,000 cells, and corners refused before they are built. This describes the generator,
+        // not the decoder; issue #783 adds heavy shape-valid blocks so models cross it again.
         assert_eq!(crossed, 0, "{crossed} past the budget");
     }
 }

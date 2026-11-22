@@ -115,3 +115,52 @@ fn an_unregistered_class_or_a_class_with_no_shape_judges_nothing() {
     let one = table(&[("K_1_1", Value::Real(1.0))]);
     assert_eq!(element_outside_extent("CDL.Reals.MatrixGain", &one), None);
 }
+
+#[test]
+fn an_element_of_a_required_length_the_block_omits_is_outside() {
+    // `VectorFilter.nin` is required: a mask with no `nin` lies inside no length.
+    let filter = table(&[
+        ("nout", Value::Integer(0)),
+        ("msk_1", Value::Boolean(true)),
+        ("msk_2", Value::Boolean(true)),
+    ]);
+    assert_eq!(
+        element_outside_extent("CDL.Routing.RealVectorFilter", &filter),
+        Some(1)
+    );
+    // With its length bound, the same mask is inside.
+    let mut bound = filter.clone();
+    bound.values.push((Arc::from("nin"), Value::Integer(2)));
+    assert_eq!(
+        element_outside_extent("CDL.Routing.RealVectorFilter", &bound),
+        None
+    );
+}
+
+#[test]
+fn a_complete_matrix_wider_than_the_port_width_is_outside() {
+    let width = crate::MAX_RESOLVED_PORT_WIDTH;
+    let row = |cols: usize| ParamTable {
+        values: (1..=cols)
+            .map(|col| (Arc::from(format!("K_1_{col}").as_str()), Value::Real(0.0)))
+            .collect(),
+    };
+    assert_eq!(
+        element_outside_extent("CDL.Reals.MatrixGain", &row(width)),
+        None
+    );
+    let past = row(width + 1);
+    assert_eq!(
+        element_outside_extent("CDL.Reals.MatrixGain", &past),
+        Some(width),
+        "the cell with the largest column is named"
+    );
+    // A table whose rectangle is past the width, likewise.
+    let mut names: Vec<String> = Vec::new();
+    names.push(format!("table_{}_2", width / 2 + 1));
+    let corner = reals(&names.iter().map(String::as_str).collect::<Vec<_>>());
+    assert_eq!(
+        element_outside_extent("CDL.Reals.Sources.TimeTable", &corner),
+        Some(0)
+    );
+}

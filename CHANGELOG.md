@@ -225,13 +225,26 @@ so far, and no tag is cut by the bump.
     a CDL enumeration now holds a member of it or is refused on the declaration
     (`parameter-kind-mismatch`), as a G36-typed one already was; an unknown CDL `Types` class
     (`…CDL.Types.ZeroTim`) is `unknown-enum-type` listing the four. Whitespace around a canonical
-    path in a value is the expression's and is read as before; inside the path it is refused.
+    path keeps what it did before (measured at a765b37d): on a CDL-typed or untyped root parameter
+    or a block parameter it is the expression's own and loads; on a G36-typed root parameter the
+    profile check reads the text as written, so leading whitespace is `type-mismatch` and trailing
+    whitespace `unknown-enum-literal`. Inside the path it is refused. A typing IRI with no `#` or
+    `/` before the path (`urn:x:Buildings.Controls.OBC.CDL.Types.SimpleController`), which typed
+    the parameter before, types nothing now and is refused.
   - **What moved.** Nothing that loads moved: measured over 540 documents (every tracked `@graph`
     document, the vendored translations, and the 139 `open-control-library` documents as written
     and with the retired `S231P#` namespace rewritten), every document that loads before and after
     has a byte-identical content id and blob, and none is newly refused for an enumeration
-    spelling; no model or translation writes a non-canonical path. No format byte changes and no
-    version bump (no release has been tagged since 0.6.0).
+    spelling: no **loadable** document in the tracked, vendored or library corpora writes another
+    form. Translations can: modelica-json (pinned 85721b82) copies a source's relative path as
+    written, the vocabulary document `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld`
+    holds two (`CDL.Types.Extrapolation.Periodic`, line 8979, and
+    `CDL.Types.Smoothness.LinearSegments`, line 8999, `TimeTable`'s defaults), and the `PID` and
+    `PIDWithReset` sources' annotations use `CDL.Types.SimpleController.PI`. A translation of a
+    sequence that writes `CDL.Types.<Enum>.<Member>` is refused, with a diagnostic naming
+    `Buildings.Controls.OBC.CDL.Types.<Enum>.<Member>` (the owner's ruling of 2026-11-22: the engine
+    stays canonical-only). No format byte changes and no version bump (no release has been tagged
+    since 0.6.0).
 - **The blob decoder applies each class's shape rules** (GitHub #779, issue #772; owner ruling
   of 2026-11-22). **Breaking, in place:** a blob carrying an array element past its vector's
   resolved length, an index too large for any width, a `TimeTable` offset past its table's
@@ -244,13 +257,16 @@ so far, and no tag is cut by the bump.
   one output was dropped. The predicate, `oce_blocks::element_outside_extent` (new, with
   `bound_cells` and `BoundCells`), is the load gate's shape rules, completeness as well as extent,
   `no_std`, allocation-free and linear in the block's parameters; a seeded test holds it to the
-  load gate over 6,000 parameter tables both ways. A blob the engine writes never carries such an
+  load gate over 8,000 parameter tables both ways (a required length left out admits no element,
+  and a matrix wider than the port width is outside its shape, as the load gate refuses both). A blob the engine writes never carries such an
   element, and every one over the corpus decodes; a 0.6.0 blob written before this change that
   carries one is refused rather than built. A lone corner cell no longer sizes a table from a
   blob, so issue #700's constructed-budget tests reach the budget with shape-valid `MultiSum`
   blocks built in the test, and the CXF path's with a hand-built graph: no valid CXF document
   reaches the budget (a dense matrix writes its cells, issue #773, and a document holds at most 2^20
-  array elements; the largest measured holds about a quarter of it).
+  array elements, which bound what a document constructs below half the budget). The rebuilt
+  budget tests hold up to about 0.85 GB each, so they run in a nextest test group of at most two
+  at once (`constructed-budget`, `.config/nextest.toml`).
 - **`MatrixGain`'s input and output counts are `K`'s shape; `nin` and `nout` are refused**
   (GitHub #779, issue #773; owner ruling of 2026-11-22). **Breaking, in place:** upstream
   declares `nin = size(K, 2)` and `nout = size(K, 1)` `protected`, but the catalog listed both as

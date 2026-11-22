@@ -35,12 +35,13 @@ fn run(text: &str) -> Result<Value, ExprError> {
 
 const SIMPLE_CONTROLLER: &str = "Buildings.Controls.OBC.CDL.Types.SimpleController";
 
-fn non_canonical(written: &str, canonical: &str) -> ExprError {
+fn non_canonical(written: &str, canonical: &str, member: &str) -> ExprError {
     ExprError::NonCanonicalEnumeration {
         written: written.to_owned(),
         canonical: enumeration_class_by_path(canonical)
             .expect("a table row")
             .qualified_path,
+        member: member.to_owned(),
     }
 }
 
@@ -54,7 +55,7 @@ fn a_non_canonical_enumeration_path_is_refused_naming_the_canonical_one() {
         "CDL.Types.SimpleController",
         "buildings.controls.obc.cdl.types.SimpleController",
     ] {
-        let expected = non_canonical(written, SIMPLE_CONTROLLER);
+        let expected = non_canonical(written, SIMPLE_CONTROLLER, "PD");
         let text = format!("{written}.PD");
         assert_eq!(run(&text).unwrap_err(), expected, "{text}");
         // Inside a larger expression.
@@ -70,11 +71,11 @@ fn a_constant_package_by_a_short_path_is_refused_naming_its_canonical_path() {
     let package = "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes";
     assert_eq!(
         run("OperationModes.occupied").unwrap_err(),
-        non_canonical("OperationModes", package)
+        non_canonical("OperationModes", package, "occupied")
     );
     assert_eq!(
         run("ASHRAE.G36.Types.OperationModes.occupied + 1").unwrap_err(),
-        non_canonical("ASHRAE.G36.Types.OperationModes", package)
+        non_canonical("ASHRAE.G36.Types.OperationModes", package, "occupied")
     );
 }
 
@@ -105,4 +106,41 @@ fn a_canonical_reference_and_an_unknown_class_keep_their_results() {
             ExprError::UnknownIdent(text.clone())
         );
     }
+}
+
+/// modelica-json (pinned 85721b82) copies a source's relative path as written: CXF-Core's
+/// `TimeTable` defaults are `CDL.Types.Extrapolation.Periodic` and
+/// `CDL.Types.Smoothness.LinearSegments` (`third_party/modelica-buildings-cdl/cxf-core/
+/// CXF-Core.jsonld` lines 8979 and 8999). Each is refused, and the message names the whole
+/// canonical member; a member the enumeration lacks is named by the placeholder.
+#[test]
+fn a_translators_relative_path_is_refused_naming_the_whole_canonical_member() {
+    for (written, member, canonical) in [
+        (
+            "CDL.Types.Extrapolation",
+            "Periodic",
+            "Buildings.Controls.OBC.CDL.Types.Extrapolation",
+        ),
+        (
+            "CDL.Types.Smoothness",
+            "LinearSegments",
+            "Buildings.Controls.OBC.CDL.Types.Smoothness",
+        ),
+    ] {
+        let error = run(&format!("{written}.{member}")).unwrap_err();
+        assert_eq!(error, non_canonical(written, canonical, member));
+        assert!(
+            error
+                .to_string()
+                .ends_with(&format!("write `{canonical}.{member}`")),
+            "{error}"
+        );
+    }
+    let unknown = run("CDL.Types.Smoothness.Nope").unwrap_err();
+    assert!(
+        unknown
+            .to_string()
+            .ends_with("write `Buildings.Controls.OBC.CDL.Types.Smoothness.<member>`"),
+        "{unknown}"
+    );
 }

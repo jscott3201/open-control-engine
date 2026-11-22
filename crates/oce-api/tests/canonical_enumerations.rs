@@ -94,9 +94,7 @@ fn only_the_canonical_spelling_of_simple_controller_pd_loads() {
             .collect();
         assert_eq!(named.len(), 1, "{path}: {diags:?}");
         assert!(
-            named[0]
-                .1
-                .contains(&format!("{SIMPLE_CONTROLLER}.<member>")),
+            named[0].1.contains(&format!("{SIMPLE_CONTROLLER}.PD")),
             "{path}: {}",
             named[0].1
         );
@@ -187,7 +185,7 @@ fn a_root_parameter_reads_its_value_and_its_declared_type_by_the_canonical_path(
             diags
                 .iter()
                 .any(|(code, message)| code == "unknown-enum-type"
-                    && message.contains(&format!("{SIMPLE_CONTROLLER}.<member>"))),
+                    && message.contains(&format!("{SIMPLE_CONTROLLER}.PD"))),
             "{path}: {diags:?}"
         );
     }
@@ -253,5 +251,163 @@ fn a_blob_names_an_enumeration_by_its_durable_class_path_only() {
             "{}",
             String::from_utf8_lossy(respelt)
         );
+    }
+}
+
+const TIME_TABLE: Shape<'static> = Shape {
+    class: "CDL.Reals.Sources.TimeTable",
+    output: "Real",
+    inputs: &[],
+};
+
+/// The relative paths modelica-json (pinned 85721b82) copies from a source as written: CXF-Core's
+/// `TimeTable` defaults (`third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld` line 8979,
+/// `"CDL.Types.Extrapolation.Periodic"`, and line 8999, `"CDL.Types.Smoothness.LinearSegments"`,
+/// from `Reals/Sources/TimeTable.mo` lines 6 and 8). A translation of a sequence that writes
+/// one is refused in every context a value is read, naming the whole canonical member (the
+/// owner's ruling of 2026-11-22 on issue #762: the engine stays canonical-only).
+#[test]
+fn a_translators_relative_paths_are_refused_in_every_context_naming_the_canonical_member() {
+    let table = crate::parameter_documents::table("table", "[0.0, 0.0, 2.0, 2.0]");
+    let cases = [
+        (
+            "extrapolation",
+            "CDL.Types.Extrapolation.Periodic",
+            "Extrapolation",
+        ),
+        (
+            "smoothness",
+            "CDL.Types.Smoothness.LinearSegments",
+            "Smoothness",
+        ),
+    ];
+    for (name, relative, type_name) in cases {
+        let canonical = format!("Buildings.Controls.OBC.{relative}");
+        let named = |diags: &[(String, String)], what: &str| {
+            assert!(
+                diags
+                    .iter()
+                    .any(|(code, message)| code == "unknown-enum-type"
+                        && message.contains(&format!("write `{canonical}`"))),
+                "{what} {relative}: {diags:?}"
+            );
+        };
+        let block = |literal: &str, root: &[Param]| {
+            let table = crate::parameter_documents::table("table", "[0.0, 0.0, 2.0, 2.0]");
+            document(
+                &TIME_TABLE,
+                &[table, crate::parameter_documents::value(name, literal)],
+                root,
+            )
+        };
+        // The canonical member loads.
+        loaded(&block(&quoted(&canonical), &[]));
+        // A block parameter.
+        named(&refusal(&block(&quoted(relative), &[])), "block parameter");
+        // A typed root parameter, read by the block.
+        let typed = Param {
+            name: "p".to_owned(),
+            members: format!(
+                r#""@type": "S231:Parameter", "S231:isOfDataType": {{ "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.{type_name}" }}, "S231:value": "{relative}""#
+            ),
+        };
+        named(&refusal(&block("\"p\"", &[typed])), "typed root");
+        // An untyped root parameter, read by the block.
+        let untyped = Param {
+            name: "p".to_owned(),
+            members: format!(r#""@type": "S231:Parameter", "S231:value": "{relative}""#),
+        };
+        named(&refusal(&block("\"p\"", &[untyped])), "untyped root");
+    }
+    drop(table);
+}
+
+/// A root parameter declared a CDL enumeration holds a member of that enumeration and nothing
+/// else, even when no block reads it: another enumeration's canonical member, an ordinal, a
+/// Boolean, a G36 constant are each refused on the declaration (`parameter-kind-mismatch`).
+#[test]
+fn a_declared_cdl_enumeration_holds_only_its_own_member_even_unread() {
+    let unread = |literal: &str| {
+        document(
+            &PID,
+            &[controller(&quoted(&format!("{SIMPLE_CONTROLLER}.PI")))],
+            &[Param {
+                name: "q".to_owned(),
+                members: format!(
+                    r#""@type": "S231:Parameter", "S231:isOfDataType": {{ "@id": "http://example.org#{CDL}.Smoothness" }}, "S231:value": {literal}"#
+                ),
+            }],
+        )
+    };
+    loaded(&unread(&quoted(&format!(
+        "{CDL}.Smoothness.ConstantSegments"
+    ))));
+    for literal in [
+        quoted(&format!("{SIMPLE_CONTROLLER}.PD")),
+        quoted(&format!("{CDL}.Extrapolation.Periodic")),
+        "2".to_owned(),
+        "true".to_owned(),
+        quoted("Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied"),
+    ] {
+        let diags = refusal(&unread(&literal));
+        assert!(
+            diags
+                .iter()
+                .any(|(code, message)| code == "parameter-kind-mismatch"
+                    && message.contains(&format!("{CDL}.Smoothness"))),
+            "{literal}: {diags:?}"
+        );
+    }
+}
+
+/// A typing IRI names its enumeration by the exact canonical path after its last `#` or `/`:
+/// a longer or shorter path, a member path, whitespace, or an IRI with neither separator before
+/// the path (`urn:x:…`, which loaded before) types nothing and is refused.
+#[test]
+fn a_typing_iri_matches_the_canonical_path_exactly() {
+    let typed = |datatype: &str| {
+        through_root(&format!(
+            r#""@type": "S231:Parameter", "S231:isOfDataType": {{ "@id": "{datatype}" }}, "S231:value": "{SIMPLE_CONTROLLER}.PD""#
+        ))
+    };
+    for datatype in [
+        format!("http://example.org#{SIMPLE_CONTROLLER}"),
+        format!("http://example.org/{SIMPLE_CONTROLLER}"),
+        format!("https://example.org/a/b#{SIMPLE_CONTROLLER}"),
+    ] {
+        assert_eq!(first_output(&typed(&datatype)), 3, "{datatype}");
+    }
+    for datatype in [
+        format!("http://example.org#{SIMPLE_CONTROLLER}X"),
+        format!("http://example.org#X{SIMPLE_CONTROLLER}"),
+        format!("http://example.org#{SIMPLE_CONTROLLER}.PD"),
+        format!("http://example.org#{SIMPLE_CONTROLLER} "),
+        format!("urn:x:{SIMPLE_CONTROLLER}"),
+        format!("http://example.org#{}", &SIMPLE_CONTROLLER[1..]),
+    ] {
+        assert!(load(&typed(&datatype)).is_err(), "{datatype} loaded");
+    }
+}
+
+/// Whitespace around a canonical path on a CDL-typed or untyped root parameter, or a block
+/// parameter, is the expression's own and loads, as it did before issue #762 (measured at
+/// a765b37d); a G36-typed root keeps its profile refusal (`oce-cxf`
+/// `canonical_enumeration_paths.rs`).
+#[test]
+fn whitespace_around_a_canonical_path_on_a_cdl_or_untyped_value_loads_as_before() {
+    let pd = format!("{SIMPLE_CONTROLLER}.PD");
+    for padded in [format!(" {pd}"), format!("{pd} "), format!(" {pd} ")] {
+        let typed = format!(
+            r#""@type": "S231:Parameter", "S231:isOfDataType": {{ "@id": "http://example.org#{SIMPLE_CONTROLLER}" }}, "S231:value": "{padded}""#
+        );
+        assert_eq!(first_output(&through_root(&typed)), 3, "typed {padded:?}");
+        let untyped = format!(r#""@type": "S231:Parameter", "S231:value": "{padded}""#);
+        assert_eq!(
+            first_output(&through_root(&untyped)),
+            3,
+            "untyped {padded:?}"
+        );
+        let block = document(&PID, &[controller(&quoted(&padded))], &[]);
+        assert_eq!(first_output(&block), 3, "block {padded:?}");
     }
 }

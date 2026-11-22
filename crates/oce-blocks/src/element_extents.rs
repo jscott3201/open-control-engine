@@ -14,11 +14,12 @@
 //!
 //! - a vector, `base_<i>` ([`ParamRule::RealArrayElements`], [`ParamRule::IntegerArrayElements`],
 //!   [`ParamRule::BooleanArrayElements`], [`ParamRule::IntegerArrayElementsInRange`]): `1..=n`, `n`
-//!   the block's `len` parameter, else the class's literal default (a negative `n` admits no
-//!   element);
+//!   the block's `len` parameter, else the class's literal default, and no element when the class
+//!   requires the length and the block omits it (a negative `n` admits no element either);
 //! - a matrix whose cells set its shape, `base_<r>_<c>` ([`ParamRule::RealMatrixElements`],
 //!   `MatrixGain.K`; [`ParamRule::TimeTableMatrix`], the `TimeTable` sources' `table`): the cells
-//!   bound must fill the rectangle their largest row and column span, every index from 1;
+//!   bound must fill the rectangle their largest row and column span, every index from 1, and the
+//!   rectangle may span at most [`MAX_RESOLVED_PORT_WIDTH`] cells;
 //! - a `TimeTable` offset, `base_<i>` ([`ParamRule::TimeTableOffset`]): `1..=cols - 1`, `cols` the
 //!   table's column count (no element when the table has fewer than two columns).
 //!
@@ -35,7 +36,7 @@
 use oce_model::{ParamTable, Value};
 
 use crate::{DefaultLiteral, DefaultSource};
-use crate::{ParamRule, registry};
+use crate::{MAX_RESOLVED_PORT_WIDTH, ParamRule, registry};
 
 /// The cells of a matrix parameter `base_<row>_<col>` a parameter table binds: the largest row and
 /// column among them, how many distinct cells there are, and the position (in the table) of the
@@ -117,7 +118,7 @@ fn rule_outside_extent(class_path: &str, params: &ParamTable, rule: &ParamRule) 
         ParamRule::RealArrayElements { base, len }
         | ParamRule::IntegerArrayElements { base, len }
         | ParamRule::BooleanArrayElements { base, len } => {
-            let n = vector_length(params, len, class_default_integer(class_path, len))?;
+            let n = vector_length(params, len, class_default_length(class_path, len))?;
             vector_outside(params, base, n)
         }
         ParamRule::IntegerArrayElementsInRange {
@@ -128,9 +129,15 @@ fn rule_outside_extent(class_path: &str, params: &ParamTable, rule: &ParamRule) 
         } => vector_outside(params, base, vector_length(params, len, Some(len_default))?),
         ParamRule::RealMatrixElements { base, .. } | ParamRule::TimeTableMatrix { base, .. } => {
             let cells = bound_cells(params, base);
-            cells
-                .outside
-                .or_else(|| (!cells.is_complete()).then_some(cells.last).flatten())
+            let too_wide = cells
+                .rows
+                .checked_mul(cells.cols)
+                .is_none_or(|area| area > MAX_RESOLVED_PORT_WIDTH);
+            cells.outside.or_else(|| {
+                (too_wide || !cells.is_complete())
+                    .then_some(cells.last)
+                    .flatten()
+            })
         }
         ParamRule::TimeTableOffset { base, table } => {
             let nout = bound_cells(params, table).cols.saturating_sub(1);
@@ -162,14 +169,17 @@ fn vector_length(params: &ParamTable, len: &str, default: Option<i64>) -> Option
     Some(usize::try_from(value).unwrap_or(0))
 }
 
-/// The class's literal Integer default for parameter `name`, if it has one. Reads the static
-/// default table; allocates nothing.
-fn class_default_integer(class_path: &str, name: &str) -> Option<i64> {
+/// The length a vector takes when the block omits its length parameter `name`: the class's
+/// literal Integer default, or 0 when the class requires the length (the load gate refuses the
+/// omission, so no element is inside it); `None` for any other default (no element can be
+/// judged against it). Reads the static default table; allocates nothing.
+fn class_default_length(class_path: &str, name: &str) -> Option<i64> {
     registry::param_defaults(class_path)
         .iter()
         .find(|parameter| parameter.name == name)
         .and_then(|parameter| match parameter.default {
             DefaultSource::Literal(DefaultLiteral::Integer(value)) => Some(value),
+            DefaultSource::Required => Some(0),
             _ => None,
         })
 }

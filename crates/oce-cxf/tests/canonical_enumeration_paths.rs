@@ -137,7 +137,7 @@ fn a_conditional_guard_and_a_comparison_read_their_literal_by_the_canonical_path
         );
         assert_named(
             &import(&doc).expect_err(path),
-            &format!("{VENTILATION}.<member>"),
+            &format!("{VENTILATION}.California_Title_24"),
             path,
         );
         // In an expression a block parameter grounds.
@@ -149,7 +149,7 @@ fn a_conditional_guard_and_a_comparison_read_their_literal_by_the_canonical_path
         );
         assert_named(
             &import(&doc).expect_err(path),
-            &format!("{VENTILATION}.<member>"),
+            &format!("{VENTILATION}.California_Title_24"),
             path,
         );
     }
@@ -189,7 +189,7 @@ fn a_parameter_value_names_its_member_by_the_canonical_path_only() {
             &format!("venStd == {canonical}"),
         );
         let diags = import(&doc).expect_err(path);
-        assert_named(&diags, &format!("{VENTILATION}.<member>"), path);
+        assert_named(&diags, &format!("{VENTILATION}.California_Title_24"), path);
         assert!(
             diags.iter().all(|d| d.code != DiagCode::TypeMismatch),
             "{path}: reported once, as unknown-enum-type: {diags:#?}"
@@ -255,7 +255,7 @@ fn a_value_handed_down_through_two_composite_scopes_is_read_by_the_canonical_pat
     for path in ["VentilationStandard", "Foo.VentilationStandard"] {
         let doc = NESTED.replace(&canonical, &format!("\"{path}.California_Title_24\""));
         let diags = import(&doc).expect_err(path);
-        assert_named(&diags, &format!("{VENTILATION}.<member>"), path);
+        assert_named(&diags, &format!("{VENTILATION}.California_Title_24"), path);
     }
     // The inner composite's own parameter, typed by a non-canonical path, is refused on itself.
     let typed = format!("\"http://example.org#{VENTILATION}\"");
@@ -303,7 +303,7 @@ fn a_g36_integer_constant_is_named_by_its_package_canonical_path_only() {
         "Foo.OperationModes.unoccupied",
     ] {
         let diags = import(&doc(written)).expect_err(written);
-        assert_named(&diags, &format!("{G36}.OperationModes.<member>"), written);
+        assert_named(&diags, &format!("{G36}.OperationModes.unoccupied"), written);
     }
     // An IRI-prefixed member is no value spelling: refused.
     assert!(
@@ -347,4 +347,68 @@ fn a_hostile_written_path_is_quoted_by_its_excerpt_made_visible() {
         .collect();
     assert_eq!(named.len(), 1, "{diags:#?}");
     assert!(named[0].message.len() < 512, "{}", named[0].message.len());
+}
+
+/// The relative paths modelica-json (pinned 85721b82) copies from a source as written:
+/// `third_party/modelica-buildings-cdl/cxf-core/CXF-Core.jsonld` line 8979
+/// (`"CDL.Types.Extrapolation.Periodic"`) and line 8999 (`"CDL.Types.Smoothness.LinearSegments"`),
+/// the `TimeTable` defaults of `Reals/Sources/TimeTable.mo` lines 6 and 8. In a guard and in an
+/// expression a block parameter grounds, each is refused naming the whole canonical member (the
+/// owner's ruling of 2026-11-22 on issue #762); the block parameter and root parameter contexts
+/// are pinned through the facade (`oce-api` `canonical_enumerations.rs`).
+#[test]
+fn a_translators_relative_path_is_refused_in_a_guard_and_a_comparison() {
+    for (type_name, member) in [
+        ("Extrapolation", "Periodic"),
+        ("Smoothness", "LinearSegments"),
+    ] {
+        let canonical = format!("Buildings.Controls.OBC.CDL.Types.{type_name}.{member}");
+        let relative = format!("CDL.Types.{type_name}.{member}");
+        let typed = format!("http://example.org#Buildings.Controls.OBC.CDL.Types.{type_name}");
+        let guard = |literal: &str| format!("venStd == {literal}");
+        import(&gated(&typed, &canonical, &canonical, &guard(&canonical))).expect("canonical");
+        for (what, doc) in [
+            (
+                "guard",
+                gated(&typed, &canonical, &canonical, &guard(&relative)),
+            ),
+            (
+                "comparison",
+                gated(&typed, &canonical, &relative, &guard(&canonical)),
+            ),
+        ] {
+            let diags = import(&doc).expect_err(what);
+            assert_named(&diags, &format!("write `{canonical}`"), what);
+        }
+    }
+}
+
+/// Whitespace around a G36-typed parameter's value keeps the refusal it had before issue #762
+/// (measured at a765b37d): the profile's own check reads the text as written, so leading
+/// whitespace is `type-mismatch` (no G36 type is spelled with it) and trailing whitespace
+/// `unknown-enum-literal`. A CDL-typed or untyped root and a block parameter read the value as an
+/// expression and load either way, as before (`oce-api` `canonical_enumerations.rs`).
+#[test]
+fn whitespace_around_a_g36_typed_value_keeps_its_earlier_refusal() {
+    let typed = format!("http://example.org#{VENTILATION}");
+    let member = format!("{VENTILATION}.California_Title_24");
+    let guard = format!("venStd == {member}");
+    let codes = |value: &str| -> Option<Vec<DiagCode>> {
+        import(&gated(&typed, value, &member, &guard))
+            .err()
+            .map(|diags| diags.iter().map(|d| d.code).collect())
+    };
+    assert_eq!(codes(&member), None);
+    assert_eq!(
+        codes(&format!(" {member}")),
+        Some(vec![DiagCode::TypeMismatch])
+    );
+    assert_eq!(
+        codes(&format!("{member} ")),
+        Some(vec![DiagCode::UnknownEnumLiteral])
+    );
+    assert_eq!(
+        codes(&format!(" {member} ")),
+        Some(vec![DiagCode::TypeMismatch])
+    );
 }

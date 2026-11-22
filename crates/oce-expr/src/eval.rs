@@ -213,6 +213,7 @@ fn eval_enum_ref(name: &str, scope: &dyn Scope) -> Result<Value, ExprError> {
             Some(row) => ExprError::NonCanonicalEnumeration {
                 written: class_name.to_owned(),
                 canonical: row.qualified_path,
+                member: literal.to_owned(),
             },
             None => ExprError::UnknownIdent(class_name.to_owned()),
         }

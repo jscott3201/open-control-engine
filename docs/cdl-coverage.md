@@ -431,7 +431,14 @@ Building 33 worked example runs from a transcription authored from the vendored 
 cross-document class library the engine does not have, or use array connectors and array
 instances, which Rule 7 of the [CXF composite subset](cxf-composite-subset.md) refuses. The test
 header in `crates/oce-cxf/tests/vendored_corpus_delta.rs` states the same limit, and that test pins
-the diagnostic counts per document, not a successful load. A host must pre-flatten each sequence
+the diagnostic counts per document, not a successful load. One more translator dialect gap: the
+translator copies a source's relative enumeration path as written (`CDL.Types.Smoothness.LinearSegments`,
+`CDL.Types.SimpleController.PI`), and the engine names an enumeration by its full path only
+(`Buildings.Controls.OBC.CDL.Types.…`, issue #762, the owner's ruling of 2026-11-22). No loadable
+document in the tracked, vendored or library corpora writes the relative form today (the
+vocabulary document `cxf-core/CXF-Core.jsonld` holds two, as `TimeTable`'s defaults, and is not a
+model); a translation of a sequence that does is refused with `unknown-enum-type` naming the full
+canonical member to write. A host must pre-flatten each sequence
 into a monomorphic, scalar-connector CXF document before import, as every supported sequence in
 the catalog below already is. Support for the cross-document library and vector ports and
 instances is tracked in GitHub #369.

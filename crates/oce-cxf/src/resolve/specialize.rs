@@ -393,7 +393,11 @@ fn validate_enum_comparison(
         // A guard literal names its enumeration by the canonical class path only (issue #762):
         // one whose last segment names a known enumeration is refused naming that path.
         if let Some(row) = enumeration_spelling_hint(class_path) {
-            let expected = format!("{}.<member>", row.qualified_path);
+            let expected = format!(
+                "{}.{}",
+                row.qualified_path,
+                oce_expr::expected_member(row.qualified_path, literal)
+            );
             diags.raise(|| {
                 Diagnostic::error(
                     DiagCode::UnknownEnumType,

@@ -159,9 +159,13 @@ fn validate_g36_enum_expr(
         return;
     };
     let Some(actual) = g36_enum_class_id(class_path) else {
-        if enum_class_id(class_path).is_none() && enumeration_spelling_hint(class_path).is_some() {
+        if class_path.trim() == class_path
+            && enum_class_id(class_path).is_none()
+            && enumeration_spelling_hint(class_path).is_some()
+        {
             // Another spelling of a known enumeration's path (issue #762): grounding the value
-            // refuses it once, `unknown-enum-type` naming the canonical path.
+            // refuses it once, `unknown-enum-type` naming the canonical path. A path with
+            // whitespace around it keeps the profile's own refusal (`type-mismatch`), as before.
             return;
         }
         let code = if is_g36_type_path(class_path) {
