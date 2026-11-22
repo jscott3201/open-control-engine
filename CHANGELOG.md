@@ -810,8 +810,9 @@ so far, and no tag is cut by the bump.
     shared 64 KiB subject) peaks at 8.5 MB with a receipt where it peaked at 67.9 MB. The later
     stages' lists are not held to the bound, so #708 stays open for them.
   - **Not held to this bound:** the lists the later load stages return and an export's
-    diagnostics. `@context` expansion amplifies a document without a diagnostic (issue #709);
-    an array parameter's element names did too, until the path budget below (issue #710).
+    diagnostics. `@context` expansion amplified a document without a diagnostic, until the
+    expansion bound below (issue #709), and an array parameter's element names did too, until
+    the path budget below (issue #710).
   - **Both readers.** `oce-author`'s importer answers with one refusal and already refuses a
     name longer than 64 bytes as `invalid-name`; the same document is pinned there as one
     refusal that names the `@id` once. Its source is unchanged.
@@ -945,6 +946,86 @@ so far, and no tag is cut by the bump.
     `cxf_array_element_names_cost.rs` (the three documents above and the 64 KiB instance,
     the declared size, the three refused values, and the budget's edge under long names and
     under a long IRI, measured with `allocation-counter`).
+- **`@context` expansion adds at most 8 MiB to a document, and reading a token copies nothing**
+  (GitHub #730, issue #709). A token read through a prefix is as long as the IRI the prefix
+  binds. The document sets that length and the number of tokens and pays a few bytes for each,
+  and nothing tied the two together: 1,024 `@type` tokens `p:T` under a 64 KiB binding, a
+  document of 78,157 bytes, loaded and held 202 MB, and 16,384 tokens under a 16 KiB binding,
+  136,525 bytes, loaded and held 807 MB.
+  - **The bound.** Expanding a document's tokens adds at most 8,388,608 bytes to it. An
+    expansion is counted as its length less the length of the token as written, over every
+    node `@id`, reference, `@type`, `isOfDataType` and `unit` or `displayUnit` IRI node, and
+    every property key that ends in `hasUnit` and is read through the `@context`, by a prefix
+    or as a term. A token written as
+    an absolute IRI is not expanded and adds nothing, so the identity and typing text the
+    reader works on is at most the document's own plus 8 MiB. The bound is on what expansion
+    adds, not on the length of a binding: one long namespace IRI read by a few tokens loads.
+  - **The refusal.** The first expansion that does not fit is not made, and the document is
+    refused with one `resource-limit-exceeded` error whose subject is the node the token is
+    written on (the token as written for a node's own `@id`; for a key, the node's `@id` as
+    written, or `@graph[i]` where it has none, as every refusal of a key names it). Its message quotes at most 64 bytes of the token, escaped, and states the
+    sizes: ``@type `p:T` expands to 65547 bytes through the document's @context, 65544 more
+    than it is written in; expansion had added 8324709 bytes, and may add at most 8388608 to
+    one document``. Nothing after that token is read, so the list holds that error and
+    whatever was raised before it, in the reader's usual sorted order. No new code;
+    `oce-diag`'s description of the code names this use.
+  - **Breaking, in place: a document whose expansion adds more than 8 MiB is refused.** Such a
+    document loaded, where the host had the memory for it, and is now refused with the typed
+    error above. Nothing else that loaded is refused. No tracked or library document is near
+    it: over the 257 tracked documents that hold an `@graph` and the 139 CXF documents of
+    `open-control-library` (`main` at `d90f63b`), the most expansion adds to one document is
+    66,275 bytes (the vendored `CXF-Core.jsonld`, 682,615 bytes), 126 times under the bound;
+    the longest IRI any of them binds is 51 bytes, and expansion adds at most 0.31 bytes for
+    each byte of a document, so a document at the 8 MiB admission limit would have to more than
+    double under expansion to be refused. A document that fills the bound exactly loads, and one
+    byte more is refused.
+  - **The bound is on what expansion adds, not on what a load holds.** A document within it
+    costs no more than the same document with every token written out as an absolute IRI,
+    which is a multiple of the bound because the loader keeps an identity in more than one
+    place: typing tokens that fill the bound peak at 17.3 MB for 137 KB of document, and node
+    `@id`s and references that fill it at 30.6 MB (71.9 MB requested) for 166 KB, 3.6 times
+    the bound and the most measured.
+  - **Nothing a format defines changes, and the workspace version is not bumped:** tightening
+    accepted input is not a format change (unit-spellings ruling 7; the ruling on #647).
+  - **One pinned document is such a document.** The edge GitHub #713 measured for "warnings
+    alone can refuse a load", 127 unused boundary inputs under a 64 KiB namespace, wrote each
+    input's `@id` twice through the prefix, so its expansion added 16 MiB: it loaded with 127
+    warnings and is now refused for what expansion adds. The edge is pinned on the reader
+    instead (`oce_cxf::import_cxf`, `@id`s written out, a 16.7 MB document: 127 warnings load,
+    128 are refused, as before). Through the facade, 8 MiB of warnings about distinct nodes is
+    no longer reachable this way: it takes 16 MiB of `@id`s, over the admission limit written
+    out and over this bound through a prefix.
+  - **Measured through `Engine::load_cxf`** (`crates/oce-api/tests/cxf_context_expansion_cost.rs`,
+    requested bytes, debug build). The issue's document is refused holding 8.6 MB at its peak
+    (8,649,348 bytes; 201,749,795 before) and the 807 MB one holding 9.4 MB. Fourteen routes
+    are measured at a 64 KiB binding and 256 tokens, at four times the binding and at four
+    times the tokens. The eight that keep what they expand (a node `@id`, a reference, a
+    `@type`, each through a prefix and as a whole term, an `isOfDataType`, a unit IRI node, a
+    `hasUnit` key) request 8.7 to 23.2 MB where they requested 34 to 411 MB.
+  - **Reading a token copies nothing.** A token is classified, compared with a namespace or
+    with a term's mapping, and found relative, in place, on the bound IRI and the token's
+    suffix as the document holds them. Before, each of these joined the two for every token
+    and dropped the result, so they cost `tokens × binding` in copying while holding nothing:
+    a reference or a node `@id` whose suffix holds whitespace, a `@type` in surrounding
+    whitespace, and every pass-through key through a prefix requested 51 to 208 MB at those
+    sizes and now request 0.6 to 7.2 MB. A `@context` term spelled through a prefix that binds
+    another IRI is compared in place too, and its refusal, which names the term's expansion
+    whole, is built only while the diagnostic list has room: 59 MB at every size where it was
+    160 to 614 MB. The same documents took 81 s to measure before and take under 6 s.
+  - **Reading a token reads nothing of a long binding either.** Two readers allocated nothing
+    and still read the bound IRI once for each token, which no allocation count shows: a
+    typing token in surrounding whitespace had its whole expansion read for whitespace
+    (100,000 tokens under a 1 MiB binding, a 1.75 MB document, took 107 s), and a key that is a
+    `@context` term bound to an IRI ending in `hasUnit` had it read by four near-miss checks
+    uncharged (20,000 spellings of one key under a 1 MiB binding, 1.4 MB, took 22.9 s and
+    loaded). What the `@context` binds holds no whitespace, so only text the document wrote is
+    read for it; and such a key is charged to the bound as a compact one is, so the second
+    document is refused at its ninth key. Both are pinned by counts of the work, never time
+    (`crates/oce-cxf/src/expansion_budget_tests.rs`).
+  - **A document within the bound is read as it was.** Every load outcome, loaded model,
+    content id and diagnostic (severity, code, message, subject, order) of the tracked and
+    library documents, as written and with the retired namespace rewritten, is byte-identical
+    before and after. No public type changes, and no format, content id, blob or golden moves.
 
 ### Leverage
 

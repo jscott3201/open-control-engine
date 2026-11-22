@@ -53,6 +53,13 @@ Enumerate the input domain and hit every boundary and degenerate case:
   closing `ResourceLimitExceeded` counts the rest.
   A new loop that can raise many diagnostics about one long string raises them through
   `DiagnosticList::raise` and gets a case in `crates/oce-api/tests/cxf_diagnostic_list_cost.rs`.
+  What `@context` expansion adds to one document is held to 8 MiB the same way (issue #709): an
+  expansion is counted as its length less its token's, and the first that does not fit is
+  `ResourceLimitExceeded`. A new place that reads a token through a prefix compares it in place
+  (`oce-cxf`'s `Iri`), joins it only through the document's `ExpansionBudget`, and gets a case in
+  `crates/oce-api/tests/cxf_context_expansion_cost.rs`. Allocation counts cannot see a reader
+  that scans the bound IRI for each token and allocates nothing, so such a reader is pinned by
+  a count of its work (`crates/oce-cxf/src/expansion_budget_tests.rs`).
   A rule over the elements of a shape one parameter declares raises one finding for the shape's
   absent elements and finds them from the bound ones (`oce-validate`'s `params_absent`), never
   by walking the shape; `crates/oce-api/tests/validate_sparse_table_cost.rs` pins the cost.

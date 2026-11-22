@@ -94,8 +94,18 @@
 //! A well-formed context is then held to the one S231 namespace this engine reads
 //! ([`vocabulary_namespace`]): `S231` bound to any other IRI, or any prefix bound to the namespace
 //! written through release 0.4.0, is refused as `VocabularyNamespaceMismatch`.
+//!
+//! **What expansion costs** (GitHub issue #709). A token read through a prefix is as long as the
+//! IRI the prefix binds, and the document sets both that length and the number of tokens. So a
+//! token is read in place ([`token_expansion`]): classifying it, comparing its expansion with a
+//! namespace or with a term's mapping, and finding it relative copy nothing. An expansion this
+//! pass keeps is joined through one [`ExpansionBudget`] for the document ([`expansion_budget`]),
+//! which holds what expansion adds, each expansion's length less its token's, to 8 MiB. The first
+//! expansion that does not fit is refused as `ResourceLimitExceeded`, naming the token and its
+//! node, and the pass reads nothing after it: it raises what it raised before that token, then
+//! that one error (the resolver sorts the list it returns, as it sorts every list).
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use oce_diag::{DiagCode, Diagnostic};
 
@@ -106,8 +116,12 @@ use oce_diag::DiagnosticList;
 
 #[path = "context_scope.rs"]
 mod context_scope;
+#[path = "expansion_budget.rs"]
+mod expansion_budget;
 #[path = "property_keys.rs"]
 mod property_keys;
+#[path = "token_expansion.rs"]
+mod token_expansion;
 #[path = "unread_qudt_has_unit.rs"]
 mod unread_qudt_has_unit;
 #[path = "vocabulary_namespace.rs"]
@@ -115,8 +129,8 @@ mod vocabulary_namespace;
 #[path = "vocabulary_terms.rs"]
 mod vocabulary_terms;
 
-/// Declared `@context` prefix/term substitutions: term → IRI.
-type PrefixTable = BTreeMap<String, String>;
+use expansion_budget::{ExpansionBudget, Site};
+use token_expansion::{Expansion, Iri, PrefixTable, expand_curie, expand_token, is_absolute_iri};
 
 /// Expand `doc`'s identity and typing tokens against its own `@context`.
 ///
@@ -146,10 +160,17 @@ pub(crate) fn expand_document(
     // scoped-context refusal and every later stage read one spelling (issue #383). A document
     // whose `@context` is already refused is not normalized: its prefix table may be partial,
     // and its refusal list stays exactly the context refusals.
+    // One budget for the whole pass: what a key read through a prefix adds and what every
+    // identity and typing token adds are charged together (GitHub issue #709).
+    let mut budget = ExpansionBudget::new();
     if context_diags.is_empty() {
-        property_keys::normalize(&mut expanded, &table, raw, &mut context_diags);
+        property_keys::normalize(&mut expanded, &table, raw, &mut budget, &mut context_diags);
     }
-    context_scope::collect_refusals(&expanded, &mut context_diags);
+    // A key whose expansion did not fit is refused, and nothing after it is read, the scoped
+    // contexts included.
+    if !budget.has_ended() {
+        context_scope::collect_refusals(&expanded, &mut context_diags);
+    }
     if !context_diags.is_empty() {
         // Context-shape and property-key refusals return alone, before any slot is inspected:
         // whenever the slot pass below reports `RelativeIri`, "declares no @base" is literally
@@ -158,7 +179,12 @@ pub(crate) fn expand_document(
     }
     let mut diags = DiagnosticList::new();
     for node in &mut expanded.graph {
-        expand_node(node, &table, &mut diags);
+        expand_node(node, &table, &mut budget, &mut diags);
+        if budget.has_ended() {
+            // The expansion that did not fit is refused, and nothing after it is read. Every
+            // reader below returns at once on an ended budget, so this only spares the walk.
+            break;
+        }
     }
     if diags.is_empty() {
         Ok(expanded)
@@ -258,11 +284,13 @@ fn merge_context_entries<'a>(
                         .with_subject(term.clone()),
                     );
                 } else if is_absolute_iri(iri) {
-                    match iri_shaped_term_refusal(term, iri, table) {
-                        Some(refusal) => diags.push(refusal),
-                        None => {
-                            table.insert(term.clone(), iri.clone());
-                        }
+                    if binds_own_expansion(term, iri, table) {
+                        table.insert(term.clone(), iri.clone());
+                    } else {
+                        // A context may define any number of such terms through one long
+                        // prefix, so the refusal, which names the term's own expansion whole,
+                        // is built only while the list has room for it (GitHub issue #709).
+                        diags.raise(|| iri_shaped_term_refusal(term, iri, table));
                     }
                 } else {
                     // A prefix bound to a non-absolute value would concatenate every CURIE under
@@ -329,30 +357,28 @@ fn is_iri_shaped_term(term: &str) -> bool {
 /// refused (`@base`, `@import`, `@vocab`) or never made a term, which is what JSON-LD's step 5
 /// does with a keyword-form name. [`rebound_term_refusals`] then judges the accepted terms
 /// against the whole context.
-fn iri_shaped_term_refusal(term: &str, iri: &str, table: &PrefixTable) -> Option<Diagnostic> {
-    if !is_iri_shaped_term(term) {
-        return None;
-    }
-    let own = own_expansion(term, table);
-    if own.as_deref() == Some(iri) {
-        return None;
-    }
-    let reading = match &own {
+fn iri_shaped_term_refusal(term: &str, iri: &str, table: &PrefixTable) -> Diagnostic {
+    let reading = match own_expansion(term, table) {
         Some(own) => format!("its own expansion is `{own}`"),
         None => "it has no expansion of its own".to_owned(),
     };
-    Some(
-        Diagnostic::error(
-            DiagCode::MalformedDocument,
-            format!(
-                "@context term `{term}` is spelled as an IRI but binds `{iri}`, and {reading}; \
-                 JSON-LD 1.1 refuses this as an invalid IRI mapping (Create Term Definition, step \
-                 14.2.4), because the document could then redirect that spelling wherever it \
-                 appears"
-            ),
-        )
-        .with_subject(term.to_owned()),
+    Diagnostic::error(
+        DiagCode::MalformedDocument,
+        format!(
+            "@context term `{term}` is spelled as an IRI but binds `{iri}`, and {reading}; \
+             JSON-LD 1.1 refuses this as an invalid IRI mapping (Create Term Definition, step \
+             14.2.4), because the document could then redirect that spelling wherever it \
+             appears"
+        ),
     )
+    .with_subject(term.to_owned())
+}
+
+/// Whether `term` may bind `iri`: it is not spelled as an IRI ([`is_iri_shaped_term`]), or `iri`
+/// is its own expansion against `table`. The expansion is compared in place, never joined: a
+/// context may define a term per few bytes through a prefix bound to an IRI of any length.
+fn binds_own_expansion(term: &str, iri: &str, table: &PrefixTable) -> bool {
+    !is_iri_shaped_term(term) || own_expansion(term, table).is_some_and(|own| own.is(iri))
 }
 
 /// Refuse every term of the finished `table` spelled as an IRI whose own expansion under the whole
@@ -368,15 +394,12 @@ fn iri_shaped_term_refusal(term: &str, iri: &str, table: &PrefixTable) -> Option
 /// can trip this, since one map binds each term once and merges a prefix before its terms.
 fn rebound_term_refusals(table: &PrefixTable, diags: &mut DiagnosticList) {
     for (term, iri) in table {
-        if !is_iri_shaped_term(term) {
+        if binds_own_expansion(term, iri, table) {
             continue;
         }
-        let now = own_expansion(term, table);
-        if now.as_deref() == Some(iri.as_str()) {
-            continue;
-        }
-        let now = now.map_or_else(|| "nothing".to_owned(), |now| format!("`{now}`"));
-        diags.push(
+        diags.raise(|| {
+            let now = own_expansion(term, table)
+                .map_or_else(|| "nothing".to_owned(), |now| format!("`{now}`"));
             Diagnostic::error(
                 DiagCode::NonSubsetConstruct,
                 format!(
@@ -387,18 +410,18 @@ fn rebound_term_refusals(table: &PrefixTable, diags: &mut DiagnosticList) {
                      that spelling wherever it appears"
                 ),
             )
-            .with_subject(term.clone()),
-        );
+            .with_subject(term.clone())
+        });
     }
 }
 
 /// A term's own expansion: its spelling read as [`expand_token`] reads a token, without the
 /// whole-token match of the term itself (a compact IRI through its prefix, an absolute IRI as
-/// written), or `None` when it has no absolute reading.
-fn own_expansion(term: &str, table: &PrefixTable) -> Option<String> {
+/// written), or `None` when it has no absolute reading. Nothing is copied.
+fn own_expansion<'a>(term: &'a str, table: &'a PrefixTable) -> Option<Iri<'a>> {
     match expand_curie(term, table) {
         Expansion::Expanded(own) => Some(own),
-        Expansion::Verbatim => Some(term.to_owned()),
+        Expansion::Verbatim => Some(Iri::whole(term)),
         Expansion::Relative => None,
     }
 }
@@ -416,135 +439,35 @@ fn nested_compact_prefix<'a>(
         .then_some(prefix)
 }
 
-/// Whether `value` has syntactically absolute-IRI form: everything before the FIRST colon is
-/// a nonempty ASCII scheme per RFC 3986 §3.1 — a letter, then letters, digits, `+`, `-`, or
-/// `.` — and the remainder after that colon is nonempty and free of whitespace. The whole
-/// remainder rule is engine policy, not conformance: a canonical durable key is nonempty and
-/// whitespace-free — ASCII and Unicode alike — by choice. RFC 3986 agrees on ASCII
-/// whitespace (no URI production admits one), but RFC 3987's `ucschar` (§2.2) admits
-/// U+00A0, U+2028, and other `char::is_whitespace` characters, so this predicate refuses
-/// some RFC 3987-conformant IRIs; and `ab:` is a legal URI (`path-empty`, RFC 3986 §3.3)
-/// that carries no name to key a durable identity on. The contract stays syntactic form,
-/// not semantic reachability: `S231:x` passes when `S231` is not an active prefix because it is an
-/// RFC-valid scheme. [`merge_context_entries`] separately refuses a binding value when its scheme
-/// position names an active prefix, closing the nested compact-IRI ambiguity before this predicate
-/// runs. The predicate guards both directions of the remaining binding/identity symmetry:
-/// `@context` binding values (so the legal JSON-LD binding `{"ex": "urn:"}` refuses as
-/// `NonSubsetConstruct`), the two keep-as-written identity arms of [`expand_token`], and the
-/// declared-prefix arm's joined expansion.
-fn is_absolute_iri(value: &str) -> bool {
-    match value.split_once(':') {
-        Some((scheme, rest)) => {
-            let mut chars = scheme.chars();
-            let scheme_ok = match chars.next() {
-                Some(first) if first.is_ascii_alphabetic() => {
-                    chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
-                }
-                _ => false,
-            };
-            scheme_ok && !rest.is_empty() && !rest.contains(char::is_whitespace)
-        }
-        None => false,
-    }
-}
-
-/// The outcome of expanding one token against the prefix table.
-enum Expansion {
-    /// A whole-token term match, or a CURIE with a declared prefix whose joined expansion
-    /// passes [`is_absolute_iri`]: the canonical form.
-    Expanded(String),
-    /// Kept as written: a `//`-suffix or undeclared-prefix token that is itself a
-    /// syntactically absolute IRI ([`is_absolute_iri`]).
-    Verbatim,
-    /// No canonical absolute form: no `:` and no whole-token term match; a prefix that is
-    /// not an RFC 3986 scheme (empty, or scheme-invalid like `2024`), whether or not the
-    /// suffix starts with `//`; a valid scheme whose remainder is empty or carries
-    /// whitespace (`ab:`, `ab:c d`); or a declared-prefix CURIE whose joined expansion
-    /// fails the predicate (a whitespace-bearing suffix, `ex:c d` with `ex` bound).
-    Relative,
-}
-
-/// Classify and expand one token. Pure; the caller decides what `Relative` means per slot.
-///
-/// [`is_absolute_iri`] gates the outcome of every arm. The two keep-as-written arms are
-/// symmetric with the `@context` binding check: a token survives verbatim only when the
-/// predicate accepts it, whether its suffix starts with `//` (never CURIE-split) or its
-/// prefix is simply undeclared — so a spelling refused as a binding value cannot become a
-/// durable key on those arms. The declared-prefix arm concatenates and then runs the same
-/// predicate on the JOINED result: a declared prefix rescues a scheme-invalid CURIE
-/// spelling (`2024:x` with `2024` bound expands, since the binding supplies the scheme)
-/// but never a whitespace-bearing suffix (`ex:c d` refuses with `ex` bound). No arm can
-/// produce a durable key the predicate refuses.
-fn expand_token(token: &str, table: &PrefixTable) -> Expansion {
-    // A whole-token term match wins over CURIE splitting (JSON-LD term semantics): a token
-    // that IS a declared term substitutes even though it contains no `:`.
-    if let Some(iri) = table.get(token) {
-        return Expansion::Expanded(iri.clone());
-    }
-    expand_curie(token, table)
-}
-
-/// [`expand_token`] without its whole-token term match: a token read as a compact IRI through its
-/// prefix, or kept as an absolute IRI. The prefix it looks up is everything before the first `:`,
-/// so it is never the token itself; [`own_expansion`] reads a term's own expansion this way,
-/// without copying the table.
-fn expand_curie(token: &str, table: &PrefixTable) -> Expansion {
-    match token.split_once(':') {
-        // A value whose suffix begins with `//` is interpreted as an IRI, not
-        // CURIE-expanded (JSON-LD 1.1 §4.1.5, Compact IRIs), so this token is
-        // never CURIE-split and never prefix-rescued: `http://…` stays absolute even when
-        // its scheme collides with a declared prefix name, and a scheme-invalid spelling
-        // (`2024://x`) has no canonical form at all. It must refuse here rather than fall
-        // through to the prefix lookup, which would mint `<bound-iri>//x` as a durable key.
-        Some((_, suffix)) if suffix.starts_with("//") => {
-            if is_absolute_iri(token) {
-                Expansion::Verbatim
-            } else {
-                Expansion::Relative
-            }
-        }
-        Some((prefix, suffix)) => match table.get(prefix) {
-            // The JOINED expansion must pass the same predicate the other arms enforce.
-            // Every accepted binding contributes a valid scheme and a clean nonempty
-            // remainder head, so the join can only fail on an authored suffix carrying
-            // whitespace (`ex:c d`) — expanding that would mint a key the engine's own
-            // importer refuses, splitting compact/expanded twins of one subject.
-            Some(iri) => {
-                let joined = format!("{iri}{suffix}");
-                if is_absolute_iri(&joined) {
-                    Expansion::Expanded(joined)
-                } else {
-                    Expansion::Relative
-                }
-            }
-            None if is_absolute_iri(token) => Expansion::Verbatim,
-            // `2024:x` and `:x` (no RFC 3986 scheme) and `ab:` / `ab:c d` (valid scheme,
-            // empty or whitespace-bearing remainder) expand against nothing and have no
-            // absolute form: refusing beats minting a durable key from a malformed spelling
-            // with zero diagnostics.
-            None => Expansion::Relative,
-        },
-        None => Expansion::Relative,
-    }
-}
-
 /// Expand an identity token in place; a relative token is refused with `RelativeIri`.
 ///
 /// `owner` is `None` when the token is the node's own `@id` (the diagnostic then carries the
-/// token itself as subject) and `Some(node_id)` for a structural reference on that node.
+/// token itself as subject) and `Some(node_id)` for a structural reference on that node. The
+/// expansion is joined through `budget`: one that does not fit leaves the token as written and
+/// is refused there, and once the budget has ended the token is not read at all.
 fn expand_identity(
     token: &mut String,
     slot: &str,
     owner: Option<&str>,
     table: &PrefixTable,
+    budget: &mut ExpansionBudget,
     diags: &mut DiagnosticList,
 ) {
-    if token.is_empty() {
+    if token.is_empty() || budget.has_ended() {
         // An empty `@id` has its own pinned diagnostic (`MissingConnectorId`) downstream.
         return;
     }
     match expand_token(token, table) {
-        Expansion::Expanded(iri) => *token = iri,
+        Expansion::Expanded(iri) => {
+            let site = Site {
+                slot,
+                reference: owner.is_some(),
+                node: owner,
+            };
+            if let Some(iri) = budget.expand(iri, token, site, diags) {
+                *token = iri;
+            }
+        }
         Expansion::Verbatim => {}
         // One node may carry any number of relative references, each refused about the same
         // `@id`, so the refusal is built only while the list has room for it (GitHub issue #695).
@@ -570,11 +493,26 @@ fn expand_identity(
     }
 }
 
-/// Expand a typing token in place — best-effort, never refused (the downstream no-match
-/// diagnostics own junk typing tokens).
-fn expand_typing(token: &mut String, table: &PrefixTable) {
+/// Expand a typing token in place — best-effort, never refused for its form (the downstream
+/// no-match diagnostics own junk typing tokens). `slot` and `owner` name the token for the one
+/// refusal there is: an expansion that does not fit `budget`, which leaves the token as written.
+fn expand_typing(
+    token: &mut String,
+    slot: &str,
+    owner: &str,
+    table: &PrefixTable,
+    budget: &mut ExpansionBudget,
+    diags: &mut DiagnosticList,
+) {
     if let Expansion::Expanded(iri) = expand_token(token, table) {
-        *token = iri;
+        let site = Site {
+            slot,
+            reference: false,
+            node: Some(owner),
+        };
+        if let Some(iri) = budget.expand(iri, token, site, diags) {
+            *token = iri;
+        }
     }
 }
 
@@ -587,13 +525,19 @@ fn each_mut<T>(values: &mut OneOrMany<T>, mut f: impl FnMut(&mut T)) {
     }
 }
 
-/// Expand every in-scope slot of one node.
-fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut DiagnosticList) {
-    expand_identity(&mut node.id, "@id", None, table, diags);
+/// Expand every in-scope slot of one node, until an expansion does not fit `budget`: nothing of
+/// the node is read after that, so the refusal is the last diagnostic the node raises.
+fn expand_node(
+    node: &mut Node,
+    table: &PrefixTable,
+    budget: &mut ExpansionBudget,
+    diags: &mut DiagnosticList,
+) {
+    expand_identity(&mut node.id, "@id", None, table, budget, diags);
     let owner = node.id.clone();
     let mut expand_refs = |slot: &str, refs: &mut OneOrMany<IriRef>| {
         each_mut(refs, |reference: &mut IriRef| {
-            expand_identity(&mut reference.id, slot, Some(&owner), table, diags);
+            expand_identity(&mut reference.id, slot, Some(&owner), table, budget, diags);
         });
     };
     expand_refs("S231:hasInput", &mut node.has_input);
@@ -604,13 +548,19 @@ fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut DiagnosticList)
     expand_refs("S231:hasInstance", &mut node.has_instance);
     expand_refs("S231:isConnectedTo", &mut node.is_connected_to);
     let mut expand_type = |slot: &str, value: &mut String| {
+        if budget.has_ended() {
+            return;
+        }
         if vocabulary_namespace::check_typing_controls(value, slot, &owner, diags) {
             return;
         }
         if vocabulary_namespace::check_typing_whitespace(value, slot, &owner, table, diags) {
             return;
         }
-        expand_typing(value, table);
+        expand_typing(value, slot, &owner, table, budget, diags);
+        if budget.has_ended() {
+            return;
+        }
         // A token in the retired or an `https:` namespace never starts with the published one,
         // so at most one of these two refuses it.
         vocabulary_namespace::check_typing(value, slot, &owner, diags);
@@ -622,7 +572,7 @@ fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut DiagnosticList)
     if let Some(datatype) = &mut node.is_of_data_type {
         expand_type("S231:isOfDataType", &mut datatype.id);
     }
-    read_unit_iris(node, table);
+    read_unit_iris(node, &owner, table, budget, diags);
 }
 
 /// Read each `unit` and `displayUnit` IRI node of `node` through the closed unit table (issue
@@ -648,10 +598,24 @@ fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut DiagnosticList)
 /// spelling, and it is refused as unmapped where it is read. `quantity` is never read here
 /// (decision 1): its IRI node stays a verbatim lexical term.
 ///
-/// Work is one expansion and one table lookup per term; nothing is dereferenced and nothing is
-/// refused here.
-fn read_unit_iris(node: &mut Node, table: &PrefixTable) {
-    for slot in [&mut node.unit, &mut node.display_unit] {
+/// Work is one expansion and one table lookup per term; nothing is dereferenced, and the one
+/// refusal raised here is an expansion that does not fit `budget`, named by its property and
+/// `owner`, the node's expanded `@id`. Nothing is read once the budget has ended.
+fn read_unit_iris(
+    node: &mut Node,
+    owner: &str,
+    table: &PrefixTable,
+    budget: &mut ExpansionBudget,
+    diags: &mut DiagnosticList,
+) {
+    let slots = [
+        ("S231:unit", &mut node.unit),
+        ("S231:displayUnit", &mut node.display_unit),
+    ];
+    for (property, slot) in slots {
+        if budget.has_ended() {
+            return;
+        }
         let Some(term) = slot.as_mut() else {
             continue;
         };
@@ -665,7 +629,15 @@ fn read_unit_iris(node: &mut Node, table: &PrefixTable) {
             continue;
         }
         if let Expansion::Expanded(iri) = expand_token(id, table) {
-            *id = iri;
+            let site = Site {
+                slot: property,
+                reference: false,
+                node: Some(owner),
+            };
+            match budget.expand(iri, id, site, diags) {
+                Some(iri) => *id = iri,
+                None => return,
+            }
         }
         if let Some(unit) = unit_of_iri(id).map(str::to_owned) {
             *term = TermAttr::Bare(unit);

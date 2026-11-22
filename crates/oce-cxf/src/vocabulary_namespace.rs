@@ -47,7 +47,7 @@
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use super::{Expansion, PrefixTable, expand_token};
+use super::token_expansion::{Expansion, Iri, PrefixTable, expand_token};
 use crate::export::S231_CONTEXT_IRI;
 use crate::format_controls::{describe, first_format_or_control};
 use crate::resolve::extension_blocks::EXTENSION_BLOCK_TERM;
@@ -197,12 +197,19 @@ pub(super) fn check_typing_whitespace(
     if trimmed == token {
         return false;
     }
-    let iri = match expand_token(trimmed, table) {
-        Expansion::Expanded(iri) => iri,
-        Expansion::Verbatim | Expansion::Relative => trimmed.to_owned(),
+    // The trimmed token's expansion is read in place, never joined: a node may carry any number
+    // of such tokens through a prefix bound to an IRI of any length (GitHub issue #709).
+    // What the `@context` binds holds no whitespace and neither does what is joined to it, so
+    // only a term the document wrote out is read for whitespace below: reading a bound one would
+    // cost the binding again for every token. (What follows a literal `S231:` is the document's
+    // text whatever the token expands to, so it is never taken for bound; no table the
+    // `@context` pass admits holds a term that makes the difference.)
+    let (iri, bound) = match expand_token(trimmed, table) {
+        Expansion::Expanded(iri) => (iri, !trimmed.starts_with("S231:")),
+        Expansion::Verbatim | Expansion::Relative => (Iri::whole(trimmed), false),
     };
     let named = match trimmed.strip_prefix("S231:") {
-        Some(term) => Some((S231_CONTEXT_IRI, term)),
+        Some(term) => Some((S231_CONTEXT_IRI, Iri::whole(term))),
         None => std::iter::once(S231_CONTEXT_IRI)
             .chain(FOREIGN_NAMESPACES)
             .find_map(|namespace| Some((namespace, iri.strip_prefix(namespace)?))),
@@ -211,9 +218,9 @@ pub(super) fn check_typing_whitespace(
         return false;
     };
     diags.raise(|| {
-        let (quoted, named) = (excerpt(token), excerpt(term));
+        let (quoted, named) = (excerpt(token), term.excerpt());
         let subject = if owner.is_empty() { &quoted } else { owner };
-        let message = if term.contains(char::is_whitespace) {
+        let message = if !bound && term.contains_whitespace() {
             // No spelling of it without the surrounding whitespace names a term, so none is
             // offered.
             format!(

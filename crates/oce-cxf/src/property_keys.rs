@@ -68,9 +68,10 @@ use serde::de::{IgnoredAny, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value as Json};
 
+use super::expansion_budget::{ExpansionBudget, Site};
+use super::token_expansion::{Expansion, Iri, PrefixTable, expand_token};
 use super::unread_qudt_has_unit::{UnreadHasUnit, unread_has_unit};
 use super::vocabulary_namespace::{FOREIGN_NAMESPACES, foreign_key};
-use super::{Expansion, PrefixTable, expand_token};
 use crate::dto::{CxfDocument, Node};
 use crate::export::S231_CONTEXT_IRI;
 use crate::unit_iri::QUDT_SCHEMA_NAMESPACES;
@@ -185,6 +186,7 @@ pub(super) fn normalize(
     doc: &mut CxfDocument,
     table: &PrefixTable,
     raw: Option<&[u8]>,
+    budget: &mut ExpansionBudget,
     diags: &mut DiagnosticList,
 ) {
     let authored = authored_keys(raw);
@@ -218,7 +220,11 @@ pub(super) fn normalize(
             table,
             subject: &subject,
         };
-        let aliases = scope.aliases_of(node, diags);
+        let aliases = scope.aliases_of(node, budget, diags);
+        if budget.has_ended() {
+            // A key's expansion did not fit and is refused; nothing after it is read.
+            return;
+        }
         if !aliases.is_empty() {
             let mut explicit = |key: &str| keys.iter().any(|authored| authored == key);
             rewrite(node, &aliases, &subject, &mut explicit, diags);
@@ -229,27 +235,27 @@ pub(super) fn normalize(
 /// The modeled term an expanded key `iri` names in the S231 vocabulary bound to `namespace`, if
 /// any: the whole remainder after `namespace` is a modeled term, or a second spelling of one
 /// ([`S231_SPELLINGS`]).
-fn modeled_term(iri: &str, namespace: &str) -> Option<&'static str> {
+fn modeled_term(iri: Iri<'_>, namespace: &str) -> Option<&'static str> {
     let term = iri.strip_prefix(namespace)?;
     MODELED_TERMS
         .iter()
         .copied()
-        .find(|modeled| *modeled == term)
+        .find(|modeled| term.is(modeled))
         .or_else(|| {
             S231_SPELLINGS
                 .iter()
-                .find(|(written, _)| *written == term)
+                .find(|(written, _)| term.is(written))
                 .map(|(_, modeled)| *modeled)
         })
 }
 
 /// The modeled term an expanded key `iri` names in the QUDT schema, if any: `unit` for
 /// [`QUDT_HAS_UNIT`] in either of [`QUDT_SCHEMA_NAMESPACES`], and nothing else.
-fn qudt_term(iri: &str) -> Option<&'static str> {
+fn qudt_term(iri: Iri<'_>) -> Option<&'static str> {
     QUDT_SCHEMA_NAMESPACES
         .iter()
         .filter_map(|namespace| iri.strip_prefix(namespace))
-        .any(|term| term == QUDT_HAS_UNIT)
+        .any(|term| term.is(QUDT_HAS_UNIT))
         .then_some("unit")
 }
 
@@ -275,23 +281,62 @@ enum KeyMeaning {
 
 impl KeyScope<'_> {
     /// Classify `key` (already trimmed by the caller when probing a near miss).
-    fn meaning(&self, key: &str) -> KeyMeaning {
-        if let Some(term) = key.strip_prefix("S231:").and_then(|t| modeled_term(t, "")) {
+    ///
+    /// The key's expansion is read in place ([`Iri`]): a key costs no copy and no reading of the
+    /// IRI the `@context` binds, whatever it turns out to mean (GitHub issue #709). The one
+    /// reading that needs the expansion whole is the near-miss check of a key that ends in
+    /// `hasUnit` ([`unread_has_unit`]); a key expanded through the `@context`, by a prefix or as
+    /// a term, is joined for it through `budget`, and one that does not fit is refused there
+    /// and read as unrelated. A refusal names the node as the rest of this pass does, by its
+    /// `@id` as written, where a slot's names it expanded: keys are read before any `@id` is.
+    fn meaning(
+        &self,
+        key: &str,
+        budget: &mut ExpansionBudget,
+        diags: &mut DiagnosticList,
+    ) -> KeyMeaning {
+        if let Some(term) = key
+            .strip_prefix("S231:")
+            .and_then(|t| modeled_term(Iri::whole(t), ""))
+        {
             return KeyMeaning::Own(term);
         }
-        let iri = match expand_token(key, self.table) {
-            Expansion::Expanded(iri) => iri,
-            Expansion::Verbatim => key.to_owned(),
+        let (iri, written) = match expand_token(key, self.table) {
+            Expansion::Expanded(iri) => (iri, false),
+            Expansion::Verbatim => (Iri::whole(key), true),
             Expansion::Relative => return KeyMeaning::Unrelated,
         };
-        if let Some(term) = modeled_term(&iri, S231_CONTEXT_IRI).or_else(|| qudt_term(&iri)) {
+        if let Some(term) = modeled_term(iri, S231_CONTEXT_IRI).or_else(|| qudt_term(iri)) {
             return KeyMeaning::Own(term);
         }
-        FOREIGN_NAMESPACES
+        if let Some(foreign) = FOREIGN_NAMESPACES
             .iter()
-            .find_map(|ns| modeled_term(&iri, ns).map(|term| KeyMeaning::Foreign(term, ns)))
-            .or_else(|| unread_has_unit(&iri).map(KeyMeaning::Unread))
-            .unwrap_or(KeyMeaning::Unrelated)
+            .find_map(|ns| modeled_term(iri, ns).map(|term| KeyMeaning::Foreign(term, ns)))
+        {
+            return foreign;
+        }
+        // Only a key that ends in `hasUnit` can be an unread one, and that is the comparison
+        // `unread_has_unit` makes first; made here on the pieces, it spares the join.
+        if !iri.ends_with(QUDT_HAS_UNIT) {
+            return KeyMeaning::Unrelated;
+        }
+        if written {
+            // The key is the IRI: the check reads what the document wrote, once.
+            return unread_has_unit(key).map_or(KeyMeaning::Unrelated, KeyMeaning::Unread);
+        }
+        // The check reads the whole expansion, bound IRI included, so each key that asks it is
+        // charged: the keys of a document cannot have it read more than the budget and
+        // themselves, whether a prefix binds the IRI or the key is a term bound to all of it.
+        let site = Site {
+            slot: "property key",
+            reference: false,
+            node: Some(self.subject),
+        };
+        let Some(joined) = budget.expand(iri, key, site, diags) else {
+            return KeyMeaning::Unrelated;
+        };
+        let unread = unread_has_unit(&joined);
+        unread.map_or(KeyMeaning::Unrelated, KeyMeaning::Unread)
     }
 
     /// Collect the pass-through keys of `node` that name a modeled property, in the S231
@@ -299,14 +344,24 @@ impl KeyScope<'_> {
     /// near-miss spellings and a `hasUnit` key that would go unread. On a node that carries a
     /// `@context` of its own, which is refused as a scoped context, an unread `hasUnit` key is
     /// not refused as well: the document-level bindings are not what that node meant its keys by.
-    fn aliases_of(&self, node: &Node, diags: &mut DiagnosticList) -> Vec<Alias> {
+    ///
+    /// Stops at the first key whose expansion does not fit `budget`, which is refused there.
+    fn aliases_of(
+        &self,
+        node: &Node,
+        budget: &mut ExpansionBudget,
+        diags: &mut DiagnosticList,
+    ) -> Vec<Alias> {
         let subject = self.subject;
         let scoped = node.other.contains_key("@context");
         let mut aliases = Vec::new();
         for key in node.other.keys().filter(|key| !key.starts_with('@')) {
+            if budget.has_ended() {
+                break;
+            }
             let trimmed = key.trim();
             if trimmed != key {
-                match self.meaning(trimmed) {
+                match self.meaning(trimmed, budget, diags) {
                     KeyMeaning::Own(term) | KeyMeaning::Foreign(term, _) => diags.raise(|| {
                         malformed(
                             subject,
@@ -325,7 +380,7 @@ impl KeyScope<'_> {
                 }
                 continue;
             }
-            match self.meaning(key) {
+            match self.meaning(key, budget, diags) {
                 KeyMeaning::Own(term) => aliases.push(Alias {
                     key: key.clone(),
                     term,
@@ -475,20 +530,22 @@ mod tests {
     #[test]
     fn modeled_term_matches_only_whole_terms_after_the_namespace() {
         let ns = S231_CONTEXT_IRI;
-        assert_eq!(modeled_term(&format!("{ns}min"), ns), Some("min"));
-        assert_eq!(modeled_term(&format!("{ns}minimum"), ns), None);
-        assert_eq!(modeled_term(&format!("{ns}Min"), ns), None);
-        assert_eq!(modeled_term(ns, ns), None);
-        assert_eq!(modeled_term("http://example.org#min", ns), None);
-        assert_eq!(modeled_term(&format!("{ns}moSource"), ns), None);
+        let modeled_term = |iri: &str| modeled_term(Iri::whole(iri), ns);
+        assert_eq!(modeled_term(&format!("{ns}min")), Some("min"));
+        assert_eq!(modeled_term(&format!("{ns}minimum")), None);
+        assert_eq!(modeled_term(&format!("{ns}Min")), None);
+        assert_eq!(modeled_term(ns), None);
+        assert_eq!(modeled_term("http://example.org#min"), None);
+        assert_eq!(modeled_term(&format!("{ns}moSource")), None);
     }
 
     #[test]
     fn the_second_s231_spellings_name_their_modeled_terms_and_nothing_near_them_does() {
         let ns = S231_CONTEXT_IRI;
-        assert_eq!(modeled_term(&format!("{ns}hasUnit"), ns), Some("unit"));
+        let modeled_term = |iri: &str| modeled_term(Iri::whole(iri), ns);
+        assert_eq!(modeled_term(&format!("{ns}hasUnit")), Some("unit"));
         assert_eq!(
-            modeled_term(&format!("{ns}hasDisplayUnit"), ns),
+            modeled_term(&format!("{ns}hasDisplayUnit")),
             Some("displayUnit")
         );
         for near in [
@@ -500,7 +557,7 @@ mod tests {
             "hasQuantity",
             "hasQuantityKind",
         ] {
-            assert_eq!(modeled_term(&format!("{ns}{near}"), ns), None, "{near}");
+            assert_eq!(modeled_term(&format!("{ns}{near}")), None, "{near}");
         }
         // Every second spelling reads as a term the DTO models.
         for (_, modeled) in S231_SPELLINGS {
@@ -510,6 +567,7 @@ mod tests {
 
     #[test]
     fn has_unit_is_the_one_qudt_schema_term_read_in_both_schema_namespaces() {
+        let qudt_term = |iri: &str| qudt_term(Iri::whole(iri));
         for ns in QUDT_SCHEMA_NAMESPACES {
             assert_eq!(qudt_term(&format!("{ns}hasUnit")), Some("unit"), "{ns}");
             for other in [

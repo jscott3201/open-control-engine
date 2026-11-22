@@ -679,6 +679,7 @@ changes.
 | Preserved array parameters of one document | 1,048,576 elements, and 64 MiB (67,108,864 bytes) of element paths together, each path the instance IRI, `.` and the element's name | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses either, before its value is read or any of its names is built; it draws on neither |
 | Constructed blocks, model-wide | 4,194,304 words (32 MiB) held by the blocks outside their state: tables, gain matrices, resolved port kinds | `crates/oce-graph/src/constructed.rs` | `OcError::Build(BuildError::ConstructedTooLarge { block, requested, limit })` at instantiation, recorded as `resource-limit-exceeded`; `BlobError::ConstructedTooLarge` from the blob decoder |
 | Run state, model-wide | 4,194,304 words (32 MiB) | `crates/oce-graph/src/lib.rs` | `OcError::Build(BuildError::StateTooLarge { block, requested, limit })`, recorded as `resource-limit-exceeded`; `BlobError::StateTooLarge` from the blob decoder |
+| What `@context` expansion adds to one document | 8 MiB (8,388,608 bytes) over every expanded token, an expansion counted as its length less the token's | `crates/oce-cxf/src/expansion_budget.rs` | `resource-limit-exceeded` on the node the first token that does not fit is written on; nothing after it is read |
 
 Composite nesting and boundary traversal are different walks and have separate limits. Boundary
 traversal is iterative, so an accepted path does not consume one call-stack frame per hop. Its work
@@ -740,8 +741,13 @@ of a load, to 8 MiB of text (issue #695). What you can rely on:
 - **It is always a refusal, for warnings too.** The closing error is an error whatever was
   left out, so a document that raises nothing but warnings is refused once they pass the
   bound: the bound is the one reason a document with no error of its own does not load. A load
-  never succeeds with warnings missing. Measured at the edge: 127 unused boundary inputs under
-  a 64 KiB namespace load with 127 warnings, and 128 are refused.
+  never succeeds with warnings missing. Measured at the edge on the reader
+  (`oce_cxf::import_cxf`, which has no admission limit): 127 unused boundary inputs with 64 KiB
+  `@id`s written out, a document of 16.7 MB, load with 127 warnings, and 128 are refused.
+  Through the facade that document is over the admission limit, and the same inputs written
+  through a prefix are refused first for what expansion adds
+  ([below](#expansion-adds-a-bounded-amount-to-a-document)): 8 MiB of warnings about distinct
+  nodes takes 16 MiB of `@id`s, each written on its node and in a reference.
 - **A list within the bound is whole.** Every diagnostic the reader raises is listed, with its
   message and subject as they are: nothing is shortened, cut, merged or dropped. Every tracked
   document and every document of `open-control-library` is far inside the bound (the largest
@@ -776,6 +782,56 @@ parameters, not its shape. A table short one cell keeps its message, which names
 `ExtractSignal`'s omitted selectors out of range are one finding the same way, and a
 `VectorFilter`'s omitted mask members are counted, not walked.
 
+### Expansion adds a bounded amount to a document
+
+A token read through a `@context` prefix is as long as the IRI the prefix binds: `p:T` under a
+64 KiB binding is 64 KiB once expanded. The document sets that length and the number of tokens,
+and pays three bytes for each, so nothing ties what the reader holds to the document's size
+unless the reader counts it: 1,024 such tokens, a document of 78,157 bytes, loaded and held
+202 MB (issue #709). What you can rely on:
+
+- **The bound.** Expanding a document's tokens adds at most 8,388,608 bytes to it. An
+  expansion is counted as its length less the length of the token as written, over every node
+  `@id`, every reference (`hasInput`, `hasOutput`, `hasParameter`, `hasConstant`,
+  `containsBlock`, `hasInstance`, `isConnectedTo`), every `@type` and `isOfDataType`, every
+  `unit` and `displayUnit` IRI node, and every property key that ends in `hasUnit` and is read
+  through the `@context`, by a prefix or as a term. So the identity and typing text the reader
+  works on is at most the document's own plus 8 MiB.
+- **What adds nothing.** A token written as an absolute IRI is not expanded. A token that
+  expands to no more bytes than it is written in adds nothing. Reading a token (to classify it,
+  to compare it with a namespace, to find it relative) copies nothing, reads none of the IRI the
+  `@context` binds past a fixed number of bytes, and is not counted, so a property key, a
+  relative reference or a token refused for its whitespace costs what the token costs through a
+  binding of any length, never the binding again. The one reading that takes a whole expansion
+  is the check of a `hasUnit` key above, which is why that key is counted.
+- **Past the bound.** The first expansion that does not fit is not made. The document is
+  refused with one `resource-limit-exceeded` error whose subject is the node the token is
+  written on (the token as written, for a node's own `@id`; for a key, the node's `@id` as
+  written, or `@graph[i]` where it has none, as every refusal of a key names it: keys are read
+  before any `@id` is expanded), and whose message quotes at most 64 bytes of the token, escaped, and states the
+  sizes: ``@type `p:T` expands to 65547 bytes through the document's @context, 65544 more than
+  it is written in; expansion had added 8324709 bytes, and may add at most 8388608 to one
+  document``. Nothing after that token is read, so the list holds that error and whatever was
+  raised before it, in the reader's usual sorted order.
+- **What that is in memory.** A refused document costs what it added before the refusal: the
+  issue's document now peaks at 8.6 MB. A document within the bound costs no more than the same
+  document with every token written out as an absolute IRI, which the reader always accepted:
+  expansion makes the first into the second. That is a multiple of the bound, not the bound,
+  because the loader keeps an identity in more than one place. Typing tokens that fill the
+  bound exactly peak at 17.3 MB for 137 KB of document; node `@id`s and references that fill it
+  peak at 30.6 MB (71.9 MB requested over the load) for 166 KB, 3.6 times the bound and the
+  most measured. The bound removes the product of tokens and binding; it is not a memory limit
+  for a load, which stays yours to set.
+- **No real document is near it.** Over the 257 tracked documents that hold an `@graph` and the
+  139 CXF documents of `open-control-library`, the most expansion adds to one document is
+  66,275 bytes (the vendored `CXF-Core.jsonld`, 682,615 bytes), 126 times under the bound; the
+  longest IRI any of them binds is 51 bytes, and expansion never adds more than 0.31 bytes for
+  each byte of a document. A document at the 8 MiB admission limit would have to more than
+  double under expansion to be refused.
+
+The bound is on what expansion adds, not on the length of a binding: one long namespace IRI
+read by a few tokens loads, as it did.
+
 ## Treat untrusted CXF as untrusted input
 
 A CXF document is a program. Loading one from a source you do not control is running code you did
@@ -794,11 +850,11 @@ a sandbox, cancellation/deadline guarantee, or evidence that every below-cap doc
 Below the cap the pipeline refuses the known amplification shapes with typed diagnostics (issue
 #365): a `containsBlock` child reached twice (`shared-instance`), array parameters past a
 1,048,576-element per-document budget or past 64 MiB of element paths (issue #710; a broadcast
-string value is not yet counted, issue #736), run state
-past 4,194,304 words and, since issue #700, what the constructed blocks hold outside their state
-(tables, gain matrices, resolved port kinds) past 4,194,304 words (all three
-`resource-limit-exceeded`), and binding evaluation past 2^24 deterministic work units per
-expression or 2^26 per document (`grounding-failed`). Those limits bound growth, not absolute footprint — a maximal admissible
+string value is not yet counted, issue #736), run state past 4,194,304 words, since issue #700
+what the constructed blocks hold outside their state (tables, gain matrices, resolved port kinds)
+past 4,194,304 words, and since issue #709 `@context` expansion that adds more than 8 MiB to a
+document (all four `resource-limit-exceeded`), and binding evaluation past 2^24 deterministic
+work units per expression or 2^26 per document (`grounding-failed`). Those limits bound growth, not absolute footprint — a maximal admissible
 document can still need hundreds of MiB — so isolation stays your obligation.
 Receipt admission refusals use the existing `Import` stage, with byte counts only and no input
 content, source error or structured diagnostics in the `OcError`; `OperationFailure` still exposes

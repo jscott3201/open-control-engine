@@ -136,6 +136,17 @@ pub const MAX_DOCUMENT_EVAL_FUEL: u64 = 1 << 26;
 /// [`ResolveOptions::deny_warnings`] is set — returns [`CxfError::Validation`] instead, with the
 /// graph withheld because it may be structurally unsound.
 ///
+/// Expanding the document's tokens against its `@context` adds at most 8 MiB (8,388,608 bytes)
+/// to it (GitHub issue #709). A token read through a prefix is as long as the IRI the prefix
+/// binds, so each expansion is counted as its length less the length of the token as written,
+/// over every `@id`, reference, `@type`, `isOfDataType` and unit IRI node, and every property
+/// key that ends in `hasUnit` and is read through the `@context`, by a prefix or as a term. The
+/// first expansion that does not
+/// fit is refused with one [`oce_diag::DiagCode::ResourceLimitExceeded`] error whose subject is
+/// the node it is written on (the token as written, for a node's own `@id`); nothing after it is
+/// read, so the list holds that error and what was raised before it, sorted as every list is. A
+/// token written as an absolute IRI adds nothing.
+///
 /// # Errors
 /// - [`CxfError::Json`] if `bytes` is not valid JSON in the CXF document shape.
 /// - [`CxfError::Validation`] if resolution produced at least one error diagnostic.
