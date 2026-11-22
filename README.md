@@ -251,7 +251,9 @@ bumped it (issue #683): a Real parameter written as an Integer is held as a Real
 the parameter table, the blob and the canonical content id are those of the document that writes
 it as a Real, and an Integer above 2^53 in magnitude on a Real parameter is refused
 (`parameter-out-of-range`). A blob or a snapshot release 0.5.0 wrote is refused with
-`EngineVersionMismatch`.
+`EngineVersionMismatch`. Every reader of such a parameter sees that Real too (issue #735), and a
+parameter holding a value of another kind than its catalog type, which a block used to replace
+with its default, is refused (`parameter-kind-mismatch`, issue #734).
 
 M2's `oce` command-line tool
 (`crates/leverage/oce-cli`, the first binary above the facade) puts the authoring loop at a shell

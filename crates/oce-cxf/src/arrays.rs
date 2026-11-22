@@ -366,19 +366,33 @@ fn collides_with_sibling(
     true
 }
 
+/// Where the elements of one array parameter are bound: the block's class, the owning instance
+/// and the array's parameter node, for holding each element in its catalog type.
+struct ElementOwner<'a> {
+    class_path: &'a str,
+    owner: &'a str,
+    piri: &'a str,
+}
+
 /// Append one minted per-element entry to both the param table and the incremental sibling
 /// scope (so a later sibling binding can reference it by its `k_i` name), once its string bytes,
-/// if it is a string, are reserved from the document's `strings` budget (issue #736). Mints
-/// nothing and returns the refusal when they do not fit: the caller refuses the array there with
-/// one `ResourceLimitExceeded` and mints none of its later elements.
+/// if it is a string, are reserved from the document's `strings` budget (issue #736). The element
+/// is held in its catalog type first (issues #683, #735), so the table and the sibling scope a
+/// later member reads hold the same value. Mints nothing and returns the refusal when the string
+/// bytes do not fit: the caller refuses the array there with one `ResourceLimitExceeded` and mints
+/// none of its later elements.
 fn mint_element(
     ename: &str,
     value: Value,
     table: &mut Vec<(Arc<str>, Value)>,
     siblings: &mut IndexedEntries,
+    at: &ElementOwner<'_>,
     strings: &mut StringParameterBudget,
+    diags: &mut DiagnosticList,
 ) -> Result<(), StringBudgetRefusal> {
     strings.take(&value)?;
+    let value =
+        crate::resolve::hold_in_catalog_type(at.class_path, at.owner, at.piri, ename, value, diags);
     let key: Arc<str> = Arc::from(ename);
     siblings.push(Arc::clone(&key), EvalResult::Scalar(value.clone()));
     table.push((key, value));
@@ -446,6 +460,7 @@ fn mint_element(
 pub(crate) fn expand_array_param(
     piri: &str,
     owner: &str,
+    class_path: &str,
     pnode: &Node,
     cxf_val: &CxfValue,
     enclosing: &ScopeFrame,
@@ -489,6 +504,13 @@ pub(crate) fn expand_array_param(
     let n = count;
     // Every value of a node the instance lists again is kept for its later listings.
     let repeated = reads.groundings.is_repeated(piri);
+    // Each element is held in its catalog type as it is minted, before the table or the sibling
+    // scope sees it (issues #683, #735); a refusal names this array's parameter node.
+    let at = ElementOwner {
+        class_path,
+        owner,
+        piri,
+    };
     match cxf_val {
         // Preserved per-element values as a JSON list of element literals.
         CxfValue::List(elems) => {
@@ -524,7 +546,9 @@ pub(crate) fn expand_array_param(
                         continue;
                     }
                 };
-                if let Err(refusal) = mint_element(ename, value, table, siblings, strings) {
+                if let Err(refusal) =
+                    mint_element(ename, value, table, siblings, &at, strings, diags)
+                {
                     return diags.raise(|| refusal.diagnostic(piri, owner));
                 }
             }
@@ -549,7 +573,7 @@ pub(crate) fn expand_array_param(
                             continue;
                         }
                         if let Err(refusal) =
-                            mint_element(ename, v.clone(), table, siblings, strings)
+                            mint_element(ename, v.clone(), table, siblings, &at, strings, diags)
                         {
                             return diags.raise(|| refusal.diagnostic(piri, owner));
                         }

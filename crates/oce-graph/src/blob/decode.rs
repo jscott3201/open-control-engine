@@ -45,7 +45,9 @@ use crate::{ConstructedBudget, MAX_STATE_WORDS, Schedule, allocate_state, build_
 ///    canonical list order and exact consumption ([`BlobError::Malformed`]);
 /// 7. each class in turn (registered, same signature hash); then each block in turn (class index,
 ///    unique parameter names, each parameter in order a finite Real or a known enum class and
-///    ordinal, then the constructed budget
+///    ordinal and then a value its class's catalog type admits
+///    ([`BlobError::ParameterKindMismatch`]: the load gate's own predicate,
+///    `oce_blocks::admits_parameter_value`, issue #734), then the constructed budget
 ///    ([`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS), charged the moment the block is
 ///    constructed: [`BlobError::ConstructedTooLarge`]), then the constructed block's kind, state
 ///    length and arity, and each of its connector ids in range and not already claimed); then
@@ -176,7 +178,8 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
         }
         let (entry, class_path) = (*entry, Arc::clone(class_path));
 
-        // Parameters: unique names, finite Reals, resolvable enums.
+        // Parameters: unique names, finite Reals, resolvable enums, each of a kind its catalog
+        // type admits.
         let mut names = record.params.reader();
         names_scratch.clear();
         for _ in 0..record.params.count {
@@ -214,7 +217,17 @@ fn build_instances(layout: &Layout<'_>, counts: &Counts) -> Result<Instances, Bl
                     parameter: index_u32(parameter_index),
                 });
             }
-            params.push((Arc::from(name), value(raw, at)?));
+            let value = value(raw, at)?;
+            // A value its catalog type does not admit would reach the constructor, whose readers
+            // fall back to a default for it (issue #734); the load gate refuses such a document,
+            // so no encoder writes one.
+            if oce_blocks::parameter_kind_fault(&class_path, name, &value).is_some() {
+                return Err(BlobError::ParameterKindMismatch {
+                    block,
+                    parameter: index_u32(parameter_index),
+                });
+            }
+            params.push((Arc::from(name), value));
         }
         let params = ParamTable { values: params };
 

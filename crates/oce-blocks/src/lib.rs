@@ -42,10 +42,11 @@ use oce_model::{ParamTable, Value, ValueType, determinism::canonicalize_real};
 
 mod catalog;
 mod catalog_rules;
-// Host-facing authoring metadata (GitHub #440): `std` only, so no bare-metal image carries it.
+// Host-facing authoring metadata (GitHub #440): the descriptions are `std` only, so no bare-metal
+// image carries them. The parameter typing beside them is built everywhere: the compiled-schedule
+// blob decoder refuses a parameter of the wrong kind with it (issue #734).
 #[cfg(feature = "std")]
 mod class_descriptions;
-#[cfg(feature = "std")]
 mod class_metadata;
 mod class_signature;
 mod constructed;
@@ -66,7 +67,7 @@ mod logical_timing;
 mod logical_variable_pulse;
 mod lowering;
 mod math;
-#[cfg(feature = "std")]
+mod param_kinds;
 mod param_templates;
 mod pid;
 pub mod port_names;
@@ -91,10 +92,12 @@ pub use catalog::{
     CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming,
 };
 #[cfg(feature = "std")]
-pub use class_metadata::{
-    ClassParameter, class_description, class_parameters, parameter_value_type,
+pub use class_metadata::class_description;
+pub use class_metadata::{ClassParameter, class_parameters, parameter_value_type};
+pub use param_kinds::{
+    MAX_EXACT_INTEGER_AS_REAL, ParameterKindFault, admits_parameter_value, exact_real,
+    parameter_kind_fault, parameter_kind_is_ruled,
 };
-#[cfg(feature = "std")]
 pub use param_templates::{
     PARAM_COL_PLACEHOLDER, PARAM_INDEX_PLACEHOLDER, PARAM_ROW_PLACEHOLDER, ParamNameTemplate,
 };

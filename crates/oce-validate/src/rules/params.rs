@@ -3,11 +3,11 @@
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
-use oce_blocks::{ParamRule, lookup};
+use oce_blocks::{ParamRule, ParameterKindFault, lookup, parameter_kind_fault};
 use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::{BlockInstance, ModelGraph, ParamTable, Value, ValueType, enum_descriptor};
 
-use super::{block_subject_of, params_arrays, params_flattened};
+use super::{block_subject_of, params_arrays, params_flattened, params_kinds};
 
 /// Check raw resolved block parameters against the registry-published class rules.
 ///
@@ -58,6 +58,9 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut DiagnosticList)
         if has_non_finite {
             continue;
         }
+        // Every parameter the catalog types holds a value of its kind (issue #734). The class
+        // rules below judge the kind of the parameters they name; this fills the rest.
+        params_kinds::check_parameter_kinds(blk, entry.param_rules(), diags);
         for rule in entry.param_rules() {
             check_rule(blk, *rule, diags);
         }
@@ -343,6 +346,12 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut DiagnosticList) 
             let Some(value) = find_param(&blk.params, name) else {
                 return;
             };
+            // An ordinal, a string or another enumeration's member is the kind rule's finding.
+            if let Some(ParameterKindFault::WrongKind { .. }) =
+                parameter_kind_fault(&blk.class_iri, name, value)
+            {
+                return;
+            }
             if !enum_member_value(value, members) {
                 push_range_error(
                     blk,
@@ -614,9 +623,8 @@ fn required_kind_matches(value: &Value, kind: ValueType) -> bool {
         | (ValueType::Integer, Value::Integer(_))
         | (ValueType::Boolean, Value::Boolean(_))
         | (ValueType::String, Value::String(_)) => true,
+        // A qualified member of the enumeration only: no ordinal or string stand-in (R2, #734).
         (ValueType::Enum(class), Value::Enum { class: actual, .. }) => class == *actual,
-        // Resolved CXF preserves the established enum stand-ins accepted by `EnumMembers`.
-        (ValueType::Enum(_), Value::Integer(_) | Value::String(_)) => true,
         _ => false,
     }
 }
@@ -658,13 +666,6 @@ fn enum_member_value(value: &Value, members: &[&str]) -> bool {
         Value::Enum { ordinal, .. } => {
             usize::try_from(*ordinal).is_ok_and(|ordinal| (1..=members.len()).contains(&ordinal))
         }
-        Value::Integer(v) => {
-            usize::try_from(*v).is_ok_and(|ordinal| (1..=members.len()).contains(&ordinal))
-        }
-        Value::String(s) => s
-            .rsplit('.')
-            .next()
-            .is_some_and(|member| members.contains(&member)),
         _ => false,
     }
 }

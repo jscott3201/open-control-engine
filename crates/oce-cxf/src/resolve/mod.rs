@@ -72,6 +72,7 @@ mod port_binding;
 #[cfg(test)]
 mod port_binding_tests;
 mod real_parameters;
+pub(crate) use real_parameters::hold_in_catalog_type;
 #[cfg(test)]
 mod real_parameters_tests;
 mod reference_keys;

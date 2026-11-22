@@ -300,7 +300,7 @@ fn each_listed_class_has_a_concrete_mixed_parameterization() {
             &[(
                 "controllerType",
                 Value::Enum {
-                    class: oce_model::EnumClassId(0),
+                    class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
                     ordinal: 1,
                 },
             )],

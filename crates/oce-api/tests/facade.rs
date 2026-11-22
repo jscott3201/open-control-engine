@@ -31,6 +31,8 @@ mod blob_summary_facts;
 mod content_id_corpus;
 #[path = "support/frame_trace.rs"]
 mod frame_trace;
+#[path = "support/parameter_documents.rs"]
+mod parameter_documents;
 
 mod array_extent;
 mod authored_point_identity;
@@ -113,6 +115,7 @@ mod g36_trim_and_respond;
 mod g36_ventilation_zones_ashrae62_1_setpoints;
 mod hash_order_independence;
 mod integer_range_bindings;
+mod integer_respelling_identity;
 mod library_rule_state_continuation;
 mod load_cxf_trace;
 mod native_pass_through;
@@ -120,6 +123,8 @@ mod non_finite_bounds;
 mod non_finite_composite_parameters;
 mod non_finite_input_policy;
 mod non_finite_parameters;
+mod parameter_kinds;
+mod parameter_scope_kinds;
 mod prepare_frame_preservation;
 mod real_parameter_literals;
 mod release_fallback;

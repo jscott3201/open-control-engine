@@ -43,8 +43,6 @@
 
 use std::collections::BTreeSet;
 
-use oce_model::EnumClassId;
-
 use super::common::*;
 use crate::{DefaultLiteral, DefaultSource, ParamRule, RegistryEntry, registry};
 
@@ -90,8 +88,12 @@ pub(super) enum Axis {
     Width { name: &'static str, min: i64 },
     /// A Boolean flag.
     Flag { name: &'static str },
-    /// An enumeration, swept by ordinal `1..=members`.
-    Enum { name: &'static str, members: u32 },
+    /// An enumeration of `class`, swept by ordinal `1..=members`.
+    Enum {
+        name: &'static str,
+        members: u32,
+        class: oce_model::EnumClassId,
+    },
     /// `base_1..=base_len` selectors, each in `min..=value(max)`.
     Selector {
         base: &'static str,
@@ -228,11 +230,17 @@ pub(super) fn axes(entry: &RegistryEntry) -> Vec<Axis> {
         }
     }
     scalars.extend(flags.into_iter().map(|name| Axis::Flag { name }));
-    scalars.extend(
-        enums
-            .into_iter()
-            .map(|(name, members)| Axis::Enum { name, members }),
-    );
+    scalars.extend(enums.into_iter().map(|(name, members)| {
+        let class = match crate::parameter_value_type(entry.class_path, name) {
+            Some(oce_model::ValueType::Enum(class)) => class,
+            other => panic!("{}: {name} is typed {other:?}", entry.class_path),
+        };
+        Axis::Enum {
+            name,
+            members,
+            class,
+        }
+    }));
     scalars.extend(arrays);
     scalars
 }
@@ -302,8 +310,12 @@ fn extensions(axis: &Axis, point: &[(String, Value)]) -> Vec<Point> {
         Axis::Flag { name } => [false, true]
             .map(|b| vec![(name.to_owned(), Value::Boolean(b))])
             .to_vec(),
-        Axis::Enum { name, members } => (1..=members)
-            .map(|ordinal| vec![(name.to_owned(), enum_value(ordinal))])
+        Axis::Enum {
+            name,
+            members,
+            class,
+        } => (1..=members)
+            .map(|ordinal| vec![(name.to_owned(), enum_value(class, ordinal))])
             .collect(),
         Axis::Selector {
             base,
@@ -339,12 +351,10 @@ fn extensions(axis: &Axis, point: &[(String, Value)]) -> Vec<Point> {
     }
 }
 
-/// An enumeration value by 1-based source ordinal, as the resolver grounds it.
-pub(super) fn enum_value(ordinal: u32) -> Value {
-    Value::Enum {
-        class: EnumClassId(0),
-        ordinal,
-    }
+/// The member of `class` at its 1-based source ordinal, as the resolver grounds a qualified
+/// member (a reader takes an enumeration value of its own class only; issue #734, ruling R2).
+pub(super) fn enum_value(class: oce_model::EnumClassId, ordinal: u32) -> Value {
+    Value::Enum { class, ordinal }
 }
 
 /// Every grid point of `axes`. Scalars are expanded before arrays, so an array's length and bound

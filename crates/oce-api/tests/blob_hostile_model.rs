@@ -159,9 +159,90 @@ fn parameter_defects_are_refused() {
             "{ordinal}"
         );
     }
+    // An ordinal inside its enumeration decodes as a value; on the Real `k` of a constant it is
+    // still not a value the parameter admits, so the blob is refused for its kind rather than
+    // built on the constant's default (issue #734).
     let mut in_range = chain();
     in_range.instances[0].params[0].1 = Val::Enum(b"CDL.Types.SimpleController".to_vec(), 4);
-    decode(&in_range.to_bytes()).unwrap();
+    assert_eq!(
+        refusal(&in_range),
+        BlobError::ParameterKindMismatch {
+            block: 0,
+            parameter: 0
+        }
+    );
+}
+
+#[test]
+fn a_parameter_of_a_kind_its_class_does_not_admit_is_refused_by_the_decoder() {
+    // Every value here reached the constructor before, whose reader fell back to a default: the
+    // constant ran as `k = 0`, not as the value the blob carried.
+    for (value, parameter) in [
+        (Val::Boolean(1), 0),
+        (Val::Integer((1 << 53) + 1), 0),
+        (Val::Integer(i64::MIN), 0),
+        (Val::Str(b"1.5".to_vec()), 0),
+    ] {
+        let mut image = chain();
+        image.instances[0].params[0].1 = value;
+        assert_eq!(
+            refusal(&image),
+            BlobError::ParameterKindMismatch {
+                block: 0,
+                parameter
+            }
+        );
+    }
+    // The kinds the parameter admits decode: a Real, and an Integer exact as a Real.
+    for value in [Val::real(-1.5), Val::Integer(-3), Val::Integer(1 << 53)] {
+        let mut image = chain();
+        image.instances[0].params[0].1 = value;
+        let bytes = image.to_bytes();
+        decode(&bytes).unwrap();
+    }
+}
+
+/// One `CalendarTime` whose `zerTim` is written `value`, its six outputs claimed in order.
+fn calendar(value: Val) -> Image {
+    let mut image = Image::new();
+    image.classes = vec![class("CDL.Reals.Sources.CalendarTime")];
+    image.connectors = 6;
+    let zero_time = Value::Enum {
+        class: oce_api::EnumClassId::ZERO_TIME,
+        ordinal: 11,
+    };
+    image.instances = vec![inst(
+        0,
+        "CDL.Reals.Sources.CalendarTime",
+        &[("zerTim", zero_time)],
+        &[],
+        &[0, 1, 2, 3, 4, 5],
+    )];
+    image.instances[0].params[0].1 = value;
+    image.schedule = vec![0];
+    image
+}
+
+#[test]
+fn an_enumeration_parameter_in_a_blob_is_a_qualified_member_or_refused() {
+    // Ruling R2 (issue #734): a 0.6.0 blob written before it could carry an ordinal or a string
+    // on an enumeration parameter, which the reader decoded; this build refuses it rather than
+    // read it with another meaning.
+    decode(&calendar(Val::Enum(b"CDL.Types.ZeroTime".to_vec(), 11)).to_bytes()).unwrap();
+    for value in [
+        Val::Integer(11),
+        Val::Str(b"NY2017".to_vec()),
+        Val::Str(b"Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017".to_vec()),
+        Val::Enum(b"CDL.Types.Smoothness".to_vec(), 2),
+    ] {
+        assert_eq!(
+            refusal(&calendar(value)),
+            BlobError::ParameterKindMismatch {
+                block: 0,
+                parameter: 0
+            }
+        );
+    }
 }
 
 #[test]
