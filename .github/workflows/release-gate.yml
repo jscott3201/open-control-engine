@@ -513,7 +513,7 @@ jobs:
   # Fan-in over the four cells' vectors, once per architecture. Both legs compare every byte the
   # cells produced (portable and target-bound bytes equal across codegen within an architecture,
   # portable bytes equal and target-bound bytes different across architectures, the
-  # compiled-schedule blobs equal in all four cells and 123329 bytes each, and the four round-trip
+  # compiled-schedule blobs equal in all four cells and 123098 bytes each, and the four round-trip
   # recordings equal); each leg then replays the x86_64 debug recording through its own archived
   # blob round trip, and parses the OTHER architecture's target-bound snapshot and refuses it
   # through the public restore path, natively, with the oce-api unit tests its own architecture's
@@ -568,15 +568,15 @@ jobs:
       # The 46 compiled-schedule blobs (GitHub #400) carry no architecture field, so every cell's
       # bytes must be identical: debug against release within an architecture, and x86_64 against
       # aarch64. Each cell already compared its bytes with the checked-in goldens; the size check
-      # keeps a truncated or empty artifact from passing as four equal files. 123329 is the sum of
+      # keeps a truncated or empty artifact from passing as four equal files. 123098 is the sum of
       # the goldens' lengths (crates/oce-api/tests/fixtures/blob/*.oceb).
       - name: Compare compiled-schedule blob bytes across codegen profiles and architectures
         working-directory: target/determinism
         run: |
           for file in determinism-{x86_64,aarch64}-{debug,release}/blobs-*.bin; do
             size="$(wc -c < "$file" | tr -d ' ')"
-            if [ "$size" != 123329 ]; then
-              echo "FAIL: $file is $size bytes; the 46 blob goldens sum to 123329" >&2
+            if [ "$size" != 123098 ]; then
+              echo "FAIL: $file is $size bytes; the 46 blob goldens sum to 123098" >&2
               exit 1
             fi
           done

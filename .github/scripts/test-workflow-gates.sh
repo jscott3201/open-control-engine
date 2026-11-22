@@ -562,7 +562,7 @@ jobs:
       - run: |
           for file in determinism-{x86_64,aarch64}-{debug,release}/blobs-*.bin; do
             size="$(wc -c < "$file" | tr -d ' ')"
-            if [ "$size" != 123329 ]; then
+            if [ "$size" != 123098 ]; then
               exit 1
             fi
           done
@@ -2269,7 +2269,7 @@ drop_blob_architecture_comparison() {
 }
 
 drop_blob_size_requirement() {
-  edit_pr_gate "$1" '/if \[ "\$size" != 123329 \]; then/d'
+  edit_pr_gate "$1" '/if \[ "\$size" != 123098 \]; then/d'
 }
 
 # The release gate's own triggers (issue #545: a push to `development` is merge-gate.yml's), the
@@ -3660,7 +3660,7 @@ run_case release-gate-cross-architecture-comparison-dropped fail drop_release_ga
 run_case blob-architecture-comparison-dropped fail drop_blob_architecture_comparison \
   "pr-gate.yml job determinism-compare is missing required gate pattern: compare compiled-schedule blob bytes across architectures"
 run_case blob-size-unchecked fail drop_blob_size_requirement \
-  "refuse a compiled-schedule blob artifact that is not the 123329 bytes of the goldens"
+  "refuse a compiled-schedule blob artifact that is not the 123098 bytes of the goldens"
 run_case release-gate-with-development-push fail release_gate_with_development_push \
   "release-gate.yml push trigger does not name branches [main] (got: [main, development])"
 run_case release-gate-push-to-development-only fail release_gate_push_to_development_only \

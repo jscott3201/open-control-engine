@@ -433,7 +433,7 @@ every pair of defects for each artefact; the earlier check wins in every pair.
 
 ## Cost
 
-A blob of the 46 G36 catalog fixtures is 306 to 17,001 bytes (123,329 in all). `decode` allocates
+A blob of the 46 G36 catalog fixtures is 306 to 17,001 bytes (123,098 in all). `decode` allocates
 what it returns — the model arena, the blocks and whatever their constructors allocate, the schedule,
 the run state and the I/O table — plus one default-parameter block per class for its signature
 hash and four scratch vectors, all freed before it returns; I/O paths and payloads borrow the input

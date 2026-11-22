@@ -282,7 +282,7 @@ require_release_codegen_determinism_cells() {
 }
 
 # The determinism fan-in's cross-architecture half, in either workflow: portable bytes equal,
-# target-bound bytes different, compiled-schedule blobs equal and the goldens' 123329 bytes, the
+# target-bound bytes different, compiled-schedule blobs equal and the goldens' 123098 bytes, the
 # round-trip recordings equal, the x86_64 debug recording replayed through each architecture's
 # archived suite, and the other architecture's target-bound snapshot refused.
 require_determinism_fan_in() {
@@ -297,8 +297,8 @@ require_determinism_fan_in() {
   require_job_pattern "$path" 'determinism-compare' \
     '^[[:space:]]*cmp determinism-x86_64-debug/blobs-debug\.bin determinism-aarch64-debug/blobs-debug\.bin$' \
     'compare compiled-schedule blob bytes across architectures'
-  require_job_line "$path" 'determinism-compare' 'if [ "$size" != 123329 ]; then' \
-    'refuse a compiled-schedule blob artifact that is not the 123329 bytes of the goldens'
+  require_job_line "$path" 'determinism-compare' 'if [ "$size" != 123098 ]; then' \
+    'refuse a compiled-schedule blob artifact that is not the 123098 bytes of the goldens'
   require_job_pattern "$path" 'determinism-compare' \
     'export OCE_FOREIGN_TARGET_STATE_IN=.*determinism-\$FOREIGN_ARCH-debug/target-state-debug\.bin' \
     'supply the other architecture target-bound snapshot to the restore test'

@@ -694,7 +694,7 @@ parses the **other** architecture's target-bound snapshot and refuses it through
 its own cell built and archived. Each cell also writes the 46 compiled-schedule blobs it
 encodes (`OCE_BLOB_OUT`, after its `blob_goldens` test has compared them with the checked-in
 goldens), and the fan-in requires those bytes identical in all four cells
-and each file 123,329 bytes, the goldens' total, so a truncated
+and each file 123,098 bytes, the goldens' total, so a truncated
 artifact cannot pass ([compiled-schedule blob](compiled-schedule-blob.md), GitHub #400).
 `bash .agents/gate.sh full` writes the artifact the same way and checks its size.
 Nothing is emulated; every test in the subset runs in every cell.
