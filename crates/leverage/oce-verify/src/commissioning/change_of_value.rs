@@ -136,14 +136,28 @@ pub(crate) fn with_corners(
 /// of `stop` and `|start|`, which the reference's step series spans) and `w` the largest
 /// half-width applied.
 ///
-/// Why this value. A funnel corner is `x / m ± w / m`, then times `m`: at most three roundings,
-/// each at most half an epsilon of a quantity no larger than `m + w`, so the corner as computed
-/// is within `1.5 ε (m + w)` of the exact `x ± w`. The instant it should meet carries at most
-/// one rounding of its own and the tolerance's decimal one, each at most `0.5 ε (m + w)`. The
-/// sum, `2.5 ε (m + w)`, is under the radius, so a corner the inputs put on an instant is always
-/// read there. The radius is about `8.9e-16 s` per second of `m + w` (`1.4e-14 s` for a
-/// 30 s window, `3.2e-12 s` for an hour), so what it forgives is an excursion shorter than
-/// the funnel's own arithmetic can place.
+/// Why this value. Let `u = ε / 2`, the most one rounding moves a value relative to itself, and
+/// let the corner `c` the inputs mean be `X ± W`, with `X` a sample time and `W` the tolerance
+/// as written in decimal, and `Y` the decimal instant the other series steps at, `c = Y`. The
+/// funnel computes `x / m`, `w / m`, their sum or difference and the product with `m`: four
+/// roundings, of quantities at most `|x|`, `w`, `|c|` and `|c|` in seconds, and a corner that
+/// can meet an instant lies inside the window, so `|c| <= m`. That is at most `u (3 m + w)`.
+/// Parsing `X` adds `u m` and parsing `Y` another `u m`. The half-width carries `u w` from
+/// parsing `atolx`; `3 u w` from `ltolx` (its parse, `|x|`'s, the product); and from `rtolx`
+/// `3 u w` (its parse, the subtraction of the range, the product) plus `rtolx` times the two
+/// window ends' parse errors, at most `rtolx ε m`. So the corner as computed and the instant
+/// are within `2.5 ε m + ε w` under `atolx`, `2.5 ε m + 2 ε w` under `ltolx` and
+/// `(2.5 + rtolx) ε m + 2 ε w` under `rtolx`: under the radius, the last while `rtolx <= 1.5`.
+/// A larger `rtolx` makes the half-width more than one and a half ranges, which puts every
+/// corner outside the window, where none is snapped. So a corner the inputs put on an instant
+/// is always read there.
+///
+/// The radius is four to eight units in the last place of `m` (one ulp of `m` lies between
+/// `ε m / 2` and `ε m`) plus `4 ε w`: about `1.4e-14 s` for a 30 s window, `3.2e-12 s` for an
+/// hour, `1.5e-6 s` at epoch seconds (`m` about `1.7e9`, whose time resolution is `2.4e-7 s`)
+/// and `8 s` at the largest time a spec accepts, `2^53`. What it forgives is an excursion the
+/// funnel's own arithmetic cannot place at that magnitude. Issue #795 asks for the funnel to be
+/// built on times relative to `start`, which would shrink it to about `4 ε (stop - start + w)`.
 pub(crate) fn snap_radius(magnitude: f64, half_width: f64) -> f64 {
     4.0 * f64::EPSILON * (magnitude + half_width)
 }

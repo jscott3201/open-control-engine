@@ -219,7 +219,9 @@ batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
   - under `--bounds`, beside it, `reference.csv`, `test.csv`, `lowerBound.csv` and
     `upperBound.csv` for each output whose envelope was built (a Real output with at least one
     compared instant and no non-finite engine sample: the receipt's `half_width` is present
-    exactly for those; the orchestrator's call on issue #664);
+    exactly for those; the orchestrator's call on issue #664). With no `sampling` they hold the
+    funnel's own corners, while the verdict reads corners snapped within `4 ε (m + w)` of a
+    series instant (issue #746);
   - `DIR/receipt.json`, last, so a `receipt.json` this run wrote means its curves are complete.
 
   Each CSV file is pyfunnel's shape: the line `x,y`, then one line per point with both numbers in

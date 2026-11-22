@@ -166,6 +166,27 @@ fn a_value_at_exactly_stop_is_judged_and_adds_no_time() {
 }
 
 #[test]
+fn a_reference_step_at_exactly_stop_asserts_nothing() {
+    // The same case with the trend as the reference: the setpoint's step at 30 s is now the
+    // reference's, a vertical whose band spans both levels, so the engine's value there is
+    // inside it and the output passes (the differential's `grid_ramp_at_stop`). A discrete
+    // output has no role and still fails.
+    let run = run_edited(
+        "value_at_stop_only",
+        &[(
+            r#""model": "Plant","#,
+            r#""model": "Plant", "funnelReference": "trend","#,
+        )],
+        &[],
+        &CommissionOptions::default(),
+    );
+    let set = report(&run, "TSet");
+    assert_eq!(set.status, OutputStatus::Pass);
+    assert_eq!(set.exceedance_time_s, 0.0);
+    assert_eq!(report(&run, "enOut").status, OutputStatus::Fail);
+}
+
+#[test]
 fn an_engine_sample_out_of_range_fails_the_output_with_no_envelope() {
     // 1e302 degC is above 2^1000 K: the engine's setpoint is out of range from 10 s on.
     let main = "time,Supply Temp,Offset,Enable,Stage\n0,20,1,true,1\n10,1e302,1,true,1\n20,20,1,true,1\n30,20,1,true,1\n";

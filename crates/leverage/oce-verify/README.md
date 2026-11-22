@@ -979,9 +979,10 @@ reference, test and bound curves). Every refusal is a `VerifyError`, with no rec
   value, so the funnel sees a step and not a ramp), the band's corners inside the window join
   the instants, a corner within `4 ε (m + w)` of a series instant read as lying on it, and each
   instant's exceedance is the largest error over the stretch to the next. `exceedance_time_s` is
-  then exact for a staircase band and an upper bound otherwise; a value at `stop` is judged and
-  adds no time. A masked run reads from its first instant to where its last stretch ends. The
-  band is the funnel port's, so pyfunnel's on the `--bounds` files; the per-instant errors are
+  then exact for a staircase band and an upper bound otherwise; the test's value at `stop` is
+  judged and adds no time, while a reference step at `stop` asserts nothing. A masked run reads from its first instant to where its last stretch ends. The
+  band is the funnel port's, so pyfunnel's on the `--bounds` files, which hold the funnel's own
+  corners, while the verdict reads them snapped within `4 ε (m + w)`; the per-instant errors are
   not pyfunnel's. The receipt has no `time.sampling`, and each output's `last_sample_t` is when
   the trend last logged at or before `stop` (a silent logger is held, not reported; #793).
 - **Report.** Per output: `status`, `compared`, `masked`, `uncovered`, the role and tolerances

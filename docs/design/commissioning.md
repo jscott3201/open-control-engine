@@ -793,7 +793,7 @@ There is no mutant score and no gate (decision 7).
 | `half_width`, `half_height` | object | when an envelope was built | `{ "min", "max" }` over the reference points, in model seconds and in the output's CDL unit, before `x` is normalised. Under `funnel`: the half-sizes of "Envelope" step 1 with its fallbacks, so never zero. Under `aligned-grid`: the sum of the three tolerance terms at each reference point, with no fallback, so zero when every tolerance of the axis is zero |
 | `worst` | object | when `status` is `fail` | `{ "t", "exceedance" }`: the largest exceedance over the compared instants and the earliest instant that has it. Without `sampling` *(#746)* the instant is where the stretch with that largest error starts |
 | `first_exceedance_t` | real | when `status` is `fail` | the earliest compared instant with an exceedance above zero. Without `sampling` *(#746)* it is where the first stretch with an error above zero starts; on a sloped band the first time outside can be later inside it |
-| `exceedance_time_s` | real | always | the sum, in ascending time order, of `t[k + 1] - t[k]` over the compared instants `k` with an exceedance above zero, `t[k + 1]` the next test instant; the last instant adds nothing; `0.0` when there is none. Without `sampling` *(#746)* an instant's exceedance is the largest error over its stretch, so this is the time outside exactly for a Boolean or Integer output and for a Real output whose band is flat between its corners (a step series' band without a local `x` tolerance), and an upper bound otherwise; a step's vertical segment counts no time. The value at `stop` is still judged, so an output whose only excess is at `stop` fails with `0.0` here |
+| `exceedance_time_s` | real | always | the sum, in ascending time order, of `t[k + 1] - t[k]` over the compared instants `k` with an exceedance above zero, `t[k + 1]` the next test instant; the last instant adds nothing; `0.0` when there is none. Without `sampling` *(#746)* an instant's exceedance is the largest error over its stretch, so this is the time outside exactly for a Boolean or Integer output and for a Real output whose band is flat between its corners (a step series' band without a local `x` tolerance), and an upper bound otherwise; a step's vertical segment counts no time. The test's value at `stop` is still judged, so an output whose only excess is there fails with `0.0` here; a reference step at `stop` is a vertical and asserts nothing (rule 10 of "As landed: the change-of-value comparison") |
 | `masked_intervals` | array | always | `{ "from", "to" }` in model seconds, the first and last instant of each run of masked instants, in time order, at most 64. Without `sampling` *(#790)* `to` is where the run's last stretch ends: the instant where the mask ends, or `stop` |
 | `masked_intervals_total` | integer | always | the count before the cap |
 | `masked_exceedance` | array | always | `{ "t", "exceedance" }` for each masked instant whose error is above zero, in time order, at most 16; reported, never counted (decision 23). The error is the envelope's at that instant on the series as zeroed: the test's value there is zero, and the bounds are built from the zeroed reference |
@@ -1201,23 +1201,44 @@ by funnel's step 5; a piecewise comparison over held values), the last, as recom
    `worst.t` 5.999999999999999. The review's sweep found 132 such failures in 1,950 cases. A
    corner within `4 ε (m + w)` of a series instant (`ε` the machine epsilon, `m` the funnel's `x`
    magnitude, the larger of `stop` and `|start|`, `w` the largest half-width) is now read as
-   lying on the nearest such instant; only corners move, never an instant. Why the bound
-   suffices and cannot be exceeded by the funnel's own error: a corner is `x / m ± w / m` then
-   times `m`, three roundings each at most half an epsilon of a quantity no larger than
-   `m + w`, so within `1.5 ε (m + w)` of the exact `x ± w`; the instant it meets carries at most
-   its own rounding and the tolerance's decimal one, `0.5 ε (m + w)` each; `2.5 ε (m + w)` is
-   under the radius. The radius is about `8.9e-16 s` per second of `m + w` (`1.4e-14 s` for a
-   30 s window), so what it forgives is an excursion the funnel's arithmetic cannot place. A
-   step one tolerance plus the next representable time past the radius fails, as before. The
-   bounds `--bounds` writes are the funnel's own, unsnapped.
+   lying on the nearest such instant; only corners move, never an instant. **Why the bound
+   suffices.** With `u = ε / 2`: the funnel computes `x / m`, `w / m`, their sum and the product
+   with `m`, four roundings of quantities at most `|x|`, `w`, `|c|` and `|c|`, and a corner that
+   can meet an instant lies inside the window (`|c| <= m`), so `u (3 m + w)`; parsing the sample
+   time adds `u m` and parsing the instant it should meet another `u m`; the half-width carries
+   `u w` from `atolx`, `3 u w` from `ltolx` (its parse, `|x|`'s, the product), and from `rtolx`
+   `3 u w` plus `rtolx` times the window ends' parse errors, at most `rtolx ε m`. The two lie
+   within `2.5 ε m + ε w` under `atolx`, `2.5 ε m + 2 ε w` under `ltolx` and
+   `(2.5 + rtolx) ε m + 2 ε w` under `rtolx`: under `4 ε (m + w)`, the last while
+   `rtolx <= 1.5`; a larger `rtolx` puts every corner more than the window's length from every
+   sample, outside the window, where none is snapped. (The delta review of GitHub #790 bounded
+   it at `2.5 ε m + 2 ε w`, and `+ 3 ε w` with `rtolx` or `ltolx`, without the window ends'
+   share.) **Its
+   size** is four to eight units in the last place of the window's largest time, plus `4 ε w`:
+   about `1.4e-14 s` for a 30 s window, `1.5e-6 s` at epoch seconds (`m` about `1.7e9`, where the
+   time resolution is `2.4e-7 s`), and `8 s` at `2^53`, the largest time a spec accepts. What it
+   forgives is an excursion the funnel's arithmetic cannot place at that magnitude. Issue #795
+   asks for the funnel to be built on times relative to `start`, which would shrink the radius
+   to about `4 ε (stop - start + w)`. A step one tolerance plus the next representable time past
+   the radius fails, as before. The bounds `--bounds` writes are the funnel's own, unsnapped;
+   the verdict reads the snapped ones.
 9. **Masked runs are stretches.** Each instant stands for the stretch to the next, so a run of
    masked instants is reported from its first instant to where its last stretch ends: the
    instant where the mask ends, or `stop`. A fan off from 5 s to 15 s is `{5, 15}` however few
    instants lie inside, and a mask past the window `{5, 30}`. With a `sampling` the run's `to`
    stays its last masked instant.
-10. **A value at exactly `stop` is judged**, as the grid path judges the sample at `stop`: it is
-    the last instant and adds no time, so an output whose only excess is at `stop` fails with
-    `exceedance_time_s` `0.0`.
+10. **The test's value at exactly `stop` is judged**, as the grid path judges the sample at
+    `stop`: the test series' held value there is read against the band from the left; it is the
+    last instant and adds no time, so an output whose only excess is at `stop` fails with
+    `exceedance_time_s` `0.0`. A **reference** step at exactly `stop` is different: it is a
+    vertical whose band spans both levels, so the reference's new value at `stop` is never
+    asserted. The outcome of a change logged at `stop` alone therefore depends on the role:
+    in `value_at_stop_only` the trend logs a new setpoint at `stop`, so under
+    `funnelReference: "engine"` the trend is the test and the output fails with time `0.0`, and
+    under `"trend"` the step is the reference's and the output passes. Either way it lasts no
+    time in the window. This is the case the seeded differential names `grid_ramp_at_stop`: the
+    grid draws a reference step at `stop` as a ramp and fails the test there, by change of value
+    it passes. A Boolean or Integer output has no role and fails either way.
 
 **Also the orchestrator's calls of 2026-11-22**, each pinned by a test in
 `tests/commissioning/run_change_readings.rs`:

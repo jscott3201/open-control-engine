@@ -227,8 +227,12 @@ pub struct OutputReport {
     /// exceedance is the largest error over its stretch, so this is exact for a Boolean or
     /// Integer output and for a Real output whose band is flat between its corners (a staircase,
     /// as a step series' band is without a local `x` tolerance), and an upper bound otherwise; a
-    /// step's vertical segment counts no time. The last instant, `stop`, adds nothing but is
-    /// still judged, so an output whose only excess is at `stop` fails with `0.0` here.
+    /// step's vertical segment counts no time. The last instant, `stop`, adds nothing but the
+    /// test series' value there is still judged against the band read from its left, so an
+    /// output whose only excess is the test's at `stop` fails with `0.0` here. A step of the
+    /// reference series at exactly `stop` is a vertical whose band spans both levels, so the
+    /// reference's new value there is never asserted: the same change passes under the other
+    /// `funnel_reference` (the differential's `grid_ramp_at_stop`; the design note, rule 10).
     pub exceedance_time_s: f64,
     /// The runs of masked instants, in time order, each as [`MaskedInterval`] says; at most
     /// [`MAX_MASKED_INTERVALS`].
