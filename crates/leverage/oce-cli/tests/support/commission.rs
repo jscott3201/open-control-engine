@@ -93,6 +93,30 @@ pub fn run_layout(name: &str, case: &str) -> PathBuf {
     dir
 }
 
+/// The bytes of a file of the run fixture's change-of-value case `case` (a reference with no
+/// `sampling`; `oce-verify`'s `tests/fixtures/commissioning/run/change_of_value/`).
+pub fn change_of_value_file(case: &str, name: &str) -> Vec<u8> {
+    run_file(&format!("change_of_value/{case}/{name}"))
+}
+
+/// A scratch directory holding the run fixture's change-of-value case `case`: its spec as
+/// `spec.json`, its four trend files, the mapping and the `plant` subject.
+pub fn change_of_value_layout(name: &str, case: &str) -> PathBuf {
+    let dir = scratch(name);
+    for file in [
+        "spec.json",
+        "main.csv",
+        "limit.csv",
+        "outputs.csv",
+        "fan.csv",
+    ] {
+        fs::write(dir.join(file), change_of_value_file(case, file)).expect("a case file");
+    }
+    fs::write(dir.join("points.json"), run_file("points.json")).expect("the mapping");
+    fs::write(dir.join("plant.cxf.json"), subject("plant")).expect("the subject");
+    dir
+}
+
 /// A scratch directory holding the library's oracle case (`oracle_spec.json`: two input sources,
 /// one frame refused for a missing sample, an off-grid stop) as `spec.json`, under `envelope`.
 pub fn oracle_layout(name: &str, envelope: &str) -> PathBuf {

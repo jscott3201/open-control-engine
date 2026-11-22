@@ -145,8 +145,11 @@ pub struct TimeRecord {
     pub window_start: SpecNumber,
     /// The window's stop, as the spec wrote it.
     pub window_stop: SpecNumber,
-    /// The sampling that applies to the reference, its own or the spec's: a run needs one.
-    pub sampling: SpecNumber,
+    /// The sampling that applies to the reference, its own or the spec's, as the spec wrote it.
+    /// `None` when neither gives one: the outputs are then compared by change of value, each
+    /// over the stretches between its own instants (commissioning note, "As landed: the
+    /// change-of-value comparison"), and the receipt has no `sampling`.
+    pub sampling: Option<SpecNumber>,
 }
 
 /// One finding of the spec loader that concerns the top level or this reference.
@@ -188,7 +191,10 @@ pub struct OutputReport {
     pub output_type: OutputType,
     /// The verdict.
     pub status: OutputStatus,
-    /// The test instants compared.
+    /// The test instants compared. With a `sampling`, the grid's; without one, the output's
+    /// change-of-value instants (the window's ends, every sample time of its two series and its
+    /// indicators, every uncovered-stretch end and, for a Real output, every corner of its
+    /// band inside the window), each standing for the stretch from it to the next.
     pub compared: u64,
     /// The test instants an indicator excluded.
     pub masked: u64,
@@ -209,7 +215,11 @@ pub struct OutputReport {
     /// The earliest compared instant with an exceedance above zero, when the status is `fail`.
     pub first_exceedance_t: Option<f64>,
     /// The time in exceedance, in seconds: the sum over the compared instants with an exceedance
-    /// above zero of the step to the next test instant.
+    /// above zero of the step to the next test instant. Without a `sampling` an instant's
+    /// exceedance is the largest error over its stretch, so this is exact for a Boolean or
+    /// Integer output and for a Real output whose band is flat between its corners (a staircase,
+    /// as a step series' band is without a local `x` tolerance), and an upper bound otherwise; a
+    /// step's vertical segment counts no time.
     pub exceedance_time_s: f64,
     /// The runs of masked instants, in time order; at most [`MAX_MASKED_INTERVALS`].
     pub masked_intervals: Vec<MaskedInterval>,

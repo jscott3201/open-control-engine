@@ -933,9 +933,9 @@ reference of a commissioning spec against the bytes in `SpecInputs` and returns 
 output (the exceedance at each test instant and, under `CommissionOptions::bounds`, the
 reference, test and bound curves). Every refusal is a `VerifyError`, with no receipt.
 
-- **Bind.** The reference has a `cxf` and a `window` (`reference-incomplete`) and a `sampling`,
-  its own or the spec's (`sampling-required`, until a change-of-value comparison lands, #746);
-  the CXF loads (`subject-load-failed` at `references[i].cxf`). The trend sources are read (`source-refused`
+- **Bind.** The reference has a `cxf` and a `window` (`reference-incomplete`); a `sampling`, its
+  own or the spec's, chooses the grid, and without one the outputs are compared by change of
+  value (#746, below); the CXF loads (`subject-load-failed` at `references[i].cxf`). The trend sources are read (`source-refused`
   with the reader's code as its cause, `too-many-sources`). Every point an `inputs` source reads
   lands on a boundary input, and every point an `expected` source reads on a boundary output, by
   replay's name rule (`unknown-*`, `ambiguous-*`, `duplicate-input`, `duplicate-output`); its CDL
@@ -947,9 +947,10 @@ reference, test and bound curves). Every refusal is a `VerifyError`, with no rec
   `indicators` keys are matched against the outputs (`spec-refused` with the spec reader's code),
   every indicator name resolves (`unknown-indicator`, at most 64 distinct,
   `too-many-indicators`), and the parameters resolve and type (`param-*`, `value-*`). The bounds
-  come next, before the replay: each output's instants at most the envelope's limit, the run's
-  `instants × (1 + indicators)` together at most 16,777,216, the grid envelope's `instants²`
-  at most 2^32 (each `too-many-points`), and the trace's bytes at most `max_trace_bytes`
+  come next, before the replay: each output's points at most the envelope's limit, the run's
+  `instants × (1 + indicators)` together at most 16,777,216, the grid envelope's `points²`
+  at most 2^32 (each `too-many-points`; without a `sampling` each count is an upper bound from
+  the frames, trend samples and indicator-file samples in the window), and the trace's bytes at most `max_trace_bytes`
   (`replay-failed`, cause `trace-too-large`). The parameter edits are applied in passes before
   any frame (`param-refused`).
 - **Run.** One replay over the merged inputs: recorded times, equal times allowed, the sources'
@@ -967,6 +968,18 @@ reference, test and bound curves). Every refusal is a `VerifyError`, with no rec
   neither masked nor uncovered fails the output with no envelope. A Boolean or Integer is
   compared exactly, a mismatch an exceedance of 1. An indicator sample that is not Boolean or
   exactly 0 or 1 is `indicator-not-boolean`.
+- **Compare by change of value** (no `sampling`; issue #746, ruled by the owner on 2026-11-22).
+  Both series are step functions, the engine's held from frame to frame and the trend's from
+  sample to sample. An output's instants are `start`, `stop` and every sample time in the window
+  of the engine series, the trend series and its indicators, and every uncovered-stretch end;
+  masking and the zero fill are as above. A Boolean or Integer is compared exactly at each, which
+  is exact in time. A Real's envelope is built around the reference's step series (the held
+  value carried to each change, then the new value, so the funnel sees a step and not a ramp),
+  the bound corners inside the window join the instants, and each instant's exceedance is the
+  largest error over the stretch to the next. `exceedance_time_s` is then exact for a staircase
+  band and an upper bound otherwise. The band is the funnel port's, so pyfunnel's on the
+  `--bounds` files; the per-instant errors are not pyfunnel's. The receipt has no
+  `time.sampling`.
 - **Report.** Per output: `status`, `compared`, `masked`, `uncovered`, the role and tolerances
   of a Real, the half-sizes applied, `worst`, `first_exceedance_t`, `exceedance_time_s`, the
   masked intervals (at most 64) and masked exceedances (at most 16, never counted). The body

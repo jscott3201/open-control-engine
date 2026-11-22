@@ -255,7 +255,6 @@ bind and run codes (verify, exit 2):
   too-many-outputs              the commissioning reference compares more than 4,096 outputs
   source-refused                a trend source or the point mapping was refused (cause: the source reader's code)
   unit-refused                  a mapped point's unit does not fit its sequence port (cause: the unit code)
-  sampling-required             the commissioning reference gives no sampling, which a run needs for now
   too-many-indicators           the commissioning reference's indicator rules name more than 64 indicators
 
 commissioning spec codes (verify --commission, exit 2; the last four are causes of spec-refused):

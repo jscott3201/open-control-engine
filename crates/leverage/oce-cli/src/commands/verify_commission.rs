@@ -17,7 +17,8 @@
 //!    (decision 35);
 //! 3. the reference's own completeness, decided by the library before any other file is read:
 //!    an index past the end (`reference-out-of-range`), no `cxf` or no `window`
-//!    (`reference-incomplete`), no `sampling` (`sampling-required`);
+//!    (`reference-incomplete`). A reference with no `sampling` runs, compared by change of value
+//!    (issue #746);
 //! 4. its files, each resolved inside the spec's directory handle and bounded from its metadata
 //!    ([`super::commission_files`]);
 //! 5. with `--out DIR`, the output checks, which open `DIR` once
@@ -110,7 +111,7 @@ pub(crate) fn run(args: &CommissionArgs) -> Outcome {
     let Some(reference) = spec
         .references()
         .get(index)
-        .filter(|reference| runnable(&spec, reference))
+        .filter(|reference| runnable(reference))
     else {
         // The library refuses this reference before it opens a byte: no file is read for it.
         return finish_run(
@@ -168,12 +169,11 @@ pub(crate) fn run(args: &CommissionArgs) -> Outcome {
     finish_run(args, report, run, (loaded, running.elapsed()), out.as_ref())
 }
 
-/// Whether the library would run `reference` as far as its first file: a `cxf`, a `window` and a
-/// `sampling`, its own or the spec's. Anything else the library refuses before it reads a byte.
-fn runnable(spec: &CommissioningSpec, reference: &SpecReference) -> bool {
-    reference.cxf().is_some()
-        && reference.window().is_some()
-        && spec.sampling_for(reference).is_some()
+/// Whether the library would run `reference` as far as its first file: a `cxf` and a `window`.
+/// Anything else the library refuses before it reads a byte. A `sampling` is not needed: without
+/// one the outputs are compared by change of value (issue #746).
+fn runnable(reference: &SpecReference) -> bool {
+    reference.cxf().is_some() && reference.window().is_some()
 }
 
 /// The reference to run: `--reference N`, else the only one (index `0` also for a spec with

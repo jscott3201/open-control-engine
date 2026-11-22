@@ -1,0 +1,3 @@
+time,Setpoint,Enabled,Staged,Limited
+5,21,true,1,50
+30,21,true,1,50

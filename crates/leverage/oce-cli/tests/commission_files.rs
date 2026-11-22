@@ -316,8 +316,13 @@ fn nothing_is_written_on_a_refusal_before_the_first_write() {
         ("commission_out_refused_missing", |dir| {
             fs::remove_file(dir.join("fan.csv")).expect("remove");
         }),
-        ("commission_out_refused_sampling", |dir| {
-            support::commission::edit(dir, "spec.json", r#""sampling": 5,"#, "");
+        ("commission_out_refused_window", |dir| {
+            support::commission::edit(
+                dir,
+                "spec.json",
+                r#""window": { "start": 0, "stop": 30 },"#,
+                "",
+            );
         }),
     ];
     for (name, prepare) in cases {

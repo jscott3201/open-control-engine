@@ -36,6 +36,7 @@ diff of oracle.txt.
 """
 
 import csv
+import json
 import struct
 import sys
 from pathlib import Path
@@ -88,6 +89,12 @@ def sign(v):
 
 
 def funnel(reference, test, tol):
+    lower, upper, hw, hh = funnel_bounds(reference, tol)
+    return errors_at(lower, upper, test), hw, hh
+
+
+def funnel_bounds(reference, tol):
+    """The funnel's lower and upper bound around `reference`, and the half-sizes' extremes."""
     rx = [p[0] for p in reference]
     ry = [p[1] for p in reference]
     min_x = max_x = rx[0]
@@ -181,6 +188,12 @@ def funnel(reference, test, tol):
                 sys.exit("derive_run.py: a loop to remove; this oracle covers loop-free cases only")
         return [((x * mag_x) if norm else x, y) for x, y in corners]
 
+    return outline(False), outline(True), (min(hx), max(hx)), (min(hy), max(hy))
+
+
+def errors_at(lower_bound, upper_bound, test):
+    """Funnel's step 5: both bounds interpolated at each test x, and the error there."""
+
     def bound_at(bound, xs):
         values = []
         end = 1
@@ -195,12 +208,12 @@ def funnel(reference, test, tol):
             values.append(y0 + (((y1 - y0) / (x1 - x0)) * (x - x0)) if not equ((x1 - x0) * (x - x0), 0.0) else y0)
         return values
 
-    lower = bound_at(outline(False), [p[0] for p in test])
-    upper = bound_at(outline(True), [p[0] for p in test])
+    lower = bound_at(lower_bound, [p[0] for p in test])
+    upper = bound_at(upper_bound, [p[0] for p in test])
     errors = []
     for (_, y), low, up in zip(test, lower, upper):
         errors.append(low - y if y < low else (y - up if y > up else 0.0))
-    return errors, (min(hx), max(hx)), (min(hy), max(hy))
+    return errors
 
 
 # The aligned-grid envelope, from oce-conformance's funnel.rs as the design note describes it.
@@ -218,6 +231,17 @@ def value_at(curve, x):
 
 
 def aligned_grid(reference, test, tol):
+    lower, upper, hw, hh = aligned_grid_bounds(reference, tol)
+    errors = []
+    for x, y in test:
+        low, high = value_at(lower, x), value_at(upper, x)
+        above, below = y - high, y - low
+        errors.append((above if above > 0 else 0.0) - (below if below < 0 else 0.0))
+    return errors, hw, hh
+
+
+def aligned_grid_bounds(reference, tol):
+    """The aligned-grid lower and upper bound around `reference`, and the half-sizes' extremes."""
     xs = [p[0] for p in reference]
     ys = [p[1] for p in reference]
     range_x, range_y = max(xs) - min(xs), max(ys) - min(ys)
@@ -236,12 +260,7 @@ def aligned_grid(reference, test, tol):
                 low, high = min(low, ry - h), max(high, ry + h)
         lower.append((g, low))
         upper.append((g, high))
-    errors = []
-    for x, y in test:
-        low, high = value_at(lower, x), value_at(upper, x)
-        above, below = y - high, y - low
-        errors.append((above if above > 0 else 0.0) - (below if below < 0 else 0.0))
-    return errors, (min(r[2] for r in rects), max(r[2] for r in rects)), (
+    return lower, upper, (min(r[2] for r in rects), max(r[2] for r in rects)), (
         min(r[3] for r in rects), max(r[3] for r in rects))
 
 
@@ -400,8 +419,187 @@ def case(root, envelope):
     return lines
 
 
-def main(directory):
+# The change-of-value comparison (a reference with no sampling; the design note's "As landed: the
+# change-of-value comparison", ruled by the owner on 2026-11-22), derived from its statement.
+def held_at(times, t):
+    """The index of the last sample at or before t (the last of equal times), or None."""
+    found = None
+    for i, x in enumerate(times):
+        if x <= t:
+            found = i
+    return found
+
+
+def steps(instants, values):
+    """A series held at instants as funnel points: the held value carried to each change first."""
+    points = []
+    for k, (t, v) in enumerate(zip(instants, values)):
+        if k > 0 and v != values[k - 1]:
+            points.append((t, values[k - 1]))
+        points.append((t, v))
+    return points
+
+
+def read_bound(bound, t, side):
+    """The bound at t from the stretch after t ("right") or the one before it ("left")."""
+    xs = [p[0] for p in bound]
+    ys = [p[1] for p in bound]
+    if side == "right":
+        at_or_before = [i for i, x in enumerate(xs) if x <= t]
+        if not at_or_before:
+            return ys[0]
+        j = at_or_before[-1]
+        if xs[j] == t or j == len(xs) - 1:
+            return ys[j]
+        return ys[j] + (((ys[j + 1] - ys[j]) / (xs[j + 1] - xs[j])) * (t - xs[j]))
+    at_or_after = [i for i, x in enumerate(xs) if x >= t]
+    if not at_or_after:
+        return ys[-1]
+    j = at_or_after[0]
+    if xs[j] == t or j == 0:
+        return ys[j]
+    return ys[j - 1] + (((ys[j] - ys[j - 1]) / (xs[j] - xs[j - 1])) * (t - xs[j - 1]))
+
+
+def outside(y, low, up):
+    return low - y if y < low else (y - up if y > up else 0.0)
+
+
+def change_case(directory):
+    spec = json.loads((directory / "spec.json").read_text())
+    ref = spec["references"][0]
+    start = float(ref["window"]["start"])
+    stop = float(ref["window"]["stop"])
+    envelope = ref.get("envelope", "funnel")
+    role = ref.get("funnelReference", "engine")
+    max_age = float(ref["inputs"][1]["hold"]["maxAge"])
+    tolerance_base = {name: 0.0 for name in ["atolx", "atoly", "rtolx", "rtoly", "ltolx", "ltoly"]}
+    tolerance_base.update({k: float(v) for k, v in spec["tolerances"].items()})
+    main = read_csv(directory / "main.csv")
+    limit = read_csv(directory / "limit.csv")
+    outputs = read_csv(directory / "outputs.csv")
+    fan = read_csv(directory / "fan.csv")
+    main_times = [float(r["time"]) for r in main]
+    limit_times = [float(r["time"]) for r in limit]
+    frames = sorted(set(main_times) | set(limit_times))
+    executed, stretches, open_from = [], [], None
+    for t in frames:
+        last_limit = held_at(limit_times, t)
+        has_limit = last_limit is not None and t - limit_times[last_limit] <= max_age
+        if t in main_times and has_limit:
+            executed.append(t)
+            if open_from is not None and t > open_from:
+                stretches.append((open_from, t))
+            open_from = None
+        elif open_from is None:
+            open_from = t
+    if open_from is not None:
+        stretches.append((open_from, None))
+    ends = sorted([a for a, _ in stretches] + [b for _, b in stretches if b is not None])
+
+    def engine_value(t, name):
+        row = main[held_at(main_times, t)]
+        lim = limit[held_at(limit_times, t)]
+        return {
+            "TSet": kelvin(float(row["Supply Temp"])) + float(row["Offset"]),
+            "enOut": boolean(row["Enable"]),
+            "nOut": int(row["Stage"]),
+            "limOut": ratio(float(lim["Limit"])),
+        }[name]
+
+    trend_times = [float(r["time"]) for r in outputs]
+    trend = {
+        "TSet": [kelvin(float(r["Setpoint"])) for r in outputs],
+        "enOut": [boolean(r["Enabled"]) for r in outputs],
+        "nOut": [int(r["Staged"]) for r in outputs],
+        "limOut": [ratio(float(r["Limited"])) for r in outputs],
+    }
+    fan_times = [float(r["time"]) for r in fan]
+    fan_values = [boolean(r["Fan Status"]) for r in fan]
+    engine_series = {name: [engine_value(t, name) for t in executed]
+                     for name in ["TSet", "enOut", "nOut", "limOut"]}
+    lines = [f"case\t{directory.name}"]
+    for name in ["TSet", "enOut", "limOut", "nOut"]:
+        real = name in ("TSet", "limOut")
+        kind = "real" if real else "discrete"
+        gated = name == "limOut"
+        times = set([start, stop]) | set(executed) | set(trend_times) | set(ends)
+        if gated:
+            times |= set(fan_times)
+        instants = sorted(t for t in times if start <= t <= stop)
+        engine_at = [held_at(executed, t) for t in instants]
+        trend_at = [held_at(trend_times, t) for t in instants]
+        if engine_at[0] is None or trend_at[0] is None:
+            lines += report(name, kind, [], [], [], [])
+            continue
+        fates = []
+        for t in instants:
+            on = True
+            if gated:
+                index = held_at(fan_times, t)
+                on = index is not None and fan_values[index]
+            if not on:
+                fates.append("masked")
+            elif any(t >= a and (b is None or t < b) for a, b in stretches):
+                fates.append("uncovered")
+            else:
+                fates.append("compared")
+        engine = [engine_series[name][i] for i in engine_at]
+        test_values = [trend[name][i] for i in trend_at]
+        if not real:
+            exceedances = [
+                (1.0 if a != b else 0.0) if f == "compared" else (0.0 if f == "masked" else float("nan"))
+                for a, b, f in zip(engine, test_values, fates)
+            ]
+            lines += report(name, kind, instants, fates, exceedances, [])
+            continue
+        engine = [v if f == "compared" else 0.0 for v, f in zip(engine, fates)]
+        test_values = [v if f == "compared" else 0.0 for v, f in zip(test_values, fates)]
+        if "compared" not in fates:
+            lines += report(name, kind, instants, fates, [float("nan")] * len(instants), [])
+            continue
+        reference, test = (engine, test_values) if role == "engine" else (test_values, engine)
+        tolerances = dict(tolerance_base)
+        if name == "TSet":
+            tolerances["atoly"] = 0.05
+        build = funnel_bounds if envelope == "funnel" else aligned_grid_bounds
+        lower, upper, hw, hh = build(steps(instants, reference), tolerances)
+        corners = {x for x, _ in lower} | {x for x, _ in upper}
+        pieces = sorted(set(instants) | {x for x in corners if start < x < stop})
+        piece_fates, piece_test = [], []
+        for t in pieces:
+            k = held_at(instants, t)
+            piece_fates.append(fates[k])
+            piece_test.append(test[k])
+        errors = []
+        for k, (t, y) in enumerate(zip(pieces, piece_test)):
+            last_error = outside(y, read_bound(lower, t, "left"), read_bound(upper, t, "left"))
+            if k + 1 < len(pieces):
+                first_error = outside(y, read_bound(lower, t, "right"), read_bound(upper, t, "right"))
+                end = pieces[k + 1]
+                end_error = outside(y, read_bound(lower, end, "left"), read_bound(upper, end, "left"))
+                errors.append(end_error if end_error > first_error else first_error)
+            else:
+                errors.append(last_error)
+        shown = [e if f != "uncovered" else float("nan") for e, f in zip(errors, piece_fates)]
+        extra = [f"half_width\t{bits(hw[0])}\t{bits(hw[1])}", f"half_height\t{bits(hh[0])}\t{bits(hh[1])}"]
+        extra += [f"masked_exceedance\t{bits(t)}\t{bits(e)}"
+                  for t, e, f in zip(pieces, errors, piece_fates) if f == "masked" and e > 0]
+        lines += report(name, kind, pieces, piece_fates, shown, extra)
+    return lines
+
+
+def main(directory, mode=None):
     root = Path(directory)
+    if mode == "change-of-value":
+        lines = []
+        for case_directory in sorted(p for p in (root / "change_of_value").iterdir() if p.is_dir()):
+            lines += change_case(case_directory)
+        for golden in sorted((root / "change_of_value").glob("*.receipt.json")):
+            lines.append(f"receipt\t{golden.name}\t{receipt_id(golden.read_text(encoding='ascii'))}")
+        sys.stdout.write("# derive_run.py over the run fixture's change-of-value cases\n")
+        sys.stdout.write("\n".join(lines) + "\n")
+        return
     lines = case(root, "funnel") + case(root, "aligned-grid")
     for golden in sorted((root / "receipts").glob("*.receipt.json")):
         lines.append(f"receipt\t{golden.name}\t{receipt_id(golden.read_text(encoding='ascii'))}")
@@ -410,4 +608,4 @@ def main(directory):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(*sys.argv[1:3])

@@ -406,7 +406,10 @@ reference are interpolated at the test series' times. The verifier only prepares
   makes that output `no_data`.
 - Without `sampling`, both series are compared at their own times. With `sampling = s`, both are
   resampled by **zero-order hold** at `start + k * s` (by multiply, as replay's grid), taking the
-  last sample at or before each instant, the last of an equal-time pair included.
+  last sample at or before each instant, the last of an equal-time pair included. *(Restated by
+  issue #746, ruled by the owner on 2026-11-22:)* without `sampling`, both series are step
+  functions held from sample to sample and are compared over the stretches between their
+  instants, never only at them ("As landed: the change-of-value comparison").
 - Zero-order hold, not linear interpolation, because the engine's outputs change only at frames and
   a trend log reports the last value it saw: interpolating would invent values neither controller
   produced and smear a late step that the time tolerance exists to judge.
@@ -760,7 +763,7 @@ vector file's rules, and arrays keep the order each row states.
 | `data` | string | always | `trended` or `synthetic` (decisions 4 and 41) |
 | `parameters` | array | always | the edits as `{ "path", "value" }`, `path` the canonical parameter path, sorted by path bytes; `[]` when there are none; at most 256 |
 | `content_id` | string | when `parameters` is not empty | `Engine::content_id` after the edits (decision 30) |
-| `time` | object | always | `base` (always `recorded`); `origin`, when the spec gives one, as its canonical form spells it; `window` as `{ "start", "stop" }`; `sampling`, when one applies to the reference |
+| `time` | object | always | `base` (always `recorded`); `origin`, when the spec gives one, as its canonical form spells it; `window` as `{ "start", "stop" }`; `sampling`, when one applies to the reference. With no `sampling` the outputs were compared by change of value (#746), and the object says so by having none |
 | `mapping` | object | when the mapping is a file | `{ "path", "digest" }`: the path as the spec writes it and `fnv1a128:<32 hex>` of the bytes supplied. An inline mapping is inside `spec_id` |
 | `units.table` | string | always | `units/v1` |
 | `units.columns` | array | always | one `{ "device", "cdl", "from", "to" }` (`cdl` is the mapping's `cdl.name` as written, never a canonical path) per point a source of the reference reads whose mapping gives a unit on both sides, identity pairs included, sorted by `device` bytes; at most 256 |
@@ -782,7 +785,7 @@ There is no mutant score and no gate (decision 7).
 | `output` | string | always | the canonical path |
 | `type` | string | always | `real`, `integer` or `boolean`: a Real goes through the envelope, the other two are compared exactly (decision 8) |
 | `status` | string | always | `no_data` when `compared == 0`; else `fail` when any compared instant has an exceedance above zero; else `pass` |
-| `compared` | integer | always | the test instants compared. With `sampling` they are the instants `start + k * s` in the window. Without it they are the test series' own sample times in the window, with `start` and `stop` (decision 14): the test series is the trend's under `funnel_reference: "engine"` and the engine's under `"trend"`, and for a Boolean or Integer output it is the trend's, the engine's value held to each |
+| `compared` | integer | always | the test instants compared. With `sampling` they are the instants `start + k * s` in the window. Without it *(restated by #746)* they are the output's change-of-value instants in the window: `start`, `stop`, every sample time of the engine series, the trend series and the output's indicators, and every end of an uncovered stretch; for a Real output also every corner of either bound of its envelope. Each stands for the stretch from it to the next instant |
 | `masked` | integer | always | the test instants an indicator excluded |
 | `uncovered` | integer | always | the test instants in a refused stretch that no indicator masked (decision 28): from a frame refused for a missing sample up to the next executed frame, or to `stop` when none follows |
 | `funnel_reference` | string | when `type` is `real` | `engine` or `trend`: which series the envelope is built around (decision 11). It is per output here because only a Real output has an envelope; a vector receipt carries one `funnel_reference` for its body, always `expectation` |
@@ -790,7 +793,7 @@ There is no mutant score and no gate (decision 7).
 | `half_width`, `half_height` | object | when an envelope was built | `{ "min", "max" }` over the reference points, in model seconds and in the output's CDL unit, before `x` is normalised. Under `funnel`: the half-sizes of "Envelope" step 1 with its fallbacks, so never zero. Under `aligned-grid`: the sum of the three tolerance terms at each reference point, with no fallback, so zero when every tolerance of the axis is zero |
 | `worst` | object | when `status` is `fail` | `{ "t", "exceedance" }`: the largest exceedance over the compared instants and the earliest instant that has it |
 | `first_exceedance_t` | real | when `status` is `fail` | the earliest compared instant with an exceedance above zero |
-| `exceedance_time_s` | real | always | the sum, in ascending time order, of `t[k + 1] - t[k]` over the compared instants `k` with an exceedance above zero, `t[k + 1]` the next test instant; the last instant adds nothing; `0.0` when there is none |
+| `exceedance_time_s` | real | always | the sum, in ascending time order, of `t[k + 1] - t[k]` over the compared instants `k` with an exceedance above zero, `t[k + 1]` the next test instant; the last instant adds nothing; `0.0` when there is none. Without `sampling` *(#746)* an instant's exceedance is the largest error over its stretch, so this is the time outside exactly for a Boolean or Integer output and for a Real output whose band is flat between its corners (a step series' band without a local `x` tolerance), and an upper bound otherwise; a step's vertical segment counts no time |
 | `masked_intervals` | array | always | `{ "from", "to" }` in model seconds, the first and last instant of each run of masked instants, in time order, at most 64 |
 | `masked_intervals_total` | integer | always | the count before the cap |
 | `masked_exceedance` | array | always | `{ "t", "exceedance" }` for each masked instant whose error is above zero, in time order, at most 16; reported, never counted (decision 23). The error is the envelope's at that instant on the series as zeroed: the test's value there is zero, and the bounds are built from the zeroed reference |
@@ -808,7 +811,10 @@ one place: a mask edge that falls between the two series' sample times. Without 
 reference and the test are zeroed at their own instants, and next to an edge the band still
 runs from the reference's last unmasked value to zero while the test is already zero. With
 `sampling` both series are zeroed at the same instants and the list is empty, except in the
-rounding case of "Envelope". An uncovered instant's error is not recorded.
+rounding case of "Envelope". An uncovered instant's error is not recorded. *(Restated by #746:)*
+without `sampling` every mask edge is an instant of both series, so both are zeroed from the same
+instant; a masked instant's error is the largest over its stretch, and can be above zero next
+to an edge, where the band built from the zeroed reference still spans the step.
 
 **A non-finite engine sample.** A Real output whose engine series holds a NaN or an infinity at
 an instant that is neither masked nor uncovered is `fail`: no envelope is built for it,
@@ -936,7 +942,9 @@ and the review of GitHub #744:
    Integer `2`) is `indicator-not-boolean`, exit 2, with no receipt. The refusal names the
    indicator, the time and the value. Every sample is checked, whether or not the window
    reaches it.
-6. **`sampling` is required for now.** A reference whose own `sampling` and the spec's are both
+6. **`sampling` is required for now.** *(Lifted by GitHub #PRNUM, issue #746: see "As landed:
+   the change-of-value comparison". The code `sampling-required` is gone.)* A reference whose own
+   `sampling` and the spec's are both
    absent is refused as `sampling-required`, exit 2, with no receipt. Without a grid, the test
    instants were only the test series' own times, and the envelope interpolated the reference
    linearly between its samples. A value the engine held between two frames was therefore
@@ -1071,7 +1079,8 @@ measured about 250 at 2^20 frames). The receipt's complete lists are bounded at 
 `too-many-points` and `compare-refused` are shared with it): `reference-out-of-range`, `reference-incomplete`, `spec-refused`, `unknown-indicator`,
 `indicator-not-boolean`, `duplicate-output`, `frame-refused`, `too-many-sources`,
 `too-many-outputs`, `source-refused`, `unit-refused`, `sampling-required` and
-`too-many-indicators`. To `UNIT_ERROR_CODES` it adds `difference-for-absolute` and
+`too-many-indicators` (`sampling-required` removed again by #746, so `too-many-indicators`
+follows `unit-refused`). To `UNIT_ERROR_CODES` it adds `difference-for-absolute` and
 `port-unit-mismatch`. A `frame-refused` carries its class as the cause, and
 `VerifyError::frame_index`, `frame_time` and `engine_message` (cut to 256 bytes at a character
 boundary).
@@ -1092,6 +1101,135 @@ boundary).
 - the M3 gate row (decision 39): a synthetic trend from the engine, its setpoint raised by
   0.1 K, fails with zero tolerances and passes within `atoly = 0.2`. Both golden receipts are
   labelled `data: synthetic`.
+
+### As landed: the change-of-value comparison
+
+*(GitHub #PRNUM, issue #746.)* A reference with no `sampling`, its own or the spec's, runs again:
+its outputs are compared **by change of value**. The refusal `sampling-required` (ruling 6
+above) is lifted and its code removed. A reference with a `sampling` runs exactly as before, and
+every receipt and transcript of one is byte-identical, the Building 33 day's included. The code
+is `src/commissioning/change_of_value.rs` (the instants, the step series, the pieces) and
+`compare_change.rs` (one output), beside `compare_output.rs`, which keeps the grid path.
+
+**Why.** The review of GitHub #744 reproduced two false passes without a grid (ruling 6): a
+trend step 3 s late passed under a 1 s `x` tolerance, and a Boolean toggling between two logged
+points passed. The issue asked for a step in the reference at each change and for discrete
+outputs at the union of both series' times. Building it found two more:
+
+- **A step reference alone does not fix the late step** when the trend is also logged on
+  change. The engine steps from 0 to 1 at 10 s and the trend logs `(0, 0)`, `(13, 1)`, `(20,
+  1)`: at the trend's own instants every value is inside a step band with `atolx` 1. The value
+  the trend held from 11 s to 13 s has to be judged, so the test is a step series too.
+- **A pulse the trend never logged** passes at the series' own times, or at their union. The
+  engine is 1 higher from 10 s to 20 s and the trend logs only its value at 0 s: every instant
+  is at 10 s or 20 s, where the `x` tolerance makes the band widest. Only the band's corners,
+  at 11 s and 19 s, lie where it is narrow.
+
+**Ruled by the owner on 2026-11-22**, of four options put with the two findings above (the test
+at its own points; at the union of both series' points; the union and the band's corners read
+by funnel's step 5; a piecewise comparison over held values), the last, as recommended:
+
+1. **Both series are step functions.** The engine's output is held from each executed frame to
+   the next, as it holds on a controller; a trend from each logged sample to the next. Each is
+   read by zero-order hold, as on the grid path.
+2. **The series instants** of an output are `start`, `stop`, and every time within the window
+   of: the engine series (its executed frames), the trend series, each of the output's
+   indicators, and the ends of each uncovered stretch. Between two of them no series, no
+   indicator and no stretch changes, so an instant's fate (masked, uncovered, compared) holds
+   to the next. Masked and uncovered instants are zeroed in both series before the envelope is
+   built: OBC §12.7.2's zero fill is unchanged (decision 46 of the vectors note; issue #745 is
+   untouched), and since every mask edge is an instant of both series, both step to zero there.
+3. **A Boolean or Integer output** is compared exactly at each series instant. Both series are
+   constant from one instant to the next, so the comparison is exact in time, and
+   `exceedance_time_s` is the time in mismatch. This is the issue's "union of both series'
+   times", with the indicators' times and the stretches' ends added: without them a mismatch
+   that starts inside a masked stretch and runs past its end would be missed.
+4. **A Real output.** The envelope is built around the reference's **step series**: the series
+   held at the series instants, with, where the value changes, the held value carried to that
+   instant first and the new value starting there, so funnel's linear interpolation draws a
+   step and not a ramp. The test's step series is handed to the envelope beside it. The
+   instants then also take every corner of the two bounds strictly inside the window, each
+   with the fate and the test value of the series instant before it. Between two instants the
+   test is constant and each bound a straight line, so the error, funnel's `max(0, y - y_up) -
+   min(0, y - y_low)`, is largest at one end: **an instant's exceedance is the larger of the
+   error at the instant, both bounds read from the stretch after it, and the error at the next
+   instant, both bounds read from the stretch before it.** At a vertical in a bound (two corners
+   at one `x`) the reading from after takes the later corner and from before the earlier one.
+   The last instant, `stop`, is the error there, the bounds read from before. The envelope's
+   own errors at the test's points are not read.
+5. **The figures** keep their rules over these instants: `compared`, `masked` and `uncovered`
+   count them; `worst` and `first_exceedance_t` are the instants of the stretches; and
+   `exceedance_time_s`, the sum of the stretches with an exceedance above zero, is **exact for a
+   staircase band** (flat between corners, as a step series' band is without a local `x`
+   tolerance) **and an upper bound otherwise**, where the error is above zero over part of a
+   stretch only. `masked_exceedance` lists masked instants whose stretch's error is above zero.
+6. **What is pyfunnel's.** The band is: the bounds are the funnel port's construction around the
+   reference's step series, which the pinned pyfunnel 2.1.1 accepts with repeated `x` values,
+   and `--bounds` writes the step series and the bounds as the library keeps them, so pyfunnel
+   run on `reference.csv` and `test.csv` draws the same bound curves. The evidence that the port
+   matches pyfunnel on repeated `x` is the hostile case `equal_times` of the differential
+   (`tests/fixtures/funnel/hostile/equal_times/`: a step reference and a step test, `x` repeated
+   twice and three times, all five files byte for byte), so no new capture was made. **The
+   per-instant errors on this path are not pyfunnel's**: pyfunnel reads its error only at the
+   test's points, and this path reads the largest error over each stretch. No receipt figure of
+   a run without `sampling` is claimed to match pyfunnel.
+
+**The orchestrator's calls on 2026-11-22** (not owner rulings), each pinned by a test in
+`tests/commissioning/run_change_readings.rs`:
+
+1. **Equal times collapse to the last row**, as on the grid path: a §12.2 switch written as two
+   rows at `t` is one step at `t`, and a value that lasts no time is not compared.
+2. **One sample at or before `start`** is held over the window: a series needs no other.
+3. **A series that ends before `stop` is held to `stop`**, as on the grid path. A trend that
+   stopped logging is therefore **held, not reported**: its last value is compared to the end
+   of the window, and the receipt does not say that the trend fell silent.
+4. **Masking**: the zero fill stays, and mask and uncovered edges are instants of both series
+   (rule 2 above).
+5. **A vertical segment counts no time**: a carry point and the new value share one instant,
+   instants are distinct, and the excess at a vertical is folded into the stretch on each side.
+
+**The receipt.** With no `sampling` the body's `time` object has none, and `TimeRecord::sampling`
+is an `Option`; nothing else changes shape. `compared` and `exceedance_time_s` are restated in
+the output table above.
+
+**The bounds before the replay.** No limit is added. An output's series instants are at most
+its window's frames, trend samples and indicator-file samples plus two (a trace indicator's
+samples and every stretch end are frame times), all known before the replay; a Real output's
+step series are then at most twice that less one. The per-output cap (`max_funnel_points`, or
+`max_aligned_grid_points` under `aligned-grid`) holds that count of points, the run's work
+holds the instants times one plus the indicators, and the grid envelope's quadratic work the
+points squared, each refused before the replay as the run's own `too-many-points`, so the
+envelope's own `too-many-points` is never reached (pinned at the cap and one past it). The
+corners the envelope adds as instants are at most its own output, bounded by its limits. The
+union of the instants is one two-way merge per list, linear in the lengths: two interleaved
+series of 25,000, 50,000 and 100,000 samples take exactly 75,003, 150,003 and 300,003 steps.
+A whole run of four outputs with 25,000, 50,000 and 100,000 frames and trend samples took
+13.8, 28.8 and 54.2 ms in a release build (133, 260 and 518 ms in a debug build), measured once
+on the development machine and not pinned.
+
+**Evidence:**
+
+- sixteen synthetic runs of the `plant` subject (`tests/fixtures/commissioning/run/
+  change_of_value/`), every figure, instant and exceedance of every output equal bit for bit to
+  `derive_run.py <run fixture> change-of-value` (`change_of_value/oracle.txt`), which shares no
+  code with the crate and also recomputes the ids of three golden receipts there;
+- the two reproductions, failing: the late step at 11 s, 0.95 K outside for 2.0 s, and the
+  unlogged toggle at 10 s for 10.0 s; and the funnel at the series' own times passing the late
+  step, as GitHub #744 first built it;
+- trends that are right, passing: steps at the engine's frames, a step half and a whole `x`
+  tolerance late, a slow ramp logged past a 0.04 K deadband under a 0.05 K band, a Boolean
+  switching on an engine frame written as two rows, and outputs that never change;
+- one receipt for two runs, chunk sizes 1, 7 and the whole run, and every order of the files;
+- `oce verify --commission` on three such specs, its stdout each golden receipt byte for byte,
+  and `--out --bounds` writing the step series with their repeated `x`;
+- fifteen mutants of the new path, each caught: a ramp for the step (no carry point); the carry
+  taking the new value; the trend's or the engine's times dropped from the union; the band's
+  corners, the indicators' times or the stretch ends dropped from the instants; a stretch's
+  error at its start only or at its end only; a bound read from the wrong side at either end;
+  no zero fill; a corner taking the next instant's test value; and the bound before the replay
+  without its doubling or without the frames. The error at a stretch's end only survived the
+  sixteen runs, whose bands never fall away from the test right after a vertical, and is caught
+  by a unit test of that band shape.
 
 ## Rust API sketch
 
@@ -1308,7 +1446,7 @@ open:
 - **Order of the refusals**: usage; the spec (4 MiB from metadata, then the spec reader); the
   reference (`reference-required`, decision 35); the reference's own completeness, decided by
   the library before any other file is read (`reference-out-of-range`, `reference-incomplete`,
-  `sampling-required`); the files, in the receipt's order of sources after the CXF and the
+  and, until #746, `sampling-required`); the files, in the receipt's order of sources after the CXF and the
   mapping; with `--out`, the output checks; the run; the writes. The output checks come after
   the reads and before the run: `DIR` must be an existing directory and `DIR/outputs` must not
   exist (`write-failed`), and a `DIR/receipt.json` that is the spec or a file the run read, by
@@ -1339,8 +1477,7 @@ open:
   rule's `not-boolean`, the mapping's spec code, the unit code) is not carried to the report,
   because `VerifyError` holds one cause, and the detail names the place and the reason instead.
 
-**Open, and not resolved here:** the change-of-value comparison that lifts `sampling-required`
-(#746), the library's follow-ups from the review of GitHub #744, among them the 1-ulp last
+**Open, and not resolved here:** the library's follow-ups from the review of GitHub #744, among them the 1-ulp last
 instant (#747), and the zero fill of masked ticks (#745).
 
 ## Building 33 data

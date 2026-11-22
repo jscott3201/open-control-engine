@@ -48,9 +48,11 @@
 mod bind_ports;
 mod bind_reference;
 mod canonical;
+mod change_of_value;
 mod choices;
 mod combi_time_table;
 mod comments;
+mod compare_change;
 mod compare_output;
 mod decode;
 mod decode_sources;

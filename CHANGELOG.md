@@ -1383,6 +1383,39 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **`oce-verify` compares a commissioning reference with no `sampling` by change of value**
+  (GitHub #PRNUM, issue #746; design note `docs/design/commissioning.md`, "As landed: the
+  change-of-value comparison", ruled by the owner on 2026-11-22). Both series are step functions:
+  the engine's output held from frame to frame, a trend's from sample to sample. An output's
+  instants are the window's ends and every sample time in the window of the engine series, the
+  trend series and its indicators, and every uncovered-stretch end. A Boolean or Integer output
+  is compared exactly at each, which is exact in time. A Real output's envelope is built around
+  the reference's step series (the held value carried to each change, then the new value, so the
+  funnel draws a step and not a ramp), the band's corners inside the window join the instants,
+  and each instant's exceedance is the largest error over the stretch to the next.
+  `exceedance_time_s` is exact for a staircase band and an upper bound otherwise; a step's
+  vertical segment counts no time. The zero fill of masked instants is unchanged (#745). The
+  band and the `--bounds` files are the funnel port's (pyfunnel 2.1.1 accepts repeated `x`; the
+  hostile differential case `equal_times` is the evidence); the per-instant errors are not
+  pyfunnel's. The two false passes the review of GitHub #744 reproduced now fail: a trend step
+  3 s late under a 1 s `x` tolerance (outside 0.95 K for 2.0 s from 11 s) and a Boolean toggling
+  between two logged points (a mismatch for 10.0 s from 10 s); so does a pulse the trend never
+  logged, found while building it. Each output's points are bounded before the replay from the
+  frames, trend samples and indicator-file samples in the window, under the existing caps, so
+  the envelope's own `too-many-points` stays unreachable. Evidence: sixteen synthetic runs equal
+  bit for bit to `derive_run.py`'s independent derivation, three golden receipts, and mutants.
+  A run with a `sampling` is unchanged, every golden and transcript byte-identical.
+- **A commissioning reference with no `sampling` runs: `sampling-required` is gone** (GitHub
+  #PRNUM, issue #746). The owner's ruling of 2026-11-21 refused such a reference until a
+  faithful comparison existed; it now runs by change of value. The code is removed from
+  `VERIFY_ERROR_CODES` (48 codes; `too-many-indicators` follows `unit-refused`), and
+  `TimeRecord::sampling` is an `Option<SpecNumber>`: a receipt with no `sampling` has no
+  `time.sampling`.
+- **`oce verify --commission` runs a spec whose reference gives no `sampling`** (GitHub #PRNUM,
+  issue #746). The verb reads the reference's files and prints the library's receipt, where it
+  printed the `sampling-required` report and exited 2; `oce vocab` no longer lists that code.
+  The transcript `verify_commission_sampling_required` is replaced by three change-of-value
+  runs, each stdout the library's golden receipt byte for byte.
 - **`oce` reads and writes through directory handles everywhere** (GitHub #777, issue #771;
   Unix). Three places in `crates/leverage/oce-cli` still reached a directory or a file by path
   after their checks, so whoever could change the directories during a run could redirect them;

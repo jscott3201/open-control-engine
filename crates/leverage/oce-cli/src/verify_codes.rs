@@ -296,10 +296,6 @@ pub(crate) const VERIFY_MEANINGS: &[(&str, &str)] = &[
         "a mapped point's unit does not fit its sequence port (cause: the unit code)",
     ),
     (
-        "sampling-required",
-        "the commissioning reference gives no sampling, which a run needs for now",
-    ),
-    (
         "too-many-indicators",
         "the commissioning reference's indicator rules name more than 64 indicators",
     ),

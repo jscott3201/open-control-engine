@@ -129,7 +129,9 @@ fn time_record(time: &TimeRecord) -> Json {
     if let Some(origin) = &time.origin {
         entries.push(entry("origin", Json::str(origin.as_str())));
     }
-    entries.push(entry("sampling", Json::Raw(time.sampling.canonical())));
+    if let Some(sampling) = &time.sampling {
+        entries.push(entry("sampling", Json::Raw(sampling.canonical())));
+    }
     Json::object(entries)
 }
 

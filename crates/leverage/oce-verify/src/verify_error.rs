@@ -173,10 +173,6 @@ pub enum VerifyErrorKind {
     /// the [`crate::UnitError`] code (`port-unit-mismatch`, `absolute-for-difference`,
     /// `difference-for-absolute`).
     UnitRefused,
-    /// A commissioning reference with no `sampling`, its own or the spec's (owner ruling of
-    /// 2026-11-21): without a grid the envelope would judge a value the engine held between two
-    /// samples as a ramp. Lifted when a change-of-value comparison lands.
-    SamplingRequired,
     /// A commissioning reference whose indicator rules give more than
     /// [`crate::MAX_INDICATORS`] distinct names.
     TooManyIndicators,
@@ -232,7 +228,6 @@ impl VerifyErrorKind {
         Self::TooManyOutputs,
         Self::SourceRefused,
         Self::UnitRefused,
-        Self::SamplingRequired,
         Self::TooManyIndicators,
     ];
 
@@ -287,7 +282,6 @@ impl VerifyErrorKind {
             Self::TooManyOutputs => "too-many-outputs",
             Self::SourceRefused => "source-refused",
             Self::UnitRefused => "unit-refused",
-            Self::SamplingRequired => "sampling-required",
             Self::TooManyIndicators => "too-many-indicators",
         }
     }
@@ -342,7 +336,6 @@ pub const VERIFY_ERROR_CODES: &[&str] = &[
     "too-many-outputs",
     "source-refused",
     "unit-refused",
-    "sampling-required",
     "too-many-indicators",
 ];
 
