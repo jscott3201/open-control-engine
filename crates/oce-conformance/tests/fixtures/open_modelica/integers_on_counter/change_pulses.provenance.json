@@ -1,0 +1,23 @@
+{
+  "class": "CDL.Integers.OnCounter",
+  "pilot": "tools/openmodelica-event-reference/events/OnCounterChangePilot.mo",
+  "pilot_sha256": "9155a73aceaabd3b84ea3a15b0c504a9a9dc9ab9c9263f82b781509327aaabc5",
+  "simulate_template_sha256": "8e14c335d78af9b66502d46232b6c65f0585062023e2d901b388f19450ececd5",
+  "image": "openmodelica/openmodelica@sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
+  "omc": "OpenModelica 1.25.1",
+  "architecture": "arm64",
+  "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "buildings_tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
+  "msl_commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
+  "msl_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
+  "class_source": "Buildings/Controls/OBC/CDL/Integers/OnCounter.mo",
+  "class_source_sha256": "9a7bdbc0e6e915868d045b1c90aab336577dbe676dbef19d072a9fec1ca1bf45",
+  "also_source": "Buildings/Controls/OBC/CDL/Logical/Change.mo",
+  "also_source_sha256": "87ddbe1b35598b6aee12e0310fa204da12bd2ef4aa7a3d5185388d8165a520a4",
+  "settings": "cvode, tolerance 1e-6, 0 to 10 s, output every 1 s",
+  "projection": "at each frame instant 0 to 9 s, the last row within 1e-6 s of it",
+  "command": "docker run --rm --pull=never --network none --memory 4g --cpus 4 --user <host-uid>:<host-gid> -e HOME=/work -v <buildings>:/libs/buildings:ro -v <msl>:/libs/msl:ro -v tools/openmodelica-event-reference/events:/scripts:ro -v <run directory>:/work -w /work <image> omc /work/run.mos",
+  "raw": "change_pulses.raw.csv",
+  "change_pulses_sha256": "233761d4f02bdaac8e2e0a98840de829049e536cac20ec235a1975b829f6b52c",
+  "raw_sha256": "12aaf8056505264bf1fec12f9137f5bc08f16367b479c7f200b1a3289dec81b5"
+}

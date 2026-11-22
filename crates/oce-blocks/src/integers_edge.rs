@@ -40,7 +40,13 @@ fn word_i64(word: u64) -> i64 {
 /// and only captures the input levels as history. A counter whose output reaches its own `trigger`
 /// or `reset` (`y -> GreaterEqualThreshold -> reset`, say) is an algebraic loop; a
 /// `CDL.Logical.Pre` on that path breaks it and applies the event one frame later. Count overflow
-/// wraps two's-complement like the integer arithmetic family.
+/// wraps two's-complement like the integer arithmetic family. OpenModelica 1.25.1 agrees exactly
+/// at every frame, with the trigger true from frame 0 and with it rising at frame 1, a `reset` held
+/// across a trigger edge included (issue #670; `oce-conformance`'s
+/// `open_modelica_event_triggers.rs`). Fed by `CDL.Logical.Change` of a signal that changes on two
+/// consecutive frames, it counts one event where OpenModelica counts two: `Change` holds `true`
+/// for a frame here and pulses at each instant there (`open_modelica_event_pulses.rs`, a
+/// registered known divergence, open in issue #800).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OnCounter {
     pub(crate) y_start: i64,

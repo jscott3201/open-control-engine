@@ -461,12 +461,20 @@ const SAMPLE_INDEX_EPS: f64 = 1e-9;
 /// `feeds_through` is vacuously `false` (the `Constant` convention). Stateful `[S]`: the last sample
 /// index already fired lives in one `[S]` state word as an `i64` (seeded to `-1` = "no sample yet").
 ///
-/// Robust to **arbitrary host cadence** (`01` §11.1 req 1/2): coarser than `period` (fires on the
-/// tick that first reaches/passes a boundary), equal, or finer (fires only on the crossing tick). If
-/// one coarse tick spans several boundaries it fires **once** and snaps `last_k` to the current `k`
-/// (samples the current instant — no sub-tick replay; a documented host-cadence behavior OUT of the
-/// conformance guarantee, `01` §11.1 req 2 / `07` §13, since the `EventAligned` driver pins a tick on
-/// every instant).
+/// Defined at **any host cadence** (`01` §11.1 req 1/2): frames coarser than `period` (fires on
+/// the tick that first reaches/passes a boundary), equal to it, or finer (fires only on the
+/// crossing tick). If one coarse tick spans several boundaries it fires **once** and snaps `last_k`
+/// to the current `k` (samples the current instant — no sub-tick replay; a documented host-cadence
+/// behavior OUT of the conformance guarantee, `01` §11.1 req 2 / `07` §13, since the `EventAligned`
+/// driver pins a tick on every instant).
+///
+/// **What that means for an event input it feeds.** At a `period` at or below the frame step every
+/// frame reaches a new sample instant, so the output is `true` on every frame. A `when` input it
+/// feeds (`Discrete.TriggeredSampler.trigger`, a reset `trigger`, ...) then sees no false-to-true
+/// transition after frame 0 and never fires, where Modelica's `sample` is true only at each
+/// instant and fires the `when` at every one. Only a `period` above the frame step lets the output
+/// fall between samples. This is the HostTick v1 projection limit of issue #800 (open; pinned by
+/// `oce-conformance`'s `sample_trigger_event_inputs.rs`).
 #[derive(Clone, Copy, Debug)]
 pub struct SampleTrigger {
     pub(crate) period: f64,

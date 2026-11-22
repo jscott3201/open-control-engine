@@ -292,7 +292,11 @@ to decide something the note left open, the record is here; the decided text abo
   `derive_valve.py` appends a one-frame disable and its re-enable, where `Change` is still true
   at the re-enable, after the original 74 frames: 78 frames, 19 labelled stretches. Of the
   original 74 rows, 4 move (25, 237, 272 and 307 s, to 0) and 70 are byte-identical; the engine
-  matches all 78 bit for bit, and the derivation catches all eleven mutants again.
+  matches all 78 bit for bit, and the derivation catches all eleven mutants again. The appended
+  frames tell the two variants apart under the engine's rule only: in Modelica `Change` is true
+  at each change's instant, so it fires at the disable and again at the re-enable, and both
+  variants reset at 382 s. OpenModelica does; the engine does not (GitHub #796, issue #800, which
+  waits on an owner decision).
 - **golden-gen: nine files, not seven.** The rule is re-derived in `reals_pid.rs`,
   `reals_integrator.rs`, `discrete_sources.rs`, `integers_conversions.rs` (the `OnCounter`
   rule) and nine sequence files: `cdl_recurrences.rs` (`TriggeredSampler`), `control_loops.rs`,

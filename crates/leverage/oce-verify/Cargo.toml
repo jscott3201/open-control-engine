@@ -46,3 +46,6 @@ oce-bless = { workspace = true }
 # The load-cost test measures allocations on the reading thread; the crate and version
 # `oce-replay` already uses.
 allocation-counter = "0.8.1"
+# The OpenModelica evidence tests check the digests their provenance records hold; the crate and
+# version `oce-conformance` already uses, so the lockfile gains no package.
+sha2 = "0.10"

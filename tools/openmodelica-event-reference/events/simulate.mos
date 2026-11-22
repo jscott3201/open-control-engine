@@ -1,0 +1,17 @@
+// Simulate one event-trigger pilot (issue #670) in the pinned OpenModelica container.
+// regenerate.sh writes this file with @PILOT@ replaced by one pilot's model name into the run
+// directory and runs it there; the two libraries are mounted read-only at /libs, the pilots at
+// /scripts, and the container has no network. The pilot is simulated from 0 to 10 s under
+// cvode at tolerance 1e-6, written every 1 s: every frame instant 0 to 9 s is an output point,
+// events add rows, and the run goes one second past the last frame so that the table's event
+// for the last frame, which lands a little after 9 s, is inside it.
+setCommandLineOptions("-d=nogen");
+loadFile("/libs/msl/Complex.mo"); getErrorString();
+loadFile("/libs/msl/ModelicaServices/package.mo"); getErrorString();
+loadFile("/libs/msl/Modelica/package.mo"); getErrorString();
+loadFile("/libs/buildings/Buildings/package.mo"); getErrorString();
+loadFile("/scripts/@PILOT@.mo"); getErrorString();
+simulate(@PILOT@, startTime=0, stopTime=10, numberOfIntervals=10,
+  tolerance=1e-6, method="cvode", outputFormat="csv",
+  variableFilter="time|(initiallyTrue|risingAfterStart|consecutivePulses|consecutivePulsesChange|ramp)[.](u|u_s|u_m|y_reset_in|trigger|reset|y)");
+getErrorString();

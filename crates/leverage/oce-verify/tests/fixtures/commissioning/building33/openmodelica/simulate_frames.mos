@@ -1,0 +1,19 @@
+// Simulate upstream's CoolingCoilValve on the 78 synthetic frames of valve_oracle.txt (issue
+// #787). run_openmodelica_frames.sh writes this file with @MODEL@ replaced by the wrapper's name
+// (CoolingCoilValveFrames, each input held; CoolingCoilValveReenableProbe, the same with TSup at
+// 290 K from 382 s, issue #800) into the run directory and runs it there; the two libraries
+// are mounted read-only at /libs, the wrappers at /scripts, and the container has no network.
+setCommandLineOptions("-d=nogen");
+loadFile("/libs/msl/Complex.mo"); getErrorString();
+loadFile("/libs/msl/ModelicaServices/package.mo"); getErrorString();
+loadFile("/libs/msl/Modelica/package.mo"); getErrorString();
+loadFile("/libs/buildings/Buildings/package.mo"); getErrorString();
+loadFile("/scripts/@MODEL@.mo"); getErrorString();
+// cvode at tolerance 1e-6, the settings of the day's run; output every 1 s, so every frame
+// instant is an output point, to 393 s, one second past the last frame, so that the table's
+// event for the last frame (it lands a little after 392 s) is inside the run.
+simulate(@MODEL@,
+  startTime=0, stopTime=393, numberOfIntervals=393, tolerance=1e-6, method="cvode",
+  outputFormat="csv",
+  variableFilter="time|cooVal[.](yCooVal|TSup|TSupSet|TOut|uFanFee|uFanSta|limPI[.]I[.]y)");
+getErrorString();
