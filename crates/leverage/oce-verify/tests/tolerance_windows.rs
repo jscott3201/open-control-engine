@@ -453,7 +453,7 @@ fn a_band_past_two_to_the_thousand_is_refused_whatever_the_output() {
     let edge = 2.0_f64.powi(1000);
     for (of, within) in [
         (format!("{edge:e}"), format!(r#"{{"atoly": {edge:e}}}"#)),
-        (format!("{:e}", -edge), format!(r#"{{"ltoly": 1}}"#)),
+        (format!("{:e}", -edge), r#"{"ltoly": 1}"#.to_owned()),
         ("1e308".to_owned(), r#"{"atoly": 1e308}"#.to_owned()),
     ] {
         for envelope in [FUNNEL, ALIGNED] {

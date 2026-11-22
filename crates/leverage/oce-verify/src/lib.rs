@@ -124,8 +124,27 @@
 //!     unreachable!("the scenario's one expectation is a window");
 //! };
 //! assert_eq!((window.first_tick(), window.last_tick()), (16, 30));
-//! assert_eq!(window.equals(), Literal::Boolean(true));
+//! assert_eq!(window.equals(), Some(Literal::Boolean(true)));
 //! assert!(set.spec_id().starts_with("spec:fnv1a128:"));
+//!
+//! // A tolerance window: `within` and `of` in place of `equals`, an optional `when` mask, and
+//! // the set's envelope, `funnel` when the set names none.
+//! let tolerant = VectorSet::from_json_bytes(
+//!     br#"{"schema": "oce/vectors/v1", "clock": {"step_s": 60, "horizon_s": 1800},
+//!         "scenarios": [{"name": "tracks", "inputs": {},
+//!           "expect": [{"output": "VDis_flow", "from_s": 300, "to_s": 1800,
+//!                       "within": {"atoly": 0.005, "atolx": 60},
+//!                       "of": [{"t": 300, "value": 0.0}, {"t": 600, "value": 0.25}],
+//!                       "when": ["occupied"]}]}]}"#,
+//!     &VerifyLimits::default(),
+//! )?;
+//! let Expectation::Window(window) = &tolerant.scenarios()[0].expectations()[0] else {
+//!     unreachable!("the scenario's one expectation is a window");
+//! };
+//! let within = window.within().expect("a tolerance window");
+//! assert_eq!((within.tolerances().atoly, within.tolerances().atolx), (0.005, 60.0));
+//! assert_eq!(window.when(), ["occupied"]);
+//! assert_eq!(tolerant.envelope(), oce_verify::Envelope::Funnel);
 //!
 //! // A key the format does not define is refused by its code, never ignored.
 //! let refused = VectorSet::from_json_bytes(
