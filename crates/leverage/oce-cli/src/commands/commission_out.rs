@@ -30,14 +30,21 @@
 //! `DIR/receipt.json` is `write-failed` (issue #664's review: a stale receipt), as is anything
 //! that appeared there since the first check. So `DIR` holds neither name when the run starts, a
 //! `receipt.json` beside the curves is always this run's, and a refusal before the first write
-//! leaves nothing behind. **The writes** ([`write()`]): `outputs/` is made with a plain create,
-//! which fails on anything already there, a directory a racing writer made included
-//! (`write-failed`); each file goes through `write_atomically` (a fresh temporary file, created
-//! owner-only, `0600` on Unix, synced, renamed over the entry), which never follows a link at the
-//! entry, so a link planted at `receipt.json` between the check and the write is replaced, its
-//! target untouched. `outputs/` and `outputs/<k>/` are made here and then reached again **by
-//! path**, so whoever can change `DIR` while the curves are written can swap one for a link and
-//! carry them outside `DIR`; writing through directory handles is issue #771. A write that fails
+//! leaves nothing behind. [`check()`] opens `DIR` **once** ([`Out`]), and nothing below it is
+//! reached by its path again (Unix; issue #771). **The writes** ([`write()`]): `outputs/` and each
+//! `outputs/<k>/` are made with `mkdirat` from their parent's handle, which fails on anything
+//! already there, a directory a racing writer made included (`write-failed`), and are opened with
+//! `O_DIRECTORY | O_NOFOLLOW` from that handle and must be empty (`directory::Directory::make`);
+//! each file goes through `atomic_write::write_in` relative to the handle of its directory (a
+//! fresh temporary file, created owner-only, `0600` on Unix, synced, renamed over the entry with
+//! `renameat`, removed with `unlinkat` on a failure), which never follows a link at the entry,
+//! so a link planted at `receipt.json` between the check and the write is replaced, its target
+//! untouched; and before a curve's bytes are written, `outputs/` and `outputs/<k>/` must be owned
+//! by the owner of its temporary file, so a directory another user swapped in is refused. So no
+//! directory swapped for a link, and no `DIR` exchanged, during the run can carry a curve outside
+//! the directory the checks opened (`commission_out_tests.rs` tries every schedule). A process
+//! running as the same user is not stopped by the owner check, and needs no swap: it can rewrite
+//! the outputs anyway. Windows reaches each directory by path (`directory`). A write that fails
 //! part-way is `write-failed` naming the file; the files already written stay, and the refusal
 //! lists them as the report's `curves`: without `receipt.json` they are not a run's output. An
 //! empty `DIR` ([`empty_dir`]) is refused as a missing one before anything is read.

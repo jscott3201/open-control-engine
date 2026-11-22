@@ -1291,7 +1291,9 @@ open:
    with `O_NOFOLLOW | O_NONBLOCK`; a harness that swapped an intermediate directory 1,000,000
    times read outside 168,695 times on Linux with the path-based checks and never with the walk.
    Windows keeps the path-based checks. The vector `--out` no longer writes through a link at its
-   `receipt.json`; the curve files `--commission --out` writes are still reached by path, #771.)*
+   `receipt.json`. Since #771 the curve files `--commission --out` writes go through handles on
+   `DIR` and the directories it makes, and the spec and its files through one handle on the
+   spec's directory.)*
 8. **Two usage lines.** `oce verify --help` and every usage error print the vector form and the
    commissioning form as two lines, so clap never prints the combination it refuses.
 

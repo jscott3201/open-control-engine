@@ -806,7 +806,17 @@ checks; each was reproduced as a harness against the built binary (a debug build
 scratch directory) before and after the change, on macOS (APFS) and on Linux (the
 `rust:1.97.1-alpine` image on aarch64, tmpfs, no network):
 
-@@TABLE771@@
+| Race (the reviewer's reproduction as a harness) | Runs | macOS arm64, before | after | Linux aarch64, before | after |
+| --- | --- | --- | --- | --- | --- |
+| (i) `verify --commission spec.json --out out --bounds`: `out/outputs` exchanged for a link to a victim directory once the first curve's temporary file exists | 200 | 200 sent the curves outside `DIR`, exit 0 | 0 (all 200 swapped) | 198 (2 runs finished before the swap) | 0 (196 swapped) |
+| (ii) `verify --commission cur/spec.json`: `cur` exchanged flat out with another folder | 2,000 | 676 paired the spec with the other folder's CXF | 0 | 455 | 0 |
+| (ii) `verify cur/vectors.json --subject rule.cxf.jsonld`: the same, for a vector set and its mutant | 2,000 | 97 | 0 | 427 | 0 |
+| (iii) `fmt --write t.oce`: `t.oce` exchanged flat out with a link to a file outside its directory | 3,000 | 117 wrote the outside file's canonical text into the directory | 0 | 362 | 0 |
+
+A pairing is counted only when it is proved: each folder holds the other folder's file names as
+over-size decoys, so a document read with the other folder's file answers `input-too-large`. The
+runs that are not counted answer a verdict or a refusal for the swap they met (`read-failed`,
+`not-found`, the outside code), never a pairing.
 
 The deterministic proofs are the adversaries in `src/commands/contained_tests.rs`,
 `atomic_write_tests.rs`, `commission_out_tests.rs` and `fmt_tests.rs`: each tries every schedule

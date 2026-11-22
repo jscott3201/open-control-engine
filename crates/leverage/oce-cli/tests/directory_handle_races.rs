@@ -296,13 +296,17 @@ fn no_pairing_across_folders(test: &str, vectors: bool) {
         None,
         "a document was paired with another folder's file: {answers:?}"
     );
+    // A canonicalization that resolves while the folders exchange can see the other folder's
+    // path (macOS's `realpath` reads the path of the file it opened), and refuses the file as
+    // outside the directory: a refusal, never a pairing.
     for answer in answers.keys() {
         assert!(
             [
                 "verdict",
                 "read-failed",
                 "not-found",
-                "file-outside-directory"
+                "file-outside-directory",
+                "mutant-outside-directory"
             ]
             .contains(&answer.as_str()),
             "an answer the race cannot explain: {answers:?}"

@@ -1287,6 +1287,81 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **`oce` reads and writes through directory handles everywhere** (GitHub #@@PR@@, issue #771;
+  Unix). Three places in `crates/leverage/oce-cli` still reached a directory or a file by path
+  after their checks, so whoever could change the directories during a run could redirect them;
+  each predates GitHub #764, and the review of that PR reproduced each on macOS.
+  - **`verify --commission --out DIR`** wrote its curve files by path under `DIR/outputs/<k>/`:
+    `outputs` exchanged for a link while the first curve was synced sent the curves outside
+    `DIR`, exit 0, the report still listing them under `DIR`. The output checks now open `DIR`
+    once; `outputs/` and each `outputs/<k>/` are made with `mkdirat` and opened with
+    `openat(O_DIRECTORY | O_NOFOLLOW)` from their parent's handle, must be empty when opened and
+    must be owned by the user who owns the temporary file created inside (a directory another
+    user swapped in is refused; a process running as the same user is not stopped by that, and
+    can rewrite the outputs anyway); each curve and `receipt.json` is written relative to the
+    handle of its directory.
+  - **The atomic writer is handle-relative for every verb** (`emit -o`, `import -o`, `fmt
+    --write`, both forms of `verify --out`): the parent is opened once, following the caller's
+    links (as ruled on issue #758), the temporary file is created with `openat(O_CREAT | O_EXCL
+    | O_NOFOLLOW)`, renamed with `renameat` and, on a failure, removed with `unlinkat` from the
+    same handle, so a parent swapped during the write no longer leaves a `.oce-tmp` behind.
+  - **A document is read through its directory's handle** (a commissioning spec, a vector set):
+    the directory is opened once, the document is read from that handle (a link at the
+    document's own entry is still followed, so a spec that is a link reads the files beside the
+    link, the documented rule, now pinned by a test; the orchestrator's call on issue #771), and
+    every file it names is resolved against that same handle instead of reopening the directory
+    by its canonical path. A folder exchanged during the run paired a spec with another folder's
+    files; it cannot now. The canonicalization that honours a link inside the directory still
+    reads the directory by path: a folder swapped in after the pin can change which file
+    **inside** the pinned directory is read, never reach one outside it (an adversary test tries
+    every schedule).
+  - **`fmt --write` reads the file it rewrites from its directory's handle** (no link followed,
+    the handle a regular file with the identity checked), takes the new file's mode from that
+    handle rather than from whatever regular file is at the name when it writes, and renames
+    only if the entry still has the device and inode it read (`write-failed`, "the file changed
+    after it was read; nothing is written", otherwise). A file swapped in during the one instant
+    between that check and the rename is replaced, never written through.
+  - **Measured** (before → after, the reviewer's reproductions as a harness through the built
+    binary): (i) `outputs` exchanged for a link while the first curve was
+    written sent the curves outside `DIR` in 200 of 200 runs on macOS and 198 of 200 on Linux,
+    and in none after; (ii) a document's folder exchanged flat out paired the document with the
+    other folder's file in 676 (spec) and 97 (vector set) of 2,000 runs on macOS, 455 and 427 on
+    Linux, and in none after; (iii) `fmt --write`'s file exchanged with a link wrote the outside
+    file's canonical text into the directory in 117 of 3,000 runs on macOS and 362 on Linux, and
+    in none after. Linux is the `rust:1.97.1-alpine` image on aarch64, by digest, with no
+    network; the CLI README has the table.
+  - **Breaking, in place:** a directory that can be searched but not listed (mode `--x` or
+    `-wx`) is refused where a path-based call passed through it, since the handles are opened
+    read-only (rustix offers no `O_SEARCH` on macOS): a document's directory is `read-failed`
+    "permission denied" (was a successful read of the document), a write's parent is
+    `write-failed` "permission denied", and a `--commission --out DIR` is `write-failed` "the
+    output directory cannot be read: permission denied" before the run. The orchestrator
+    accepted this on issue #771. Also changed: a `--commission --out DIR` just under the
+    platform's path limit now has its curves written (each name is relative to its directory's
+    handle), where the longer names under it were `write-failed` (ENAMETOOLONG);
+    `commission_out_guards.rs`'s path-limit sweep now pins that. No other code, message or exit
+    status moves, and no transcript or golden is re-blessed.
+  - **Evidence.** Adversary tests try every schedule of the swap between the code's own calls,
+    each with the path-based code that came before as a control that some schedule must beat:
+    the writer (`atomic_write_tests.rs`: the parent swapped for a link, the write succeeding and
+    the rename failing), `--commission --out` (`commission_out_tests.rs`: `outputs` and `DIR`
+    itself swapped), the document and a named file (`contained_tests.rs`: no schedule pairs the
+    document with another folder's file, and the canonicalization limit above), and `fmt
+    --write` (`fmt_tests.rs`: a link and a wider-mode file swapped in). Typed refusals with the
+    tree left as it was: a read-only directory, every temporary name taken, a `DIR` removed
+    during the run, a directory made then replaced by a non-empty one, a directory owned by
+    another user, the entry changed after it was read. `tests/directory_handle_races.rs` races
+    each of the three through the binary and swaps a named pipe in for a document and for `fmt
+    --write`'s file under a hang guard (each skips with a note on a file system with no atomic
+    exchange). Of 20 mutants of the change (19 single, one pair), 16 are killed; the
+    four that survive alone each have a stated cover: the last entry's `O_NOFOLLOW` and its
+    identity check each cover the other (the pair is killed), the temporary file's `O_NOFOLLOW`
+    is covered by `O_EXCL` (it never follows a link at the name), and the identity check between
+    a document's directory handle and its canonical path keeps the outside refusal consistent,
+    while no read can leave the handle without it (the adversary proves it). Windows keeps the path-based reads and writes and says so (the CLI
+    README, "Writing a file" and "Reading a file a document names"); it type-checks
+    (`--target x86_64-pc-windows-msvc --all-targets`) and is untested.
+
 - **No `oce` verb writes through a symbolic link at its target, and a file a document names is
   opened component by component without following one** (GitHub #764, issue #758; ruled by the
   owner on 2026-11-22). **Breaking, in place**, for a symlinked output: `oce verify VECTORS --out
@@ -1338,11 +1413,11 @@ so far, and no tag is cut by the bump.
     `forbid(unsafe_code)`. Windows has less, untested there: the entry is checked and the file
     opened by path, and nothing ties the handle to the entry checked (std has no stable file
     index).
-  - **What stays open (issue #771):** the directories `verify --commission --out` creates under
-    `DIR` (`outputs/`, `outputs/<k>/`) are reached by path, so whoever can change `DIR` during
-    the run can redirect the curve files (the review reproduced it 50 times in 50); a document is
-    read by path before its directory is resolved; `fmt --write` reads its input by path after
-    the target check. Each predates this change.
+  - **What stayed open (issue #771, since closed by GitHub #@@PR@@):** the directories `verify
+    --commission --out` creates under `DIR` (`outputs/`, `outputs/<k>/`) were reached by path, so
+    whoever could change `DIR` during the run could redirect the curve files (the review
+    reproduced it 50 times in 50); a document was read by path before its directory was resolved;
+    `fmt --write` read its input by path after the target check. Each predates this change.
   - **Evidence.** `tests/output_targets.rs` holds all five writers to every kind of target with
     every entry unchanged after a refusal, the way out each names, and an empty `--out`;
     `src/commands/contained_tests.rs` tries every schedule of swaps between two of the reader's

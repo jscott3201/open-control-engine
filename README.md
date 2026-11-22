@@ -341,9 +341,10 @@ refuses a name `oce` would read as another form. No verb writes through a symbol
 target: the path `emit -o`, `import -o`, `fmt --write` or `verify --out` writes must be absent or
 a regular file, or the run is refused before it reads anything (`output-not-a-file`; owner ruling
 of 2026-11-22, #758), and a file a commissioning spec or a vector set names is opened component
-by component without following a link (on Unix). The directories `verify --commission --out`
-creates under `DIR` are still reached by path, so whoever can change `DIR` during a run can
-redirect the curve files (#771).
+by component without following a link (on Unix). On Unix every read and write below a directory
+goes through a handle opened once (#771): a document and the files it names come through one
+handle on its directory, the curve files `verify --commission --out` writes go through handles on
+`DIR` and the directories it makes, and `fmt --write` rewrites only the file it read.
 
 Open follow-ups from M2 include the benchmark data the agent-usable row needs (#457) and checking a
 sequence parameter's unit suffix against the block parameter it feeds (#590); `oce check` (#574)
