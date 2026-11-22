@@ -1,0 +1,22 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "line 4 column 1",
+      "code": "json-syntax",
+      "detail": "expected a key",
+      "span": {
+        "column": 1,
+        "line": 4
+      }
+    }
+  ],
+  "findings": [],
+  "input": "trailing.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

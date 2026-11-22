@@ -55,9 +55,18 @@ pub(crate) const NOT_LOADABLE: &str = "not-loadable";
 /// The facade could not name a model it loaded (never expected).
 pub(crate) const NO_CONTENT_ID: &str = "no-content-id";
 
+/// `verify --commission` over a spec with several references and no `--reference` (commissioning
+/// note, decision 35).
+pub(crate) const REFERENCE_REQUIRED: &str = "reference-required";
+/// A path a commissioning spec names (its CXF, its mapping or a trend source) that resolves,
+/// through a symbolic link or a drive prefix, to a file outside the spec's directory (issue
+/// #664, the rule of `mutant-outside-directory`).
+pub(crate) const FILE_OUTSIDE_DIRECTORY: &str = "file-outside-directory";
+
 /// `import -o` names a file `oce` would read in another form than the one written.
 pub(crate) const OUTPUT_FORM_MISMATCH: &str = "output-form-mismatch";
-/// `emit -o` or `import -o` names the input file itself.
+/// `emit -o` or `import -o` names the input file itself, or `verify --commission --out DIR` would
+/// write `DIR/receipt.json` over a file the run reads.
 pub(crate) const OUTPUT_IS_INPUT: &str = "output-is-input";
 /// The two sides of `diff` have names that read as two forms, and `--from` was not given.
 pub(crate) const MIXED_FORMS: &str = "mixed-forms";
@@ -79,7 +88,7 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     (READ_FAILED, "the input could not be read"),
     (
         INPUT_TOO_LARGE,
-        "the input is over its limit (4 MiB a sequence or vector file, 8 MiB CXF); refused before it is read",
+        "the input is over its limit (4 MiB a sequence, vector, commissioning spec or mapping file, 8 MiB CXF, 1 GiB a trend source); refused before it is read",
     ),
     (
         INVALID_NAMESPACE,
@@ -91,7 +100,7 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     ),
     (
         WRITE_FAILED,
-        "the output could not be written or renamed into place",
+        "the output could not be written or renamed into place, or (verify --out) DIR is not an existing directory, or (verify --commission --out) DIR/outputs already exists",
     ),
     (WRITE_NEEDS_FILE, "--write or -o cannot rewrite stdin"),
     (
@@ -122,6 +131,14 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
         "a mutant path resolves, through a link or a drive prefix, outside the vector file's directory",
     ),
     (
+        REFERENCE_REQUIRED,
+        "verify --commission: the spec has several references and --reference was not given; the detail lists each",
+    ),
+    (
+        FILE_OUTSIDE_DIRECTORY,
+        "verify --commission: a CXF, mapping or trend source path resolves, through a link or a drive prefix, outside the spec's directory",
+    ),
+    (
         NAMESPACE_NEEDS_AUTHORED,
         "id --namespace was given beside a CXF document; only a text or wire file is emitted",
     ),
@@ -136,7 +153,7 @@ pub(crate) const TOOL_CODES: &[(&str, &str)] = &[
     ),
     (
         OUTPUT_IS_INPUT,
-        "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; nothing is written",
+        "emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; or verify --commission --out DIR would write DIR/receipt.json over a file the run reads; nothing is written",
     ),
     (
         MIXED_FORMS,
@@ -534,7 +551,7 @@ pub(crate) const TEXT_FORM_TAGS: &[&str] = &[
 pub(crate) const EXIT_MEANINGS: &[(u8, &str)] = &[
     (
         0,
-        "yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported, nothing differs",
+        "yes: clean, canonical, resolved, every scenario or compared output passed, an id printed, a document imported, nothing differs",
     ),
     (
         1,

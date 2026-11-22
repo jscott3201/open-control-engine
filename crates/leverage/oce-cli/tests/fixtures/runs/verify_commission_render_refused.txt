@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "code": "not-found",
+      "detail": "no such file",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "absent.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr
+absent.json: error[not-found] no such file
+oce verify absent.json: refused: the commissioning spec could not be read; no receipt

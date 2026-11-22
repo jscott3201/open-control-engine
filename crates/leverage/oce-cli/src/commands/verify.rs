@@ -40,10 +40,10 @@ use serde_json::Value;
 
 use super::{Outcome, verify_mutants, verify_subject, write_atomically};
 use crate::report::{Facts, Report};
-use crate::{Exit, VerifyArgs, input};
+use crate::{Exit, VectorArgs, input};
 
-/// Run `verify`.
-pub(crate) fn run(args: &VerifyArgs) -> Outcome {
+/// Run `verify` over a vector set.
+pub(crate) fn run(args: &VectorArgs) -> Outcome {
     let started = Instant::now();
     let mut report = Report::new("verify", Some(input::display_name(&args.vectors)));
     report.set("subject", Value::from(input::display_name(&args.subject)));
@@ -109,7 +109,7 @@ pub(crate) fn run(args: &VerifyArgs) -> Outcome {
 }
 
 /// The exit status and stdout of a run that reached a verdict.
-fn answer(args: &VerifyArgs, receipt: &Receipt, mut report: Report) -> Outcome {
+fn answer(args: &VectorArgs, receipt: &Receipt, mut report: Report) -> Outcome {
     let (status, exit) = verdict(args, receipt);
     let document = receipt.to_canonical_json().into_bytes();
     let Some(dir) = &args.out else {
@@ -139,7 +139,7 @@ fn answer(args: &VerifyArgs, receipt: &Receipt, mut report: Report) -> Outcome {
 }
 
 /// The set's status and the exit status, the exit-only flags applied.
-fn verdict(args: &VerifyArgs, receipt: &Receipt) -> (&'static str, Exit) {
+fn verdict(args: &VectorArgs, receipt: &Receipt) -> (&'static str, Exit) {
     let ReceiptBody::Vectors(body) = &receipt.body else {
         return ("unknown", Exit::Error);
     };
@@ -166,7 +166,7 @@ fn verdict(args: &VerifyArgs, receipt: &Receipt) -> (&'static str, Exit) {
 }
 
 /// A duration in whole milliseconds, saturating.
-fn whole_ms(duration: Duration) -> u64 {
+pub(crate) fn whole_ms(duration: Duration) -> u64 {
     u64::try_from(duration.as_millis()).unwrap_or(u64::MAX)
 }
 

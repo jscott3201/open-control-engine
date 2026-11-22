@@ -139,10 +139,10 @@ error codes (exit 2):
   not-found                 the input path does not exist
   not-a-file                the input path is a directory or another non-file
   read-failed               the input could not be read
-  input-too-large           the input is over its limit (4 MiB a sequence or vector file, 8 MiB CXF); refused before it is read
+  input-too-large           the input is over its limit (4 MiB a sequence, vector, commissioning spec or mapping file, 8 MiB CXF, 1 GiB a trend source); refused before it is read
   invalid-namespace         --namespace is empty, too long, not printable ASCII or does not end in #, / or :
   unspellable               the model cannot be written as text, or (import --wire) in the wire form so that it reads back
-  write-failed              the output could not be written or renamed into place
+  write-failed              the output could not be written or renamed into place, or (verify --out) DIR is not an existing directory, or (verify --commission --out) DIR/outputs already exists
   write-needs-file          --write or -o cannot rewrite stdin
   write-needs-text          fmt --write rewrites text files only; redirect a wire file's text instead
   malformed-param           a --param is not NAME=VALUE
@@ -153,11 +153,13 @@ error codes (exit 2):
   emit-refused              the emitter refused for a reason this tool does not know
   unknown-subject-form      a verify subject is not .jsonld, .cxf.json, .oce or .json and --subject-form was not given
   mutant-outside-directory  a mutant path resolves, through a link or a drive prefix, outside the vector file's directory
+  reference-required        verify --commission: the spec has several references and --reference was not given; the detail lists each
+  file-outside-directory    verify --commission: a CXF, mapping or trend source path resolves, through a link or a drive prefix, outside the spec's directory
   namespace-needs-authored  id --namespace was given beside a CXF document; only a text or wire file is emitted
   not-loadable              id or a CXF side of diff: the engine refused the document; id: or the sequence has error findings; there is no content id or diff
   no-content-id             the facade could not name a model it loaded
   output-form-mismatch      import -o or emit -o names a file whose name reads as another form than the one written (.oce text, .json wire, .jsonld and .cxf.json CXF)
-  output-is-input           emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; nothing is written
+  output-is-input           emit -o or import -o names the input file itself, by path, link or (on Unix) hard link, or, on Unix, the regular file standard input reads; or verify --commission --out DIR would write DIR/receipt.json over a file the run reads; nothing is written
   mixed-forms               diff: the two names read as two forms (text, wire, CXF) and --from was not given; both sides are one form
   stdin-twice               diff: both sides are stdin (-), which is read once
 
@@ -255,6 +257,100 @@ bind and run codes (verify, exit 2):
   sampling-required             the commissioning reference gives no sampling, which a run needs for now
   too-many-indicators           the commissioning reference's indicator rules name more than 64 indicators
 
+commissioning spec codes (verify --commission, exit 2; the last four are causes of spec-refused):
+  not-utf8              the spec is not UTF-8
+  byte-order-mark       the spec starts with a byte-order mark
+  json-syntax           the spec, its // and /* */ comments removed, is not one strict JSON document (a trailing comma included)
+  input-too-large       the spec is larger than 4 MiB, comments included
+  nesting-too-deep      objects and arrays nest deeper than 8 levels
+  list-too-long         a list has more than 65,536 entries
+  string-too-long       a string is longer than 4,096 bytes as written
+  duplicate-key         an object writes one key twice
+  unknown-key           an object carries a key the format does not define
+  missing-key           an object lacks a required key
+  wrong-type            a value has the wrong JSON type for its position
+  non-finite-number     NaN or Infinity as a number, or a real that overflows binary64
+  integer-out-of-range  an integer outside 64 bits, or one read as a real above 2^53
+  control-character     a string carries a control character, raw or escaped (an escaped \n excepted)
+  unterminated-comment  a /* comment is never closed
+  unknown-schema        schema is not oce/commissioning-spec/v1
+  too-many-parameters   a reference's parameters map has more than 256 entries
+  too-many-keys         an outputs, indicators or columns map has more than 4,096 keys
+  empty-name            an empty model, sequence, key, indicator, parameter path, point name or unit, table, timeColumn or column
+  unknown-value         a format, envelope, funnelReference or point type outside its list
+  path-invalid          a cxf, mapping, source or controllerOutput path is absolute, has an empty, . or .. segment, or holds a backslash
+  invalid-time-origin   time.origin is not an RFC 3339 instant with an explicit offset
+  invalid-tolerance     a tolerance is negative
+  invalid-sampling      a sampling is not above zero
+  invalid-window        a window's start is after its stop
+  invalid-hold          a hold.maxAge is negative
+  duplicate-point       two points of one mapping share a name on one side, cdl or device
+  unmatched-key         the cause of spec-refused: an outputs or indicators key selects no output of the sequence
+  ambiguous-output      the cause of spec-refused: an exact outputs or indicators key names several outputs
+  conflicting-override  the cause of spec-refused: two outputs keys of one kind give one output one tolerance field two values
+  work-limit-exceeded   the cause of spec-refused: matching the keys against the outputs needs more than 2^28 work units
+
+trend source codes (verify --commission, the cause of source-refused, exit 2):
+  reference-out-of-range    the reference index is past the end of the spec's references
+  too-many-sources          the reference names more than 256 trend sources
+  duplicate-file            the run was handed one path's bytes twice
+  file-unlisted             the run was handed bytes under a path the reference does not name
+  file-missing              the reference names a mapping or trend source the run was handed no bytes for
+  too-many-total-bytes      the mapping and the trend sources are more than 1 GiB together (each path once, the CXF not counted); oce refuses it from the files' metadata before reading them
+  mapping-required          the reference reads trend sources and names no pointNameMapping
+  mapping-refused           the point-mapping file does not load (the detail says where and why)
+  column-reference-invalid  a timeColumn, columns key or table its format does not take, or the time column mapped to a point
+  unmapped-point            a column names a device point the mapping does not have
+  point-read-twice          two columns of one role name one device point
+  type-pair-refused         no rule converts the point's device type to its CDL type
+  unit-refused              the point's two units have no conversion, or a reading overflows
+  unit-on-discrete-point    a unit conversion other than the identity on an int or bool CDL point
+  format-tag-missing        a combiTimeTable file does not start with #1
+  table-syntax              a combiTimeTable file is not the format (a matrix header, a cell, a separator)
+  table-required            a combiTimeTable file holds several matrices and the source names no table
+  table-not-found           no matrix of the file has the source's table name
+  duplicate-table           two matrices of the file have the source's table name
+  size-mismatch             a matrix holds fewer or more values than its declared size
+  bad-number                a combiTimeTable value is not a decimal number in C syntax
+  non-finite-number         an infinity in a csv cell or time, or a combiTimeTable value beyond the largest binary64
+  bad-cell                  a csv cell its column's device type does not read
+  cell-refused              a value the point's type rule refuses: a 0.5 Boolean, a non-integral Integer
+  column-missing            a column the source names, or its time column, is not in the file
+  duplicate-column          a csv header names one column twice
+  no-header                 a controllerOutput file has no header row
+  no-point-columns          a controllerOutput file's header names no column but the time
+  ragged-row                a csv row has a different number of fields from the header
+  not-utf8                  a csv cell or header is not UTF-8
+  cell-too-long             a csv cell, combiTimeTable number or matrix name is longer than 256 bytes
+  too-many-rows             more than 16,777,216 rows in one file or frames in the merged inputs
+  too-many-columns          more than 4,096 columns in one file or in the merged inputs, the time included
+  too-many-bytes            more than 1 GiB in one file or held by a source's or the merged inputs' columns
+  time-missing              a csv row's time cell is empty, NA or NaN
+  bad-time                  a time cell is neither seconds nor an instant, or not the first row's kind
+  time-origin-required      a csv time column of instants in a spec with no time.origin
+  time-regression           a time earlier than the row before it in one file
+  unreadable                a replay reader refusal with no word of its own (never expected)
+
+unit codes (verify --commission, the cause of unit-refused, exit 2):
+  unknown-pair             units/v1 lists no conversion from the device's unit to the CDL point's
+  one-sided                one side of a mapped point has a unit and the other none
+  empty-unit               a unit is written as the empty string
+  overflow                 a finite reading's conversion is beyond the largest binary64
+  absolute-for-difference  an absolute temperature pair on a TemperatureDifference port
+  difference-for-absolute  a temperature difference pair on a ThermodynamicTemperature port
+  port-unit-mismatch       the mapping's cdl.unit is not the unit the sequence port declares
+
+frame refusal classes (verify --commission, the cause of frame-refused, exit 2):
+  input-type                  an input value of the wrong type for its port
+  input-non-finite            an infinite input value
+  input-domain                an input value outside its port's declared bounds (a wrong unit or mapping, most often)
+  non-finite-time             a frame time that is not finite
+  time-out-of-range           a frame time beyond the engine's magnitude limit
+  time-regression             a frame time earlier than the one before
+  non-finite-time-step        a time step that is not finite
+  model-time-unrepresentable  a model time the engine cannot represent
+  run                         a refusal about the engine or the run, not the frame (run-refused carries it)
+
 diff codes (diff, exit 2):
   outside-root        a CXF block or boundary is not named under its document's root (one the engine exported included); at names the side
   unresolved-ports    the ports of a CXF block cannot be named from its class and ground parameters (never expected for a loaded document)
@@ -262,7 +358,7 @@ diff codes (diff, exit 2):
   unexpected-refusal  the facade refused a blob with an error that is not a blob refusal (never expected; diff reads no blob)
 
 exit codes:
-  0  yes: clean, canonical, resolved, every scenario passed, an id printed, a document imported, nothing differs
+  0  yes: clean, canonical, resolved, every scenario or compared output passed, an id printed, a document imported, nothing differs
   1  no: an error finding, a non-canonical file, ports that do not resolve, a failed or no_data verdict, any difference (diff)
   2  error: a usage, read, parse, size or I/O failure, a run with no verdict, an input with no content id (id), a document the importer refuses or the output form cannot spell (import), or a side that does not load or cannot be named (diff); the question was not answered
 

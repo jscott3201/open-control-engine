@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "references[0].expected[0].path",
+      "code": "not-found",
+      "detail": "trend source `outputs.csv`: no such file",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

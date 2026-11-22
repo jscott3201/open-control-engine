@@ -1,0 +1,20 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "references[0]",
+      "cause": "input-domain",
+      "code": "frame-refused",
+      "detail": "the engine refused frame 1 at t = 10.0 s (input-domain): input value outside declared domain for 'urn:verify:plant#top.lim'",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

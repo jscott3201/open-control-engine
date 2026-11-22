@@ -1217,6 +1217,40 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **`oce verify --commission <SPEC>` runs one reference of a commissioning spec from the command
+  line** (GitHub #757, issue #664; design note `docs/design/commissioning.md`, "CLI",
+  decisions 21 and 33 to 37, "As landed: the verb"). Flags: `--reference <N>` (needed when the
+  spec has several references, else `reference-required`, listing each), `--out <DIR>`,
+  `--bounds` (with `--out`), `--data trended|synthetic`, `--deny-warnings`, `--timings`; the
+  vector flags are usage errors beside `--commission`, and the commissioning flags without it.
+  - **Reads.** The spec, then the reference's CXF, mapping file and trend sources, each resolved
+    inside the spec's directory (a link out is the new `file-outside-directory`) and bounded from
+    its metadata before a byte is read, under the library's own limits: the spec and the mapping
+    4 MiB, the CXF 8 MiB, a source 1 GiB (`input-too-large`), the mapping and the sources together
+    1 GiB (`source-refused`, cause `too-many-total-bytes`). A reference with no `cxf`, `window` or
+    `sampling` is refused by the library before any other file is read.
+  - **Output.** Stdout is the library's receipt, byte for byte (exit 0 pass, 1 `fail` or
+    `no_data`), or the report with the refusal under its own code (exit 2). With `--out`:
+    `DIR/outputs/<k>/errors.csv` for every compared output (`x,y`, `%.16g`; `nan` at an uncovered
+    instant, `inf` for a non-finite engine sample), under `--bounds` pyfunnel's four bound files
+    where an envelope was built, then `DIR/receipt.json`, each atomically; the report lists every
+    output's files under `curves`. `DIR` must exist, an existing `DIR/outputs` is `write-failed`,
+    a `DIR/receipt.json` that is an input is `output-is-input` and any other entry there (a link
+    included) is `write-failed`, all before the run; no file is written through a link, every file
+    is created owner-only, and a write that fails part-way lists what it wrote under `curves`. A
+    link swapped in at a file the reference names is refused (`read-failed`); the vector
+    `--out`'s link-following and the intermediate-directory race are issue #758.
+  - **Vocabulary.** `oce vocab` lists the spec reader's codes (`spec_codes`) and, as causes, the
+    source reader's, the unit table's and the engine refusal classes (`source_codes`,
+    `unit_codes`, `frame_refusal_codes`), each pinned to `oce-verify`'s list. `verify` prints two
+    usage lines, one per form. `help_verify`, `help_oce`, `usage_no_arguments` and the two `vocab`
+    transcripts move with the text; no vector run's transcript or receipt moves. The mutant reader's path rule is now shared
+    (`commands/contained.rs`), its refusals unchanged.
+  - **Evidence.** Transcripts per verdict and refusal class, the three verdicts' stdout equal to
+    `oce-verify`'s golden receipts, every `errors.csv` equal to the library's golden columns and
+    to `derive_run.py`'s derivation, seeded hostile bytes through the binary. The Building 33
+    worked example moved to issue #755, which waits on #661.
+
 - **`oce-verify` reads tolerance windows and issues the tolerance receipt** (GitHub #741, issue
   #684; design note `docs/design/vectors.md`, decisions 38 to 50, "The tolerance build's
   readings"). **Breaking, in place:** `oce/vectors/v1` gains four keys and `oce/receipt/v1` a

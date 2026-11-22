@@ -1,0 +1,18 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "code": "not-found",
+      "detail": "no such file",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "absent.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

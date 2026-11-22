@@ -4,7 +4,8 @@ The `oce` command-line tool (M2; design note [`docs/design/authoring-layer.md`](
 "CLI", decisions 9 and 20; issue #489): `emit`, `validate`, `fmt`, `catalog` and `vocab` over
 [`oce-author`](../oce-author/README.md), [`oce-vocab`](../oce-vocab/README.md) and the facade, and
 (M3; [vectors note](../../../docs/design/vectors.md), "CLI", decision 34; issue #522) `verify`
-over [`oce-verify`](../oce-verify/README.md), (M3; [content-id note](../../../docs/design/content-id.md),
+over [`oce-verify`](../oce-verify/README.md), with `--commission` for a commissioning spec (M3;
+[commissioning note](../../../docs/design/commissioning.md), "CLI"; issue #664), (M3; [content-id note](../../../docs/design/content-id.md),
 "Mapping table for the library re-stamp"; issue #513) `id` over the facade, (M3; [importer note](../../../docs/design/importer.md); issue #514) `import`
 over `oce-author`'s CXF importer and (M3; [diff note](../../../docs/design/diff.md), "CLI",
 decisions 1 and 16; issue #668) `diff` over [`oce-diff`](../oce-diff/README.md). A leverage crate
@@ -23,6 +24,9 @@ oce vocab [--json]                               keywords, tags, units, scale fa
 oce verify <VECTORS> --subject <FILE> [--subject-form cxf|text|wire] [--out <DIR>]
            [--require-mutants-caught] [--deny-warnings] [--timings]
                                                  a vector set replayed; the receipt on stdout
+oce verify --commission <SPEC> [--reference <N>] [--out <DIR>] [--bounds]
+           [--data trended|synthetic] [--deny-warnings] [--timings]
+                                                 one commissioning reference run on its trends
 oce id <FILE> [--from cxf|text|wire] [--namespace <NS>] [--json]
                                                  the canonical content id, alone on stdout
 oce import <FILE> [-o <OUT>] [--wire]            flat CXF into canonical text (or the wire form)
@@ -135,6 +139,101 @@ note](../../../docs/design/vectors.md), "CLI"; the owner's rulings in "Part 4's 
   library rules, read in place, and requires exit `0` and stdout byte-equal to `oce-verify`'s
   golden receipts. It runs in the leverage lane on every PR. This is the M3 "In-repo rules
   replay" evidence.
+
+## `oce verify --commission`
+
+One reference of a commissioning spec (`oce/commissioning-spec/v1`, OBC §12.7's Listing 12.1 read
+as published) run against its trends over `oce_verify::run_commissioning`, and the
+`kind: "commissioning"` receipt ([commissioning note](../../../docs/design/commissioning.md),
+"CLI", decisions 21 and 33 to 37; issue #664). One spec and one reference per run; there is no
+batch mode and no `oce commission` verb (decision 35; vectors note decision 34).
+
+- **Usage.** `--commission` excludes `<VECTORS>`, `--subject`, `--subject-form` and
+  `--require-mutants-caught`, and `--reference`, `--bounds` and `--data` need `--commission`;
+  `--bounds` also needs `--out`. Each is clap's usage error, exit `2`, on stderr. The human
+  rendering is the global `--render`; there is no `--format` (decision 36).
+- **The reference.** `--reference N` is the zero-based index into `references[]`. A spec with one
+  reference needs no flag; one with several and no flag is `reference-required`, whose detail
+  lists each index with its `sequence` and `model`. An index past the end is the library's
+  `reference-out-of-range`. A reference with no `cxf`, no `window` or no `sampling` (its own or the
+  spec's; the owner's ruling that `sampling` is required for now, issue #746) is refused by the
+  library (`reference-incomplete`, `sampling-required`) **before any other file is read**.
+- **Reads.** The spec at 4 MiB (`SpecLimits::MAX.max_bytes`), then the files the reference names:
+  its `cxf`, its `pointNameMapping` when that is a path, and its trend sources in the receipt's
+  order (`inputs`, `expected` or, with no `expected` key, the `controllerOutput`,
+  `indicatorSources`), a path named twice read once. Each path resolves against the directory of
+  `SPEC` as given (a spec reached through a symbolic link reads the files beside the link, not
+  beside its target) and may not leave it: its segments are joined onto that directory and
+  canonicalized, following links, and a path that resolves outside is `file-outside-directory`
+  (the rule `mutant-outside-directory` holds a mutant to; the spec reader has already refused an
+  absolute path, an empty, `.` or `..` segment and a backslash as `path-invalid`). The canonical
+  path's own entry, read without following a link, must be a regular file before it is opened
+  (`not-a-file`; a named pipe never blocks the run; a link found there was swapped in after the
+  canonicalization and is `read-failed`), the file is opened once, and its size is judged from
+  that handle before a byte is read. A file that grows after its metadata is read is read up to
+  its bound and one byte more, then refused. What stays racy is an intermediate directory swapped
+  for a link after the canonicalization, which std's opens follow (issue #758):
+
+  | File | Bound | Refusal |
+  | --- | --- | --- |
+  | the spec | 4 MiB | `input-too-large` |
+  | the CXF | 8 MiB (`oce_api::MAX_CXF_BYTES`) | `input-too-large` |
+  | the mapping | 4 MiB | `input-too-large` |
+  | a trend source | 1 GiB (`TrendLimits::MAX.replay.max_source_bytes`) | `input-too-large` |
+  | the mapping and the trend sources together, each path once, the CXF not counted | 1 GiB (`TrendLimits::MAX.max_total_bytes`) | `source-refused`, cause `too-many-total-bytes` |
+
+  These are the library's own limits, counted its way and refused under its words, so a run the
+  CLI lets through is never refused for its size later (the orchestrator's call on issue #664).
+  The Building 33 files, 11.6 MB, fit. **Memory:** a run holds the file bytes and, beside them,
+  a few times the bytes of its expected and indicator files, the merged inputs and the trace
+  (the commissioning note's "What a run holds": four expected `csv` files of 636 MB peaked at
+  4.09 GB resident in the review of GitHub #744). Every refusal of a file is at the spec field that
+  names it (`references[0].inputs[1].path`) and names the path as the spec writes it.
+- **Stdout** carries one document: the receipt (exactly `oce-verify`'s canonical bytes) when the
+  run reaches a verdict, exit `0` when every compared output passed and `1` for `fail` or
+  `no_data` (the receipt says which); the JSON report otherwise, exit `2`, with the refusal in
+  `errors[]` under its own code: the spec reader's, the source reader's (`source-refused` and its
+  cause), the unit table's (`unit-refused` and its cause), a key selection's (`spec-refused` and its
+  cause), an engine refusal (`frame-refused` and its class, `run-refused`), a comparison
+  (`compare-refused`), the tool's own.
+- **With `--out DIR`** stdout is the report, with `passed`, `status`, `receipt_id`, `output`
+  (`DIR/receipt.json`) and `curves`: one `{ "files", "index", "output" }` per compared output,
+  its index in the receipt's `outputs[]`, its canonical path and every file written for it, so no
+  reader infers anything from a file that is absent. The files (decision 37):
+  - `DIR/outputs/<k>/errors.csv` for every compared output, `<k>` the index in decimal with no
+    padding: the exceedance at each test instant;
+  - under `--bounds`, beside it, `reference.csv`, `test.csv`, `lowerBound.csv` and
+    `upperBound.csv` for each output whose envelope was built (a Real output with at least one
+    compared instant and no non-finite engine sample: the receipt's `half_width` is present
+    exactly for those; the orchestrator's call on issue #664);
+  - `DIR/receipt.json`, last, so a `receipt.json` this run wrote means its curves are complete.
+
+  Each CSV file is pyfunnel's shape: the line `x,y`, then one line per point with both numbers in
+  C's `%.16g` (`oce_verify::format_g16`). An instant where the engine computed nothing (in a
+  stretch a missing sample left uncovered) is `nan`; every compared instant of an output failed by
+  a non-finite engine sample is `inf`. A CSV file holds numbers under a fixed header and no name,
+  and is named by index, so no name a spec, mapping or CXF writes reaches a file name or a cell.
+  `DIR` must be an existing directory (it is never created) and `DIR/outputs` must not exist
+  (`write-failed`: the curves of two runs are never mixed); a `DIR/receipt.json` that is the spec
+  or a file the run reads, by path, link or (on Unix) hard link, is `output-is-input`, and any
+  other entry at `DIR/receipt.json`, a file, a directory or a symbolic link, dangling or not, is
+  `write-failed`, so a receipt this run did not write never stands beside its curves and a link
+  never carries a write out of `DIR` (the orchestrator's call in the review of GitHub #757). These
+  are checked after the reads and **before the run**, so a refusal leaves nothing written. Each
+  file goes through the atomic writer without following a link at its name (a link planted after
+  the check is replaced, its target untouched), and is created owner-only (`0600` on Unix; the
+  directories `outputs/` and `outputs/<k>/` take the process's default mode). A write that fails
+  part-way is `write-failed` naming the file; the files already written stay (without
+  `receipt.json` they are not a run's output), and the report's `curves` lists them. No trace file
+  is written.
+- **Exit-only and label flags.** `--deny-warnings` makes exit `1` when `load_warnings_total` or
+  `warnings_total` is not zero. `--timings` fills the header's `timings` (`load_ms`: reading every
+  file; `run_ms`: the whole `run_commissioning` call; `compare_ms`: `0`). `--data` is the
+  receipt's `data` label, `trended` when absent (decision 41), inside `receipt_id`. No receipt byte
+  outside `timings` depends on `--deny-warnings`, `--timings` or `--render`.
+- **What it does not resolve.** Masked ticks keep OBC §12.7.2's zero fill (issue #745), the
+  comparison waits for change-of-value sampling (issue #746), and the library's other open items
+  are issue #747. The Building 33 worked example is issue #755.
 
 ## `oce id`
 
@@ -348,9 +447,9 @@ oce import rule.cxf.jsonld | oce diff draft.oce - --from text
 
 | Exit | Meaning | When |
 | --- | --- | --- |
-| `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, under `--require-mutants-caught` the set lists a mutant and none survived, under `--deny-warnings` no warning; `id`: the input has an id; `import`: the document is imported and written; `diff`: the diff is `equal`; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
-| `1` | no | an error finding (`validate`, `emit`, which then writes nothing); `fmt --check`: not canonical; `catalog`: an unknown class, or the class rules refuse the parameter table (including a required parameter with no default); `verify`: a scenario failed or the set is `no_data`, or, under their flags, a surviving mutant, a set that lists no mutant, or a warning; `diff`: any difference, a reordering or a comment included |
-| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal; for `id`, also a document the engine does not load, an authored file with an error finding, or `--namespace` beside a CXF document; for `import`, also a document the importer refuses, a sequence the output form cannot spell, or an `-o` name that reads as another form (`import` never exits `1`); for `emit` and `import`, an `-o` that is the input file; for `diff`, also a mixed pair, stdin on both sides, a CXF side the engine does not load, or a document whose blocks are not named under its root |
+| `0` | yes | `validate` and `emit`: no error finding; `fmt --check`: canonical; `catalog`: the ports resolve; `verify`: every scenario passed, under `--require-mutants-caught` the set lists a mutant and none survived, under `--deny-warnings` no warning; `verify --commission`: every compared output passed, under `--deny-warnings` no load or run-time warning; `id`: the input has an id; `import`: the document is imported and written; `diff`: the diff is `equal`; `fmt`, `fmt --write`, `vocab`, `--help`, `--version` |
+| `1` | no | an error finding (`validate`, `emit`, which then writes nothing); `fmt --check`: not canonical; `catalog`: an unknown class, or the class rules refuse the parameter table (including a required parameter with no default); `verify`: a scenario failed or the set is `no_data`, or, under their flags, a surviving mutant, a set that lists no mutant, or a warning; `verify --commission`: an output failed or the run is `no_data`, or, under `--deny-warnings`, a warning; `diff`: any difference, a reordering or a comment included |
+| `2` | error | the question could not be answered: a usage error (clap), stdin without `--from`, an unknown extension, a missing path or a directory, an unreadable or over-size input, a parse refusal, a malformed `--namespace` or `--param`, `--write` on stdin or a wire file, a failed write, or a stdout that cannot be written; for `verify`, also a refused vector file, a subject that does not load, an unresolved name, an uncovered window, an invalid or unreadable mutant, or a run refusal; for `verify --commission`, also a refused spec, mapping, unit or key, a spec with several references and no `--reference`, a reference with no `cxf`, `window` or `sampling`, an unreadable, over-size or refused trend source, a path out of the spec's directory, a CXF that does not load, an engine refusal of a frame, a comparison the limits refuse, an `--out` whose `outputs/` exists or whose `receipt.json` is an input; for `id`, also a document the engine does not load, an authored file with an error finding, or `--namespace` beside a CXF document; for `import`, also a document the importer refuses, a sequence the output form cannot spell, or an `-o` name that reads as another form (`import` never exits `1`); for `emit` and `import`, an `-o` that is the input file; for `diff`, also a mixed pair, stdin on both sides, a CXF side the engine does not load, or a document whose blocks are not named under its root |
 
 ## Output
 
@@ -398,7 +497,7 @@ present:
 | `tool` | `"oce"` | |
 | `schema` | `"oce-report/1"` | the report contract's version; a breaking change bumps it |
 | `command` | string | `emit`, `validate`, `fmt`, `catalog`, `vocab`, `verify`, `id`, `import` or `diff` |
-| `input` | string or `null` | the input path as given, `-` for stdin (the vector file for `verify`, the base for `diff`); `null` for `catalog` and `vocab` |
+| `input` | string or `null` | the input path as given, `-` for stdin (the vector file for `verify`, the spec for `verify --commission`, the base for `diff`); `null` for `catalog` and `vocab` |
 | `ok` | boolean | `true` exactly when the exit is `0` |
 | `findings` | array | the answers that make the exit `1` (below) |
 | `errors` | array | why the question could not be answered; non-empty exactly when the exit is `2` |
@@ -435,10 +534,10 @@ Command keys:
 | `emit` | `stages` as for `validate`; with `-o`, only once the write succeeded, `output` (the path as given) and `bytes` (absent from a failed write's report) |
 | `fmt` | `form` (`text`, `wire`, or `null` before the form is known); with `--check`, `canonical` (whether the input is already canonical **in its own form**: text against `fmt`, wire against the canonical wire writer); with `--write`, only once the file is known canonical on disk (unchanged, or rewritten), `changed` and `output` (absent from a failed write's report) |
 | `catalog` | without a class, `classes`; with one, `class` (`null` when the class is unknown or a `--param` is malformed) and `params` (the `--param` strings as given). A class is one closed object, the same in both ([below](#a-catalog-class)) |
-| `vocab` | `keywords`, `types`, `tags`, `base_units`, `scale_factors` ([below](#scale-factors)), `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `import_codes` (`oce_author::IMPORT_ERROR_CODES`, in order), `error_codes`, `vector_codes` and `verify_codes` (`oce-verify`'s load, bind and run codes, pinned to its lists), `diff_codes` (`oce_diff::DiffError::CODES`, in order, the two of the blob comparison `diff` never reads included), `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
+| `vocab` | `keywords`, `types`, `tags`, `base_units`, `scale_factors` ([below](#scale-factors)), `parse_codes`, `finding_codes` (each with `stage`), `wire_codes`, `import_codes` (`oce_author::IMPORT_ERROR_CODES`, in order), `error_codes`, `vector_codes` and `verify_codes` (`oce-verify`'s load, bind and run codes, pinned to its lists), `spec_codes`, `source_codes`, `unit_codes` and `frame_refusal_codes` (`verify --commission`: the spec reader's codes, and the causes of `source-refused`, `unit-refused` and `frame-refused`, each pinned to `oce-verify`'s list), `diff_codes` (`oce_diff::DiffError::CODES`, in order, the two of the blob comparison `diff` never reads included), `exit_codes` (each `{ "code", "meaning" }`), `enumerations` (below) |
 | `id` | `form` (`cxf`, `text`, `wire`, or `null` before the form is known); `content_id`, only when the input has one (so only with `--json`, exit `0`); `stages` as for `validate`, only once a validation stage of a text or wire file ran (absent after a read, parse or namespace refusal, and for a CXF document) |
 | `import` | `output_form` (`text` or `wire`, always); once the importer accepted the document, `dropped` and `normalised` ([above](#oce-import)), so they are absent after an output-guard, read or importer refusal and present beside an `unspellable` or `write-failed` error; with `-o`, only once the write succeeded, `output` (the path as given) and `bytes`. Never `stages`: no validation stage runs |
-| `verify` | `subject` (the subject's path as given); with `--out`, only once the receipt is written, `passed`, `status` (`pass`, `fail`, `no_data`), `receipt_id` and `output` (`DIR/receipt.json`, with `/`); after a text or wire subject's validation, `stages` as for `validate` |
+| `verify` | `subject` (the subject's path as given; not for `--commission`); with `--out`, only once the receipt is written, `passed`, `status` (`pass`, `fail`, `no_data`), `receipt_id` and `output` (`DIR/receipt.json`, with `/`), and for `--commission` `curves` (per compared output its `index`, its canonical path as `output` and the `files` written for it, `DIR` as given then `/outputs/<k>/<name>`); after a text or wire subject's validation, `stages` as for `validate` |
 | `diff` | `head` (the head's path as given, `-` for stdin); `form` (`cxf`, `text`, `wire`, or `null` until both sides are known to be one form); `diff`, only once a diff is made (exit `0` and `1`): the `oce-diff/1` object `oce_diff::Diff::to_json` writes, its keys sorted as the report's are. Never `stages`: nothing is validated. An error about one side carries `at`, `base` or `head`; `mixed-forms` and `stdin-twice` are about the pair and carry none |
 
 The tool's own error codes: `missing-from`, `unknown-form`, `not-found`, `not-a-file`,
@@ -592,6 +691,29 @@ or file at the temporary name, permissions, a link target, a failed write's repo
   platform's stated reason;
 - `tests/replay_gate.rs` is the in-repo replay gate.
 
+For `verify --commission` (every run in a scratch directory holding `oce-verify`'s commissioning
+run fixture, read in place, `tests/support/commission.rs`):
+- `tests/commission_runs.rs` pins one transcript per verdict (`pass`, `fail`, `no_data`, each
+  stdout byte-equal to `oce-verify`'s golden receipt) and per refusal class (usage, the spec, the
+  reference, a file, each library refusal with its cause, `--out`), the rendering, and holds every
+  code and cause they print to `oce vocab`;
+- `tests/commission_files.rs` covers `--out`: every `errors.csv` against the library's golden
+  columns and, for the oracle case, against `derive_run.py`'s independent derivation (`nan` at an
+  uncovered instant), `inf` for a non-finite engine sample, the bound files against the library's
+  curves and a golden (`tests/fixtures/commission/`), the report's `curves`, two runs giving the
+  same files, the flags, nothing written on a refusal, a part-way failure, links at
+  `receipt.json`, hostile names, and the streams;
+- `tests/commission_out_guards.rs` covers what `--out` refuses to write over (a stale
+  `receipt.json`; a link there to a file outside `DIR`, to an unread file, dangling; a dangling
+  link at `outputs`; a `DIR` that is a file), a curve that cannot be written (a `DIR` path swept
+  across the platform's path limit, so writes fail at every stage, each run's `curves` holding
+  exactly the files that exist), and `--deny-warnings` on a load warning;
+- `tests/commission_reads.rs` covers the reads: each bound from metadata at and one past its
+  edge, the files together, links out of and inside the spec's directory, a directory and a named
+  pipe;
+- `tests/hostile_inputs.rs` runs seeded byte edits of the spec, the mapping and a trend file
+  through the binary.
+
 For `id`:
 - `tests/id_runs.rs` pins one transcript per input form and refusal class, `--json` and `--help`
   included;
@@ -656,4 +778,6 @@ For `diff`:
 
 The transcripts regenerate only with `OCE_BLESS_CLI=1 cargo nextest run -p oce-cli` (see
 `.agents/project-facts.md`). The `verify` transcripts embed receipts, which carry the engine
-version, so a workspace version bump re-blesses them.
+version, so a workspace version bump re-blesses them; the `verify_commission_*` transcripts read
+`oce-verify`'s commissioning run fixture, so anything that moves one of its golden receipts moves
+them too.

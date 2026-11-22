@@ -1,0 +1,19 @@
+exit: 2
+--- stdout
+{
+  "command": "verify",
+  "errors": [
+    {
+      "at": "outputs",
+      "code": "write-failed",
+      "detail": "`out/outputs`: it already exists, and the curves of two runs are never mixed; give an empty directory",
+      "span": null
+    }
+  ],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "schema": "oce-report/1",
+  "tool": "oce"
+}
+--- stderr

@@ -1,0 +1,46 @@
+exit: 1
+--- stdout
+{
+  "command": "verify",
+  "curves": [
+    {
+      "files": [
+        "out/outputs/0/errors.csv"
+      ],
+      "index": 0,
+      "output": "urn:verify:plant#top.TSet"
+    },
+    {
+      "files": [
+        "out/outputs/1/errors.csv"
+      ],
+      "index": 1,
+      "output": "urn:verify:plant#top.enOut"
+    },
+    {
+      "files": [
+        "out/outputs/2/errors.csv"
+      ],
+      "index": 2,
+      "output": "urn:verify:plant#top.limOut"
+    },
+    {
+      "files": [
+        "out/outputs/3/errors.csv"
+      ],
+      "index": 3,
+      "output": "urn:verify:plant#top.nOut"
+    }
+  ],
+  "errors": [],
+  "findings": [],
+  "input": "spec.json",
+  "ok": false,
+  "output": "out/receipt.json",
+  "passed": false,
+  "receipt_id": "receipt:fnv1a128:1ee254d61668758ab1b6fb490c09dfd6",
+  "schema": "oce-report/1",
+  "status": "fail",
+  "tool": "oce"
+}
+--- stderr

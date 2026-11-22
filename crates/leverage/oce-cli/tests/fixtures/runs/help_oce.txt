@@ -12,7 +12,7 @@ Commands:
   fmt       Print the canonical text form of a sequence
   catalog   List the block classes, or describe one: its ports, parameters, units, ranges and notes
   vocab     Print the text-form vocabulary, the unit scale factors and every code oce reports
-  verify    Replay a vector set against a subject and print the receipt
+  verify    Replay a vector set against a subject, or a commissioning spec against its trends, and print the receipt
   id        Print the canonical content id of a CXF document or an authored sequence
   import    Read a flat CXF document into the authoring form
   diff      Compare two sequences, or two CXF documents, and print the structural diff

@@ -452,7 +452,11 @@ blessed transcript that breaks the contract still fails. Since issue #522 the `v
 transcripts embed `oce-verify` receipts, which carry the engine version: a workspace version bump,
 or anything that moves an `oce-verify` golden receipt, moves them too. `tests/replay_gate.rs`
 compares the binary's stdout with `oce-verify`'s golden receipts in place, so it fails until those
-are re-blessed in `oce-verify`.
+are re-blessed in `oce-verify`. Since issue #664 the `verify_commission_*` transcripts run over a
+scratch copy of `oce-verify`'s commissioning run fixture (`tests/fixtures/commissioning/run/`),
+and `tests/commission_runs.rs` and `tests/commission_files.rs` hold the binary's receipts and
+`errors.csv` files to that fixture's golden receipts and exceedance columns: anything that moves
+one of those goldens moves these transcripts and fails those tests until both are re-blessed.
 
 Since issue #514 a new CXF fixture in any crate moves this crate too. `tests/import_corpus.rs`
 runs `oce import`, then `oce emit` and `oce id`, over every `.jsonld` and `.cxf.json` file git

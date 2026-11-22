@@ -5,9 +5,12 @@
 //! finding codes (`oce_author::STAGE_ONE_CODES`), the stage-2 codes, the wire codes
 //! (`oce_author::WIRE_CODES`), the importer's codes (`oce_author::IMPORT_ERROR_CODES`), the tool's
 //! own error codes, the vector file's and the verifier's codes `verify` passes through
-//! (`oce_verify::VECTOR_ERROR_CODES`, `oce_verify::VERIFY_ERROR_CODES`) and the diff's codes `diff`
-//! passes through (`oce_diff::DiffError::CODES`), each with one line of meaning; and the exit
-//! statuses.
+//! (`oce_verify::VECTOR_ERROR_CODES`, `oce_verify::VERIFY_ERROR_CODES`), the commissioning
+//! readers' codes `verify --commission` passes through (`oce_verify::SPEC_ERROR_CODES`, and as
+//! causes `oce_verify::SOURCE_ERROR_CODES`, `oce_verify::UNIT_ERROR_CODES` and
+//! `oce_verify::ENGINE_REFUSAL_CLASSES`) and the diff's
+//! codes `diff` passes through (`oce_diff::DiffError::CODES`), each with one line of meaning; and
+//! the exit statuses.
 //!
 //! `scale_factors` is the vocabulary's unit scale-factor table (`oce_vocab::SCALE_FACTORS`,
 //! vocabulary note decision 14, GitHub issue #500), in table order: the symbols that are an
@@ -32,6 +35,9 @@ use crate::codes::{
     EXIT_MEANINGS, IMPORT_MEANINGS, PARSE_MEANINGS, STAGE_ONE_MEANINGS, STAGE_TWO_MEANINGS,
     TEXT_FORM_TAGS, TOOL_CODES, WIRE_MEANINGS,
 };
+use crate::commission_codes::{
+    ENGINE_REFUSAL_MEANINGS, SOURCE_MEANINGS, SPEC_MEANINGS, UNIT_MEANINGS,
+};
 use crate::diff_codes::DIFF_MEANINGS;
 use crate::report::Report;
 use crate::verify_codes::{VECTOR_MEANINGS, VERIFY_MEANINGS};
@@ -54,6 +60,10 @@ pub(crate) fn run(json: bool) -> Outcome {
     report.set("error_codes", table(TOOL_CODES));
     report.set("vector_codes", table(VECTOR_MEANINGS));
     report.set("verify_codes", table(VERIFY_MEANINGS));
+    report.set("spec_codes", table(SPEC_MEANINGS));
+    report.set("source_codes", table(SOURCE_MEANINGS));
+    report.set("unit_codes", table(UNIT_MEANINGS));
+    report.set("frame_refusal_codes", table(ENGINE_REFUSAL_MEANINGS));
     report.set("diff_codes", table(DIFF_MEANINGS));
     report.set(
         "exit_codes",
@@ -203,6 +213,26 @@ fn render_text() -> String {
         &mut out,
         "bind and run codes (verify, exit 2)",
         VERIFY_MEANINGS,
+    );
+    rows(
+        &mut out,
+        "commissioning spec codes (verify --commission, exit 2; the last four are causes of spec-refused)",
+        SPEC_MEANINGS,
+    );
+    rows(
+        &mut out,
+        "trend source codes (verify --commission, the cause of source-refused, exit 2)",
+        SOURCE_MEANINGS,
+    );
+    rows(
+        &mut out,
+        "unit codes (verify --commission, the cause of unit-refused, exit 2)",
+        UNIT_MEANINGS,
+    );
+    rows(
+        &mut out,
+        "frame refusal classes (verify --commission, the cause of frame-refused, exit 2)",
+        ENGINE_REFUSAL_MEANINGS,
     );
     rows(&mut out, "diff codes (diff, exit 2)", DIFF_MEANINGS);
     out.push_str("exit codes:\n");
