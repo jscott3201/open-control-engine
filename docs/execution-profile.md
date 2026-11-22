@@ -89,6 +89,53 @@ Schedule acceptance is based on direct-feedthrough shape, not event convergence.
 as `Pre -> Not -> Pre` is accepted and alternates once per tick call. That network has no same-time
 Boolean fixed point, but HostTick v1 neither rejects it nor emits a non-convergence diagnostic.
 
+## Events on a Boolean input
+
+A block whose CDL source has `when trigger then ...` (or `reinit`) on a Boolean input applies the
+event at the frame of the event (issue #768; design note
+[Reset timing at the event](design/reset-timing.md)):
+
+| Boundary | HostTick v1 behavior |
+| --- | --- |
+| Event instant | Frame `k > 0` is the event instant of every Boolean event condition true at frame `k` and false at frame `k - 1`. |
+| Event frame's outputs | The values after the event, computed from frame `k`'s inputs: the frame emits from the reinitialised or re-assigned state. |
+| Integrators | The reset frame's update stores the reset value with no Euler step (that step covers `[t(k-1), t(k)]`, before the event); from frame `k + 1` on, the state is what the engine stored before this rule. |
+| Frame 0 | Initialisation: no `when` fires unless its condition holds `initial()`. An event input true at frame 0 becomes its `pre` value for frame 1, so the first event is its next false-to-true transition. |
+| Feedthrough graph | An input the event reads at emission feeds through to the output, so the block waits for its producer, and feedback from the output into it is an `algebraic-loop`. |
+
+The blocks this concerns are `Reals.PIDWithReset` (PI and PID modes: `trigger` feeds through; the
+reset back-solves the integrator to `y_reset - (P + D)` from the frame's terms, and the frame emits
+through the normal path, `P + D + (y_reset - (P + D))`, which can differ from `y_reset` by an ulp),
+`Reals.IntegratorWithReset` (`trigger` and `y_reset_in` feed through; `u` stays a loop cut),
+`Integers.OnCounter` (`trigger` and `reset` feed through), and `Discrete.TriggeredSampler` and
+`Discrete.TriggeredMax` (no event at frame 0; both already fed through). `PIDWithReset` in P mode
+has no integrator, ignores `trigger` and does not feed it through. `Logical.Change`, `Edge` and
+`FallingEdge` keep their initialisation value at frame 0, true when `u` differs from
+`pre_u_start`; a downstream `when` ignores that pulse either way. Every other class with a `when`
+in its source already matched this rule.
+
+Modelica settles feedback into an event input by event iteration, which HostTick v1 does not run.
+The engine refuses such a model with `algebraic-loop`, and the record of the event input names the
+remedy: a `Logical.Pre` on the path into a Boolean event input, or a `Discrete.UnitDelay` on the
+path into `IntegratorWithReset.y_reset_in` (a delay of exactly one frame only when its
+`samplePeriod` equals the host frame period and frames land on its sample grid; CDL has no other
+Real one-frame delay). The delay makes the model load and moves that input's events one frame
+later. It does not reproduce the engine before issue #768, which applied each event one frame late
+itself. The exact property, pinned by `crates/oce-api/tests/event_input_feedback.rs`: with every
+event input of the block delayed and none true at frame 0, `OnCounter` matches the previous
+engine count for count; the two integrating blocks match it in the frame of each reset (and, under
+steady inputs, in every output up to that frame) but still differ in the reset value, which is
+taken from the inputs of the frame the delayed event fires at, and by the integration step across
+the event, which the reset frame does not take. An event input true at frame 0 is the exception:
+the previous engine ignored it, and behind a `Pre` (`pre_u_start = false`) it is an event at
+frame 1.
+
+`TriggeredSampler` marks "no frame yet" with a third value of its previous-trigger word, so
+`state_len` is unchanged. Only `init_state` writes it. A snapshot taken before the first frame is
+validated by comparison with the `init_state` output, so it carries and restores the marker exactly;
+a snapshot taken after any frame is validated by the block's state contract, which accepts only a
+canonical Boolean there, so the marker is refused in it.
+
 ## Host observation
 
 `get_output` and `watch` are latest-state, non-receipt inspections. Load, restore and parameter

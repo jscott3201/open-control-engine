@@ -2,7 +2,7 @@
 # columns: time outdoor_damper_min_limit
 double G36_multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21_outdoor_damper_min_limit(24,2)
 0.0 0.4
-60.0 0.0
+60.0 0.4
 120.0 1.0
 180.0 0.0
 240.0 1.0

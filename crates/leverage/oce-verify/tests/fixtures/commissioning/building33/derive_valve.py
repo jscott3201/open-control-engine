@@ -22,8 +22,11 @@ is written out here from the vendored Modelica sources, read directly:
 Time is discrete, as the engine's is: each row of the input table is one frame. The integrator
 is the engine's declared discretisation, its documented tick convention for a PI controller
 (forward Euler; a frame emits from the state before it, then the state advances by the gain
-times the frame's integrand times the time since the previous frame, zero at the first frame;
-a reset on a rising trigger is applied as the state advances, so it shows at the next frame).
+times the frame's integrand times the time since the previous frame, zero at the first frame).
+A reset is applied at the event, as Modelica's `when trigger then reinit(...)` is: at a frame
+after the first where the trigger rises, the integrator is set to `y_reset - yP` from that
+frame's error before the PI emits, and that frame's update takes no Euler step (the step covers
+the interval before the event). The first frame is initialisation, where no `when` fires.
 That convention is the engine's choice, and this derivation checks the transcription (the
 wiring, the parameters, every branch), not the choice: the OpenModelica comparison in the
 README is where the continuous model is compared.
@@ -35,6 +38,9 @@ holding below the cut-off, the supply-air high limit cutting the signal (and the
 at its lower end), the fan feedback hysteresis holding and then disabling, the fan status
 disabling, the outdoor air below upstream's `uLow`, each re-enable resetting the integrator,
 and the PI driven below `yMin` (its lower saturation, with the anti-windup acting) and back.
+The last four frames, appended after the first 74, disable the valve for exactly one frame:
+`Change` is still true at the re-enable, so the integrator reset happens at the disable, not at
+the re-enable.
 Irregular frame steps exercise the time step. The PI's upper saturation at `yMax` is reached
 under the high limit, where the line cuts it; the line's own upper clamp (`limitAbove`) can never
 show in the valve signal, because the PI's output never exceeds `yMax = 1 = f2`, so only the
@@ -108,6 +114,13 @@ def scenario():
     add(4, 5.0, 288.0, 285.0, 290.0, 0.2, True, "pi: re-enabled by the outdoor air")
     add(6, 5.0, 280.0, 290.0, 290.0, 0.2, True, "pi: saturated at yMin, the anti-windup acting")
     add(4, 5.0, 288.0, 285.0, 290.0, 0.2, True, "pi: recovering from the lower saturation")
+    # Appended after the first 74 rows, which keep their times: a one-frame disable. `Change`
+    # rises at the disable (an event that resets the integrator while the valve is off) and is
+    # still true at the re-enable, so no reset fires there; a reset triggered by the enable's
+    # level would fire at the re-enable instead, and the valve differs from the next frame on.
+    add(1, 5.0, 288.0, 285.0, 290.0, 0.2, False, "off: the fan status false for one frame")
+    add(3, 5.0, 288.0, 285.0, 290.0, 0.2, True,
+        "pi: re-enabled after one frame off, Change still true at the re-enable")
     return rows
 
 
@@ -132,9 +145,13 @@ def main():
         enable = (t_out_thr and fan_thr) and fan_sta
         change = enable != enable_before
         enable_before = enable
-        # PI, emitting from the integrator state before this frame.
+        # PI. A rising trigger after the first frame resets the integrator at this frame, before
+        # the PI emits; otherwise it emits from the integrator state before this frame.
         e = REV_ACT / R * t_sup_set - REV_ACT / R * t_sup
         y_p = K * e
+        reset = t_before is not None and change and not trigger_before
+        if reset:
+            integral = Y_RESET - y_p
         y_unl = y_p + integral
         y_pi = min(Y_MAX, max(Y_MIN, y_unl))
         # Downstream: BooleanToReal, Multiply, Line, Min.
@@ -144,12 +161,10 @@ def main():
         out.append("row\t{!r}\t{!r}\t{!r}\t{!r}\t{!r}\t{}\t{}\t{!r}\t{}".format(
             t, t_sup, t_sup_set, t_out, fan_fee, "true" if fan_sta else "false",
             bits(valve), valve, branch))
-        # Advance the integrator: forward Euler over the time since the previous frame, or the
-        # reset on a rising trigger.
+        # Advance the integrator: forward Euler over the time since the previous frame, except on
+        # the reset frame, whose step covers the interval before the event.
         dt = 0.0 if t_before is None else t - t_before
-        if change and not trigger_before:
-            integral = Y_RESET - y_p
-        else:
+        if not reset:
             integrand = e - (1 / (K * NI)) * (y_unl - y_pi)
             integral = integral + K / TI * integrand * dt
         trigger_before = change

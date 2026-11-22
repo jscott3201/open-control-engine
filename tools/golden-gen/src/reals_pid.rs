@@ -4,7 +4,10 @@
 //! `PID.mo` / `PIDWithReset.mo` block wiring. It intentionally does not import or call any
 //! `oce-*` code. The emitted traces exercise non-dyadic forward-Euler integral accumulation,
 //! limiter back-calculation anti-windup, and the local `PIDWithReset` trigger plus `y_reset`
-//! parameter reset path.
+//! parameter reset path. The reset follows Modelica's `when trigger then reinit(...)`: it applies
+//! at the instant the trigger becomes true (the sample where it rises), with the reinitialised
+//! integrator `y_reset - yP` computed from that sample's error, and no `when` fires during
+//! initialisation (the first sample), where the trigger only seeds `pre(trigger)`.
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
@@ -77,23 +80,27 @@ fn pi_outputs(
     for idx in 0..time.len() {
         let e = (u_s[idx] - u_m[idx]) / 1.0;
         let y_p = config.k * e;
+        // `when trigger then reinit(I.y, y_reset - (P + D))`: an event at a sample after the
+        // first where the trigger is true and was false at the previous sample.
+        let rising_reset = prev_t.is_some()
+            && reset
+                .as_ref()
+                .is_some_and(|reset| reset.trigger[idx] && !prev_trigger);
+        if rising_reset {
+            let reset = reset.as_ref().expect("rising reset has reset inputs");
+            y_i = reset.y_reset - y_p;
+        }
         let y_u = y_p + y_i;
         let y = y_u.max(config.y_min).min(config.y_max);
         out.push(r(y));
 
         let dt = prev_t.map_or(0.0, |t_prev| time[idx] - t_prev);
-        let rising_reset = reset
-            .as_ref()
-            .is_some_and(|reset| reset.trigger[idx] && !prev_trigger);
-
-        y_i = if rising_reset {
-            let reset = reset.as_ref().expect("rising reset has reset inputs");
-            reset.y_reset - y_p
-        } else {
+        // The reset sample's Euler step covers the interval before the event: it is discarded.
+        if !rising_reset {
             let delta_y = (y_u - y) / (config.k * config.ni);
             let err_i = e - delta_y;
-            y_i + ((config.k / config.ti) * err_i) * dt
-        };
+            y_i += ((config.k / config.ti) * err_i) * dt;
+        }
 
         prev_t = Some(time[idx]);
         if let Some(reset) = &reset {
@@ -170,7 +177,7 @@ fn pid_with_reset_pi_recurrence() -> Golden {
         time,
         y,
         "default controllerType=PI; k=0.37, Ti=0.3, Ni=default 0.9, xi_start=0.11, y_reset=0.275, yMin=-0.35, yMax=0.45; trigger rises at t=0.3 and t=0.7; dt=0.1 decimal grid",
-        "Same limited PI recurrence as PID, with a rising trigger applying the canonical PIDWithReset.mo parameter reset during state update: xI := y_reset - yP. Rows t=0.4 and t=0.8 hold the same current P term as the reset row, so emitted y pins the parameter reset target on the next tick.",
+        "Same limited PI recurrence as PID, with the canonical PIDWithReset.mo parameter reset applied at the event: at a sample after the first where trigger is true and was false at the previous sample, xI := y_reset - yP from that sample's error before y is emitted, so the reset sample emits y=max(yMin,min(yP+xI,yMax)), and that sample's xI update is skipped (its Euler step covers the interval before the event). No reset fires at the first sample (initialisation). Rows t=0.3 and t=0.7 emit the reset target; rows t=0.4 and t=0.8 hold the same P term with the trigger high, so they emit it again before integrating.",
     )
     .with_scenario("pi_reset_recurrence")
     .with_inputs(vec![

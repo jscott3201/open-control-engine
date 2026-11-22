@@ -14,8 +14,8 @@
     { "name": "y_reset_in", "value_kind": "Real", "values": [0.0, 0.0, 0.0, 7.0, 11.0, 0.0, 0.0, -5.0] },
     { "name": "trigger", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0] }
   ],
-  "input": "default k=1, y_start=1.0; dt=0.1 decimal grid (non-dyadic residue); rising trigger at row 3 stores 7.0 for the next emit, held-high row 4 integrates instead of re-resetting to 11.0, second rising trigger at row 7 stores -5.0",
-  "reference_rule": "Emit prior x; then x := y_reset_in on a rising trigger else x + k*u*dt (first dt=0); reinit is direct assignment, never scaled by k; Buildings Reals/IntegratorWithReset.mo der(y)=k*u + when trigger reinit(y, y_reset_in)",
+  "input": "default k=1, y_start=1.0; dt=0.1 decimal grid (non-dyadic residue); rising trigger at row 3 emits and stores 7.0, held-high row 4 emits 7.0 and integrates instead of re-resetting to 11.0, second rising trigger at row 7 emits and stores -5.0",
+  "reference_rule": "Reset at the event: at a row after the first where trigger is true and was false at the previous row, emit y_reset_in and store it with no Euler step; otherwise emit prior x, then x := x + k*u*dt (first dt=0); no reset at the first row (initialisation); reinit is direct assignment, never scaled by k; Buildings Reals/IntegratorWithReset.mo der(y)=k*u + when trigger reinit(y, y_reset_in)",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

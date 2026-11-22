@@ -83,8 +83,67 @@ fn pid_mode_state_words_are_allocated_from_resolved_controller_type() {
     assert_eq!(sched.order, vec![p_mode, pid_mode]);
 }
 
+/// `PIDWithReset` (PI, `k = Ti = 1`, `y_reset = 5`, `e = 1`) whose trigger comes from
+/// `CivilTime > 0.5`, declared AFTER the controller, so only the trigger's emit-before edge can
+/// place the threshold first.
+fn reset_pid_with_late_declared_trigger() -> (ModelBuilder, BlockId, BlockId, ConnectorId) {
+    let mut b = ModelBuilder::default();
+    let (_set, _, set_out) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(1.0))],
+    ));
+    let (_measured, _, measured_out) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(0.0))],
+    ));
+    let (pid, pid_in, pid_out) = b.block_real(make(
+        "CDL.Reals.PIDWithReset",
+        &[
+            ("controllerType", enum_param("PI")),
+            ("k", Value::Real(1.0)),
+            ("Ti", Value::Real(1.0)),
+            ("y_reset", Value::Real(5.0)),
+            ("yMin", Value::Real(-100.0)),
+            ("yMax", Value::Real(100.0)),
+        ],
+    ));
+    let (_clock, _, clock_out) = b.block_real(make("CDL.Reals.Sources.CivilTime", &[]));
+    let (threshold, threshold_in, threshold_out) = b.block_real(make(
+        "CDL.Reals.GreaterThreshold",
+        &[("t", Value::Real(0.5))],
+    ));
+    b.connect(set_out[0], pid_in[0]);
+    b.connect(measured_out[0], pid_in[1]);
+    b.connect(clock_out[0], threshold_in[0]);
+    b.connect(threshold_out[0], pid_in[2]);
+    (b, pid, threshold, pid_out[0])
+}
+
 #[test]
-fn pid_with_reset_trigger_is_update_routed_end_to_end() {
+fn pid_with_reset_trigger_resets_at_its_frame_end_to_end() {
+    let (b, pid, threshold, y) = reset_pid_with_late_declared_trigger();
+    let sched = compile(&b.model, &b.blocks).expect("an acyclic trigger path compiles");
+    let position = |block| sched.order.iter().position(|&id| id == block).unwrap();
+    assert!(
+        position(threshold) < position(pid),
+        "the trigger feeds through, so its producer is scheduled first: {:?}",
+        sched.order
+    );
+    let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
+    // t = 0: trigger false, emits e = 1. t = 1: the trigger rises; that frame emits the reset
+    // controller, 1 + (5 - 1) = 5. t = 2: held, emits 5. t = 3: 1 + 5 = 6.
+    let mut trace = Vec::new();
+    for t in [0.0, 1.0, 2.0, 3.0] {
+        tick_once(&b.model, &sched, &b.blocks, &mut state, t);
+        trace.push(state.values[y.0 as usize].clone());
+    }
+    for (got, want) in trace.iter().zip([1.0, 5.0, 5.0, 6.0]) {
+        assert!(got.bit_eq(&Value::Real(want)), "{trace:?}");
+    }
+}
+
+#[test]
+fn pid_with_reset_trigger_true_from_the_first_frame_never_resets() {
     let mut b = ModelBuilder::default();
     let (_set, _, set_out) = b.block_real(make(
         "CDL.Reals.Sources.Constant",
@@ -115,16 +174,12 @@ fn pid_with_reset_trigger_is_update_routed_end_to_end() {
 
     let sched = compile(&b.model, &b.blocks).expect("PIDWithReset trigger must not add loops");
     let mut state = allocate_state(&b.model, &b.blocks).expect("state within budget");
-
-    tick_once(&b.model, &sched, &b.blocks, &mut state, 0.0);
-    assert!(
-        state.values[pid_out[0].0 as usize].bit_eq(&Value::Real(1.0)),
-        "rising reset must not affect the same tick output"
-    );
-
-    tick_once(&b.model, &sched, &b.blocks, &mut state, 1.0);
-    assert!(
-        state.values[pid_out[0].0 as usize].bit_eq(&Value::Real(5.0)),
-        "reset target is visible on the following tick through the update pass"
-    );
+    // Frame 0 is initialisation: no reset, and the held trigger is no event afterwards.
+    for (t, want) in [(0.0, 1.0), (1.0, 1.0), (2.0, 2.0)] {
+        tick_once(&b.model, &sched, &b.blocks, &mut state, t);
+        assert!(
+            state.values[pid_out[0].0 as usize].bit_eq(&Value::Real(want)),
+            "t = {t}: want {want}"
+        );
+    }
 }

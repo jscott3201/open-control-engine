@@ -428,8 +428,8 @@ fn only_connector_cycles_are_reported_as_cdl_violations() {
     // A connector-level cycle breaks CDL §7.16; a block-granularity cycle exists only because the
     // engine fires each block atomically, so its record must not send the author hunting for a
     // §7.16 loop. Both stay bounded: the cause text is fixed, whatever the counts and next member.
-    let connector = cycle_member_message(DiagCode::AlgebraicLoop, 1, 2, "urn:m#a.y");
-    let block = cycle_member_message(DiagCode::BlockAlgebraicLoop, 1, 2, "urn:m#p");
+    let connector = cycle_member_message(DiagCode::AlgebraicLoop, 1, 2, "urn:m#a.y", None);
+    let block = cycle_member_message(DiagCode::BlockAlgebraicLoop, 1, 2, "urn:m#p", None);
     assert!(
         connector.contains("CDL §7.16 forbids algebraic loops"),
         "{connector}"
@@ -446,8 +446,8 @@ fn only_connector_cycles_are_reported_as_cdl_violations() {
     ] {
         assert!(block.contains(needle), "missing {needle:?}: {block}");
     }
-    let wide = cycle_member_message(DiagCode::BlockAlgebraicLoop, 999_999, 1_000_000, "");
-    let narrow = cycle_member_message(DiagCode::BlockAlgebraicLoop, 1, 1, "");
+    let wide = cycle_member_message(DiagCode::BlockAlgebraicLoop, 999_999, 1_000_000, "", None);
+    let narrow = cycle_member_message(DiagCode::BlockAlgebraicLoop, 1, 1, "", None);
     assert_eq!(
         wide.len() - narrow.len(),
         "999999".len() - 1 + "1000000".len() - 1
@@ -461,6 +461,7 @@ fn only_connector_cycles_are_reported_as_cdl_violations() {
 fn loop_refusal_without_receipt_capture_keeps_no_evidence() {
     let error = oce_graph::BuildError::AlgebraicLoop {
         members: members(&["urn:m#a.y", "urn:m#a.u2"]),
+        event_inputs: Vec::new(),
     };
     let mut capture = DiagnosticCapture::new(false, DiagnosticStage::Schedule);
     let refused = capture.build_refusal(error.clone());
@@ -473,6 +474,7 @@ fn loop_refusal_without_receipt_capture_keeps_no_evidence() {
 fn connector_loop_records_sort_by_subject_not_by_cycle_order() {
     let error = oce_graph::BuildError::AlgebraicLoop {
         members: members(&["urn:m#a.y", "urn:m#a.u2"]),
+        event_inputs: Vec::new(),
     };
     let mut capture = DiagnosticCapture::new(true, DiagnosticStage::Schedule);
     let refused = capture.build_refusal(error.clone());

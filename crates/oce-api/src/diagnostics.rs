@@ -375,11 +375,16 @@ impl DiagnosticCapture {
     pub(crate) fn build_refusal(&mut self, error: oce_graph::BuildError) -> OcError {
         if let Some(records) = &mut self.records {
             let coded = match &error {
-                oce_graph::BuildError::AlgebraicLoop { members } => {
-                    Some((oce_diag::DiagCode::AlgebraicLoop, members))
-                }
+                oce_graph::BuildError::AlgebraicLoop {
+                    members,
+                    event_inputs,
+                } => Some((
+                    oce_diag::DiagCode::AlgebraicLoop,
+                    members,
+                    event_inputs.as_slice(),
+                )),
                 oce_graph::BuildError::BlockAlgebraicLoop { members } => {
-                    Some((oce_diag::DiagCode::BlockAlgebraicLoop, members))
+                    Some((oce_diag::DiagCode::BlockAlgebraicLoop, members, &[][..]))
                 }
                 oce_graph::BuildError::StateTooLarge {
                     block,
@@ -426,10 +431,14 @@ impl DiagnosticCapture {
                 }
                 _ => None,
             };
-            if let Some((code, members)) = coded {
+            if let Some((code, members, event_inputs)) = coded {
                 records.reserve(members.len());
                 for (index, member) in members.iter().enumerate() {
                     let next = &members[(index + 1) % members.len()];
+                    let role = event_inputs
+                        .iter()
+                        .find(|(path, _)| path == member)
+                        .map(|(_, role)| *role);
                     records.push(DiagnosticRecord {
                         key: DiagnosticKey {
                             stage: self.stage,
@@ -437,7 +446,13 @@ impl DiagnosticCapture {
                             code: code.as_str().to_owned(),
                             severity: DiagnosticSeverity::Error,
                         },
-                        message: cycle_member_message(code, index + 1, members.len(), &next.0),
+                        message: cycle_member_message(
+                            code,
+                            index + 1,
+                            members.len(),
+                            &next.0,
+                            role,
+                        ),
                     });
                 }
             }
@@ -463,11 +478,16 @@ impl DiagnosticCapture {
 /// cycle is not: no connector-level cycle exists, so the model may be CDL-legal and the refusal is
 /// an engine coverage limit of atomic block firing (GitHub issue #347). Its text says so, and leads
 /// with splitting the block before the delay remedy.
+///
+/// A member that is an event input of its block (`role`) appends the fixed remedy for that role
+/// ([`oce_graph::event_input_remedy`]): `CDL.Logical.Pre` for a Boolean event input,
+/// `CDL.Discrete.UnitDelay` for a reset value. The message stays bounded.
 fn cycle_member_message(
     code: oce_diag::DiagCode,
     position: usize,
     count: usize,
     next: &str,
+    role: Option<oce_blocks::EventInputRole>,
 ) -> String {
     let (kind, cause_and_remedy) = match code {
         oce_diag::DiagCode::BlockAlgebraicLoop => (
@@ -483,7 +503,15 @@ fn cycle_member_message(
              CDL.Discrete.UnitDelay) or an integrator into the loop.",
         ),
     };
-    format!("{kind} member {position} of {count}; next member: {next}. {cause_and_remedy}")
+    match role {
+        Some(role) => format!(
+            "{kind} member {position} of {count}; next member: {next}. {cause_and_remedy} {}",
+            oce_graph::event_input_remedy(role)
+        ),
+        None => {
+            format!("{kind} member {position} of {count}; next member: {next}. {cause_and_remedy}")
+        }
+    }
 }
 
 #[cfg(test)]

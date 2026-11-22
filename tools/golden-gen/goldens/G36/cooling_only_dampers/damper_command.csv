@@ -2,7 +2,7 @@
 # columns: time damper_command
 double G36_cooling_only_dampers_damper_command(34,2)
 0.0 0.0
-60.0 0.0
+60.0 0.01
 120.0 0.01
 180.0 0.01
 240.0 0.01
@@ -24,7 +24,7 @@ double G36_cooling_only_dampers_damper_command(34,2)
 1200.0 1.0
 1260.0 0.8014452920119048
 1320.0 0.0
-1380.0 0.0
+1380.0 0.010000000000000009
 1440.0 0.010000000000000009
 1500.0 1.0
 1560.0 1.0

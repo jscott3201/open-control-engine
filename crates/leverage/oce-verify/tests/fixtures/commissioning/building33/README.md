@@ -25,7 +25,7 @@ under the spec's `data/` paths, and the CLI test copies them into a scratch dire
 | `receipts/day.receipt.json` | The day's receipt. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
 | `declarations.txt` | What `CoolingCoilValve.mo` declares: parameters with their bindings evaluated, connectors, blocks with their modifiers, connections; headed by the `.mo`'s digest. | `python3 -I derive_declarations.py <the .mo> > declarations.txt`, by hand; never blessed |
 | `derive_declarations.py` | Reads the `.mo` with its own parser and a closed expression evaluator; never reads the `.oce`. | nobody: it is the reference |
-| `valve_oracle.txt` | The valve signal over 74 synthetic frames, with their inputs: every branch the valve signal can show (below; the line's upper clamp cannot show). | `python3 -I derive_valve.py > valve_oracle.txt`, by hand; never blessed |
+| `valve_oracle.txt` | The valve signal over 78 synthetic frames, with their inputs: every branch the valve signal can show (below; the line's upper clamp cannot show). | `python3 -I derive_valve.py > valve_oracle.txt`, by hand; never blessed |
 | `derive_valve.py` | The sequence written out from the `.mo` and the vendored CDL block sources, under the engine's documented discrete time. | nobody: it is the reference |
 | `openmodelica/run_openmodelica.sh`, `simulate.mos`, `extract_day.py` | Simulate upstream's own `ControlsVerification_CoolingCoilValve`, unmodified, in the pinned OpenModelica 1.25.1 container, offline, and take its `yCooVal` at the day's 5 s instants. | by hand |
 | `openmodelica/yCooVal_day.csv`, `provenance.json` | That signal (17,281 rows, as OpenModelica printed it) and the record of the run (image digest, `omc` version, architecture, the two library commits and trees). | `sh openmodelica/run_openmodelica.sh <buildings checkout> <msl checkout>`, by hand |
@@ -46,20 +46,28 @@ Four checks, each from outside the authored file:
    statements as unordered pairs, no more and no fewer. `declarations.txt` carries the digest of
    the `.mo` it was read from, and a test checks it against the vendored bytes.
 2. **Behaviour on every branch the valve signal can show** (same file): the engine's valve
-   signal equals `derive_valve.py`'s bit for bit at all 74 frames, 17 labelled stretches. The
+   signal equals `derive_valve.py`'s bit for bit at all 78 frames, 19 labelled stretches. The
    frames take, in turn: off before the outdoor air first passes the cut-off; the PI controller
    active, at 5 s, 2 s and 13 s steps and with a negative error; the outdoor-air hysteresis
    holding below the cut-off; the supply-air high limit cutting the PI's signal (the PI saturated
    at `yMax` beneath it), and the line clamped at its lower end; the fan feedback hysteresis
    holding, then disabling below `uLow` and staying off below `uHigh`; the fan status disabling;
    the outdoor air below upstream's `uLow`; each re-enable resetting the integrator; and the PI
-   driven below `yMin`, its lower saturation with the anti-windup acting, and its recovery. One
+   driven below `yMin`, its lower saturation with the anti-windup acting, and its recovery; and,
+   appended after those 74 frames (issue #768), a one-frame disable and its re-enable, where
+   `Change` is still true at the re-enable, so the reset happens at the disable, not at the
+   re-enable: the case that tells a reset triggered by `Change` from one triggered by the
+   enable's level. One
    modifier no input can show: the line's upper clamp (`higLim.limitAbove`) acts only above the
    line's upper support point, where the line would pass `f2 = 1`, and the valve is the minimum
    of the line and a PI signal that never exceeds `yMax = 1`. Only check 1 sees it, and a test
-   says so. The derivation is in the engine's discrete time: a reset shows at the next frame
-   (at 25 s and 237 s the valve is 0.09 and 0.045 for one frame, where the continuous model gives
-   0 at the event); check 3 is the comparison with the continuous model.
+   says so. The derivation is in the engine's discrete time, with each reset applied at the
+   frame of its event, as Modelica's `when trigger then reinit(...)` applies it: at the four
+   re-enables (25, 237, 272 and 307 s) the valve is 0 in that frame, as the continuous model
+   gives at the event, and that frame takes no integration step (issue #768; before it, a reset
+   showed one frame late and those frames read 0.09, 0.045, 0.018 and 0.018). Of the original
+   74 rows of `valve_oracle.txt` those four moved, to 0, and 70 are byte-identical; the four
+   appended rows are new. Check 3 is the comparison with the continuous model.
 3. **Upstream's model in OpenModelica** (`building_33_openmodelica.rs`): over the day, the
    engine's signal stays within **0.0034** of OpenModelica's at every 5 s instant (largest at
    67,375 s, the valve near 0.71; mean absolute difference under 1.5e-4). OpenModelica's run is

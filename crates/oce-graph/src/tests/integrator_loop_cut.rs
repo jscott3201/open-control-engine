@@ -115,3 +115,94 @@ fn integrator_emit_ignores_current_tick_input_until_next_tick() {
     assert!(small_next.bit_eq(&Value::Real(6.0)));
     assert!(large_next.bit_eq(&Value::Real(1004.0)));
 }
+
+/// An `IntegratorWithReset` (`u = 1`) whose output reaches its own `trigger` (through
+/// `GreaterThreshold`, optionally then `Logical.Pre`) or its own `y_reset_in` (directly, or
+/// through `Discrete.UnitDelay`). The other event input comes from a constant.
+fn self_resetting_integrator(into_trigger: bool, delayed: bool) -> ModelBuilder {
+    let mut b = ModelBuilder::default();
+    let (_integrator, integrator_in, integrator_out) = b.block_real(make(
+        "CDL.Reals.IntegratorWithReset",
+        &[("y_start", Value::Real(0.0))],
+    ));
+    let (_one, _, one_out) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(1.0))],
+    ));
+    b.connect(one_out[0], integrator_in[0]);
+    if into_trigger {
+        let (_reset, _, reset_out) = b.block_real(make(
+            "CDL.Reals.Sources.Constant",
+            &[("k", Value::Real(0.0))],
+        ));
+        let (_thr, thr_in, thr_out) = b.block_real(make(
+            "CDL.Reals.GreaterThreshold",
+            &[("t", Value::Real(2.5))],
+        ));
+        b.connect(reset_out[0], integrator_in[1]);
+        b.connect(integrator_out[0], thr_in[0]);
+        if delayed {
+            let (_pre, pre_in, pre_out) = b.block_real(make("CDL.Logical.Pre", &[]));
+            b.connect(thr_out[0], pre_in[0]);
+            b.connect(pre_out[0], integrator_in[2]);
+        } else {
+            b.connect(thr_out[0], integrator_in[2]);
+        }
+    } else {
+        let (_trigger, _, trigger_out) = b.block_real(make(
+            "CDL.Logical.Sources.Constant",
+            &[("k", Value::Boolean(false))],
+        ));
+        b.connect(trigger_out[0], integrator_in[2]);
+        if delayed {
+            let (_delay, delay_in, delay_out) = b.block_real(make(
+                "CDL.Discrete.UnitDelay",
+                &[("samplePeriod", Value::Real(1.0))],
+            ));
+            b.connect(integrator_out[0], delay_in[0]);
+            b.connect(delay_out[0], integrator_in[1]);
+        } else {
+            b.connect(integrator_out[0], integrator_in[1]);
+        }
+    }
+    b
+}
+
+#[test]
+fn integrator_feedback_into_an_event_input_is_a_loop_naming_its_delay() {
+    for (into_trigger, role, remedy) in [
+        (
+            true,
+            oce_blocks::EventInputRole::Condition,
+            "insert CDL.Logical.Pre on the path into it",
+        ),
+        (
+            false,
+            oce_blocks::EventInputRole::ResetValue,
+            "insert CDL.Discrete.UnitDelay on the path into it",
+        ),
+    ] {
+        let b = self_resetting_integrator(into_trigger, false);
+        let err = compile(&b.model, &b.blocks).expect_err("feedback into an event input loops");
+        let BuildError::AlgebraicLoop {
+            members,
+            event_inputs,
+        } = &err
+        else {
+            panic!("expected a connector-level loop, got {err:?}");
+        };
+        assert_eq!(event_inputs.len(), 1, "{err}");
+        assert_eq!(event_inputs[0].1, role);
+        assert!(members.contains(&event_inputs[0].0));
+        assert!(err.to_string().contains(remedy), "{err}");
+    }
+}
+
+#[test]
+fn integrator_feedback_through_its_delay_compiles() {
+    for into_trigger in [true, false] {
+        let b = self_resetting_integrator(into_trigger, true);
+        compile(&b.model, &b.blocks)
+            .unwrap_or_else(|err| panic!("into_trigger {into_trigger}: {err:?}"));
+    }
+}

@@ -21,7 +21,7 @@ use alloc::collections::BinaryHeap;
 use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
 use core::cmp::Reverse;
 
-use oce_blocks::{Block, BlockKind};
+use oce_blocks::{Block, BlockKind, EventInputRole};
 use oce_model::{BlockId, ConnectorId, Model};
 
 use crate::build::FeedthroughDag;
@@ -76,7 +76,7 @@ pub fn topo_sort(
     model: &Model,
     blocks: &[Box<dyn Block>],
 ) -> Result<Schedule, BuildError> {
-    let connector_order = connector_order_kahn(dag, model)?;
+    let connector_order = connector_order_kahn(dag, model, blocks)?;
     let order = block_order_kahn(model, blocks)?;
     // `driver_of` (the gather/alias map) is a separate BUILD step filled by `compile`; the sort
     // itself produces only the orderings.
@@ -92,6 +92,7 @@ pub fn topo_sort(
 fn connector_order_kahn(
     dag: &FeedthroughDag,
     model: &Model,
+    blocks: &[Box<dyn Block>],
 ) -> Result<Vec<ConnectorId>, BuildError> {
     let mut indeg = dag.indeg.clone();
     let mut ready = MinReady::with_capacity(dag.n);
@@ -120,13 +121,24 @@ fn connector_order_kahn(
             .iter()
             .map(|s| s.iter().map(|c| c.0).collect())
             .collect();
-        let members = first_cycle(dag.n, &succ, &in_residual, |v| {
+        let cycle = first_cycle(dag.n, &succ, &in_residual, |v| {
             (decl_key(model, ConnectorId(v)), v)
-        })
-        .into_iter()
-        .map(|v| connector_path(model, ConnectorId(v)))
-        .collect();
-        return Err(BuildError::AlgebraicLoop { members });
+        });
+        let event_inputs = cycle
+            .iter()
+            .filter_map(|&v| {
+                event_input_role(model, blocks, ConnectorId(v))
+                    .map(|role| (connector_path(model, ConnectorId(v)), role))
+            })
+            .collect();
+        let members = cycle
+            .into_iter()
+            .map(|v| connector_path(model, ConnectorId(v)))
+            .collect();
+        return Err(BuildError::AlgebraicLoop {
+            members,
+            event_inputs,
+        });
     }
 
     Ok(order)
@@ -179,6 +191,21 @@ fn block_order_kahn(model: &Model, blocks: &[Box<dyn Block>]) -> Result<Vec<Bloc
     }
 
     Ok(order)
+}
+
+/// The event-input role of `connector` in its owning block, or `None` when it is an output or an
+/// input with no role ([`Block::event_input_role`]).
+fn event_input_role(
+    model: &Model,
+    blocks: &[Box<dyn Block>],
+    connector: ConnectorId,
+) -> Option<EventInputRole> {
+    let b = model.connectors[connector.0 as usize].block.0 as usize;
+    let index = model.blocks[b]
+        .inputs
+        .iter()
+        .position(|&c| c == connector)?;
+    blocks[b].event_input_role(index)
 }
 
 /// Does block `B` (the block owning input connector `input`) read `input`'s value when emitting its

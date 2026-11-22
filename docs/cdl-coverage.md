@@ -499,7 +499,7 @@ of the inputs the block reads.
 | `CDL.Routing.RealVectorFilter`, `IntegerVectorFilter`, `BooleanVectorFilter` | each output depends only on the one input that `msk` selects for it | `nin ≥ 2` and `nout ≥ 1` (at least one `msk` element true) |
 | `CDL.Routing.RealVectorReplicator`, `IntegerVectorReplicator`, `BooleanVectorReplicator` | `y[i, j]` depends only on `u[j]` | `nin ≥ 2` and `nout ≥ 1` |
 | `CDL.Reals.MatrixMax`, `CDL.Reals.MatrixMin` | with `rowMax` / `rowMin = true` (the default), `y[i]` depends only on row `i`, `u[i, 1..nCol]`; with `false`, `y[j]` depends only on column `j`, `u[1..nRow, j]` | two or more outputs: `nRow ≥ 2` when reducing rows, `nCol ≥ 2` when reducing columns. For example, `MatrixMin` with `nRow = 2, nCol = 1, rowMin = true` and feedback `y[1] → u[2, 1]` is refused. |
-| `CDL.Reals.PIDWithReset` | `y` depends only on `u_s` and `u_m`, never on `trigger` | `controllerType = P`. With no integrator the controller holds no state, so it reads `trigger` when it fires even though `trigger` affects nothing. For example, `y → GreaterThreshold → trigger` is refused. In the `PI`, `PD` and `PID` modes the controller is stateful, `trigger` is read only by the state update, and the same feedback loads. |
+| `CDL.Reals.PIDWithReset` | in P mode `y` depends only on `u_s` and `u_m`, never on `trigger` | `controllerType = P`. With no integrator the controller holds no state, so it reads `trigger` when it fires even though `trigger` affects nothing. For example, `y → GreaterThreshold → trigger` is refused. In `PD` mode the controller is stateful with no integrator, `trigger` is read by nothing, and the same feedback loads. In the `PI` and `PID` modes the reset applies at the frame where `trigger` rises, so `trigger` feeds through to `y` and the same feedback is a connector-level `algebraic-loop` ([events on a Boolean input](execution-profile.md#events-on-a-boolean-input)), not this refusal. |
 
 The list is pinned by a census test in `oce-blocks` (`src/tests/mixed_feedthrough_census.rs`,
 with its grid in `mixed_feedthrough_grid.rs`). It builds every registered class with its registry
@@ -519,7 +519,8 @@ each listed class refusing feedback of this shape.
 Every other registered class, and every listed class outside its trigger condition, has outputs
 that all depend on every input it reads when it fires. That set includes `MatrixGain`, `Sort`, the
 scalar replicators, `Extractor`, a single-output `MatrixMax` or `MatrixMin`, `CDL.Reals.PID` in
-every mode, `PIDWithReset` in its stateful modes, and the multi-output stateful blocks
+every mode, `PIDWithReset` in its stateful modes, `IntegratorWithReset` and `OnCounter` (whose
+event inputs feed through, issue #768), and the multi-output stateful blocks
 `Logical.Timer`, `Logical.TimerAccumulating`, `Logical.Proof` and `Integers.Change`. Feedback
 through any of them is either a genuine connector-level loop (`algebraic-loop`) or is cut by a
 state-holding block. The scheduler also handles a stateful block that has a state-only output next
@@ -540,6 +541,19 @@ not on the same block:
 - **Insert a delay,** for example `CDL.Discrete.UnitDelay` or `CDL.Logical.Pre`, on the feedback
   path, but only where a one-step delay is acceptable for the sequence. This changes the model's
   behaviour, so it is not equivalent to the original.
+
+**Feedback into an event input is a connector-level loop.** `PIDWithReset` (PI, PID: `trigger`),
+`IntegratorWithReset` (`trigger`, `y_reset_in`) and `OnCounter` (`trigger`, `reset`) apply their
+events at the frame of the event (issue #768), so these inputs feed through, and a model whose
+output reaches one of them (`y → GreaterThreshold → trigger` on a reset PI, a counter that resets
+itself through `GreaterEqualThreshold`, an integrator feeding its own `y_reset_in`) is refused
+with `algebraic-loop`. The record of that input names the remedy: `Logical.Pre` on the path into a
+Boolean event input, or `Discrete.UnitDelay` on the path into `y_reset_in` (a one-frame delay only
+when its `samplePeriod` equals the host frame period and frames land on its grid). It makes the
+model load and delays that input's events by one frame; it does not reproduce the engine's
+output before issue #768 (see the
+[execution profile](execution-profile.md#events-on-a-boolean-input) for exactly what it does
+reproduce). No tracked document has such feedback.
 
 Firing a block's outputs separately, using the per-output feedthrough map, would schedule these
 models without restructuring. That change to scheduling semantics is tracked in GitHub issue #347.

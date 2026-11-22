@@ -2,7 +2,7 @@
 # columns: time cooling_loop_signal
 double G36_thermal_zones_control_loops_cooling_loop_signal(54,2)
 0.0 0.0
-60.0 1.0
+60.0 0.0
 120.0 0.0
 180.0 0.1333333333333333
 240.0 0.2666666666666666
@@ -39,7 +39,7 @@ double G36_thermal_zones_control_loops_cooling_loop_signal(54,2)
 2100.0 0.0
 2160.0 0.0
 2220.0 0.0
-2280.0 0.28416417405410005
+2280.0 0.0
 2340.0 0.0050000000000011355
 2400.0 0.012666666666669928
 2460.0 0.019600000000000742
@@ -53,5 +53,5 @@ double G36_thermal_zones_control_loops_cooling_loop_signal(54,2)
 2940.0 0.0
 3000.0 0.0
 3060.0 0.0
-3120.0 0.2642998875920187
+3120.0 0.0
 3180.0 0.0

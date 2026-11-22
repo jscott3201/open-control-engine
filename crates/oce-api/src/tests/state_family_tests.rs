@@ -360,3 +360,112 @@ fn real_filter_comparator_and_controller_state_contracts_continue_bit_exactly() 
         2,
     );
 }
+
+/// The classes whose events apply at the frame of the event (issue #768), continued from a
+/// snapshot taken after frame 0 (the next frame is a rising event), after the event frame itself
+/// (the next frame holds the trigger high) and after a falling frame (the next frame rises again).
+#[test]
+fn event_at_the_frame_classes_continue_bit_exactly_across_an_event_frame() {
+    let mode = |ordinal| {
+        params(&[(
+            "controllerType",
+            Value::Enum {
+                class: EnumClassId::SIMPLE_CONTROLLER,
+                ordinal,
+            },
+        )])
+    };
+    for capture_tick in 0..=2 {
+        assert_family_round_trip(
+            "CDL.Reals.IntegratorWithReset",
+            ParamTable::default(),
+            capture_tick,
+        );
+        assert_family_round_trip("CDL.Reals.PIDWithReset", mode(2), capture_tick);
+        assert_family_round_trip("CDL.Reals.PIDWithReset", mode(4), capture_tick);
+        assert_family_round_trip(
+            "CDL.Integers.OnCounter",
+            ParamTable::default(),
+            capture_tick,
+        );
+        assert_family_round_trip(
+            "CDL.Discrete.TriggeredSampler",
+            ParamTable::default(),
+            capture_tick,
+        );
+        assert_family_round_trip(
+            "CDL.Discrete.TriggeredMax",
+            ParamTable::default(),
+            capture_tick,
+        );
+    }
+}
+
+/// `TriggeredSampler`'s "no frame yet" marker (the third value of its previous-trigger word) is
+/// visible to a snapshot only before the first frame, where restore compares the words with the
+/// `init_state` output and so restores it exactly; a restored engine then treats frame 0 as
+/// initialisation. After any frame the word is a canonical Boolean, and a state carrying the
+/// marker there is refused by the block's state contract, which capture and restore both run
+/// (`validate_payload`); the capture side is exercised here.
+#[test]
+fn triggered_sampler_no_frame_marker_round_trips_only_before_the_first_frame() {
+    let graph = model(
+        "CDL.Discrete.TriggeredSampler",
+        params(&[("y_start", Value::Real(7.0))]),
+    );
+    let fresh = || {
+        let mut engine = Engine::new();
+        engine
+            .build_model_in_memory(graph.clone(), Some("urn:test:marker-model"))
+            .unwrap();
+        engine
+    };
+    let original = fresh();
+    assert_eq!(
+        original.state.words[1], 2,
+        "init writes the no-frame marker"
+    );
+    let snapshot = original
+        .state_snapshot()
+        .expect("a pre-frame state is capturable");
+    let decoded = EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
+    let mut restored = fresh();
+    restored.restore_state(&decoded).unwrap();
+    assert_eq!(restored.state.words, original.state.words);
+
+    // Frame 0 with the trigger already true: y_start, no sample, the trigger latched.
+    let u = "urn:test:CDL.Discrete.TriggeredSampler:input:0";
+    let trigger = "urn:test:CDL.Discrete.TriggeredSampler:input:1";
+    let output = |engine: &mut Engine, t: f64, value: f64, rising: bool| {
+        let frame = advance(
+            engine,
+            t,
+            &[(u, Value::Real(value)), (trigger, Value::Boolean(rising))],
+        )
+        .unwrap();
+        assert!(
+            frame.outputs().is_empty(),
+            "the single-block model has no boundary output"
+        );
+        // Connector 2 is the block's output (inputs 0 and 1 are declared first).
+        engine.state.values[2].clone()
+    };
+    for (t, value, high, want) in [
+        (0.0, 3.0, true, 7.0),
+        (0.1, 4.0, true, 7.0),
+        (0.2, 5.0, false, 7.0),
+        (0.3, 6.0, true, 6.0),
+    ] {
+        assert!(
+            output(&mut restored, t, value, high).bit_eq(&Value::Real(want)),
+            "t = {t}"
+        );
+        assert!(matches!(restored.state.words[1], 0 | 1));
+    }
+
+    // After a frame the marker is not a state any frame produces: capture refuses it.
+    let mut advanced = fresh();
+    output(&mut advanced, 0.0, 3.0, false);
+    advanced.state.words[1] = 2;
+    assert!(advanced.state_snapshot().is_err());
+}

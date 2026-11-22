@@ -278,20 +278,40 @@ fn single_output_reduction_feedback_is_a_connector_level_loop() {
 }
 
 #[test]
-fn reset_pid_trigger_feedback_compiles_outside_p_mode() {
-    // With an integrator the reset PID is [S] and `trigger` is read only by the state update, so
-    // the same feedback is cut and schedules.
-    for member in ["PI", "PD", "PID"] {
+fn reset_pid_trigger_feedback_is_a_connector_loop_with_an_integrator_and_compiles_in_pd() {
+    // With an integrator (PI, PID) the reset applies at the frame where `trigger` rises, so
+    // `trigger` feeds through to `y`: the same feedback is a connector-level loop through an
+    // event input, refused with the `Logical.Pre` remedy. PD has no integrator: `trigger` is
+    // dormant, read by nothing, and the feedback schedules.
+    for member in ["PI", "PID"] {
         let case = Case {
             class_path: "CDL.Reals.PIDWithReset",
             params: vec![("controllerType", controller(member))],
-            cut_pair: (2, 0),
-            feeding_pair: (0, 0),
+            cut_pair: (0, 0),
+            feeding_pair: (2, 0),
         };
-        let (_, result) = compile_feedback(&case, case.cut_pair);
-        let schedule = result.unwrap_or_else(|err| panic!("{member}: {err:?}"));
-        assert_eq!(schedule.order, [BlockId(0), BlockId(1)], "{member}");
+        let (_, result) = compile_feedback(&case, case.feeding_pair);
+        let err = result.expect_err(member);
+        let BuildError::AlgebraicLoop { event_inputs, .. } = &err else {
+            panic!("{member}: expected a connector-level loop, got {err:?}");
+        };
+        assert_eq!(event_inputs.len(), 1, "{member}: {err}");
+        assert_eq!(event_inputs[0].1, oce_blocks::EventInputRole::Condition);
+        assert!(
+            err.to_string()
+                .contains("CDL.Logical.Pre on the path into it"),
+            "{err}"
+        );
     }
+    let case = Case {
+        class_path: "CDL.Reals.PIDWithReset",
+        params: vec![("controllerType", controller("PD"))],
+        cut_pair: (2, 0),
+        feeding_pair: (0, 0),
+    };
+    let (_, result) = compile_feedback(&case, case.cut_pair);
+    let schedule = result.unwrap_or_else(|err| panic!("PD: {err:?}"));
+    assert_eq!(schedule.order, [BlockId(0), BlockId(1)]);
 }
 
 #[test]

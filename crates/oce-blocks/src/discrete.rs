@@ -2,7 +2,9 @@
 //!
 //! `UnitDelay` is the discrete one-sample loop-breaker. `TriggeredSampler` is event-stateful but
 //! transparent on rising trigger instants: same-tick `u` and `trigger` can determine `y`, so it
-//! must not be treated as a graph cut.
+//! must not be treated as a graph cut. `TriggeredSampler` and `TriggeredMax` fire no event at
+//! frame 0: initialisation leaves their `when trigger` inactive (Modelica 3.6 §8.6), and a trigger
+//! already true there becomes `pre(trigger)` for frame 1.
 
 use alloc::string::String;
 use oce_model::{
@@ -17,6 +19,10 @@ use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_boo
 
 const TRIGGERED_SAMPLER_HELD_WORD: usize = 0;
 const TRIGGERED_SAMPLER_PREV_TRIGGER_WORD: usize = 1;
+/// The third value of `TriggeredSampler`'s previous-trigger word: no frame has run yet. Only
+/// [`Block::init_state`] writes it; every update overwrites it with a canonical Boolean, so a
+/// post-frame state never holds it and the post-frame validator refuses it.
+const TRIGGERED_SAMPLER_NO_FRAME: u64 = 2;
 const TRIGGERED_MAX_HELD_WORD: usize = 0;
 const TRIGGERED_MAX_PREV_TRIGGER_WORD: usize = 1;
 const TRIGGERED_MAX_HAS_HISTORY_WORD: usize = 2;
@@ -175,11 +181,14 @@ impl Block for UnitDelay {
 
 /// `CDL.Discrete.TriggeredSampler` — sample `u` on a rising Boolean `trigger`.
 ///
-/// Before the first trigger instant, `y` is the parameter `y_start` (default `0`). The first tick
-/// with `trigger = true` is a rising edge because the CDL source initializes `pre(trigger)` to
-/// `false`. The block owns two `[S]` words: the held `Real` output (`f64::to_bits`) and the
-/// previous trigger bit. It feeds through from both inputs to `y` because a same-tick rising trigger
-/// emits the current `u`. Real outputs and stored samples are NaN-canonicalized for deterministic
+/// Before the first trigger instant, `y` is the parameter `y_start` (default `0`): the source's
+/// `initial equation y = y_start`. Frame 0 is initialisation, where the `when trigger` clause is
+/// inactive, so frame 0 emits `y_start` whatever `trigger` is, and its `trigger` becomes
+/// `pre(trigger)` for frame 1; the first sample is the first false-to-true transition after
+/// frame 0. The block owns two `[S]` words: the held `Real` output (`f64::to_bits`) and the
+/// previous trigger word, which holds a canonical Boolean after any frame and a third value,
+/// "no frame yet", only in the state [`Block::init_state`] writes. It feeds through from both
+/// inputs to `y` because a same-tick rising trigger emits the current `u`. Real outputs and stored samples are NaN-canonicalized for deterministic
 /// traces. The block does not panic for finite or non-finite `Real` values; validated callers must
 /// provide a `Real` then a `Boolean` input.
 #[derive(Clone, Copy, Debug, Default)]
@@ -191,8 +200,8 @@ impl TriggeredSampler {
     fn output(inputs: &[Value], region: &[u64]) -> f64 {
         let u = read_real(inputs, 0);
         let trigger = read_bool(inputs, 1);
-        let prev_trigger = word_bool(region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD]);
-        if trigger && !prev_trigger {
+        let prev_word = region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD];
+        if trigger && prev_word != TRIGGERED_SAMPLER_NO_FRAME && !word_bool(prev_word) {
             u
         } else {
             f64::from_bits(region[TRIGGERED_SAMPLER_HELD_WORD])
@@ -225,7 +234,7 @@ impl Block for TriggeredSampler {
 
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
         region[TRIGGERED_SAMPLER_HELD_WORD] = canonicalize_real(self.y_start).to_bits();
-        region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD] = bool_word(false);
+        region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD] = TRIGGERED_SAMPLER_NO_FRAME;
     }
 
     fn emit_from_state(
@@ -247,13 +256,13 @@ impl Block for TriggeredSampler {
 
 /// `CDL.Discrete.TriggeredMax` — track the maximum absolute sampled `u` on rising `trigger`.
 ///
-/// The source has no current parameters. Its `initial equation y = u` means the first emitted value
-/// is the current input unless the first tick also has a rising trigger, in which case the `when`
-/// equation applies `max(pre(y), abs(u))` with `pre(y)` seeded by the initial value. The block owns
-/// three `[S]` words: held `Real` output (`f64::to_bits`), previous trigger bit, and a
-/// `has_history` bit that lets the first emit read current `u` as the initial value. It feeds
-/// through from both inputs to `y` because the initial value and each rising-trigger event depend on
-/// same-tick inputs. Real outputs and stored samples are NaN-canonicalized; `max` uses the same
+/// The source has no current parameters. Its `initial equation y = u` makes frame 0 emit the
+/// current input exactly (a negative `u` or `-0.0` included): frame 0 is initialisation, where the
+/// `when trigger` clause is inactive, and its `trigger` becomes `pre(trigger)` for frame 1. Each
+/// later false-to-true transition applies `max(pre(y), abs(u))`. The block owns three `[S]` words:
+/// held `Real` output (`f64::to_bits`), previous trigger bit, and a `has_history` bit that marks
+/// frame 0. It feeds through from both inputs to `y` because the initial value and each
+/// rising-trigger event depend on same-tick inputs. Real outputs and stored samples are NaN-canonicalized; `max` uses the same
 /// deterministic NaN and signed-zero policy as `CDL.Reals.Max`. The block never panics for finite
 /// or non-finite `Real` values; validated callers must provide a `Real` then a `Boolean` input.
 #[derive(Clone, Copy, Debug, Default)]
@@ -263,13 +272,11 @@ impl TriggeredMax {
     fn output(inputs: &[Value], region: &[u64]) -> f64 {
         let u = read_real(inputs, 0);
         let trigger = read_bool(inputs, 1);
-        let has_history = word_bool(region[TRIGGERED_MAX_HAS_HISTORY_WORD]);
-        let held = if has_history {
-            f64::from_bits(region[TRIGGERED_MAX_HELD_WORD])
-        } else {
-            u
-        };
-        let prev_trigger = has_history && word_bool(region[TRIGGERED_MAX_PREV_TRIGGER_WORD]);
+        if !word_bool(region[TRIGGERED_MAX_HAS_HISTORY_WORD]) {
+            return u;
+        }
+        let held = f64::from_bits(region[TRIGGERED_MAX_HELD_WORD]);
+        let prev_trigger = word_bool(region[TRIGGERED_MAX_PREV_TRIGGER_WORD]);
         if trigger && !prev_trigger {
             det_max(held, u.abs())
         } else {

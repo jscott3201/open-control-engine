@@ -379,12 +379,12 @@ fn the_valve_signal_matches_the_independent_derivation_bit_for_bit_on_every_bran
     }
     // Every branch the README lists is taken, and the comparison is not vacuous.
     let branches: BTreeSet<&str> = rows.iter().map(|row| row.branch.as_str()).collect();
-    assert_eq!(branches.len(), 17, "{branches:?}");
+    assert_eq!(branches.len(), 19, "{branches:?}");
     let kinds: BTreeSet<&str> = branches
         .iter()
         .map(|branch| branch.split(':').next().expect("a kind"))
         .collect();
     assert_eq!(kinds, BTreeSet::from(["limited", "off", "pi"]));
-    assert_eq!(rows.len(), 74);
+    assert_eq!(rows.len(), 78);
     assert!(engine.iter().any(|y| *y > 0.5) && engine.contains(&0.0));
 }

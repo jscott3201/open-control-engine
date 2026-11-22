@@ -405,8 +405,8 @@ fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
         engine
             .get_output(u_t_sup)
             .expect("SupplySignals signal output exists")
-            .bit_eq(&Value::Real(0.25)),
-        "rising fan trigger resets after emit, so the first enabled tick sees the current P term"
+            .bit_eq(&Value::Real(0.0)),
+        "the rising fan trigger resets at its own frame: P + (y_reset - P) = y_reset = 0"
     );
 
     advance(&mut engine, 2.0, &inputs(295.0, 300.0, true));
@@ -415,7 +415,7 @@ fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
             .get_output(u_t_sup)
             .expect("SupplySignals signal output exists")
             .bit_eq(&Value::Real(0.0)),
-        "PIDWithReset reset target should be visible on the next tick"
+        "the reset frame skips its integration step, so the held trigger emits y_reset again"
     );
 
     advance(&mut engine, 3.0, &inputs(320.0, 295.0, true));

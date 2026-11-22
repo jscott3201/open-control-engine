@@ -52,6 +52,7 @@ fn registry_paths_and_feedthrough_classification_are_complete() {
             && IntegerChange::default().feeds_through(0, 1)
             && IntegerChange::default().feeds_through(0, 2)
     );
-    assert!(!OnCounter::default().feeds_through(0, 0));
-    assert!(!OnCounter::default().feeds_through(1, 0));
+    // OnCounter applies its trigger and reset events at their own frame, so both feed through.
+    assert!(OnCounter::default().feeds_through(0, 0));
+    assert!(OnCounter::default().feeds_through(1, 0));
 }
