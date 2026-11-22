@@ -116,8 +116,11 @@ For indexed claims, follow the [source-owner update procedure](docs/authority-cl
 The generated summary is not a replacement policy; native and delegated verifiers remain separate
 from its fast schema/projection check. Regeneration is always explicit, never part of the gate.
 
-Run the local proof that matches the lane your PR runs, first-hand, on the final head, and paste
-the tail of its output into the PR:
+Run first-hand, on the final head, fmt, clippy and rustdoc on the crates your PR changes, those
+crates' nextest suites and doctests, and the evidence the issue asks for, and paste the tail of the
+output into the PR; `CI OK` on the head is the gate. The gate script's row for your paths is
+batched: whoever lands the PRs runs it on `development` after every few merges and before a
+release PR (owner decision of 2026-11-21), so say in the PR that it is batched. The rows are:
 
 | The PR's changed paths | Local proof |
 | --- | --- |

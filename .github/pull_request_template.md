@@ -1,4 +1,4 @@
-<!-- Title: type(scope): what it does — imperative. One PR per issue; fix rounds push to this branch. -->
+<!-- Title: type(scope): what it does — imperative. One PR may close several related issues; fix rounds push to this branch. -->
 
 Closes #
 
@@ -9,11 +9,13 @@ Closes #
 ## Gate
 
 ```text
-<!-- Paste the TAIL of the local proof for this PR's row, run first-hand on the final head. Not a
-     summary. docs only: `bash .agents/gate.sh docs`. crates/leverage/**, docs, root README.md:
-     `bash .agents/gate.sh leverage`. Anything else: `bash .agents/gate.sh`. A pin advance or
-     .agents/gate.sh: `bash .agents/gate.sh full`. The tail names the row the checkout needs. A change to release-gate.yml also links a
-     green dispatched run of it on this branch. -->
+<!-- Paste the TAIL of what you ran first-hand on the final head: fmt, clippy and rustdoc on the
+     changed crates, their nextest suites and doctests, and the evidence the issue asks for. Not a
+     summary: say which commands ran. The gate script's row for this PR's paths is batched (it runs
+     on `development` after every few merges and is recorded on the milestone's tracking issue),
+     so say that it is. Owed on this PR itself: a pin advance, .agents/gate.sh, .config/nextest.toml
+     or scripts/ci/install-wasmtime.sh: `bash .agents/gate.sh full`; a change to release-gate.yml
+     also links a green dispatched run of it on this branch. -->
 ```
 
 Goldens: `git status --porcelain -- tools/golden-gen/goldens` → <!-- "prints nothing", or which goldens changed and why this PR exists to change them -->

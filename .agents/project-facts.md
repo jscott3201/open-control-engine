@@ -20,8 +20,15 @@ That script is the single source of truth for gate commands. Every other documen
 points at it. Run it in the form above and read the real output — a summary of a
 gate is a claim about a gate, and this engine controls physical equipment.
 
-**Run the row your PR's paths select, on the final head, and paste its tail** (issue #545, owner
-decision of 2026-11-10; before it every PR owed `full`, 30 minutes cold). The first four lines
+**The row your PR's paths select is batched** (owner decision of 2026-11-21): the per-PR proof is
+fmt, clippy and rustdoc on the changed crates, their nextest suites and doctests, and the evidence
+the issue asks for, run first-hand on the final head with the real tails pasted, and `CI OK` on the
+head is the gate. Whoever is landing runs the row first-hand on `development` after every few
+merges and before a release PR, and records the result on the milestone's tracking issue; a red
+batch run is fixed forward or reverted before the next merge. A pin advance or a change to
+`.agents/gate.sh`, `.config/nextest.toml` or `scripts/ci/install-wasmtime.sh` still runs `full` on
+its own PR. The rows themselves come from issue #545, owner decision of 2026-11-10 (before it every
+PR owed `full`, 30 minutes cold). The first four lines
 above are the four rows, lightest first, and each runs everything the one before it runs.
 `scripts/ci/proof-row.sh` maps changed paths to a row using the lane classifier and holds the
 exact path lists, and every gate run ends by printing the row the checkout needs beside the row
@@ -43,7 +50,7 @@ so those changes are ordinary engine-lane changes and owe `bash .agents/gate.sh`
 for reproducing a red release cell locally. Four rules go with the table:
 
 - A rebase onto `development` with no conflicts needs `CI OK` reported on the new head, not a
-  local re-run. A rebase with conflicts, or a fix round, re-runs the row.
+  local re-run. A rebase with conflicts, or a fix round, re-runs the changed crates' suites.
 - No row runs every crate's suite. Run the tests of each crate the PR changes:
   `cargo nextest run -p <crate> --locked --profile ci --no-tests=fail`, and
   `cargo test -p <crate> --doc --locked` for its doctests.
@@ -804,5 +811,5 @@ a pull request, requires the `CI OK` status from `pr-gate.yml`, and requires the
 date with `development` before merging; everything lands by squash-merge through a GitHub PR. A PR
 that falls behind is updated and its gate re-runs, because that run is the only one the change
 gets. An update that merges or rebases cleanly needs that CI run and no local one; one with
-conflicts re-runs the PR's local proof row. A fix round pushes to the **same** branch — never a second PR for the same
+conflicts, or a fix round, re-runs the changed crates' suites. A fix round pushes to the **same** branch — never a second PR for the same
 work.
