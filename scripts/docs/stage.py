@@ -223,6 +223,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Vectors, the verify replayer and receipts](docs/design/vectors.md)
 - [Bounding a vector run's work](docs/design/vector-work-budget.md)
 - [Unit spellings](docs/design/unit-spellings.md)
+- [Reset timing at the event](docs/design/reset-timing.md)
 """
     (source / "SUMMARY.md").write_text(summary, encoding="utf-8")
 
