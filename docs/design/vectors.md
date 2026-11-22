@@ -15,8 +15,8 @@ the work budgets of the [work-budget note](vector-work-budget.md) (#561) in GitH
 [Part 4's readings](#part-4s-readings). 2026-11-20, issue #656: decisions 38 to 50 add the
 `within`, `of` and `when` keys of a window, the set-level `envelope` and the tolerance receipt.
 The owner ruled on four of them, 38, 41, 49 and 50; the other nine stand as written; see
-[Tolerance windows](#tolerance-windows). The build is #684. 2026-11-21: it landed in GitHub
-#PRNUM; see [The tolerance build's readings](#the-tolerance-builds-readings).)*
+[Tolerance windows](#tolerance-windows). The build is #684. 2026-11-21: it landed in
+GitHub #741; see [The tolerance build's readings](#the-tolerance-builds-readings).)*
 
 **The version rule, in one sentence.** The format is `oce/vectors/v1` and stays `v1` until 1.0.0: a
 change is made in place, in the PR that rewrites every in-repo fixture and golden, and nothing
@@ -99,7 +99,7 @@ Where this contradicts the issue's outline, the code wins:
 Strict JSON, one object, closed at every level. The worked file below shows every field of the
 first cut. It is a shape built around the AHU-0016 rule, not a fixture: that rule has no `Assert`
 block and no Real output, so the `diagnostic` line and the tolerance window show the form only.
-*(2026-11-21, as landed in GitHub #PRNUM: the example gains the set's `envelope`, a tolerance
+*(2026-11-21, as landed in GitHub #741: the example gains the set's `envelope`, a tolerance
 window and a `when`; `tests/fixtures/note/worked_example.json` is copied from it again.)*
 
 ```json
@@ -162,7 +162,7 @@ window and a `when`; `tests/fixtures/note/worked_example.json` is copied from it
 | `scenarios[]` | yes | `name` (not empty, unique in the set), optional `description`, optional `params`, `inputs`, `expect` |
 | `inputs` | yes | input name → a constant, or a step list `[{ "t", "value" }]` starting at `t = 0` |
 | `expect[]` | yes | either a window (`output`, `from_s`, `to_s`, `equals`) or an instant (`diagnostic`, `at_s`) |
-| `envelope` | no | at set level, `funnel` or `aligned-grid`: the envelope every `within` window of the set is compared under; `funnel` when absent *(added 2026-11-20; this row and the three below are built by #684, and each key is `unknown-key` before it; as landed in GitHub #PRNUM)* |
+| `envelope` | no | at set level, `funnel` or `aligned-grid`: the envelope every `within` window of the set is compared under; `funnel` when absent *(added 2026-11-20; this row and the three below are built by #684, and each key is `unknown-key` before it; as landed in GitHub #741)* |
 | `within`, `of` (window) | together, in place of `equals` | the six tolerance names, and the expected signal over the window: a number, or a step list `[{ "t", "value" }]` from the window's `from_s` |
 | `when` (window) | no | 1 to 16 names of Boolean inputs or outputs; the window's instants count only where every one is true |
 
@@ -203,7 +203,7 @@ expectation takes one warning and a warning is taken by at most one expectation,
 unmatched.
 
 **Tolerance windows.** *(Added 2026-11-20, decisions 38 to 46; the build is #684, and until it
-lands `envelope`, `within`, `of` and `when` are `unknown-key`. As landed in GitHub #PRNUM, with
+lands `envelope`, `within`, `of` and `when` are `unknown-key`. As landed in GitHub #741, with
 the readings of [The tolerance build's readings](#the-tolerance-builds-readings): a boolean
 anywhere in `of` is `wrong-type`, and an integer token past ±2^53 in a tolerance or an `of` value
 is `integer-out-of-range`, as in a time.)* A window carries exactly one of
@@ -581,7 +581,7 @@ receipt.
 | --- | --- | --- |
 | `not-utf8`, `byte-order-mark`, `json-syntax` | load | bytes that are not one strict JSON document |
 | `input-too-large`, `nesting-too-deep`, `list-too-long`, `string-too-long` | load | a read bound (a step list past 65,536 steps is `list-too-long`) |
-| `duplicate-key`, `unknown-key`, `missing-key`, `wrong-type` | load | a closed object's shape; before the tolerance build (#684, landed in GitHub #PRNUM), `envelope`, `within`, `of` and `when` were `unknown-key`; now each is `unknown-key` in any object but its own |
+| `duplicate-key`, `unknown-key`, `missing-key`, `wrong-type` | load | a closed object's shape; before the tolerance build (#684, landed in GitHub #741), `envelope`, `within`, `of` and `when` were `unknown-key`; now each is `unknown-key` in any object but its own |
 | `non-finite-number`, `integer-out-of-range`, `control-character` | load | a lexical refusal; `integer-out-of-range` is also an integer token beyond ±2^53 in a time position *(amended 2026-11-10)* |
 | `unknown-schema` | load | a `schema` other than `oce/vectors/v1`, the two older tags included |
 | `invalid-clock` | load | `step_s` not finite and positive, `horizon_s` not finite or negative |
@@ -591,7 +591,7 @@ receipt.
 | `step-list-empty`, `step-list-not-from-zero`, `step-times-not-increasing`, `step-after-horizon` | load | a step list |
 | `invalid-window`, `window-outside-clock`, `window-uncovered` | load | a window (the last also after a run with no refused frame) |
 | `ambiguous-expectation` | load | an expectation that is not exactly one of the two forms: also a window with both `equals` and `within`, one of `within` and `of` without the other, and a `when` on an instant |
-| `unknown-envelope` | load | an `envelope` other than `funnel` or `aligned-grid` *(added 2026-11-20 with the three rows below; built by #684, landed in GitHub #PRNUM)* |
+| `unknown-envelope` | load | an `envelope` other than `funnel` or `aligned-grid` *(added 2026-11-20 with the three rows below; built by #684, landed in GitHub #741)* |
 | `invalid-tolerance` | load | a `within` with no name, a negative tolerance (a non-finite one is `non-finite-number`), or an `ltolx` above 1 |
 | `of-not-from-window-start`, `of-step-after-window` | load | an `of` step list whose first `t` is not `from_s`, or with a `t` after `to_s`; an empty list and times that do not increase reuse `step-list-empty` and `step-times-not-increasing` |
 | `when-empty`, `too-many-when-signals` | load | a `when` with no name, or with more than 16 |
@@ -849,7 +849,7 @@ port (tracking item 6) the key is `unknown-key`, never ignored; that PR adds `wi
 place and amends this note with their window semantics. Rejected: the sketch's `atol`, `rtol`,
 `ttol_s` (a second spelling of one type); accepting and ignoring the key (`oce-verify` may not ship
 a `todo!` or a silent pass). *(Ruled 2026-11-09: accepted. 2026-11-20: decisions 38 to 45 give
-the window semantics, and #684 builds them. 2026-11-21: landed in GitHub #PRNUM.)*
+the window semantics, and #684 builds them. 2026-11-21: landed in GitHub #741.)*
 
 **10. `when` names Boolean signals, and waits with `within`.** A list of input or output names,
 ANDed, masking instants that are counted as `masked` and never passed (commissioning decision 2).
@@ -1768,7 +1768,7 @@ starts `src/` or `tests/` is under `crates/leverage/oce-verify/`.
 
 ### The tolerance build's readings
 
-*(Added 2026-11-21, with GitHub #PRNUM, issue #684.)* The build of `within`, `of`, `when` and
+*(Added 2026-11-21, with GitHub #741, issue #684.)* The build of `within`, `of`, `when` and
 `envelope` landed as decisions 38 to 50 state. Where the note was silent it read as follows; the
 first two are the orchestrator's readings of recorded decisions, put on the issue and not new
 owner rulings, and the rest are the build's, each saying whether overruling it would change

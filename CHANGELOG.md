@@ -1029,7 +1029,7 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
-- **`oce-verify` reads tolerance windows and issues the tolerance receipt** (GitHub #PRNUM, issue
+- **`oce-verify` reads tolerance windows and issues the tolerance receipt** (GitHub #741, issue
   #684; design note `docs/design/vectors.md`, decisions 38 to 50, "The tolerance build's
   readings"). **Breaking, in place:** `oce/vectors/v1` gains four keys and `oce/receipt/v1` a
   mode, both at revision 1 (standing rule 9); the workspace is already at 0.6.0 (GitHub #720), so
