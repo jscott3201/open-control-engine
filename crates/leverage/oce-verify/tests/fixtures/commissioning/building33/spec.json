@@ -1,0 +1,36 @@
+{
+  "schema": "oce/commissioning-spec/v1",
+  "time": { "origin": "2018-06-07T00:00:00-07:00" },
+  "tolerances": { "atolx": 1, "atoly": 0, "rtolx": 0, "rtoly": 0.01 },
+  "sampling": 5,
+  "references": [
+    {
+      "model": "Buildings.Utilities.Plotters.Examples.ControlsVerification_CoolingCoilValve",
+      "sequence": "cooValSta",
+      "cxf": "cooling_coil_valve.cxf.json",
+      "pointNameMapping": "b33-points.json",
+      "parameters": {},
+      "envelope": "funnel",
+      "funnelReference": "engine",
+      "window": { "start": 0, "stop": 86400 },
+      "inputs": [
+        { "path": "data/Supply_Air_Temp.mos", "format": "combiTimeTable", "timeColumn": 1,
+          "columns": { "3": "Supply Air Temp" }, "hold": { "maxAge": 10 } },
+        { "path": "data/SA_Clg_Stpt.mos", "format": "combiTimeTable", "timeColumn": 1,
+          "columns": { "3": "SA Clg Stpt" }, "hold": { "maxAge": 10 } },
+        { "path": "data/OA_Temp.mos", "format": "combiTimeTable", "timeColumn": 1,
+          "columns": { "3": "OA Temp" }, "hold": { "maxAge": 10 } },
+        { "path": "data/VFD_Fan_Feedback.mos", "format": "combiTimeTable", "timeColumn": 1,
+          "columns": { "3": "VFD Fan Feedback" }, "hold": { "maxAge": 10 } },
+        { "path": "data/VFD_Fan_Enable.mos", "format": "combiTimeTable", "timeColumn": 1,
+          "columns": { "3": "VFD Fan Enable" }, "hold": { "maxAge": 90000 } }
+      ],
+      "expected": [
+        { "path": "data/Clg_Coil_Valve.mos", "format": "combiTimeTable", "timeColumn": 1,
+          "columns": { "3": "Clg Coil Valve" } }
+      ],
+      "outputs": { "cooValSta.yCooVal": { "atolx": 1, "rtoly": 0.01 } },
+      "indicators": { "cooValSta.yCoo*": [ "cooValSta.uFanSta" ] }
+    }
+  ]
+}

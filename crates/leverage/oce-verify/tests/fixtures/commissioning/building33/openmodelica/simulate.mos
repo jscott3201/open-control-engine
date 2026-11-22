@@ -1,0 +1,12 @@
+// Simulate upstream's Building 33 verification model, unmodified, over the first day.
+// Run by run_openmodelica.sh inside the pinned OpenModelica container; the two libraries are
+// mounted read-only at /libs, and the container has no network.
+setCommandLineOptions("-d=nogen");
+loadFile("/libs/msl/Modelica/package.mo"); getErrorString();
+loadFile("/libs/msl/ModelicaServices/package.mo"); getErrorString();
+loadFile("/libs/buildings/Buildings/package.mo"); getErrorString();
+// Upstream's own settings (experiment annotation and Dymola script: cvode, tolerance 1e-6),
+// stopped at one day instead of 315,710 s, written every 5 s on the trends' grid.
+simulate(Buildings.Utilities.Plotters.Examples.ControlsVerification_CoolingCoilValve,
+  startTime=0, stopTime=86400, numberOfIntervals=17280, tolerance=1e-6, method="cvode",
+  outputFormat="csv", variableFilter="time|cooValSta[.]yCooVal"); getErrorString();

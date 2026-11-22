@@ -19,7 +19,8 @@ pyfunnel refuses a case, the port refuses it for the same reason.
 | `upstream/<case>/` | funnel's own 17 test directories at the pinned commit: the two input series, `param.json` and, where upstream has one, `readme.txt`, verbatim. Upstream's `results/` directories are not copied (see "Upstream's cases"). | nobody: copied from the pinned commit |
 | `upstream/LICENSE.txt`, `upstream/COPYRIGHT.txt` | funnel's licence (BSD 3-clause with LBNL's enhancements clause) and copyright notice, beside the files copied from it. The same two texts cover the port itself, `src/funnel/`, which is a derived work of funnel's C: they are reproduced verbatim in `LICENSE-funnel` at the crate root. | nobody: copied |
 | `hostile/<case>/` | 49 cases written for this repository: `reference.csv`, `test.csv`, `param.json`, in upstream's layout. | `capture/make_hostile.py` |
-| `expected/<case>/` | What pyfunnel made of each of the 66 cases: its five CSV files (`reference.csv`, `test.csv`, `lowerBound.csv`, `upperBound.csv`, `errors.csv`), or `refused.txt` with the one line its log gave. | `capture/capture.sh`, on x86_64 Linux |
+| `recorded/<case>/` | Recorded days: `building_33_day`, the Building 33 worked example's day (issue #755), the engine series of the transcribed `CoolingCoilValve` as `reference.csv` and the trended valve as `test.csv`, 17,281 points each at 5 s, written so that they read back to the run's bits, with `atolx` 1 and `rtoly` 0.01. | `tests/commissioning/building_33_day.rs`, blessed with the day's receipt (`OCE_BLESS_VERIFY=1`) |
+| `expected/<case>/` | What pyfunnel made of each of the 67 cases: its five CSV files (`reference.csv`, `test.csv`, `lowerBound.csv`, `upperBound.csv`, `errors.csv`), or `refused.txt` with the one line its log gave. | `capture/capture.sh`, on x86_64 Linux |
 | `printf/glibc.tsv` | glibc's `snprintf("%.16g")` of 4,792 doubles (bits, a tab, the text): the reference for the crate's `%.16g` writer. | `capture/capture.sh` |
 | `capture/` | The capture: `capture.sh`, `capture.py`, `requirements.txt` (the wheel's hash pin), `make_hostile.py`, and `provenance.json`, the record of the run that wrote `expected/`. | by hand; `provenance.json` by `capture.sh` |
 | `golden/<case>.txt` | The port's own five curves and figures for every case, as hex bits. | `OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify` |
@@ -53,9 +54,16 @@ says so (decision 13); no switch rewrites them.
 - **`fail4` is compared as curves.** Upstream fails it by an unwritable output folder
   (`"output": "/results*|"`). The capture writes elsewhere, so its numbers, which are
   `success5`'s, are compared like any other case.
-- **The Building 33 day is not here.** Decision 13 lists one Building 33 day beside these two
-  sets. It needs the vendored trends (#661) and an engine series (#663), so it is captured with
-  the same script in #664.
+- **The Building 33 day is a set of its own, `recorded/`** (decision 13; issue #755). Its two
+  inputs are the day's run of the worked example (`../commissioning/building33/`), the engine
+  series as the reference and the trend as the test; the capture ran pyfunnel on them like any
+  other case. Two tests compare it: `tests/funnel_differential.rs` runs the port on the two files,
+  and `tests/commissioning/building_33_day.rs` holds the run's own five curves, `errors.csv`
+  included, to pyfunnel's files, so the claim reaches the commissioning run itself. pyfunnel
+  finds 817 of the 17,281 instants outside the band, as the run does. It is kept out of the
+  case list the other envelope tests count and golden (`tests/support/funnel_cases.rs`,
+  `RECORDED_CASES`). The capture for #755 rewrote the other 66 cases' files byte for byte as they
+  were, and `provenance.json` gained the one case.
 - **Where funnel defines no result, there is nothing to compare.** A local `x` tolerance above
   one can make funnel's loop removal read outside its arrays; pyfunnel then writes curves
   computed from whatever it read, or crashes. No such case is in `expected/`. The port returns
@@ -167,21 +175,33 @@ step, where that equality reads neighbouring instants as one).
 | `x_magnitude_above_threshold` | 21, 22 | `atolx` 2.0000000000000004e-07, `atoly` 0.2 | 12 of 22 instants outside |
 | `x_magnitude_at_threshold` | 21, 22 | `atolx` 2.0000000000000002e-07, `atoly` 0.2 | 12 of 22 instants outside |
 
+## The recorded day
+
+| Case | Points (reference, test) | Tolerances | pyfunnel 2.1.1 |
+| --- | --- | --- | --- |
+| `building_33_day` | 17281, 17281 | `atolx` 1.0, `rtoly` 0.01 | 817 of 17281 instants outside, largest error 0.02086470974525789 |
+
 ## Running the capture
 
 `capture.sh` needs x86_64 Linux, `python3` with `venv`, and network access to the package index
 for the one hash-pinned wheel; it refuses to run anywhere else. It was run for the pull request of
 issue #655 in the official `python:3.12-slim` container image
 (`sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b`) for `linux/amd64`,
-emulated on an arm64 host; the emulation executes x86_64 floating point exactly.
+emulated on an arm64 host; the emulation executes x86_64 floating point exactly. It was run again
+for the pull request of issue #755, the same way and by the same image digest, to add
+`recorded/building_33_day`; Python 3.12.16 and glibc 2.41 again.
 
 ```bash
 # From this directory. <funnel> is lbl-srg/funnel checked out at the pinned commit.
 python3 -I capture/make_hostile.py .          # only when the hostile set changes
 docker run --rm --platform linux/amd64 \
   -v "$PWD":/fixture -v <funnel>:/funnel:ro -w /fixture \
-  python:3.12-slim bash capture/capture.sh /funnel
+  python@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b \
+  bash capture/capture.sh /funnel
 ```
+
+Refresh `recorded/building_33_day/`'s two inputs first, if the day's run changed, with
+`OCE_BLESS_VERIFY=1 cargo nextest run -p oce-verify --test commissioning -E 'test(/building_33_day/)'`.
 
 `capture.py` fails if a file under `upstream/` is not upstream's byte for byte, if pyfunnel is
 not 2.1.1 or loads another library, or if a case returns anything but curves or one of funnel's

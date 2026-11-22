@@ -6,9 +6,10 @@
 Run through `capture.sh`, which builds the environment this file assumes: x86_64 Linux and
 `pyfunnel==2.1.1` installed from its hash-pinned wheel. It writes, under the fixture root:
 
-- `expected/<case>/`: for every case of `upstream/` and `hostile/`, the five CSV files pyfunnel
-  writes, byte for byte as its C library wrote them; or, for a case funnel refuses (it returns 1
-  and writes no curve), the one file `refused.txt` holding the line its log gave;
+- `expected/<case>/`: for every case of `upstream/`, `hostile/` and `recorded/`, the five CSV
+  files pyfunnel writes, byte for byte as its C library wrote them; or, for a case funnel
+  refuses (it returns 1 and writes no curve), the one file `refused.txt` holding the line its
+  log gave;
 - `printf/glibc.tsv`: C's `snprintf("%.16g")` of a fixed list of doubles, from the same libc the
   library prints with;
 - `capture/provenance.json`: what produced them.
@@ -215,6 +216,14 @@ def main(root, checkout, wheel_sha256):
         refusal = capture_case(pyfunnel, os.path.join(root, "hostile", case),
                                os.path.join(root, "expected", case))
         cases[case] = {"set": "hostile", "return_code": 0 if refusal is None else 1}
+    # Recorded days: series a commissioning run compared, written by the crate's tests so that
+    # they read back to the run's bits (issue #755: the Building 33 day).
+    for case in sorted(os.listdir(os.path.join(root, "recorded"))):
+        if case in cases:
+            raise SystemExit("recorded/{} repeats a case name".format(case))
+        refusal = capture_case(pyfunnel, os.path.join(root, "recorded", case),
+                               os.path.join(root, "expected", case))
+        cases[case] = {"set": "recorded", "return_code": 0 if refusal is None else 1}
     for name in ["COPYRIGHT.txt", "LICENSE.txt"]:
         if not same_bytes(os.path.join(root, "upstream", name), os.path.join(checkout, name)):
             raise SystemExit("upstream/{} is not upstream's file".format(name))

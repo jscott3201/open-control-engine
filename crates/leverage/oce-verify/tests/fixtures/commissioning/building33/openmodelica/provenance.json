@@ -1,0 +1,12 @@
+{
+  "image": "openmodelica/openmodelica@sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
+  "omc": "OpenModelica 1.25.1",
+  "architecture": "arm64",
+  "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "buildings_tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
+  "msl_commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
+  "msl_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
+  "model": "Buildings.Utilities.Plotters.Examples.ControlsVerification_CoolingCoilValve",
+  "settings": "cvode, tolerance 1e-6, 0 to 86400 s, output every 5 s",
+  "rows": 17281
+}

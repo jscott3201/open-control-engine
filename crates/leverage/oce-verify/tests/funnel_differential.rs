@@ -1,8 +1,8 @@
 //! The funnel port against the pinned pyfunnel (commissioning note, decision 13): the oracle
 //! pillar of the envelope.
 //!
-//! For every case of the fixture (`tests/fixtures/funnel/`: funnel's own 17 test directories
-//! and the hostile set), the port's five curves, printed with this crate's `%.16g` writer, equal
+//! For every case of the fixture (`tests/fixtures/funnel/`: funnel's own 17 test directories,
+//! the hostile set and the recorded Building 33 day), the port's five curves, printed with this crate's `%.16g` writer, equal
 //! the five files `pyfunnel==2.1.1` wrote **byte for byte**. Where pyfunnel refuses a case, the
 //! port refuses it for the same reason at the same end.
 //!
@@ -20,7 +20,8 @@ mod support;
 use oce_verify::{CompareError, CompareLimits, Series, funnel};
 
 use support::funnel_cases::{
-    CURVE_FILES, Case, Expected, HOSTILE_CASES, UPSTREAM_CASES, cases, curves, expected,
+    CURVE_FILES, Case, Expected, HOSTILE_CASES, RECORDED_CASES, UPSTREAM_CASES, cases, curves,
+    expected, recorded_cases,
 };
 
 /// The port's outcome for a case, under the default limits.
@@ -169,4 +170,35 @@ fn the_verdict_figures_agree_with_the_error_file_pyfunnel_wrote() {
             "success8"
         ]
     );
+}
+
+#[test]
+fn the_recorded_building_33_day_prints_the_five_files_pyfunnel_wrote() {
+    // One day of the Building 33 worked example at 5 s (issue #755): the engine series of the
+    // transcribed `CoolingCoilValve` as the reference and the trended valve as the test, under
+    // `atolx` 1 s and `rtoly` 0.01. 17,281 points a series, and a band that the trend leaves:
+    // the case exercises the corners and the loop removal on recorded data.
+    let recorded = recorded_cases();
+    assert_eq!(recorded.len(), RECORDED_CASES.len());
+    for case in recorded {
+        assert_eq!(case.reference.0.len(), 17_281, "{}", case.name);
+        let Expected::Curves(files) = expected(&case.name) else {
+            panic!("{}: pyfunnel wrote curves", case.name);
+        };
+        let result = port(&case).unwrap_or_else(|error| panic!("{}: {}", case.name, error.code()));
+        for ((curve, file), theirs) in curves(&result).iter().zip(CURVE_FILES).zip(&files) {
+            let ours = curve.to_csv();
+            assert!(
+                ours == *theirs,
+                "recorded/{}/{file}: {}",
+                case.name,
+                first_difference(&ours, theirs)
+            );
+        }
+        assert!(
+            result.errors_at_test().iter().any(|error| *error > 0.0),
+            "{}: the trend leaves the band somewhere",
+            case.name
+        );
+    }
 }

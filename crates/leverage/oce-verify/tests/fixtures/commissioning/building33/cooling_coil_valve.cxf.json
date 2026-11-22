@@ -1,0 +1,1099 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#"
+  },
+  "@graph": [
+    {
+      "@id": "urn:oce:author:CoolingCoilValve",
+      "@type": "S231:Block",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.alc_prop_k"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.alc_int_k"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.alc_k_unit_conv"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TOutCooCut"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TOutDelta"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.FanFeeCut"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.FanFeeDelta"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSupHighLim"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSupHigLim"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.interval"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.reverseActing"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.k"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.Ti"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uMax"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uMin"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uFanSta"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uFanFee"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSup"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSupSet"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TOut"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.yCooVal"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.yCooValMin"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.yCooValMax"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TOutThr"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSupMin"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSupMax"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andIntErr"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.min"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.cha"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.booToRea"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.pro"
+        }
+      ],
+      "S231:translationSoftware": "open-control-engine",
+      "S231:translationSoftwareVersion": "0.6.0"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.alc_prop_k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.01",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.alc_int_k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.005",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.alc_k_unit_conv",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.8",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TOutCooCut",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "283.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TOutDelta",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "256.4833333333333",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.FanFeeCut",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.FanFeeDelta",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSupHighLim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "283.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSupHigLim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "278.7055555555555",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.interval",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "15.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.018000000000000002",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "30.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.uMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.uMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.reverseActing"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.k"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.Ti"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.yMax"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.yMin"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.y_reset"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.u_s"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.u_m"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.trigger"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": "reverseActing"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "k"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "Ti"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.yMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.yMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.y_reset",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.trigger",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.limPI.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.pro.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.higLim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.limitBelow"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.limitAbove"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.x1"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.f1"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.x2"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.f2"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.higLim.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.higLim.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.higLim.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.higLim.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.higLim.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.higLim.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.higLim.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.higLim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.min.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.yCooValMin",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.yCooValMin.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.yCooValMin.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.yCooValMin.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "uMin"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.yCooValMin.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.f1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.yCooValMax",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.yCooValMax.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.yCooValMax.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.yCooValMax.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "uMax"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.yCooValMax.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.f2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TOutThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TOutThr.uLow"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TOutThr.uHigh"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TOutThr.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TOutThr.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TOutThr.uLow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "26.666666666666686",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TOutThr.uHigh",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "TOutCooCut"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TOutThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TOutThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr.uLow"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr.uHigh"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr.uLow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.04999999999999999",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr.uHigh",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "FanFeeCut"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSupMin",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSupMin.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSupMin.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSupMin.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "TSupHigLim"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSupMin.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.x1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSupMax",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSupMax.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TSupMax.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSupMax.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "TSupHighLim"
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSupMax.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.x2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee.u1"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.andOutAirFanFee.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andIntErr.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.andIntErr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andIntErr.u1"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andIntErr.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andIntErr.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.andIntErr.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.andIntErr.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.andIntErr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.cha.u"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.booToRea.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.min",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Min",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.min.u1"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.min.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.min.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.min.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.min.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.min.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.yCooVal"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.cha",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Change",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.cha.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.cha.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.cha.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.cha.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.trigger"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.booToRea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.booToRea.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.booToRea.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.booToRea.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.booToRea.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.pro.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.pro",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:hasInput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.pro.u1"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.pro.u2"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.pro.y"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.pro.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.pro.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.pro.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.min.u1"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.uFanSta",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.andIntErr.u2"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.uFanFee",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.uFanFeeThr.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSup",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.higLim.u"
+        },
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.u_m"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TSupSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:displayUnit": "degC",
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.limPI.u_s"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.TOut",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:displayUnit": "degC",
+      "S231:isConnectedTo": [
+        {
+          "@id": "urn:oce:author:CoolingCoilValve.TOutThr.u"
+        }
+      ]
+    },
+    {
+      "@id": "urn:oce:author:CoolingCoilValve.yCooVal",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+# derived by derive_valve.py from the vendored Modelica sources; never edited by hand
+# row: t, TSup, TSupSet, TOut, uFanFee, uFanSta, yCooVal bits, yCooVal, branch
+row	0.0	288.0	285.0	280.0	0.6	true	0000000000000000	0.0	off: the outdoor air has not passed the cut-off
+row	5.0	288.0	285.0	280.0	0.6	true	0000000000000000	0.0	off: the outdoor air has not passed the cut-off
+row	10.0	288.0	285.0	280.0	0.6	true	0000000000000000	0.0	off: the outdoor air has not passed the cut-off
+row	15.0	288.0	285.0	280.0	0.6	true	0000000000000000	0.0	off: the outdoor air has not passed the cut-off
+row	20.0	288.0	285.0	280.0	0.6	true	0000000000000000	0.0	off: the outdoor air has not passed the cut-off
+row	25.0	288.0	285.0	290.0	0.6	true	3fb70a3d70a3d70b	0.09000000000000001	pi: enabled, unlimited
+row	30.0	288.0	285.0	290.0	0.6	true	0000000000000000	0.0	pi: enabled, unlimited
+row	35.0	288.0	285.0	290.0	0.6	true	3f826e978d4fdf3c	0.009000000000000001	pi: enabled, unlimited
+row	40.0	288.0	285.0	290.0	0.6	true	3f926e978d4fdf3c	0.018000000000000002	pi: enabled, unlimited
+row	45.0	288.0	285.0	290.0	0.6	true	3f9ba5e353f7ceda	0.027000000000000003	pi: enabled, unlimited
+row	50.0	288.0	285.0	290.0	0.6	true	3fa26e978d4fdf3c	0.036000000000000004	pi: enabled, unlimited
+row	55.0	288.0	285.0	290.0	0.6	true	3fa70a3d70a3d70b	0.045000000000000005	pi: enabled, unlimited
+row	60.0	288.0	285.0	290.0	0.6	true	3faba5e353f7ceda	0.054000000000000006	pi: enabled, unlimited
+row	65.0	288.0	285.0	290.0	0.6	true	3fb020c49ba5e354	0.063	pi: enabled, unlimited
+row	70.0	288.0	285.0	290.0	0.6	true	3fb26e978d4fdf3c	0.07200000000000001	pi: enabled, unlimited
+row	75.0	288.0	285.0	290.0	0.6	true	3fb4bc6a7ef9db24	0.08100000000000002	pi: enabled, unlimited
+row	80.0	288.0	285.0	290.0	0.6	true	3fb70a3d70a3d70b	0.09000000000000001	pi: enabled, unlimited
+row	85.0	287.0	285.0	290.0	0.6	true	3fb4bc6a7ef9db24	0.08100000000000002	pi: enabled, a 2 s step
+row	87.0	287.0	285.0	290.0	0.6	true	3fb645a1cac08313	0.08700000000000001	pi: enabled, a 2 s step
+row	89.0	287.0	285.0	290.0	0.6	true	3fb6e2eb1c432ca6	0.08940000000000001	pi: enabled, a 2 s step
+row	91.0	284.0	285.0	290.0	0.6	true	3fa35a858793dd98	0.0378	pi: enabled, a 13 s step, error negative
+row	104.0	284.0	285.0	290.0	0.6	true	3fa2bd3c36113405	0.0366	pi: enabled, a 13 s step, error negative
+row	117.0	288.0	285.0	270.0	0.6	true	3fb9ce075f6fd220	0.1008	pi: the hysteresis holds below the cut-off
+row	122.0	288.0	285.0	270.0	0.6	true	3fbfcb923a29c77a	0.1242	pi: the hysteresis holds below the cut-off
+row	127.0	288.0	285.0	270.0	0.6	true	3fc10cb295e9e1b0	0.13319999999999999	pi: the hysteresis holds below the cut-off
+row	132.0	288.0	285.0	270.0	0.6	true	3fc2339c0ebedfa4	0.1422	pi: the hysteresis holds below the cut-off
+row	137.0	288.0	285.0	270.0	0.6	true	3fc35a858793dd98	0.1512	pi: the hysteresis holds below the cut-off
+row	142.0	281.0	230.0	290.0	0.6	true	3fe0851eb851ebc0	0.5162500000000065	limited: the supply-air high limit cuts the PI
+row	147.0	281.0	230.0	290.0	0.6	true	3fe0851eb851ebc0	0.5162500000000065	limited: the supply-air high limit cuts the PI
+row	152.0	281.0	230.0	290.0	0.6	true	3fe0851eb851ebc0	0.5162500000000065	limited: the supply-air high limit cuts the PI
+row	157.0	281.0	230.0	290.0	0.6	true	3fe0851eb851ebc0	0.5162500000000065	limited: the supply-air high limit cuts the PI
+row	162.0	281.0	230.0	290.0	0.6	true	3fe0851eb851ebc0	0.5162500000000065	limited: the supply-air high limit cuts the PI
+row	167.0	281.0	230.0	290.0	0.6	true	3fe0851eb851ebc0	0.5162500000000065	limited: the supply-air high limit cuts the PI
+row	172.0	277.0	230.0	290.0	0.6	true	0000000000000000	0.0	limited: the line clamped at its lower end
+row	177.0	277.0	230.0	290.0	0.6	true	0000000000000000	0.0	limited: the line clamped at its lower end
+row	182.0	277.0	230.0	290.0	0.6	true	0000000000000000	0.0	limited: the line clamped at its lower end
+row	187.0	288.0	285.0	290.0	0.1	true	3fead5452c73d618	0.8385339611256226	pi: the fan feedback hysteresis holds
+row	192.0	288.0	285.0	290.0	0.1	true	3feb1eff8aa91595	0.8475339611256226	pi: the fan feedback hysteresis holds
+row	197.0	288.0	285.0	290.0	0.1	true	3feb68b9e8de5512	0.8565339611256226	pi: the fan feedback hysteresis holds
+row	202.0	288.0	285.0	290.0	0.1	true	3febb2744713948f	0.8655339611256226	pi: the fan feedback hysteresis holds
+row	207.0	288.0	285.0	290.0	0.03	true	0000000000000000	0.0	off: the fan feedback below its uLow
+row	212.0	288.0	285.0	290.0	0.03	true	0000000000000000	0.0	off: the fan feedback below its uLow
+row	217.0	288.0	285.0	290.0	0.03	true	0000000000000000	0.0	off: the fan feedback below its uLow
+row	222.0	288.0	285.0	290.0	0.12	true	0000000000000000	0.0	off: the fan feedback below its uHigh
+row	227.0	288.0	285.0	290.0	0.12	true	0000000000000000	0.0	off: the fan feedback below its uHigh
+row	232.0	288.0	285.0	290.0	0.12	true	0000000000000000	0.0	off: the fan feedback below its uHigh
+row	237.0	288.0	285.0	290.0	0.2	true	3fa70a3d70a3d70b	0.045000000000000005	pi: re-enabled, the integrator reset
+row	242.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled, the integrator reset
+row	247.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled, the integrator reset
+row	252.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled, the integrator reset
+row	257.0	288.0	285.0	290.0	0.2	false	0000000000000000	0.0	off: the fan status false
+row	262.0	288.0	285.0	290.0	0.2	false	0000000000000000	0.0	off: the fan status false
+row	267.0	288.0	285.0	290.0	0.2	false	0000000000000000	0.0	off: the fan status false
+row	272.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled by the fan status
+row	277.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled by the fan status
+row	282.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled by the fan status
+row	287.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled by the fan status
+row	292.0	288.0	285.0	20.0	0.2	true	0000000000000000	0.0	off: the outdoor air below upstream's uLow
+row	297.0	288.0	285.0	20.0	0.2	true	0000000000000000	0.0	off: the outdoor air below upstream's uLow
+row	302.0	288.0	285.0	20.0	0.2	true	0000000000000000	0.0	off: the outdoor air below upstream's uLow
+row	307.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled by the outdoor air
+row	312.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled by the outdoor air
+row	317.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled by the outdoor air
+row	322.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled by the outdoor air
+row	327.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	332.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	337.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	342.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	347.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	352.0	280.0	290.0	290.0	0.2	true	0000000000000000	0.0	pi: saturated at yMin, the anti-windup acting
+row	357.0	288.0	285.0	290.0	0.2	true	3fae1f0b5787bd51	0.0588305992458752	pi: recovering from the lower saturation
+row	362.0	288.0	285.0	290.0	0.2	true	3fb15d589d6dda90	0.0678305992458752	pi: recovering from the lower saturation
+row	367.0	288.0	285.0	290.0	0.2	true	3fb3ab2b8f17d678	0.07683059924587521	pi: recovering from the lower saturation
+row	372.0	288.0	285.0	290.0	0.2	true	3fb5f8fe80c1d25f	0.0858305992458752	pi: recovering from the lower saturation

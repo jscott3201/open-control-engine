@@ -1,0 +1,158 @@
+{
+  "body": {
+    "data": "trended",
+    "findings": [],
+    "findings_total": 0,
+    "frames": {
+      "executed": 2,
+      "refused": 15,
+      "substituted": 75566
+    },
+    "load_warnings": [],
+    "load_warnings_total": 0,
+    "mapping": {
+      "digest": "fnv1a128:d6443d61aa03bf396e81214cc9fd00ec",
+      "path": "b33-points.json"
+    },
+    "model": "Buildings.Utilities.Plotters.Examples.ControlsVerification_CoolingCoilValve",
+    "outputs": [
+      {
+        "compared": 17281,
+        "exceedance_time_s": 4085.0,
+        "first_exceedance_t": 61770.0,
+        "funnel_reference": "engine",
+        "half_height": {
+          "max": 0.01,
+          "min": 0.01
+        },
+        "half_width": {
+          "max": 1.0,
+          "min": 1.0
+        },
+        "masked": 0,
+        "masked_exceedance": [],
+        "masked_exceedance_total": 0,
+        "masked_intervals": [],
+        "masked_intervals_total": 0,
+        "output": "urn:oce:author:CoolingCoilValve.yCooVal",
+        "status": "fail",
+        "tolerances": {
+          "atolx": 1,
+          "atoly": 0,
+          "ltolx": 0,
+          "ltoly": 0,
+          "rtolx": 0,
+          "rtoly": 0.01
+        },
+        "type": "real",
+        "uncovered": 0,
+        "worst": {
+          "exceedance": 0.020864709745257892,
+          "t": 65965.0
+        }
+      }
+    ],
+    "parameters": [],
+    "reference": 0,
+    "sequence": "cooValSta",
+    "sources": [
+      {
+        "digest": "fnv1a128:b2ffb91daff030d4ed63b4294040cc20",
+        "path": "data/Supply_Air_Temp.mos",
+        "role": "inputs",
+        "rows": 75563
+      },
+      {
+        "digest": "fnv1a128:585d7099e1f0baebe1860efdf4571de8",
+        "path": "data/SA_Clg_Stpt.mos",
+        "role": "inputs",
+        "rows": 75564
+      },
+      {
+        "digest": "fnv1a128:a28751a232048b3ab255c7a02f92d621",
+        "path": "data/OA_Temp.mos",
+        "role": "inputs",
+        "rows": 75564
+      },
+      {
+        "digest": "fnv1a128:80849d5d5a8bcb0fbe7b14d37fb7341f",
+        "path": "data/VFD_Fan_Feedback.mos",
+        "role": "inputs",
+        "rows": 75578
+      },
+      {
+        "digest": "fnv1a128:a606c6e57932c1b4d4dd6bbdf65b847f",
+        "path": "data/VFD_Fan_Enable.mos",
+        "role": "inputs",
+        "rows": 7
+      },
+      {
+        "digest": "fnv1a128:c73f0c5d03922d1ecff76e7ffe0e19aa",
+        "path": "data/Clg_Coil_Valve.mos",
+        "role": "expected",
+        "rows": 75564
+      }
+    ],
+    "status": "fail",
+    "time": {
+      "base": "recorded",
+      "origin": "2018-06-07T00:00:00-07:00",
+      "sampling": 5,
+      "window": {
+        "start": 0,
+        "stop": 86400
+      }
+    },
+    "units": {
+      "columns": [
+        {
+          "cdl": "yCooVal",
+          "device": "Clg Coil Valve",
+          "from": "percent",
+          "to": "1"
+        },
+        {
+          "cdl": "TOut",
+          "device": "OA Temp",
+          "from": "degF",
+          "to": "K"
+        },
+        {
+          "cdl": "TSupSet",
+          "device": "SA Clg Stpt",
+          "from": "degF",
+          "to": "K"
+        },
+        {
+          "cdl": "TSup",
+          "device": "Supply Air Temp",
+          "from": "degF",
+          "to": "K"
+        }
+      ],
+      "columns_total": 4,
+      "table": "units/v1"
+    },
+    "unverified_outputs": [],
+    "unverified_outputs_total": 0,
+    "warnings": [],
+    "warnings_total": 0
+  },
+  "comparison": {
+    "envelope": "funnel",
+    "envelope_version": "funnel@a12fa96",
+    "mode": "tolerance"
+  },
+  "content_id": "oce:canon1:7f8f18d3797291fc16afd96e21182df61cdef8846945dd7efe42c00ab11e8d4f",
+  "engine_version": "0.6.0",
+  "kind": "commissioning",
+  "passed": false,
+  "receipt_id": "receipt:fnv1a128:4d025f7ac401d69d617b42b587e3eef2",
+  "schema": "oce/receipt/v1",
+  "spec_id": "spec:fnv1a128:9b422287934f07ba1470d7adcbf423fb",
+  "timings": {
+    "compare_ms": 0,
+    "load_ms": 0,
+    "run_ms": 0
+  }
+}

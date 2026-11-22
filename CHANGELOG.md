@@ -1217,6 +1217,49 @@ so far, and no tag is cut by the bump.
 
 ### Leverage
 
+- **The OBC §12.6 Building 33 worked example runs, on a `CoolingCoilValve` authored from the
+  vendored model, not vendored, and its verdict is `fail`** (GitHub #765, issue #755; design
+  note `docs/design/commissioning.md`, "As landed: the worked example"). Upstream's translation
+  does not load (#760), so by the owner's ruling the sequence is transcribed by hand from the
+  vendored `.mo` into the oce text form and emitted with `oce emit`
+  (`crates/leverage/oce-verify/tests/fixtures/commissioning/building33/`, with a line-by-line
+  table of what was transcribed and dropped). Every verdict is about that transcription, not
+  about upstream's translation.
+  - **The verdict**, recorded on the first run and not tuned (`atolx` 1 s and `rtoly` 0.01 from
+    §12.6's Fig. 12.12 caption; `atoly` 0, `rtolx` 0 and the 5 s grid the design note's): one day of
+    the six vendored trends at 5 s, `yCooVal` `fail`, worst exceedance 0.0209 at 65,965 s,
+    4,085 s outside the 1 s by 0.01 funnel between 61,770 and 67,755 s, inside it the rest of the
+    day. The receipt is a golden, and `oce verify --commission spec.json --data trended` prints it
+    byte for byte. OBC's Fig. 12.12 for the example, as we read the published SVG, shows its
+    error in the same afternoon (about 62,000 to 68,000 s, up to about 0.02); its text says only
+    "good agreement". The receipt's `frames` count the whole replay to 493,800 s, not the day
+    (#769).
+  - **The transcription, checked from outside it:** its parameters, connectors, blocks and 21
+    connections against what `derive_declarations.py` reads from the `.mo`; its valve signal bit
+    for bit against `derive_valve.py`, derived from the `.mo` and the CDL block sources, over 74
+    frames that take every branch the valve signal can show, in the engine's discrete time (a
+    reset shows at the next frame, #768), the PI's lower saturation and its anti-windup included;
+    eleven mutants, all caught by that derivation (the day's receipt alone catches five; the
+    line's upper clamp cannot show in the valve signal and only the structural check sees it);
+    and OpenModelica 1.25.1 running upstream's own verification model over
+    the day, which the engine stays within 0.0034 of, and which leaves the funnel over the same
+    stretch (`openmodelica/run_openmodelica.sh`, its output checked in).
+  - **The rulings it carries:** `uFanFee` mapped with no unit on either side (the raw percent
+    reaches the port; a unit on one side is refused, pinned by a test); `TOutDelta` as upstream
+    writes it (a 2 degF difference converted as an absolute temperature, so the cut-off never
+    turns off; on this day a corrected one changes no figure).
+  - **The funnel differential's Building 33 day** (decision 13): `funnel/recorded/building_33_day/`,
+    the run's two series, captured by the pinned pyfunnel; the run's five curves print as its
+    files byte for byte. `capture.py` reads the new `recorded/` set; the re-run rewrote the other
+    66 cases unchanged.
+  - **Docs:** `docs/verification-evidence.md` gains the day's verdict and what it does and does
+    not show; the root `README.md` M3 row; `docs/cdl-coverage.md` now says 7 of the 44 G36
+    translations load (#633, measured there), where it said none did; the entry of GitHub #761 below gives the
+    trends' real span, where it said three days (the vendored README's wording waits for the
+    next pin-path change, #763). Follow-ups filed from the review: #767 (`Line`'s `x2 > x1`
+    warning), #768 (`PIDWithReset` reset timing), #769 (frame counts by window), #770 (reference
+    outputs pinned to their inputs by digest).
+
 - **`oce verify --commission <SPEC>` runs one reference of a commissioning spec from the command
   line** (GitHub #757, issue #664; design note `docs/design/commissioning.md`, "CLI",
   decisions 21 and 33 to 37, "As landed: the verb"). Flags: `--reference <N>` (needed when the
@@ -2037,10 +2080,12 @@ so far, and no tag is cut by the bump.
   sequence's translation does not load** (GitHub #761, issue #661).
   `third_party/modelica-buildings-cdl/` gains the eight files of upstream's
   `Buildings/Resources/Data/Utilities/Plotters/Examples/ControlsVerification_CoolingCoilValve/`
-  (six `CombiTimeTable` trends of three days at 5 s from LBNL Building 33, their `README.md` and
-  `csv2mos.py`), the sequence `Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.mo`
-  and its modelica-json translation under `cxf/`: 11,678,397 bytes, taking the tree from about
-  4.15 MB to about 15.8 MB. Neither pin moved (Buildings `a131864`, modelica-json `85721b82`), and
+  (six `CombiTimeTable` trends from LBNL Building 33, their `README.md` and `csv2mos.py`; the
+  5 s rows run to 376,910 s, about 4.36 days, then 600 s steps to 485,400 s, the supply air to
+  484,800 s and the fan feedback to 493,800 s, where upstream's README says "3 days"; corrected
+  by GitHub #765, issue #755), the sequence
+  `Buildings/Utilities/Plotters/Examples/BaseClasses/CoolingCoilValve.mo` and its modelica-json
+  translation under `cxf/`: 11,678,397 bytes, taking the tree from about 4.15 MB to about 15.8 MB. Neither pin moved (Buildings `a131864`, modelica-json `85721b82`), and
   the library's license covers the trends as it covers the `.mo` sources.
   - **Fidelity:** every new upstream file's Git blob OID equals upstream's at the pin, and
     `.agents/revendor-upstream.sh` now reads the two new upstream cones (186 blob OIDs). The six

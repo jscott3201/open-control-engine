@@ -9,6 +9,9 @@
 #[path = "../support/mod.rs"]
 mod support;
 
+mod building_33_day;
+mod building_33_openmodelica;
+mod building_33_transcription;
 mod canonical_form;
 mod closed_objects;
 mod comment_stripping;

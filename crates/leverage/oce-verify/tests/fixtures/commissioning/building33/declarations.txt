@@ -1,0 +1,74 @@
+# derived from CoolingCoilValve.mo by derive_declarations.py; never edited by hand
+source	fnv1a128:e259a507fe8fc66ee870345be25fb9d0
+param	alc_prop_k	Real	unit=1/F	quantity=	min=	max=	value=3f847ae147ae147b	0.01
+param	alc_int_k	Real	unit=1/F	quantity=	min=	max=	value=3f747ae147ae147b	0.005
+param	alc_k_unit_conv	Real	unit=	quantity=	min=	max=	value=3ffccccccccccccd	1.8
+param	TOutCooCut	Modelica.Units.SI.Temperature	unit=K	quantity=ThermodynamicTemperature	min=	max=	value=4071b26666666666	283.15
+param	TOutDelta	Modelica.Units.SI.Temperature	unit=K	quantity=ThermodynamicTemperature	min=	max=	value=407007bbbbbbbbbb	256.4833333333333
+param	FanFeeCut	Real	unit=	quantity=	min=	max=	value=3fc3333333333333	0.15
+param	FanFeeDelta	Real	unit=	quantity=	min=	max=	value=3fb999999999999a	0.1
+param	TSupHighLim	Modelica.Units.SI.Temperature	unit=K	quantity=ThermodynamicTemperature	min=	max=	value=4071b26666666666	283.15
+param	TSupHigLim	Modelica.Units.SI.Temperature	unit=K	quantity=ThermodynamicTemperature	min=	max=	value=40716b49f49f49f4	278.7055555555555
+param	interval	Modelica.Units.SI.Time	unit=s	quantity=Time	min=1	max=	value=402e000000000000	15.0
+param	reverseActing	Boolean	unit=	quantity=	min=	max=	value=false
+param	k	Real	unit=1/K	quantity=	min=	max=	value=3f926e978d4fdf3c	0.018000000000000002
+param	Ti	Real	unit=s	quantity=	min=	max=	value=403e000000000000	30.0
+param	uMax	Real	unit=1	quantity=	min=0	max=1	value=3ff0000000000000	1.0
+param	uMin	Real	unit=1	quantity=	min=0	max=1	value=0000000000000000	0.0
+port	in	uFanSta	Boolean	unit=	quantity=	displayUnit=	min=	max=
+port	in	uFanFee	Real	unit=	quantity=	displayUnit=	min=	max=
+port	in	TSup	Real	unit=K	quantity=ThermodynamicTemperature	displayUnit=	min=	max=
+port	in	TSupSet	Real	unit=K	quantity=ThermodynamicTemperature	displayUnit=degC	min=	max=
+port	in	TOut	Real	unit=K	quantity=ThermodynamicTemperature	displayUnit=degC	min=	max=
+port	out	yCooVal	Real	unit=1	quantity=	displayUnit=	min=0	max=1
+block	limPI	Buildings.Controls.OBC.CDL.Reals.PIDWithReset
+assign	limPI	reverseActing	false	ref=reverseActing
+assign	limPI	k	3f926e978d4fdf3c	0.018000000000000002	ref=k
+assign	limPI	Ti	403e000000000000	30.0	ref=Ti
+assign	limPI	yMax	3ff0000000000000	1.0	ref=
+assign	limPI	yMin	0000000000000000	0.0	ref=
+assign	limPI	y_reset	0000000000000000	0.0	ref=
+block	higLim	Buildings.Controls.OBC.CDL.Reals.Line
+assign	higLim	limitBelow	true
+assign	higLim	limitAbove	true
+block	yCooValMin	Buildings.Controls.OBC.CDL.Reals.Sources.Constant
+assign	yCooValMin	k	0000000000000000	0.0	ref=uMin
+block	yCooValMax	Buildings.Controls.OBC.CDL.Reals.Sources.Constant
+assign	yCooValMax	k	3ff0000000000000	1.0	ref=uMax
+block	TOutThr	Buildings.Controls.OBC.CDL.Reals.Hysteresis
+assign	TOutThr	uLow	403aaaaaaaaaaab0	26.666666666666686	ref=
+assign	TOutThr	uHigh	4071b26666666666	283.15	ref=TOutCooCut
+block	uFanFeeThr	Buildings.Controls.OBC.CDL.Reals.Hysteresis
+assign	uFanFeeThr	uLow	3fa9999999999998	0.04999999999999999	ref=
+assign	uFanFeeThr	uHigh	3fc3333333333333	0.15	ref=FanFeeCut
+block	TSupMin	Buildings.Controls.OBC.CDL.Reals.Sources.Constant
+assign	TSupMin	k	40716b49f49f49f4	278.7055555555555	ref=TSupHigLim
+block	TSupMax	Buildings.Controls.OBC.CDL.Reals.Sources.Constant
+assign	TSupMax	k	4071b26666666666	283.15	ref=TSupHighLim
+block	andOutAirFanFee	Buildings.Controls.OBC.CDL.Logical.And
+block	andIntErr	Buildings.Controls.OBC.CDL.Logical.And
+block	min	Buildings.Controls.OBC.CDL.Reals.Min
+block	cha	Buildings.Controls.OBC.CDL.Logical.Change
+block	booToRea	Buildings.Controls.OBC.CDL.Conversions.BooleanToReal
+block	pro	Buildings.Controls.OBC.CDL.Reals.Multiply
+connect	TOut	TOutThr.u
+connect	TOutThr.y	andOutAirFanFee.u1
+connect	TSup	higLim.u
+connect	TSup	limPI.u_m
+connect	TSupMax.y	higLim.x2
+connect	TSupMin.y	higLim.x1
+connect	TSupSet	limPI.u_s
+connect	andIntErr.u1	andOutAirFanFee.y
+connect	andIntErr.u2	uFanSta
+connect	andIntErr.y	booToRea.u
+connect	andIntErr.y	cha.u
+connect	andOutAirFanFee.u2	uFanFeeThr.y
+connect	booToRea.y	pro.u2
+connect	cha.y	limPI.trigger
+connect	higLim.f1	yCooValMin.y
+connect	higLim.f2	yCooValMax.y
+connect	higLim.y	min.u2
+connect	limPI.y	pro.u1
+connect	min.u1	pro.y
+connect	min.y	yCooVal
+connect	uFanFee	uFanFeeThr.u

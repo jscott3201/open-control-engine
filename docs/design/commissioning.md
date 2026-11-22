@@ -676,7 +676,7 @@ row per case). Six things are as the tree found them, not as this section said:
 
 The Building 33 day of the differential set follows in #664, captured with the same script once
 the trends (#661) and an engine series (#663) exist. *(2026-11-21: moved to #755 with the worked
-example; #661 has not landed.)*
+example. Landed with it, GitHub #765: see "As landed: the worked example".)*
 
 **`aligned-grid`.** The conservative envelope `oce-conformance` uses today (`build_bounds`): a grid
 of every sample and rectangle edge, min and max over covering rectangles, half-sizes as a **sum** of
@@ -1416,6 +1416,83 @@ showed:
 The finding above that `CoolingCoilValve` has no `TemperatureDifference` port confirms "As
 landed: the run, the comparison and the receipt": the quantity gap of #743 does not reach this
 example.
+
+### As landed: the worked example
+
+*(GitHub #765, issue #755.)* The worked example runs, and its first verdict is **`fail`**. The
+fixture is `crates/leverage/oce-verify/tests/fixtures/commissioning/building33/`, with a README
+that maps every line of the `.mo` to what was authored:
+
+- **`cooling_coil_valve.oce`, authored from the vendored model, not vendored**, and its CXF from
+  `oce emit` (`cooling_coil_valve.cxf.json`, held to the emitter's output byte for byte). The
+  verdict is about this transcription, not about upstream's translation. The text form takes no
+  expression, so each binding the `.mo` writes as an expression is the f64 value it evaluates to
+  in the `.mo`'s order (`k` 0.018000000000000002, `Ti` 30.0, `TOutThr.uLow`
+  26.666666666666686, `uFanFeeThr.uLow` 0.04999999999999999); the parameter bounds and units the
+  text form cannot carry, `protected`, and every annotation are dropped, each listed.
+- **The spec** is "Worked spec" above with one change, the `cxf` path; `spec.json` is the run's
+  and `building_33.json` beside the other specs stays the block above. The mapping
+  (`b33-points.json`) gives `uFanFee` no unit on either side, by the owner's ruling.
+
+**The verdict, recorded on the first run and not tuned** (`atolx` 1 s and `rtoly` 0.01 are
+§12.6's, from Fig. 12.12's caption; `atoly` 0, `rtolx` 0 and the 5 s grid are this note's): `yCooVal` `fail`, 17,281 instants
+compared, none masked or uncovered, worst exceedance 0.020864709745257892 at 65,965 s, first at
+61,770 s, 4,085 s outside the band (817 instants, 61,770 to 67,755 s); the band 1 s by 0.01
+throughout. The receipt is the golden `receipts/day.receipt.json`; `oce verify --commission
+spec.json --data trended` prints it byte for byte and exits 1.
+
+**Adjudication.** We attribute the failure to the recorded controller, not to the
+transcription. The basis: the transcription is at most 0.0034 from OpenModelica's run of
+upstream's model, which cannot account for an excess of 0.02 beyond a band 0.01 high, and that
+OpenModelica run fails over the same stretch. In full:
+
+1. the transcription is checked from outside it four ways: its parameters, connectors, blocks
+   and 21 connections against what `derive_declarations.py` reads from the `.mo`; its valve
+   signal bit for bit against `derive_valve.py`'s derivation from the `.mo` and the CDL block
+   sources over 74 frames that take every branch the valve signal can show, in the engine's
+   discrete time (a reset shows at the next frame), the lower saturation and its anti-windup
+   included; eleven mutants, every one caught by that derivation; and OpenModelica. The line's
+   upper clamp (`limitAbove`) cannot show in the valve signal for any input, because the PI's
+   output never exceeds `yMax = 1`, the line's `f2`: only the structural check sees it;
+2. OpenModelica 1.25.1 (the digest-pinned image of the other OpenModelica evidence) simulates
+   upstream's own `ControlsVerification_CoolingCoilValve` over the day, and the engine stays
+   within 0.0034 of it at every instant (largest at 67,375 s);
+3. that OpenModelica signal, put through the same funnel against the same trend, leaves the band
+   over the same stretch, 61,770 to 67,755 s (834 instants, worst 0.0234 at 67,335 s);
+4. OBC §12.6's Fig. 12.12, as we read the published SVG, shows its error non-zero only at about
+   62,000 to 68,000 s of the first day, at up to about 0.02; its text says only "good
+   agreement". §12.6 names the ALC controller's discrete time step and proprietary anti-windup
+   as the residuals.
+
+**Readings of this build:**
+
+- **The frames are the trend's, not the window's.** The replay runs all 75,583 frames the trend
+  files hold, to 493,800 s, and compares the window's instants: `frames` is `executed` 2,
+  `substituted` 75,566, `refused` 15. The note's sketch showed one day's frames. The 15 refused
+  frames are at 485,400 to 493,800 s, after the supply-air trend ends (484,800 s) and its 10 s
+  hold has run out, while the fan feedback goes on; all outside the window. `substituted` is
+  nearly every frame because the fan enable logs one sample a day and its 90,000 s hold fills
+  every other frame. Issue #769 asks for in-window counts and a replay that stops at `stop`.
+- **`model`** in the receipt names upstream's example model, as the spec writes it; only
+  `content_id` identifies the transcription that ran.
+- **`TOutDelta`** is transcribed as upstream writes it. On this day it changes nothing: the
+  outdoor air starts at 50.39 degF and never falls below 48.89 degF, so the cut-off is on all day
+  under upstream's 26.67 K threshold and under a corrected 282.04 K one alike; a test runs the day
+  with the corrected threshold and finds every figure the same.
+- **What the day cannot see.** The enable is on all day and the supply-air high limit never cuts
+  the signal (the supply air is below 50 degF at 56 instants, 71,875 to 73,975 s, where the
+  limit ranges from 0.85 at 48.8 degF to 0.99 and stays above the valve by at least 0.068, at
+  71,905 s), so six of the eleven mutants leave the day's receipt unchanged; the derivation's
+  synthetic frames are the evidence for those parts.
+- **The Building 33 day of the funnel differential** is `tests/fixtures/funnel/recorded/
+  building_33_day/`, a set of its own beside `upstream/` and `hostile/`: its inputs are the run's
+  two series, written to read back to the same bits, and the run's five curves print as the
+  pinned pyfunnel's byte for byte (817 instants outside, as the receipt says). The capture
+  re-ran for it and rewrote the other 66 cases' files unchanged.
+- **Cost.** One run of the day takes about 0.8 s and 36 MB in a debug build and 0.1 s in a
+  release build. In a parallel debug run of both suites a test running the day once takes 0.7 to
+  1.2 s and the longest (five mutants, a day each) about 6 s, so the tests run in the leverage
+  lane with no slow-test override.
 
 ## Decisions
 
