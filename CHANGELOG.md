@@ -191,7 +191,7 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
-- **The constructed budget lives in `oce-blocks`, beside what it counts** (GitHub #786, issue
+- **The constructed budget lives in `oce-blocks`, beside what it counts** (GitHub #788, issue
   #722). `ConstructedBudget` and `MAX_CONSTRUCTED_WORDS` move from `oce-graph` to `oce-blocks`
   (beside `Block::constructed_words` and `MAX_CONSTRUCTION_PEAK_BYTES`), so the CXF resolver and
   the validator, which do not depend on `oce-graph`, charge with the one accumulator the blob
@@ -604,7 +604,7 @@ so far, and no tag is cut by the bump.
 ### CXF import and export
 
 - **A load's signature probes are charged to the constructed budget, so a refused document
-  costs work bounded by the budget, not by its block count** (GitHub #786, issue #722).
+  costs work bounded by the budget, not by its block count** (GitHub #788, issue #722).
   **Breaking, in place** for documents already refused: which refusal they get, and at which
   stage. No document that loaded before is refused now, and none changes its content id or blob
   (the corpus below).
@@ -650,7 +650,7 @@ so far, and no tag is cut by the bump.
     `class_ports` constructions are the same shape above the facade (GitHub issue #785).
 
 - **A leaf's own conditional guard reads each member in the type its class gives it** (GitHub
-  #786, issue #759). **Breaking, in place.** Since GitHub #754 every binding is held in its
+  #788, issue #759). **Breaking, in place.** Since GitHub #754 every binding is held in its
   parameter's type before anything reads it, but the guard scope the specialization pass builds
   from a leaf's own declarations still read a leaf member as written. So `2` and `2.0` on a Real
   member could decide a guard two ways: a `CDL.Reals.PID` whose output is conditional on
@@ -779,7 +779,7 @@ so far, and no tag is cut by the bump.
     specialize pass holds a composite's or the root's declarations the same way, so a guard over
     a declared-Real sum (`p + 1 > p` at 2^53) prunes alike in both spellings; a leaf's own chain
     there still read its members as written (refusals only, never a wrong value) until GitHub
-    #786 (issue #759). A value a document lists more than once and GitHub #752 grounds once is held per
+    #788 (issue #759). A value a document lists more than once and GitHub #752 grounds once is held per
     listing, in the type of each parameter that lists it. The claim is a test now:
     `oce-api`'s `integer_respelling_identity.rs` respells every integral Real `S231:value`
     literal of every tracked document as a bare Integer and as a typed `xsd:integer` and requires
