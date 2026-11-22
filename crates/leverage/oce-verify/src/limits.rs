@@ -167,7 +167,7 @@ impl VerifyLimits {
 
 /// `limits` with every field above [`ReplayLimits::MAX`] lowered to it, so the limits a scenario
 /// replays under always pass `ReplayLimits::validate`.
-fn lowered(limits: &ReplayLimits) -> ReplayLimits {
+pub(crate) fn lowered(limits: &ReplayLimits) -> ReplayLimits {
     let max = ReplayLimits::MAX;
     ReplayLimits {
         max_rows: limits.max_rows.min(max.max_rows),

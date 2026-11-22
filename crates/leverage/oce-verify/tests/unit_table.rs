@@ -568,6 +568,8 @@ fn the_table_is_named_and_its_codes_are_kebab_case() {
             "empty-unit",
             "overflow",
             "absolute-for-difference",
+            "difference-for-absolute",
+            "port-unit-mismatch",
         ]
     );
     for code in UNIT_ERROR_CODES {

@@ -219,7 +219,7 @@ pub(crate) struct Ran {
 }
 
 /// A replay error as a refusal at `subject`.
-fn replay_failed(subject: &str, error: &ReplayError) -> VerifyError {
+pub(crate) fn replay_failed(subject: &str, error: &ReplayError) -> VerifyError {
     VerifyError::new(
         VerifyErrorKind::ReplayFailed,
         subject,
@@ -229,7 +229,7 @@ fn replay_failed(subject: &str, error: &ReplayError) -> VerifyError {
 }
 
 /// The trace column kind that carries an input of `value_type`. Binding refuses every other.
-fn column_kind(value_type: ValueType) -> Option<ColumnKind> {
+pub(crate) fn column_kind(value_type: ValueType) -> Option<ColumnKind> {
     match value_type {
         ValueType::Real => Some(ColumnKind::Real),
         ValueType::Integer => Some(ColumnKind::Integer),
@@ -465,7 +465,7 @@ pub(crate) fn coverage_error(
 }
 
 /// The frame counts of a trace, by status byte.
-fn frame_counts(trace: &Trace) -> FrameCounts {
+pub(crate) fn frame_counts(trace: &Trace) -> FrameCounts {
     let mut counts = FrameCounts::default();
     for status in trace
         .status()

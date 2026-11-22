@@ -320,6 +320,37 @@ impl fmt::Display for Envelope {
     }
 }
 
+/// The smallest and the largest of one axis's half-sizes over the reference points: what a
+/// receipt reports as `half_width` or `half_height` (commissioning note, "Report and receipt").
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HalfSize {
+    /// The smallest half-size.
+    pub min: f64,
+    /// The largest half-size.
+    pub max: f64,
+}
+
+impl HalfSize {
+    /// The extremes of `sizes`, which is not empty and holds no NaN, by `<` and `>` from the
+    /// first. `0.0` and `0.0` for an empty slice, which no comparison gives.
+    pub(crate) fn of(sizes: impl IntoIterator<Item = f64>) -> Self {
+        let mut sizes = sizes.into_iter();
+        let Some(first) = sizes.next() else {
+            return Self { min: 0.0, max: 0.0 };
+        };
+        let (mut min, mut max) = (first, first);
+        for size in sizes {
+            if size < min {
+                min = size;
+            }
+            if size > max {
+                max = size;
+            }
+        }
+        Self { min, max }
+    }
+}
+
 /// What one comparison found: the five curves funnel reports and the figures a verdict is read
 /// from.
 ///
@@ -355,6 +386,23 @@ pub struct FunnelResult {
     /// The `x` of the first instant, in the order of [`FunnelResult::errors`], whose error is
     /// above zero; `None` when there is none.
     pub first_error_x: Option<f64>,
+    /// The error at each of the test's own instants, in the test's order.
+    errors_at_test: Vec<f64>,
+    /// The half-widths applied, over the reference points.
+    half_width: HalfSize,
+    /// The half-heights applied, over the reference points.
+    half_height: HalfSize,
+}
+
+/// What [`FunnelResult::from_curves`] takes beside the curves: the error at each test instant
+/// in the test's order, and the half-sizes applied.
+pub(crate) struct Applied {
+    /// One error per test instant, in the test's order.
+    pub(crate) errors_at_test: Vec<f64>,
+    /// The half-widths over the reference points.
+    pub(crate) half_width: HalfSize,
+    /// The half-heights over the reference points.
+    pub(crate) half_height: HalfSize,
 }
 
 impl FunnelResult {
@@ -363,9 +411,9 @@ impl FunnelResult {
         envelope: Envelope,
         reference: Series<'_>,
         test: Series<'_>,
-        lower_bound: Curve,
-        upper_bound: Curve,
+        (lower_bound, upper_bound): (Curve, Curve),
         errors: Curve,
+        applied: Applied,
     ) -> Self {
         let mut max_error = 0.0;
         let mut max_error_x = None;
@@ -390,7 +438,37 @@ impl FunnelResult {
             max_error,
             max_error_x,
             first_error_x,
+            errors_at_test: applied.errors_at_test,
+            half_width: applied.half_width,
+            half_height: applied.half_height,
         }
+    }
+
+    /// The error at each of the test's own instants, one per test sample and in the test's
+    /// order, equal times included. For [`Envelope::Funnel`] it is [`FunnelResult::errors`]'s
+    /// `y`; for [`Envelope::AlignedGrid`] it leaves out the breakpoints between test instants,
+    /// which [`FunnelResult::errors`] also lists, and keeps the order of a repeated instant's
+    /// samples, which that list sorts by error. A verdict reads this (commissioning note,
+    /// decision 32).
+    #[must_use]
+    pub fn errors_at_test(&self) -> &[f64] {
+        &self.errors_at_test
+    }
+
+    /// The smallest and largest half-width applied over the reference points, in the unit of
+    /// `x` and before `x` is normalised. Under [`Envelope::Funnel`], "Envelope" step 1's
+    /// half-sizes with their fallbacks, so never zero; under [`Envelope::AlignedGrid`], the sum
+    /// of the three terms, with no fallback, so zero when every tolerance of the axis is zero.
+    #[must_use]
+    pub fn half_width(&self) -> HalfSize {
+        self.half_width
+    }
+
+    /// The smallest and largest half-height applied over the reference points, in the unit of
+    /// `y`, read as [`FunnelResult::half_width`] is.
+    #[must_use]
+    pub fn half_height(&self) -> HalfSize {
+        self.half_height
     }
 
     /// Whether the test lies inside the band at every compared instant: no error is above zero.

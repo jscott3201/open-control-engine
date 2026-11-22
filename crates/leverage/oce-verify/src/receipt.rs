@@ -12,12 +12,14 @@
 //! records are typed by the port or parameter they belong to ([`ReceiptValue`]) and spelled
 //! exactly, a negative zero, a NaN or an infinity as the bits of the binary64.
 //!
-//! The types are `#[non_exhaustive]` so the commissioning body can arrive in place; they are
-//! built only by [`crate::run_vectors`] and read by everyone.
+//! The types are `#[non_exhaustive]`; they are built only by [`crate::run_vectors`] and
+//! [`crate::run_commissioning`] and read by everyone. The commissioning body's own types are in
+//! the commissioning module ([`crate::CommissioningBody`]).
 
 use oce_replay::EngineRefusal;
 
 use crate::clock::Clock;
+use crate::commissioning::CommissioningBody;
 use crate::envelope::Envelope;
 
 /// The format tag every receipt carries in its `schema` key, for every kind (decision 37).
@@ -28,12 +30,15 @@ pub const RECEIPT_SCHEMA: &str = "oce/receipt/v1";
 /// (decision 38). No key chooses another.
 pub const VECTOR_FUNNEL_REFERENCE: &str = "expectation";
 
-/// Which verifier issued a receipt. The commissioning verifier adds its kind in place.
+/// Which verifier issued a receipt.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ReceiptKind {
     /// A vector set replayed against a subject (`vectors`).
     Vectors,
+    /// One reference of a commissioning spec, its trends replayed against its sequence
+    /// (`commissioning`; commissioning note, "Report and receipt").
+    Commissioning,
 }
 
 impl ReceiptKind {
@@ -42,6 +47,7 @@ impl ReceiptKind {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Vectors => "vectors",
+            Self::Commissioning => "commissioning",
         }
     }
 }
@@ -52,9 +58,11 @@ impl ReceiptKind {
 pub enum ComparisonMode {
     /// Every expected value equals the output exactly; a Real compares by its bits (`exact`).
     Exact,
-    /// An envelope was used somewhere (`tolerance`): for a vector set, at least one window is a
-    /// tolerance window, while its exact windows are still compared by bits (decision 42). Each
-    /// failure's code says which comparison failed.
+    /// An envelope was used (`tolerance`). For a vector set, at least one window is a tolerance
+    /// window, while its exact windows are still compared by bits (decision 42), and each
+    /// failure's code says which comparison failed. A commissioning receipt always has this mode,
+    /// whatever the types of its outputs (commissioning note, decision 32): its Boolean and
+    /// Integer outputs are still compared exactly.
     Tolerance,
 }
 
@@ -536,13 +544,18 @@ pub struct VectorBody {
     pub mutants: Option<MutantSection>,
 }
 
-/// The body of a receipt, by kind: a closed enum (decision 21). The commissioning verifier adds
-/// its variant in place.
+/// The body of a receipt, by kind: a closed enum (decision 21).
 #[non_exhaustive]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "one receipt per run, built once and read in place: boxing a variant would only add a pointer to every match"
+)]
 #[derive(Clone, Debug)]
 pub enum ReceiptBody {
     /// A vector run's body.
     Vectors(VectorBody),
+    /// A commissioning run's body (commissioning note, "Report and receipt").
+    Commissioning(CommissioningBody),
 }
 
 /// One receipt: the shared header and the body (decision 21).
@@ -577,7 +590,7 @@ impl Receipt {
 
     /// The identity of this receipt's content: `receipt:fnv1a128:` and the 32 lowercase hex
     /// digits of FNV-1a-128 over [`Self::to_canonical_json`] with the header's `timings` and
-    /// `receipt_id` removed. [`crate::run_vectors`] stores it in `header.receipt_id`; recomputing
+    /// `receipt_id` removed. [`crate::run_vectors`] and [`crate::run_commissioning`] store it in `header.receipt_id`; recomputing
     /// it checks that a receipt was not edited after it was issued.
     #[must_use]
     pub fn computed_receipt_id(&self) -> String {

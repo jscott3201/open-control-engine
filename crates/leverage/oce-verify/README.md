@@ -461,6 +461,11 @@ the hashed part, so a workspace version bump of the major, minor or patch moves 
 a change of the pre-release suffix alone moves none (issue #593). `oce-verify` measures nothing:
 `timings` are zeros unless the caller passes `VerifyOptions::timings`.
 
+A commissioning run issues the same `Receipt` with `kind: "commissioning"`,
+`comparison: { "mode": "tolerance", "envelope", "envelope_version" }` and
+`ReceiptBody::Commissioning` (see [Running a reference](#running-a-reference)); under `exact` the
+`comparison` object is still `{ "mode": "exact" }` alone, so no vector receipt byte changed.
+
 ## The schema
 
 [`schema/vectors.schema.json`](schema/vectors.schema.json) (`VECTORS_JSON_SCHEMA`) is derived with
@@ -918,6 +923,78 @@ golden, checked against `derive_trends.py`'s independent derivation and against 
 `signals` subject; a hold at exactly `maxAge` and one ulp past; every bound at its limit and one
 past; a Building 33-shaped source of 75,578 rows inside a pinned allocation bound; hostile bytes
 in every file kind within a stated memory bound; and every order of files and sources.
+
+## Running a reference
+
+`run_commissioning(spec, reference, inputs, options)` (issues #662 and #663; design note
+`docs/design/commissioning.md`, "As landed: the run, the comparison and the receipt") runs one
+reference of a commissioning spec against the bytes in `SpecInputs` and returns a
+`CommissionRun`: the receipt, the trace (inputs retained) and one `OutputCurves` per compared
+output (the exceedance at each test instant and, under `CommissionOptions::bounds`, the
+reference, test and bound curves). Every refusal is a `VerifyError`, with no receipt.
+
+- **Bind.** The reference has a `cxf` and a `window` (`reference-incomplete`) and a `sampling`,
+  its own or the spec's (`sampling-required`, until a change-of-value comparison lands, #746);
+  the CXF loads (`subject-load-failed` at `references[i].cxf`). The trend sources are read (`source-refused`
+  with the reader's code as its cause, `too-many-sources`). Every point an `inputs` source reads
+  lands on a boundary input, and every point an `expected` source reads on a boundary output, by
+  replay's name rule (`unknown-*`, `ambiguous-*`, `duplicate-input`, `duplicate-output`); its CDL
+  type is the port's (`value-type-mismatch`); on a Real port its `cdl.unit` is the port's unit and
+  its unit row fits the port's quantity, matched by local name (`unit-refused`, cause
+  `port-unit-mismatch`, `absolute-for-difference` or `difference-for-absolute`); every input is
+  supplied (`input-not-supplied`). The compared outputs are those an `expected` source supplies
+  (at most 4,096, `too-many-outputs`); the rest are `unverified_outputs`. The `outputs` and
+  `indicators` keys are matched against the outputs (`spec-refused` with the spec reader's code),
+  every indicator name resolves (`unknown-indicator`, at most 64 distinct,
+  `too-many-indicators`), and the parameters resolve and type (`param-*`, `value-*`). The bounds
+  come next, before the replay: each output's instants at most the envelope's limit, the run's
+  `instants × (1 + indicators)` together at most 16,777,216, the grid envelope's `instants²`
+  at most 2^32 (each `too-many-points`), and the trace's bytes at most `max_trace_bytes`
+  (`replay-failed`, cause `trace-too-large`). The parameter edits are applied in passes before
+  any frame (`param-refused`).
+- **Run.** One replay over the merged inputs: recorded times, equal times allowed, the sources'
+  holds, `OnRefusal::RecordAndContinue`. A frame refused for a missing sample is counted in
+  `frames.refused` and opens an uncovered stretch up to the next executed frame (or to `stop`);
+  the first engine refusal ends the run as `frame-refused` (its class as the cause, with
+  `frame_index`, `frame_time` and the engine's message cut to 256 bytes) or `run-refused`.
+- **Compare.** Both series of every output are held by zero-order hold at one set of instants:
+  the grid `start + k * s <= stop`, then `stop` when the grid does not reach it. Each instant
+  is masked (an indicator is false), uncovered, or compared; masked and uncovered instants are
+  zeroed in both series before the envelope is built. A Real goes through the reference's
+  envelope (`funnel` or `aligned-grid`, the engine series the reference unless
+  `funnelReference: "trend"`), read at the instants and never at a breakpoint between them
+  (`compare-refused` when the envelope gives no result); an engine sample that is non-finite or above 2^1000 at an instant
+  neither masked nor uncovered fails the output with no envelope. A Boolean or Integer is
+  compared exactly, a mismatch an exceedance of 1. An indicator sample that is not Boolean or
+  exactly 0 or 1 is `indicator-not-boolean`.
+- **Report.** Per output: `status`, `compared`, `masked`, `uncovered`, the role and tolerances
+  of a Real, the half-sizes applied, `worst`, `first_exceedance_t`, `exceedance_time_s`, the
+  masked intervals (at most 64) and masked exceedances (at most 16, never counted). The body
+  records the reference, `data` (`CommissionOptions::data`, `trended` by default), the edits as
+  written and the edited `content_id`, the time window and sampling, the mapping's and every
+  source's digest, the unit rows (at most 256), the frames, the warnings (at most 16) and the
+  findings (at most 64). Every cap is a constant (`MAX_*`), never an option.
+
+**Bounds.** A run holds the merged trends (up to 1 GiB, `TrendLimits`), the expected and
+indicator series for the whole run (each sample its time and value, about four times the bytes
+of short `csv` cells), the trace (up to 1 GiB, `max_trace_bytes`, checked before the replay)
+and one output's held series and curves at a time (about 50 MB at 2^20 instants). The peak is
+therefore a multiple of the trend files' bytes plus the trace and the series. The review of
+GitHub #744 measured 3.2 GiB beyond 636 MB of expected `csv`, and 2.13 GiB beyond the `csv` of
+a 16M-frame run. The allocation test (`tests/commissioning/run_cost.rs`) pins the per-frame term
+only: 365 bytes a frame at 20,000 frames. Instants that round to one value are refused
+(`replay-failed`, cause `grid-not-increasing`). The
+receipt's complete lists are bounded at bind and the others capped by constants.
+
+**Evidence.** `tests/commissioning/run_*.rs` and the unit tests beside each module: goldens of a
+`pass`, a `fail` and a `no_data` receipt and their exceedance columns
+(`tests/fixtures/commissioning/run/receipts/`, blessed with `OCE_BLESS_VERIFY=1`); the
+independent `derive_run.py` (run with `python3 -I`) over a four-output case under each envelope
+(a 5 s grid, an off-grid stop, an uncovered stretch) and every golden's `receipt_id`; the funnel's figures derived by hand; the engine series against
+a plain frame loop; every refusal by its code and place; each bound at its limit and one past;
+one receipt for chunk sizes 1, 7 and the whole run; seeded byte edits and hostile numbers that
+never panic; and the M3 gate row, a perturbed synthetic trend failing with zero tolerances and
+passing within its band, both golden receipts labelled `data: synthetic`.
 
 ## Fixtures and goldens
 

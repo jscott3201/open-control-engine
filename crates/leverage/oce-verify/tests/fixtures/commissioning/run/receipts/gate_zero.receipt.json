@@ -1,0 +1,207 @@
+{
+  "body": {
+    "data": "synthetic",
+    "findings": [],
+    "findings_total": 0,
+    "frames": {
+      "executed": 4,
+      "refused": 0,
+      "substituted": 0
+    },
+    "load_warnings": [],
+    "load_warnings_total": 0,
+    "mapping": {
+      "digest": "fnv1a128:10f2ad6cb8c9a018d7af4c2b13dcf352",
+      "path": "points.json"
+    },
+    "model": "Plant",
+    "outputs": [
+      {
+        "compared": 7,
+        "exceedance_time_s": 30.0,
+        "first_exceedance_t": 0.0,
+        "funnel_reference": "engine",
+        "half_height": {
+          "max": 1e-10,
+          "min": 1e-10
+        },
+        "half_width": {
+          "max": 1e-10,
+          "min": 1e-10
+        },
+        "masked": 0,
+        "masked_exceedance": [],
+        "masked_exceedance_total": 0,
+        "masked_intervals": [],
+        "masked_intervals_total": 0,
+        "output": "urn:verify:plant#top.TSet",
+        "status": "fail",
+        "tolerances": {
+          "atolx": 0,
+          "atoly": 0,
+          "ltolx": 0,
+          "ltoly": 0,
+          "rtolx": 0,
+          "rtoly": 0
+        },
+        "type": "real",
+        "uncovered": 0,
+        "worst": {
+          "exceedance": 0.09999999990003516,
+          "t": 0.0
+        }
+      },
+      {
+        "compared": 7,
+        "exceedance_time_s": 0.0,
+        "masked": 0,
+        "masked_exceedance": [],
+        "masked_exceedance_total": 0,
+        "masked_intervals": [],
+        "masked_intervals_total": 0,
+        "output": "urn:verify:plant#top.enOut",
+        "status": "pass",
+        "type": "boolean",
+        "uncovered": 0
+      },
+      {
+        "compared": 5,
+        "exceedance_time_s": 0.0,
+        "funnel_reference": "engine",
+        "half_height": {
+          "max": 1e-10,
+          "min": 1e-10
+        },
+        "half_width": {
+          "max": 1e-10,
+          "min": 1e-10
+        },
+        "masked": 2,
+        "masked_exceedance": [],
+        "masked_exceedance_total": 0,
+        "masked_intervals": [
+          {
+            "from": 15.0,
+            "to": 20.0
+          }
+        ],
+        "masked_intervals_total": 1,
+        "output": "urn:verify:plant#top.limOut",
+        "status": "pass",
+        "tolerances": {
+          "atolx": 0,
+          "atoly": 0,
+          "ltolx": 0,
+          "ltoly": 0,
+          "rtolx": 0,
+          "rtoly": 0
+        },
+        "type": "real",
+        "uncovered": 0
+      },
+      {
+        "compared": 7,
+        "exceedance_time_s": 0.0,
+        "masked": 0,
+        "masked_exceedance": [],
+        "masked_exceedance_total": 0,
+        "masked_intervals": [],
+        "masked_intervals_total": 0,
+        "output": "urn:verify:plant#top.nOut",
+        "status": "pass",
+        "type": "integer",
+        "uncovered": 0
+      }
+    ],
+    "parameters": [],
+    "reference": 0,
+    "sequence": "plant",
+    "sources": [
+      {
+        "digest": "fnv1a128:08788e57d5d43a5d2b8ebd9c2b32c09c",
+        "path": "inputs.csv",
+        "role": "inputs",
+        "rows": 4
+      },
+      {
+        "digest": "fnv1a128:55249c4b562292ae9ef7e82e41f886e9",
+        "path": "outputs.csv",
+        "role": "expected",
+        "rows": 4
+      },
+      {
+        "digest": "fnv1a128:6c01841e89b21c3f7c457e05a790ed0d",
+        "path": "fan.csv",
+        "role": "indicators",
+        "rows": 3
+      }
+    ],
+    "status": "fail",
+    "time": {
+      "base": "recorded",
+      "origin": "2026-11-21T00:00:00Z",
+      "sampling": 5,
+      "window": {
+        "start": 0,
+        "stop": 30
+      }
+    },
+    "units": {
+      "columns": [
+        {
+          "cdl": "lim",
+          "device": "Limit",
+          "from": "percent",
+          "to": "1"
+        },
+        {
+          "cdl": "limOut",
+          "device": "Limited",
+          "from": "percent",
+          "to": "1"
+        },
+        {
+          "cdl": "dT",
+          "device": "Offset",
+          "from": "degC_delta",
+          "to": "K"
+        },
+        {
+          "cdl": "TSet",
+          "device": "Setpoint",
+          "from": "degC",
+          "to": "K"
+        },
+        {
+          "cdl": "T",
+          "device": "Supply Temp",
+          "from": "degC",
+          "to": "K"
+        }
+      ],
+      "columns_total": 5,
+      "table": "units/v1"
+    },
+    "unverified_outputs": [],
+    "unverified_outputs_total": 0,
+    "warnings": [],
+    "warnings_total": 0
+  },
+  "comparison": {
+    "envelope": "funnel",
+    "envelope_version": "funnel@a12fa96",
+    "mode": "tolerance"
+  },
+  "content_id": "oce:canon1:414fccb652bd576ae780f1198d6119d7bff5d33c9bf064001307ab11ef62414c",
+  "engine_version": "0.6.0",
+  "kind": "commissioning",
+  "passed": false,
+  "receipt_id": "receipt:fnv1a128:5c7b02ea475935632104ec3b9804c371",
+  "schema": "oce/receipt/v1",
+  "spec_id": "spec:fnv1a128:d47f3239946d7782d7f42a4119386319",
+  "timings": {
+    "compare_ms": 0,
+    "load_ms": 0,
+    "run_ms": 0
+  }
+}

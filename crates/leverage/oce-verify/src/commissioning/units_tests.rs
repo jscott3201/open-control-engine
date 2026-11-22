@@ -328,6 +328,8 @@ fn the_error_codes_are_pinned_and_each_variant_has_its_own() {
             "empty-unit",
             "overflow",
             "absolute-for-difference",
+            "difference-for-absolute",
+            "port-unit-mismatch",
         ]
     );
     let one_of_each = [
@@ -348,6 +350,11 @@ fn the_error_codes_are_pinned_and_each_variant_has_its_own() {
             value: 0.0,
         },
         UnitError::AbsoluteForDifference { from: "", to: "" },
+        UnitError::DifferenceForAbsolute { from: "", to: "" },
+        UnitError::PortUnitMismatch {
+            mapping: None,
+            port: None,
+        },
     ];
     assert_eq!(one_of_each.len(), UNIT_ERROR_CODES.len());
     let codes: Vec<&str> = one_of_each.iter().map(UnitError::code).collect();
@@ -440,41 +447,53 @@ fn a_temperature_difference_port_refuses_every_absolute_pair_and_takes_the_rest(
     ];
     for listed in &UNITS_V1 {
         let conversion = UnitConversion::Listed(listed);
-        let checked = conversion.for_port_quantity(Some("TemperatureDifference"));
-        if absolute.contains(&(listed.from, listed.to)) {
-            let refused = checked.unwrap_err();
-            assert_eq!(
-                refused,
-                UnitError::AbsoluteForDifference {
-                    from: listed.from,
-                    to: listed.to,
-                }
-            );
-            assert_eq!(refused.code(), "absolute-for-difference");
-        } else {
-            assert_eq!(checked, Ok(conversion), "{} -> {}", listed.from, listed.to);
+        // Every spelling of the quantity whose local name is `TemperatureDifference` (owner
+        // ruling of 2026-11-21): bare, compact IRI and full QUDT IRI, with `#`, `/` or `:`.
+        for quantity in [
+            "TemperatureDifference",
+            "q:TemperatureDifference",
+            "http://qudt.org/vocab/quantitykind/TemperatureDifference",
+            "http://qudt.org/vocab/quantitykind#TemperatureDifference",
+        ] {
+            let checked = conversion.for_port_quantity(Some(quantity));
+            if absolute.contains(&(listed.from, listed.to)) {
+                let refused = checked.unwrap_err();
+                assert_eq!(
+                    refused,
+                    UnitError::AbsoluteForDifference {
+                        from: listed.from,
+                        to: listed.to,
+                    }
+                );
+                assert_eq!(refused.code(), "absolute-for-difference");
+            } else {
+                assert_eq!(checked, Ok(conversion), "{} -> {}", listed.from, listed.to);
+            }
         }
-        // Any other quantity, a near miss of it, or none, takes every row. The IRI spelling and
-        // the lower-case one pass deliberately: the check matches the bare string only, and the
-        // binder (#662), which sees how the port's quantity was written, owns the rest.
+        // Any other quantity, a near miss of one, or none, takes every row: a port with no
+        // quantity (every modelica-json translation today) leaves the mapping's spelling to
+        // decide.
         for quantity in [
             None,
-            Some("ThermodynamicTemperature"),
             Some("Pressure"),
             Some("temperatureDifference"),
             Some("temperaturedifference"),
-            Some("q:TemperatureDifference"),
             Some("TemperatureDifference "),
+            Some("TemperatureDifference/"),
+            Some("q:TemperatureDifferenceX"),
             Some(""),
         ] {
-            assert_eq!(conversion.for_port_quantity(quantity), Ok(conversion));
+            assert_eq!(
+                conversion.for_port_quantity(quantity),
+                Ok(conversion),
+                "{quantity:?}"
+            );
         }
     }
     for conversion in [UnitConversion::Unitless, UnitConversion::Identity] {
-        assert_eq!(
-            conversion.for_port_quantity(Some("TemperatureDifference")),
-            Ok(conversion)
-        );
+        for quantity in ["TemperatureDifference", "ThermodynamicTemperature"] {
+            assert_eq!(conversion.for_port_quantity(Some(quantity)), Ok(conversion));
+        }
     }
     assert_eq!(
         UnitConversion::resolve(Some("degF"), Some("K"))
@@ -483,6 +502,85 @@ fn a_temperature_difference_port_refuses_every_absolute_pair_and_takes_the_rest(
             .to_string(),
         "`degF` to `K` converts a temperature reading, but the port is a temperature difference: \
          write the device unit as `degF_delta` or `degC_delta`"
+    );
+}
+
+#[test]
+fn a_thermodynamic_temperature_port_refuses_every_difference_pair_and_takes_the_rest() {
+    let difference = [("degF_delta", "K"), ("degC_delta", "K")];
+    for listed in &UNITS_V1 {
+        let conversion = UnitConversion::Listed(listed);
+        for quantity in [
+            "ThermodynamicTemperature",
+            "q:ThermodynamicTemperature",
+            "http://qudt.org/vocab/quantitykind/ThermodynamicTemperature",
+        ] {
+            let checked = conversion.for_port_quantity(Some(quantity));
+            if difference.contains(&(listed.from, listed.to)) {
+                let refused = checked.unwrap_err();
+                assert_eq!(
+                    refused,
+                    UnitError::DifferenceForAbsolute {
+                        from: listed.from,
+                        to: listed.to,
+                    }
+                );
+                assert_eq!(refused.code(), "difference-for-absolute");
+            } else {
+                assert_eq!(checked, Ok(conversion), "{} -> {}", listed.from, listed.to);
+            }
+        }
+    }
+    assert_eq!(
+        UnitConversion::resolve(Some("degF_delta"), Some("K"))
+            .and_then(|c| c.for_port_quantity(Some("ThermodynamicTemperature")))
+            .unwrap_err()
+            .to_string(),
+        "`degF_delta` to `K` converts a temperature difference, but the port is a temperature \
+         reading: write the device unit as `degF` or `degC`"
+    );
+}
+
+#[test]
+fn a_quantity_is_read_by_its_local_name_after_the_last_hash_slash_or_colon() {
+    use super::QuantityRule as Rule;
+    for (quantity, rule) in [
+        (None, Rule::Any),
+        (Some("TemperatureDifference"), Rule::Difference),
+        (Some("ThermodynamicTemperature"), Rule::Absolute),
+        (Some("q:TemperatureDifference"), Rule::Difference),
+        (Some("a#b/c:ThermodynamicTemperature"), Rule::Absolute),
+        (Some("a:TemperatureDifference#x"), Rule::Any),
+        (Some("TemperatureDifference:"), Rule::Any),
+        (Some("VolumeFlowRate"), Rule::Any),
+        (Some(""), Rule::Any),
+    ] {
+        assert_eq!(Rule::of(quantity), rule, "{quantity:?}");
+    }
+}
+
+#[test]
+fn a_port_unit_agrees_only_when_the_spellings_are_equal_or_both_absent() {
+    assert_eq!(
+        UnitConversion::check_port_unit(Some("K"), Some("K")),
+        Ok(())
+    );
+    assert_eq!(UnitConversion::check_port_unit(None, None), Ok(()));
+    for (mapping, port) in [
+        (Some("K"), Some("degC")),
+        (Some("K"), None),
+        (None, Some("K")),
+        (Some("k"), Some("K")),
+        (Some("K "), Some("K")),
+    ] {
+        let refused = UnitConversion::check_port_unit(mapping, port).unwrap_err();
+        assert_eq!(refused.code(), "port-unit-mismatch");
+    }
+    assert_eq!(
+        UnitConversion::check_port_unit(Some("K"), None)
+            .unwrap_err()
+            .to_string(),
+        "the mapping gives the CDL point `K` and the sequence port declares no unit"
     );
 }
 

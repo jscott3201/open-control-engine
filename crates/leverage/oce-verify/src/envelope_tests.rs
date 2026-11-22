@@ -372,9 +372,13 @@ fn the_figures_are_read_off_the_error_curve_in_its_order() {
             Envelope::Funnel,
             ok(),
             ok(),
-            Curve::from_points([]),
-            Curve::from_points([]),
+            (Curve::from_points([]), Curve::from_points([])),
             Curve::from_points(errors.iter().copied()),
+            crate::envelope::Applied {
+                errors_at_test: errors.iter().map(|(_, error)| *error).collect(),
+                half_width: HalfSize::of([1.0]),
+                half_height: HalfSize::of([1.0]),
+            },
         )
     };
     let inside = result(&[(0.0, 0.0), (1.0, 0.0)]);

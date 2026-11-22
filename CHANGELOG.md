@@ -1202,6 +1202,54 @@ so far, and no tag is cut by the bump.
   they took 18.2 s (`cxf_cross_level`, every ordered pair) and 19.0 s (`cxf_corpus`, equal ids)
   locally, and CI's leverage lane ran `oce-diff`'s whole suite in 18.7 s, well under half of the
   120 s termination.
+- **`oce-verify` runs a commissioning reference and issues its receipt** (GitHub #744, issues
+  #662, #663; design note `docs/design/commissioning.md`, "As landed: the run, the comparison and
+  the receipt", parts 5 and 6 of 7). `run_commissioning(spec, reference, inputs, options)` returns
+  a `CommissionRun`: the receipt, the trace (inputs retained) and the exceedance columns
+  (`OutputCurves`, with the bound curves under `CommissionOptions::bounds`).
+  - **Bind**, every refusal before any frame. A reference needs a `sampling` (owner ruling of
+    2026-11-21, `sampling-required`, lifted by #746). Names resolve by replay's rule with no
+    prefix on mapping names. Each mapped point's CDL type, `cdl.unit` and unit row are held to
+    its port (owner rulings of 2026-11-21): `cdl.unit` must be the port's unit; a quantity
+    matches by its local name; a `ThermodynamicTemperature` port takes absolute rows and a
+    `TemperatureDifference` port takes difference rows; a port with no quantity takes any (gap
+    filed as #743). The compared outputs are those an `expected` source supplies, and the rest
+    are listed as unverified. Keys, indicators (at most 64 distinct, `too-many-indicators`) and
+    parameters follow; parameters are applied in passes, with the edited `content_id` in the
+    body only.
+  - **Bounds before the replay**: instants per output under the envelope's cap; the run's
+    `instants × (1 + indicators)` at most 16,777,216; the grid envelope's `instants²` at most
+    2^32 (`MAX_TOTAL_ALIGNED_GRID_WORK`); the trace's bytes at most `max_trace_bytes`; the
+    instants strictly increasing (`replay-failed`, cause `grid-not-increasing`).
+  - **Run**: one replay. A frame refused for a missing sample is recorded and its stretch
+    uncovered, found in one linear walk. An engine refusal is `frame-refused` or `run-refused`,
+    with no receipt.
+  - **Compare**: zero-order hold at the grid `start + k * s`, then `stop` when the grid does not
+    reach it. Masked and uncovered instants are zeroed in both series before the envelope. A
+    Real goes through `funnel` or `aligned-grid` at the instants (`FunnelResult::errors_at_test`,
+    `half_width` and `half_height` added); a Boolean or Integer is compared exactly. A
+    non-finite or out-of-range engine sample fails its output with no envelope.
+  - **The receipt**: `oce/receipt/v1` gains `kind: "commissioning"`
+    (`ReceiptKind::Commissioning`, `ReceiptBody::Commissioning(CommissioningBody)`, the note's
+    body and output tables) on the header's `tolerance` form GitHub #741 landed. No vector
+    receipt byte moved. Record caps are constants (`MAX_*`).
+  - **Codes**: `VERIFY_ERROR_CODES` gains `reference-out-of-range`, `reference-incomplete`, `spec-refused`, `unknown-indicator`,
+    `indicator-not-boolean`, `duplicate-output`, `frame-refused`, `too-many-sources`,
+    `too-many-outputs`, `source-refused`, `unit-refused`, `sampling-required` and
+    `too-many-indicators`, and `too-many-points` and `compare-refused` now cover a commissioning
+    run too. `UNIT_ERROR_CODES` gains
+    `difference-for-absolute` and `port-unit-mismatch`. `oce vocab` lists each (`oce-cli`'s
+    `verify_codes.rs` and its two `vocab_*` transcripts).
+  - **Evidence**:
+    - golden `pass`, `fail` and `no_data` receipts and their columns;
+    - an independent `derive_run.py` over a four-output case under each envelope, with an
+      off-grid stop and an uncovered stretch, and every golden's `receipt_id`;
+    - the funnel's figures derived by hand, and the engine checked against a plain frame loop;
+    - chunk-size, file-order and timings determinism, seeded hostile bytes, and a peak-allocation
+      test;
+    - the M3 gate row: a synthetic trend perturbed by 0.1 K fails with zero tolerances and
+      passes within its band (`data: synthetic`).
+
 - **`oce-diff` compares two compiled-schedule blobs as same or different** (GitHub #723, issue
   #667; design note `docs/design/diff.md`, decisions 3 and 15, part 3 of 4).
   `compare_blobs(base, head)` reads each side through `oce_api::inspect_blob`, base first, and

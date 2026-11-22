@@ -58,10 +58,78 @@ const PINNED: &[&str] = &[
     "compare-refused",
     "replay-failed",
     "window-uncovered",
+    "reference-out-of-range",
+    "reference-incomplete",
+    "spec-refused",
+    "unknown-indicator",
+    "indicator-not-boolean",
+    "duplicate-output",
+    "frame-refused",
+    "too-many-sources",
+    "too-many-outputs",
+    "source-refused",
+    "unit-refused",
+    "sampling-required",
+    "too-many-indicators",
 ];
 
-/// The codes no run reaches today, each with the unit test that pins it and why.
+/// The codes no vector run reaches, each with the test that pins it and why: four no loadable
+/// subject or loaded set reaches, and the commissioning run's own, each produced by a
+/// commissioning run in `tests/commissioning/` (`too-many-points` and `compare-refused` are
+/// shared, and a vector run produces both).
 const PINNED_BESIDE_THE_CODE: &[(&str, &str)] = &[
+    (
+        "reference-out-of-range",
+        "tests/commissioning/run_bind.rs: a commissioning reference index past the end",
+    ),
+    (
+        "reference-incomplete",
+        "tests/commissioning/run_bind.rs: a commissioning reference with no cxf or no window",
+    ),
+    (
+        "spec-refused",
+        "tests/commissioning/run_bind.rs: a commissioning key matching no output, several, or conflicting",
+    ),
+    (
+        "unknown-indicator",
+        "tests/commissioning/run_bind.rs: an indicator name that is no signal and no indicator source point",
+    ),
+    (
+        "indicator-not-boolean",
+        "tests/commissioning/run_masking.rs: an indicator sample of 0.5",
+    ),
+    (
+        "duplicate-output",
+        "tests/commissioning/run_bind.rs: two mapped names landing on one boundary output",
+    ),
+    (
+        "frame-refused",
+        "tests/commissioning/run_refused_frames.rs: a trended input outside its declared domain",
+    ),
+    (
+        "too-many-sources",
+        "tests/commissioning/run_bounds.rs: a commissioning reference of 257 trend sources",
+    ),
+    (
+        "too-many-outputs",
+        "tests/commissioning/run_bounds.rs: a commissioning reference comparing 4,097 outputs",
+    ),
+    (
+        "source-refused",
+        "tests/commissioning/run_bind.rs: a trend cell the source reader refuses",
+    ),
+    (
+        "unit-refused",
+        "tests/commissioning/run_bind.rs: a mapped unit that does not fit its sequence port",
+    ),
+    (
+        "sampling-required",
+        "tests/commissioning/run_comparison.rs: a commissioning reference with no sampling",
+    ),
+    (
+        "too-many-indicators",
+        "tests/commissioning/run_bounds.rs: a commissioning reference of 65 distinct indicators",
+    ),
     (
         "enum-port-unsupported",
         "src/bind_tests.rs: the importer refuses an Enum boundary pass-through and no elementary block takes or gives an Enum signal",

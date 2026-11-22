@@ -77,10 +77,14 @@ pub enum VerifyErrorKind {
     /// A tolerance window (`within` and `of`) on a Boolean or Integer output: the envelope is
     /// type-blind, so a value between two levels could pass.
     ToleranceOnDiscreteOutput,
-    /// A tolerance window holds more ticks than [`crate::CompareLimits`] allows for the set's
-    /// envelope (`max_funnel_points` or `max_aligned_grid_points`), or, under `aligned-grid`, the
-    /// windows' ticks squared pass [`crate::VerifyLimits::max_total_aligned_grid_work`]. Checked
-    /// at bind's budget step, straight after the instant budget.
+    /// More comparison points than the envelope's limit allows ([`crate::CompareLimits`]:
+    /// `max_funnel_points` or `max_aligned_grid_points`), or, under `aligned-grid`, the ticks or
+    /// instants squared past their bound. A vector set: a tolerance window's ticks, or the
+    /// windows' ticks squared past [`crate::VerifyLimits::max_total_aligned_grid_work`], checked
+    /// at bind's budget step, straight after the instant budget. A commissioning run: an
+    /// output's instants, the run's `instants × (1 + indicators)` past 16,777,216 (decision 42),
+    /// or the instants squared past [`crate::MAX_TOTAL_ALIGNED_GRID_WORK`], all before the replay
+    /// runs, so a comparison never returns the port's code of the same spelling.
     TooManyPoints,
     /// The instants the set may compare, `(1 + mutants)` times its scenarios' window ticks and
     /// diagnostic expectations, are more than [`crate::VerifyLimits::max_total_instants`].
@@ -118,9 +122,11 @@ pub enum VerifyErrorKind {
     /// The engine refused a frame for a reason about the run rather than the frame
     /// (`EngineRefusal::Run`): later frames would be refused the same way.
     RunRefused,
-    /// The envelope gave a tolerance window no result: [`VerifyError::cause`] is one of
-    /// [`COMPARE_REFUSAL_CAUSES`]. Found by the self-enclosure call, the expected signal compared
-    /// against itself, so it never depends on the values of the output the window judges.
+    /// The envelope gave a window or an output no result: [`VerifyError::cause`] is one of
+    /// [`COMPARE_REFUSAL_CAUSES`]. For a vector set it is found by the self-enclosure call, the
+    /// expected signal compared against itself, so it never depends on the values of the output
+    /// the window judges. A commissioning run has no self-enclosure call: its refusal comes from
+    /// comparing the output itself.
     CompareRefused,
     /// A replay ended with an error rather than a verdict; [`VerifyError::cause`] is its class
     /// from [`REPLAY_FAILURE_CAUSES`], never a Rust variant name.
@@ -129,6 +135,51 @@ pub enum VerifyErrorKind {
     /// proves every window holds a tick of the clock, and a run that refused no frame executed
     /// every tick, so this is a defence that no loaded set reaches.
     WindowUncovered,
+    /// A commissioning run named a reference index past the end of the spec's `references`
+    /// (decision 35).
+    ReferenceOutOfRange,
+    /// A reference that loads but cannot run: it has no `cxf`, or no `window` (decision 16).
+    /// [`VerifyError::subject`] names the missing field.
+    ReferenceIncomplete,
+    /// A reference's `outputs` or `indicators` keys could not be matched against the sequence's
+    /// outputs: [`VerifyError::cause`] is the spec reader's code, `unmatched-key`,
+    /// `ambiguous-output`, `conflicting-override` or `work-limit-exceeded`.
+    SpecRefused,
+    /// An indicator name that is neither one signal of the sequence (`<sequence>.<path>`,
+    /// resolved against its inputs and outputs) nor the `cdl.name` of a point an
+    /// `indicatorSources` source reads (decision 27). A name with the prefix that matches several
+    /// signals is refused the same way, with [`VerifyError::candidates`].
+    UnknownIndicator,
+    /// An indicator whose value at a sample is neither a Boolean nor exactly `0` or `1`
+    /// (decision 2; owner ruling of 2026-11-21): a Real at `0.5`, a NaN, an Integer at `2`.
+    IndicatorNotBoolean,
+    /// Two mapped names of the expected outputs resolve to one boundary output.
+    DuplicateOutput,
+    /// The engine refused a submitted frame for a reason about the frame (decision 28): a value
+    /// outside an input's domain, a non-finite value, a time it cannot take. The run ends with no
+    /// receipt. [`VerifyError::cause`] is the class ([`crate::ENGINE_REFUSAL_CLASSES`]);
+    /// [`VerifyError::frame_index`], [`VerifyError::frame_time`] and
+    /// [`VerifyError::engine_message`] say where and what.
+    FrameRefused,
+    /// A reference reads more trend sources than [`crate::TrendLimits::max_sources`] (decision
+    /// 42).
+    TooManySources,
+    /// A reference compares more outputs than 4,096 (decision 42).
+    TooManyOutputs,
+    /// A trend source, or the point mapping, was refused: [`VerifyError::cause`] is the
+    /// [`crate::SourceError`] code.
+    SourceRefused,
+    /// A mapped point's units do not fit the sequence port it lands on: [`VerifyError::cause`] is
+    /// the [`crate::UnitError`] code (`port-unit-mismatch`, `absolute-for-difference`,
+    /// `difference-for-absolute`).
+    UnitRefused,
+    /// A commissioning reference with no `sampling`, its own or the spec's (owner ruling of
+    /// 2026-11-21): without a grid the envelope would judge a value the engine held between two
+    /// samples as a ramp. Lifted when a change-of-value comparison lands.
+    SamplingRequired,
+    /// A commissioning reference whose indicator rules give more than
+    /// [`crate::MAX_INDICATORS`] distinct names.
+    TooManyIndicators,
 }
 
 impl VerifyErrorKind {
@@ -170,6 +221,19 @@ impl VerifyErrorKind {
         Self::CompareRefused,
         Self::ReplayFailed,
         Self::WindowUncovered,
+        Self::ReferenceOutOfRange,
+        Self::ReferenceIncomplete,
+        Self::SpecRefused,
+        Self::UnknownIndicator,
+        Self::IndicatorNotBoolean,
+        Self::DuplicateOutput,
+        Self::FrameRefused,
+        Self::TooManySources,
+        Self::TooManyOutputs,
+        Self::SourceRefused,
+        Self::UnitRefused,
+        Self::SamplingRequired,
+        Self::TooManyIndicators,
     ];
 
     /// The stable kebab-case code of this kind: the contract a caller branches on.
@@ -212,6 +276,19 @@ impl VerifyErrorKind {
             Self::CompareRefused => "compare-refused",
             Self::ReplayFailed => "replay-failed",
             Self::WindowUncovered => "window-uncovered",
+            Self::ReferenceOutOfRange => "reference-out-of-range",
+            Self::ReferenceIncomplete => "reference-incomplete",
+            Self::SpecRefused => "spec-refused",
+            Self::UnknownIndicator => "unknown-indicator",
+            Self::IndicatorNotBoolean => "indicator-not-boolean",
+            Self::DuplicateOutput => "duplicate-output",
+            Self::FrameRefused => "frame-refused",
+            Self::TooManySources => "too-many-sources",
+            Self::TooManyOutputs => "too-many-outputs",
+            Self::SourceRefused => "source-refused",
+            Self::UnitRefused => "unit-refused",
+            Self::SamplingRequired => "sampling-required",
+            Self::TooManyIndicators => "too-many-indicators",
         }
     }
 }
@@ -254,6 +331,19 @@ pub const VERIFY_ERROR_CODES: &[&str] = &[
     "compare-refused",
     "replay-failed",
     "window-uncovered",
+    "reference-out-of-range",
+    "reference-incomplete",
+    "spec-refused",
+    "unknown-indicator",
+    "indicator-not-boolean",
+    "duplicate-output",
+    "frame-refused",
+    "too-many-sources",
+    "too-many-outputs",
+    "source-refused",
+    "unit-refused",
+    "sampling-required",
+    "too-many-indicators",
 ];
 
 /// The causes a `replay-failed` refusal carries ([`VerifyError::cause`]), the closed table the
@@ -295,9 +385,14 @@ pub const MUTANT_PARAM_REFUSAL_CAUSES: &[&str] = &[
 /// The causes a `compare-refused` refusal carries ([`VerifyError::cause`]): the funnel port's
 /// ten [`crate::COMPARE_ERROR_CODES`], in their order, then `reference-outside-envelope`, a
 /// window's expected signal that leaves its own envelope (an error above zero at a tick of the
-/// self-enclosure call). A bound past 2^1000 in magnitude is `non-finite-envelope`. A loaded set
-/// can reach four: `work-limit-exceeded`, `loop-removal-undefined`, `non-finite-envelope` and
-/// `reference-outside-envelope`; load and bind refuse what would give the others.
+/// self-enclosure call). `non-finite-envelope` means the envelope's arithmetic left the finite
+/// numbers: for a vector set that includes a bound past 2^1000 in magnitude, which the
+/// self-enclosure call refuses; a commissioning run treats an engine sample past 2^1000 as a
+/// failed output instead, so it meets the code only for a trend that large. A loaded set can
+/// reach four: `work-limit-exceeded`, `loop-removal-undefined`, `non-finite-envelope` and
+/// `reference-outside-envelope`; load and bind refuse what would give the others. A
+/// commissioning run reaches the first three only: it has no self-enclosure call and refuses
+/// the point caps before the replay.
 pub const COMPARE_REFUSAL_CAUSES: &[&str] = &[
     "invalid-tolerance",
     "length-mismatch",
@@ -382,6 +477,10 @@ struct Details {
     candidates: Vec<String>,
     cause: Option<&'static str>,
     diagnostic_codes: Vec<&'static str>,
+    /// A refused frame's trace row and the bits of its time in model seconds.
+    frame: Option<(u64, u64)>,
+    /// The engine's message about a refused frame, cut to 256 bytes at a character boundary.
+    engine_message: Option<String>,
 }
 
 impl VerifyError {
@@ -420,6 +519,14 @@ impl VerifyError {
     /// The same refusal carrying the engine's diagnostic codes.
     pub(crate) fn with_diagnostic_codes(mut self, codes: Vec<&'static str>) -> Self {
         self.details.diagnostic_codes = codes;
+        self
+    }
+
+    /// The same refusal about the trace row `frame`, at `time` model seconds, with the engine's
+    /// `message` about it.
+    pub(crate) fn with_frame(mut self, frame: u64, time: f64, message: String) -> Self {
+        self.details.frame = Some((frame, time.to_bits()));
+        self.details.engine_message = Some(message);
         self
     }
 
@@ -468,8 +575,10 @@ impl VerifyError {
 
     /// The cause of `replay-failed` (one of [`REPLAY_FAILURE_CAUSES`]), the class of
     /// `param-refused` (one of [`PARAM_REFUSAL_CLASSES`]), the cause of `mutant-param-refused`
-    /// (one of [`MUTANT_PARAM_REFUSAL_CAUSES`]) or the cause of `compare-refused` (one of
-    /// [`COMPARE_REFUSAL_CAUSES`]); `None` for every other kind.
+    /// (one of [`MUTANT_PARAM_REFUSAL_CAUSES`]), the cause of `compare-refused` (one of
+    /// [`COMPARE_REFUSAL_CAUSES`]), the class of `frame-refused` (one of
+    /// [`crate::ENGINE_REFUSAL_CLASSES`]), and the lower layer's code of `spec-refused`,
+    /// `source-refused` and `unit-refused`; `None` for every other kind.
     #[must_use]
     pub fn cause(&self) -> Option<&'static str> {
         self.details.cause
@@ -481,6 +590,27 @@ impl VerifyError {
     #[must_use]
     pub fn diagnostic_codes(&self) -> &[&'static str] {
         &self.details.diagnostic_codes
+    }
+
+    /// The trace row of the frame a `frame-refused` refusal is about; `None` for every other
+    /// kind.
+    #[must_use]
+    pub fn frame_index(&self) -> Option<u64> {
+        self.details.frame.map(|(frame, _)| frame)
+    }
+
+    /// That frame's time, in model seconds; `None` for every other kind.
+    #[must_use]
+    pub fn frame_time(&self) -> Option<f64> {
+        self.details.frame.map(|(_, bits)| f64::from_bits(bits))
+    }
+
+    /// The engine's message about that frame, cut to 256 bytes at a character boundary; `None`
+    /// for every other kind. For the three input classes it names the input; the verifier does
+    /// not parse it, so a `frame-refused` has no [`Self::path`].
+    #[must_use]
+    pub fn engine_message(&self) -> Option<&str> {
+        self.details.engine_message.as_deref()
     }
 }
 

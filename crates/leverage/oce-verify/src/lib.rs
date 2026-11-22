@@ -5,8 +5,10 @@
 //!
 //! Status: the four parts of the verification product (M3): the one vector format,
 //! `oce/vectors/v1`, the run that checks a set against a sequence and issues the receipt, mutant
-//! mode, and tolerance mode: the envelope arithmetic, and the tolerance windows a vector file
-//! asks for it with (issue #684). The `oce verify` verb builds on it.
+//! mode, and tolerance mode: the envelope arithmetic, the tolerance windows a vector file asks
+//! for it with (issue #684), and the commissioning verifier, which runs a spec's reference
+//! against its sequence and issues a commissioning receipt ([`run_commissioning()`]). The
+//! `oce verify` verb builds on it.
 //!
 //! A **vector set** is a strict-JSON document of scenarios, each a schedule of inputs over one
 //! clock and expectations over windows of it, to be checked against one loaded sequence, the
@@ -85,8 +87,15 @@
 //! - **Typed refusals** ([`SpecError`], [`SpecErrorKind`], [`SPEC_ERROR_CODES`]), each with the
 //!   line and column of the text as written, comments included.
 //!
-//! Nothing runs a commissioning spec yet: binding one to a sequence and its receipt are the
-//! later parts.
+//! Its fifth and sixth parts (issues #662 and #663) run one reference
+//! ([`run_commissioning()`]): bind it to its sequence (names by replay's one rule, every mapped
+//! point's type, unit and quantity held to its port, the compared outputs those an `expected`
+//! source supplies, the keys, indicators and parameters), run one replay over the merged trends
+//! (a frame refused for a missing sample recorded and its stretch uncovered, an engine refusal
+//! an error), prepare each compared output's two series by zero-order hold, mask them by their
+//! indicators, compare a Real under the reference's envelope at the test's own instants and a
+//! Boolean or Integer exactly, and issue the commissioning receipt (`kind: "commissioning"`,
+//! [`CommissioningBody`]) with the exceedance columns ([`CommissionRun`]).
 //!
 //! Its second part (issue #659) is the closed unit table a trend's readings are converted with,
 //! device unit to CDL unit, before any comparison: [`convert_unit`] over `units/v1`
@@ -277,13 +286,20 @@ pub use commissioning::{
     UnitError, UnitSide, convert_unit,
 };
 pub use commissioning::{
+    CommissionOptions, CommissionRun, CommissioningBody, CommissioningParam, Exceedance,
+    FindingRecord, MAX_COMPARED_OUTPUTS, MAX_FINDINGS, MAX_INDICATORS, MAX_MASKED_EXCEEDANCE,
+    MAX_MASKED_INTERVALS, MAX_RUN_POINTS, MAX_RUN_WARNINGS, MAX_TOTAL_ALIGNED_GRID_WORK,
+    MAX_UNIT_COLUMNS, MAX_UNVERIFIED_OUTPUTS, MaskedInterval, OutputBounds, OutputCurves,
+    OutputReport, OutputStatus, OutputType, SpecNumber, TimeRecord, TrendData, run_commissioning,
+};
+pub use commissioning::{
     InputColumn, MappingRecord, SOURCE_ERROR_CODES, SeriesValues, SourceError, SourceErrorKind,
     SourceRecord, SourceRole, SpecInputs, TrendFrameSource, TrendInputs, TrendLimits, TrendSeries,
     TrendSources, UnitColumn,
 };
 pub use compare_error::{Axis, COMPARE_ERROR_CODES, CompareError, SeriesEnd, SeriesRole};
 pub use compare_limits::CompareLimits;
-pub use envelope::{Curve, Envelope, FunnelResult, Series, Tolerances};
+pub use envelope::{Curve, Envelope, FunnelResult, HalfSize, Series, Tolerances};
 pub use error::{Location, VECTOR_ERROR_CODES, VectorError, VectorErrorKind};
 pub use funnel::{FUNNEL_VERSION, funnel};
 pub use g16::format_g16;

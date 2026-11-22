@@ -57,7 +57,9 @@ use self::loop_removal::Work;
 use self::tube_size::{Extent, HalfSizes};
 use crate::compare_error::{CompareError, SeriesEnd};
 use crate::compare_limits::CompareLimits;
-use crate::envelope::{Curve, Envelope, FunnelResult, Series, Tolerances, check_inputs};
+use crate::envelope::{
+    Applied, Curve, Envelope, FunnelResult, HalfSize, Series, Tolerances, check_inputs,
+};
 
 /// The funnel this crate's [`funnel()`] reproduces: `lbl-srg/funnel` at commit `a12fa96`, the
 /// source of `pyfunnel` 2.1.1. A commissioning receipt carries it as
@@ -145,13 +147,18 @@ pub fn funnel(
         return Err(CompareError::NonFiniteEnvelope);
     }
 
+    let applied = Applied {
+        errors_at_test: errors.clone(),
+        half_width: HalfSize::of(half.x.iter().copied()),
+        half_height: HalfSize::of(half.y.iter().copied()),
+    };
     Ok(FunnelResult::from_curves(
         Envelope::Funnel,
         reference,
         test,
-        curve(&lower),
-        curve(&upper),
+        (curve(&lower), curve(&upper)),
         Curve::from_columns(test.x.to_vec(), errors),
+        applied,
     ))
 }
 

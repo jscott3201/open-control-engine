@@ -198,7 +198,7 @@ pub(crate) const VERIFY_MEANINGS: &[(&str, &str)] = &[
     ),
     (
         "too-many-points",
-        "a tolerance window has more ticks than the set's envelope compares (1,048,576 funnel, 32,768 aligned-grid)",
+        "a tolerance window, or a commissioning output or run, has more points than its envelope compares",
     ),
     (
         "too-many-instants",
@@ -241,7 +241,7 @@ pub(crate) const VERIFY_MEANINGS: &[(&str, &str)] = &[
     ),
     (
         "compare-refused",
-        "the envelope gave a tolerance window no result (cause: reference-outside-envelope, work-limit-exceeded, ...)",
+        "the envelope gave a tolerance window or a commissioning output no result (cause: reference-outside-envelope, work-limit-exceeded, ...)",
     ),
     (
         "replay-failed",
@@ -250,6 +250,58 @@ pub(crate) const VERIFY_MEANINGS: &[(&str, &str)] = &[
     (
         "window-uncovered",
         "a window held no executed tick after a run with no refused frame",
+    ),
+    (
+        "reference-out-of-range",
+        "the commissioning spec has no reference at the index asked for",
+    ),
+    (
+        "reference-incomplete",
+        "the commissioning reference has no cxf or no window, which a run needs",
+    ),
+    (
+        "spec-refused",
+        "an outputs or indicators key matches no output, several, or disagrees with another (cause)",
+    ),
+    (
+        "unknown-indicator",
+        "an indicator name is no signal of the sequence and no indicatorSources point",
+    ),
+    (
+        "indicator-not-boolean",
+        "an indicator sample is not Boolean and not exactly 0 or 1",
+    ),
+    (
+        "duplicate-output",
+        "two mapped names of the expected outputs resolve to one boundary output",
+    ),
+    (
+        "frame-refused",
+        "the engine refused a trend frame (cause: its class); no receipt",
+    ),
+    (
+        "too-many-sources",
+        "the commissioning reference reads more than 256 trend sources",
+    ),
+    (
+        "too-many-outputs",
+        "the commissioning reference compares more than 4,096 outputs",
+    ),
+    (
+        "source-refused",
+        "a trend source or the point mapping was refused (cause: the source reader's code)",
+    ),
+    (
+        "unit-refused",
+        "a mapped point's unit does not fit its sequence port (cause: the unit code)",
+    ),
+    (
+        "sampling-required",
+        "the commissioning reference gives no sampling, which a run needs for now",
+    ),
+    (
+        "too-many-indicators",
+        "the commissioning reference's indicator rules name more than 64 indicators",
     ),
 ];
 

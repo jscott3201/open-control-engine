@@ -388,6 +388,13 @@ impl<'a> IndicatorSelection<'a> {
         self.matched.selected.has(key, output)
     }
 
+    /// The rules that select the output at `output`, as indexes into
+    /// [`SpecReference::indicators`], ascending. Empty for an output no rule selects and for an
+    /// index past the end.
+    pub(crate) fn keys_for(&self, output: usize) -> impl Iterator<Item = usize> + '_ {
+        self.matched.keys_for(output)
+    }
+
     /// The indicators of the output at `output`: the names of every rule whose key selects it,
     /// each name once, in the order of the rules and then of each rule's list. The output is
     /// compared only where all of them are true; an empty list gates nothing.
