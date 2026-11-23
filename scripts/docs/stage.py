@@ -224,6 +224,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 - [Bounding a vector run's work](docs/design/vector-work-budget.md)
 - [Unit spellings](docs/design/unit-spellings.md)
 - [Reset timing at the event](docs/design/reset-timing.md)
+- [Event inputs fed by one-frame pulses](docs/design/pulse-event-inputs.md)
 """
     (source / "SUMMARY.md").write_text(summary, encoding="utf-8")
 
