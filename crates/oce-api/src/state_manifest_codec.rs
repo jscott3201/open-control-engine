@@ -25,6 +25,17 @@ pub(crate) fn encode_manifest(
     writer.finish()
 }
 
+/// The length of `manifest`'s canonical encoding, counted and never written, whatever it is: past
+/// `MAX_SNAPSHOT_BYTES` too, so a caller can say by how much.
+pub(crate) fn manifest_len(
+    manifest: &ExecutionManifest,
+    allow_dense: bool,
+) -> Result<usize, EngineStateError> {
+    let mut counted = Writer::counting();
+    write_manifest(&mut counted, manifest, allow_dense)?;
+    Ok(counted.position())
+}
+
 fn write_manifest(
     writer: &mut Writer,
     manifest: &ExecutionManifest,

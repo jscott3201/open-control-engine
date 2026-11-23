@@ -52,6 +52,7 @@ mod cxf_pass_through_attribute_cost;
 mod cxf_pass_through_key_cost;
 mod cxf_shared_parameter_cost;
 mod hostile_load_bounds;
+mod load_budgets;
 mod prepare_frame;
 mod replay;
 mod replay_codec;

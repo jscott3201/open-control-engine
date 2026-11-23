@@ -41,6 +41,18 @@ pub(super) fn digest(graph: &CanonicalGraph<'_>) -> Result<[u8; 32], ContentIdEr
     Ok(hash.0.finalize().into())
 }
 
+/// The length of `graph`'s `OCECANON` v1 encoding, counted and never written: the pass adds the
+/// length of each field and never reads a name's bytes, so it costs the records, whatever the
+/// names they repeat. The length does not depend on the lists' order, so `graph` may be unsorted.
+///
+/// # Errors
+/// As [`encode`]: the same refusals, for the same graph.
+pub(super) fn length(graph: &CanonicalGraph<'_>) -> Result<usize, ContentIdError> {
+    let mut size = Writer(0_usize);
+    write(&mut size, graph)?;
+    Ok(size.0)
+}
+
 /// Where encoded bytes go: appended to a vector, hashed, or only counted.
 trait Sink {
     fn raw(&mut self, bytes: &[u8]);

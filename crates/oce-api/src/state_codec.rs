@@ -58,7 +58,39 @@ pub(crate) fn encoded_snapshot_len(
     Ok(writer.position().saturating_add(TRAILER_BYTES))
 }
 
+/// The length of the snapshot of `image`, counted and never written, when its manifest encodes to
+/// `manifest_len` bytes and it carries `words` state words: `image` itself carries neither (its
+/// `words` empty), so nothing the count does not need is built. The same writer as
+/// [`encode_snapshot`] counts every other field, so the two agree byte for byte.
+pub(crate) fn counted_snapshot_len(
+    image: &StateImage,
+    allow_dense: bool,
+    manifest_len: usize,
+    words: usize,
+) -> Result<usize, EngineStateError> {
+    debug_assert!(image.words.is_empty(), "the words are counted, not carried");
+    let mut writer = Writer::counting();
+    // Not size-checked: the length is what is asked for, past the cap too.
+    write_snapshot_fields(&mut writer, image, allow_dense, &[])?;
+    Ok(writer
+        .position()
+        .saturating_add(manifest_len)
+        .saturating_add(words.saturating_mul(8))
+        .saturating_add(TRAILER_BYTES))
+}
+
 fn write_snapshot(
+    writer: &mut Writer,
+    image: &StateImage,
+    allow_dense: bool,
+    manifest: &[u8],
+) -> Result<(), EngineStateError> {
+    write_snapshot_fields(writer, image, allow_dense, manifest)?;
+    crate::state::enforce_size(writer.position().saturating_add(TRAILER_BYTES))
+}
+
+/// Every field of a snapshot but its trailer, in order, with no check of the total's size.
+fn write_snapshot_fields(
     writer: &mut Writer,
     image: &StateImage,
     allow_dense: bool,
@@ -111,7 +143,6 @@ fn write_snapshot(
         body_length_offset,
         u64::try_from(body_length).map_err(|_| too_large(body_length))?,
     );
-    crate::state::enforce_size(writer.position().saturating_add(TRAILER_BYTES))?;
     Ok(())
 }
 

@@ -24,14 +24,68 @@ pub(crate) struct BuiltManifest {
     pub(crate) dense_by_sorted_key: BTreeMap<ConnectorKey, usize>,
 }
 
+/// What a manifest reads of a loaded model: the model, its constructed blocks, its schedule, its
+/// run state's slots and its input definitions. A loaded engine lends its own
+/// ([`Engine::manifest_source`]); the load lends the parts it is about to commit, so it can count
+/// the snapshot of a model before the engine holds it.
+pub(crate) struct ManifestSource<'e> {
+    pub(crate) model: &'e oce_model::ModelGraph,
+    pub(crate) blocks: &'e [Box<dyn oce_blocks::Block>],
+    pub(crate) schedule: &'e oce_graph::Schedule,
+    pub(crate) state: &'e oce_graph::RunState,
+    pub(crate) frame_definitions: &'e [crate::InputDefinition],
+}
+
+impl Engine {
+    /// The parts of this engine a manifest reads.
+    pub(crate) fn manifest_source(&self) -> ManifestSource<'_> {
+        ManifestSource {
+            model: &self.model,
+            blocks: &self.blocks,
+            schedule: &self.schedule,
+            state: &self.state,
+            frame_definitions: &self.io.frame_definitions,
+        }
+    }
+}
+
+/// A manifest and the keys it gives each connector, before it is encoded.
+pub(crate) struct AssembledManifest {
+    pub(crate) manifest: ExecutionManifest,
+    pub(crate) connector_keys_by_dense: Vec<ConnectorKey>,
+    pub(crate) dense_by_sorted_key: BTreeMap<ConnectorKey, usize>,
+}
+
 pub(crate) fn build_manifest(
     engine: &Engine,
     durable: bool,
 ) -> Result<BuiltManifest, EngineStateError> {
-    let mut block_keys = Vec::with_capacity(engine.model.blocks.len());
+    let assembled = assemble_manifest(&engine.manifest_source(), durable)?;
+    let manifest_bytes =
+        crate::state_manifest_codec::encode_manifest(&assembled.manifest, !durable)?;
+    let fingerprint = fingerprint(
+        crate::state::EXECUTION_ABI_REVISION,
+        ENGINE_VERSION,
+        &manifest_bytes,
+    );
+    Ok(BuiltManifest {
+        manifest: assembled.manifest,
+        fingerprint,
+        connector_keys_by_dense: assembled.connector_keys_by_dense,
+        dense_by_sorted_key: assembled.dense_by_sorted_key,
+    })
+}
+
+/// The manifest of `source`, keyed durably when `durable`, not yet encoded: every key shares the
+/// model's allocations, so it costs its records, whatever the names they carry.
+pub(crate) fn assemble_manifest(
+    source: &ManifestSource<'_>,
+    durable: bool,
+) -> Result<AssembledManifest, EngineStateError> {
+    let mut block_keys = Vec::with_capacity(source.model.blocks.len());
     let mut block_key_set = BTreeSet::new();
-    for (index, block) in engine.model.blocks.iter().enumerate() {
-        let key = block_key(engine, index, durable)?;
+    for (index, block) in source.model.blocks.iter().enumerate() {
+        let key = block_key(source, index, durable)?;
         if !block_key_set.insert(key.clone()) {
             return Err(EngineStateError::IneligibleModel {
                 subject: key.subject(),
@@ -47,8 +101,8 @@ pub(crate) fn build_manifest(
         block_keys.push(key);
     }
 
-    let mut connector_keys_by_dense = vec![None; engine.model.connectors.len()];
-    for (block_index, block) in engine.model.blocks.iter().enumerate() {
+    let mut connector_keys_by_dense = vec![None; source.model.connectors.len()];
+    for (block_index, block) in source.model.blocks.iter().enumerate() {
         let owner = block_keys[block_index].clone();
         for (port_index, connector_id) in block.inputs.iter().copied().enumerate() {
             assign_connector_key(
@@ -94,9 +148,8 @@ pub(crate) fn build_manifest(
     }
 
     let mut enum_classes = BTreeMap::<String, Vec<String>>::new();
-    let mut blocks = Vec::with_capacity(engine.model.blocks.len());
-    for (index, (model_block, block)) in engine.model.blocks.iter().zip(&engine.blocks).enumerate()
-    {
+    let mut blocks = Vec::with_capacity(source.model.blocks.len());
+    for (index, (model_block, block)) in source.model.blocks.iter().zip(source.blocks).enumerate() {
         let kind = block.kind();
         let state_revision = block.state_contract_revision();
         if kind == BlockKind::Stateful && state_revision == 0 {
@@ -146,8 +199,8 @@ pub(crate) fn build_manifest(
     }
     blocks.sort_by(|left, right| left.key.cmp(&right.key));
 
-    let mut connectors = Vec::with_capacity(engine.model.connectors.len());
-    for (dense, connector) in engine.model.connectors.iter().enumerate() {
+    let mut connectors = Vec::with_capacity(source.model.connectors.len());
+    for (dense, connector) in source.model.connectors.iter().enumerate() {
         if connector.id.0 as usize != dense {
             return Err(EngineStateError::IneligibleModel {
                 subject: format!("connector#{}", connector.id.0),
@@ -187,7 +240,7 @@ pub(crate) fn build_manifest(
             members: members.into_iter().map(Arc::from).collect(),
         })
         .collect();
-    let mut connections = engine
+    let mut connections = source
         .model
         .connections
         .iter()
@@ -199,19 +252,19 @@ pub(crate) fn build_manifest(
         })
         .collect::<Vec<_>>();
     connections.sort();
-    let schedule = engine
+    let schedule = source
         .schedule
         .order
         .iter()
         .map(|id| block_keys[id.0 as usize].clone())
         .collect();
-    let connector_order = engine
+    let connector_order = source
         .schedule
         .connector_order
         .iter()
         .map(|id| connector_keys_by_dense[id.0 as usize].clone())
         .collect();
-    let mut driver_of = engine
+    let mut driver_of = source
         .schedule
         .driver_of
         .iter()
@@ -224,7 +277,7 @@ pub(crate) fn build_manifest(
         })
         .collect::<Vec<_>>();
     driver_of.sort_by(|left, right| left.0.cmp(&right.0));
-    let mut state_slots = engine
+    let mut state_slots = source
         .state
         .slots
         .iter()
@@ -237,13 +290,13 @@ pub(crate) fn build_manifest(
         })
         .collect::<Result<Vec<_>, EngineStateError>>()?;
     state_slots.sort_by(|left, right| left.0.cmp(&right.0));
-    let external_inputs = engine
+    let external_inputs = source
         .model
         .external_inputs
         .iter()
         .map(|id| connector_keys_by_dense[id.0 as usize].clone())
         .collect();
-    let boundary_outputs = engine
+    let boundary_outputs = source
         .model
         .boundary_outputs
         .iter()
@@ -254,7 +307,7 @@ pub(crate) fn build_manifest(
             )
         })
         .collect();
-    let target_bound = engine
+    let target_bound = source
         .blocks
         .iter()
         .any(|block| requires_target(block.signature().class_path));
@@ -278,17 +331,10 @@ pub(crate) fn build_manifest(
         state_slots,
         external_inputs,
         boundary_outputs,
-        input_definitions: crate::state_io::build_inputs(&engine.io.frame_definitions)?,
+        input_definitions: crate::state_io::build_inputs(source.frame_definitions)?,
     };
-    let manifest_bytes = crate::state_manifest_codec::encode_manifest(&manifest, !durable)?;
-    let fingerprint = fingerprint(
-        crate::state::EXECUTION_ABI_REVISION,
-        ENGINE_VERSION,
-        &manifest_bytes,
-    );
-    Ok(BuiltManifest {
+    Ok(AssembledManifest {
         manifest,
-        fingerprint,
         connector_keys_by_dense,
         dense_by_sorted_key,
     })
@@ -457,14 +503,19 @@ fn compare_port_bindings(
 }
 
 pub(crate) fn block_subject(engine: &Engine, block_index: usize) -> String {
-    engine.model.blocks[block_index]
+    block_subject_of(&engine.model, block_index)
+}
+
+/// [`block_subject`] of a model not yet held by an engine.
+fn block_subject_of(model: &oce_model::ModelGraph, block_index: usize) -> String {
+    model.blocks[block_index]
         .instance_iri
         .as_deref()
         .map(crate::state_diagnostics::bounded_text)
         .unwrap_or_else(|| {
             crate::state_diagnostics::bounded_format(format_args!(
                 "{}#b{block_index}",
-                engine.model.blocks[block_index].class_iri
+                model.blocks[block_index].class_iri
             ))
         })
 }
@@ -507,8 +558,12 @@ pub(crate) fn target_bound_classes() -> Vec<&'static str> {
     classes
 }
 
-fn block_key(engine: &Engine, index: usize, durable: bool) -> Result<BlockKey, EngineStateError> {
-    let block = &engine.model.blocks[index];
+fn block_key(
+    source: &ManifestSource<'_>,
+    index: usize,
+    durable: bool,
+) -> Result<BlockKey, EngineStateError> {
+    let block = &source.model.blocks[index];
     if let Some(instance_iri) = &block.instance_iri {
         return Ok(BlockKey::Authored(Arc::clone(instance_iri)));
     }
@@ -516,8 +571,8 @@ fn block_key(engine: &Engine, index: usize, durable: bool) -> Result<BlockKey, E
         && block.inputs.len() == 1
         && block.outputs.len() == 1
     {
-        let input = &engine.model.connectors[block.inputs[0].0 as usize];
-        let output = &engine.model.connectors[block.outputs[0].0 as usize];
+        let input = &source.model.connectors[block.inputs[0].0 as usize];
+        let output = &source.model.connectors[block.outputs[0].0 as usize];
         if let (Some(input_path), Some(output_path)) = (&input.iri, &output.iri) {
             return Ok(BlockKey::PassThrough {
                 input_path: Arc::clone(input_path),
@@ -527,7 +582,7 @@ fn block_key(engine: &Engine, index: usize, durable: bool) -> Result<BlockKey, E
     }
     if durable {
         Err(EngineStateError::IneligibleModel {
-            subject: block_subject(engine, index),
+            subject: block_subject_of(source.model, index),
             detail: "durable block has no authored identity".into(),
         })
     } else {

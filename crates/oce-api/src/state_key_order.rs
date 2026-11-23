@@ -1,6 +1,7 @@
 //! Canonical ordering for compound keys as their revision-1 wire bytes.
 
 use std::cmp::Ordering;
+use std::sync::Arc;
 
 use crate::state::{BlockKey, ConnectorKey, WireDir};
 
@@ -65,7 +66,13 @@ fn wire_dir_tag(direction: WireDir) -> u8 {
     }
 }
 
-fn wire_string_cmp(left: &str, right: &str) -> Ordering {
+/// Two paths in their wire order: length, then bytes. Keys that name one block share one
+/// allocation of its path, so two views of one allocation are equal without reading it: sorting
+/// the many keys of a long-named block costs no comparison of its name (issue #815).
+fn wire_string_cmp(left: &Arc<str>, right: &Arc<str>) -> Ordering {
+    if Arc::ptr_eq(left, right) {
+        return Ordering::Equal;
+    }
     let left_len = u32::try_from(left.len()).unwrap_or(u32::MAX).to_le_bytes();
     let right_len = u32::try_from(right.len()).unwrap_or(u32::MAX).to_le_bytes();
     left_len

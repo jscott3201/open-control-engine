@@ -42,6 +42,11 @@ fn agrees(document: &[u8], what: &str) -> bool {
     let bytes = engine.canonical_content_bytes().expect("bytes");
     let reference = reference_bytes(&engine.model, &engine.io).expect("reference");
     assert!(bytes == reference, "{what}: the canonical bytes differ");
+    // The load-time budget counts the same length from the records as the model lists them.
+    let counted = super::graph::unsorted_graph(&engine.model, &engine.io)
+        .and_then(|graph| super::encode::length(&graph))
+        .expect("counted");
+    assert_eq!(counted, bytes.len(), "{what}: the counted length differs");
     let id = engine.content_id().expect("id");
     assert_eq!(id.digest(), &sha256(&reference), "{what}: the id differs");
     true

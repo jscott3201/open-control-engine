@@ -83,6 +83,7 @@ pub(crate) use real_parameters::hold_in_catalog_type;
 mod real_parameters_tests;
 mod reference_keys;
 mod report;
+mod shared_iris;
 mod single_assignment;
 mod specialize;
 pub(crate) mod term_shape;
@@ -655,13 +656,13 @@ pub(crate) fn resolve(
     // here exactly as `resolve_golden` already records for the rest of the resolver.
     let boundary_outputs =
         boundary_outputs::materialize(doc, &boundary_output_sources, &boundary_types, &mut diags);
-    pass_through_pairs.sort_by_key(|(input, output)| {
+    // Each key once per pair (`sort_by_cached_key`, stable like `sort_by_key`), and each IRI's
+    // position once per allocation: a boundary input passed to `n` outputs is looked up once.
+    let mut positions = shared_iris::PositionsByView::new(&graph_pos);
+    pass_through_pairs.sort_by_cached_key(|(input, output)| {
         (
-            graph_pos.get(input.as_str()).copied().unwrap_or(usize::MAX),
-            graph_pos
-                .get(output.as_str())
-                .copied()
-                .unwrap_or(usize::MAX),
+            positions.get(input.as_str()).unwrap_or(usize::MAX),
+            positions.get(output.as_str()).unwrap_or(usize::MAX),
         )
     });
     pass_through::materialize(
@@ -700,11 +701,14 @@ pub(crate) fn resolve(
     // each other, and `ConnectorId` alone orders within a group. That second component is what
     // moved all fifteen goldens. It is assigned in Step 5a from `@graph` order over instance port
     // nodes, so it does not follow the boundary port's array spelling.
-    graph.external_inputs.sort_by_key(|id| {
+    // The same keys as before, each computed once per input and each boundary's position looked
+    // up once per allocation, where the key used to hash the IRI on every comparison (issue #815).
+    let mut positions = shared_iris::PositionsByView::new(&graph_pos);
+    graph.external_inputs.sort_by_cached_key(|id| {
         let pos = graph.connectors[id.0 as usize]
             .iri
             .as_deref()
-            .and_then(|iri| graph_pos.get(iri).copied())
+            .and_then(|iri| positions.get(iri))
             .unwrap_or(usize::MAX);
         (pos, id.0)
     });
