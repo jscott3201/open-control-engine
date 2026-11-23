@@ -679,7 +679,7 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
-- **An export peaks at about the bytes it returns** (GitHub #PRNUM, issue #803). The exporter built
+- **An export peaks at about the bytes it returns** (GitHub #806, issue #803). The exporter built
   every node of the document before serializing it: a 1,120-byte node for each array element, more
   while the node vector grew, beside a copy of each element's `@id` in its plan and another in its
   duplicate check. A `MatrixGain` whose `K` is 128 × 128 exported 1.67 MB at a peak of 58.7 MB, and
@@ -716,7 +716,7 @@ so far, and no tag is cut by the bump.
     rewritten) records identical load outcomes, content ids, blob bytes, diagnostics and export
     bytes against the base.
 
-- **The G36 enumeration check builds a refusal only when the list keeps it** (GitHub #PRNUM, issue
+- **The G36 enumeration check builds a refusal only when the list keeps it** (GitHub #806, issue
   #799). A parameter typed by a G36 enumeration is judged once for each instance that lists it,
   and its refusals quote the value's text or the typing IRI; each was built and then pushed, so a
   node with a 64 KiB value listed by 1,024 instances built 64 MiB of messages after the read's
@@ -727,7 +727,7 @@ so far, and no tag is cut by the bump.
   (before, 67,844,910 / 124,765,414 / 238,607,342, 222,346 a further leaf). Pinned by `oce-api`
   `cxf_g36_enumeration_check_cost.rs`.
 
-- **The exporter borrows a connector's diagnostic subject** (GitHub #PRNUM, issue #799). Each
+- **The exporter borrows a connector's diagnostic subject** (GitHub #806, issue #799). Each
   connector's subject, a copy of its block's IRI, was built whether or not a finding used it; it
   is now borrowed from the graph and copied only by a finding that is raised. 1,024 outputs of a
   block whose IRI is 64 KiB export requesting 898,328 bytes in all, 553 a further output (before,
