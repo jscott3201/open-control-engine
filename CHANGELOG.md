@@ -679,6 +679,81 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
+- **The array elements a document mints are held to 65,536 and 8 MiB of paths** (GitHub #802,
+  issue #756; owner rulings of 2026-11-22). **Breaking, in place:** a document whose broadcasts,
+  array expressions (brace literals included) and further listings of an array node together
+  mint more than 65,536 elements, or mint elements whose paths take more than 8 MiB, is refused,
+  where it loaded (or was refused later, after the reader had built every element) while it fit
+  the element and path budgets. No tracked or `open-control-library` model mints more than 12
+  elements or about 1.1 KB of paths (the vendored `ReliefFanGroup` translation, refused for other
+  reasons), none lists a written array twice, and none that loads mints one.
+  - **What was wrong.** A broadcast (`q[n]` with the value `[v]`), an array expression
+    (`fill(v, n)`) and a further listing of an array node make `n` elements from values the
+    document writes once, at about 339 bytes an element at the reader's peak with a short
+    instance IRI and about 1.9 bytes more for each byte of its path. The element budget let
+    `q[1048576]` broadcasting `1.5`, a 5.6 KB document, read at a peak of about 355 MB (11.2 /
+    22.3 / 44.4 MB measured at 32,768 / 65,536 / 131,072) and once load at 786 MB; a written
+    `q[1024]` listed 1,024 times, about 26 KB, read at about 304 MB; and a broadcast of 65,536
+    under a 1,005-byte IRI, 12 KB, at about 142 MB (projected).
+  - **The budgets.** `oce_cxf`'s `MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS` (65,536) and
+    `MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES` (8 MiB), beside `MAX_DOCUMENT_ARRAY_ELEMENTS` and
+    `MAX_DOCUMENT_ARRAY_PATH_BYTES`, against which minted elements and their paths count too.
+    Minted: every element of a broadcast on two or more elements, of an array expression of any
+    kind, and of every listing of an array node after the first that reserved its elements, whatever
+    the spelling; the first listing of a JSON list writes its elements and mints none. Each listing
+    of a node is charged as a listing of a separate node would be, its grounding shared or not
+    (issue #749), except that one node's first listing writes. "First" means first in
+    `containsBlock` order, and a further listing's minted paths are spelled under the IRI of the
+    instance that lists it, so a document's outcome can depend on that order when its owners' IRIs
+    differ in length: a written `q[8322]` listed by `urn:c0` and then by an instance with a
+    1,005-byte IRI is refused, and in the other order reads (deterministic, and no bound escapes:
+    the long first listing is charged to the 64 MiB path budget). A document may hold at most 65,536
+    elements written as array expressions, and one brace literal holds at most 4,095, so 17 brace
+    literals of 4,000 elements are refused where the same values as JSON lists read: large arrays
+    belong in JSON lists. Both are charged after the element and path budgets, before the value is
+    read or any name or element is built; crossing either is `resource-limit-exceeded` on the
+    parameter node, naming the limit, and reserves nothing. So a document refused before is still
+    refused, though its diagnostics can differ: a parameter these budgets refuse no longer draws on
+    the element budget, so a later one that used to be refused may fit (the 1.5 KB document of four
+    `p[1048576]` broadcasts, issue #365, went from three element-budget refusals to four minted
+    ones).
+  - **What it costs now.** The issue's document and its `fill(1.5, 1048576)` spelling are refused at
+    peaks of 126,587 and 126,425 bytes, the same at 262,144 and 524,288 elements; the long-IRI
+    broadcasts at 16,384 to 65,536 at 151,779. At both budgets together a document reads at 25.9 MB
+    as one broadcast (65,536 elements, 8,377,502 bytes of paths) and at 27.5 MB as a written
+    `q[1024]` listed by 65 instances with 120-byte IRIs, and a `MatrixGain` whose 256 × 256 `K` is
+    broadcast under a 116-byte root loads at 49.7 MB, 140.3 MB requested; under a 921-byte root a 90
+    × 90 gain loads at 26.5 MB and a 128 × 128 one is refused at 5.2 MB. A leaf listing one array
+    node twice is still refused as `duplicate-parameter` by the validator, after a reader peak of
+    about 19.5 MB at the minted budget (25.7 MB for the facade load). Exporting such a model is not
+    bounded yet (issue #803).
+  - **Where elements are made, swept.** Only the reader's expansion of a preserved array makes
+    table elements. Array connectors, array instances and composite array declarations are
+    refused before they are grounded; a class whose port count comes from a parameter is refused
+    in the `hasInstance` derivation; authored vector ports are each written in the document; the
+    buffers a width parameter or `MatrixGain`'s `K` sizes inside a block are the constructed
+    budget's (GitHub #721, #788); and an evaluation that builds an array it does not keep (a
+    symbolic `sizeOfDimensions`, a leaf's array member read in a guard scope, an expression longer
+    than its declared shape) is held to `oce-expr`'s 2^20 elements an array and the evaluation
+    budget, and dropped at once.
+  - **Evidence.** `oce-api` `cxf_minted_array_cost.rs`: the issue's broadcast and its `fill`
+    refused with the peak pinned and flat at 1x/2x/4x; exactly 65,536 read and 65,537 refused
+    for a broadcast, two dimensions, an array expression, two arrays, brace literals (the same
+    values as JSON lists read) and a written `q[1024]` listed 65 times by one leaf or 65 leaves;
+    shared against separate nodes and the same refusal whatever order the owners come in; and
+    the facade's duplicate refusal with its peak. `cxf_minted_array_path_cost.rs`: the minted
+    paths at 8 MiB and one byte past, for one row and for 64 rows, under a 1,005-byte IRI and
+    for a re-listed node; long-IRI broadcasts refused at a flat peak; shared against separate
+    nodes; a broadcast's refusal the same in any owner order under IRIs of one length, and both
+    orders of the short and long owners above; the worst cases at both budgets; and the
+    921-byte-root gain. `oce-cxf` `arrays_tests.rs` pins each budget's edge, the order of the
+    four checks, that a refusal reserves nothing from any budget, what counts as minted, and that
+    a node's first listing writes and each later one mints. `resolve_load_bounds.rs` and
+    `hostile_load_bounds.rs` pin the element budget's edge with arrays that reserve their
+    elements and are refused for their length, building no 2^20-element table; no test reads a
+    document of 2^20 elements any more (it would hold about 640 MB; issue #804). Documented in
+    [host responsibilities](docs/host-responsibilities.md) and the composite subset.
+
 - **A value many owners read is grounded once for the document, and each owner is charged what
   grounding it again would spend** (GitHub #797, issue #749). A parameter node that many leaves
   list was grounded again by each leaf in resolver Step 7, and a declaration many composites list

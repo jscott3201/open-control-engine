@@ -263,29 +263,35 @@ fn the_declared_size_of_a_refused_array_costs_nothing() {
 fn a_value_refused_for_its_shape_builds_no_name() {
     // A 32 KiB name over 1,024 elements fits the budget; each value below is refused for its
     // shape, before any name is built. [measured: peaks of 410,561 to 411,036 bytes; before,
-    // 67.5 MB each]
-    let local = "k".repeat(32 * 1024);
-    for (value, message) in [
+    // 67.5 MB each] An array expression mints its elements, whose paths under that name (33.5 MB)
+    // the minted path budget refuses before the expression is read (issue #756), so its shape is
+    // checked under a 7 KiB name, whose 1,024 paths fit.
+    let long = "k".repeat(32 * 1024);
+    let shorter = "k".repeat(7 * 1024);
+    for (local, value, message) in [
         (
+            &long,
             "[ 1.0, 2.0 ]",
             "array value list has 2 element(s) but the declared dimensions imply 1024",
         ),
         (
+            &long,
             "1.0",
             "array parameter value must be a JSON list of element literals or an array \
              expression string",
         ),
         (
+            &shorter,
             "\"{1, 2}\"",
             "array expression evaluated to 2 element(s) but the declared dimensions imply 1024",
         ),
     ] {
-        let document = with_arrays(CON, &[(&local, "(1024)", value)]);
+        let document = with_arrays(CON, &[(local, "(1024)", value)]);
         let (diagnostics, info) = refused(&document);
         assert_eq!(
             diagnostics,
             [Diagnostic::error(DiagCode::GroundingFailed, message)
-                .with_subject(parameter(CON, &local))],
+                .with_subject(parameter(CON, local))],
             "{value}"
         );
         assert!(
@@ -295,10 +301,28 @@ fn a_value_refused_for_its_shape_builds_no_name() {
             document.len()
         );
     }
+    // The same expression under the 32 KiB name is refused by the minted path budget, before the
+    // expression is read or any name is built.
+    let document = with_arrays(CON, &[(&long, "(1024)", "\"{1, 2}\"")]);
+    let (diagnostics, info) = refused(&document);
+    assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+    assert_eq!(diagnostics[0].code, DiagCode::ResourceLimitExceeded);
+    assert!(
+        diagnostics[0]
+            .message
+            .starts_with("array parameter's 1024 minted element path(s)"),
+        "{diagnostics:?}"
+    );
+    assert!(
+        info.bytes_max <= 48 * bytes(document.len()),
+        "{}",
+        info.bytes_max
+    );
 }
 
-/// On the constant `instance`, an array `base[len]` and a one-element array whose path takes the
-/// rest of the budget to the byte: the reader reads the document with every name in order, and
+/// On the constant `instance`, an array `base[len]` written out (its long paths are not minted, so
+/// the 8 MiB of minted paths does not bind first; issue #756) and a one-element array whose path
+/// takes the rest of the budget to the byte: the reader reads the document with every name in order, and
 /// holds at most `copies` times the budget at its peak (the facade then refuses the names, which
 /// the constant's class does not declare). One byte more on the second name refuses it, at
 /// no more than three times the paths of the first array, whose names were minted before the
@@ -309,10 +333,11 @@ fn assert_budget_edge(instance: &str, base: &str, len: usize, copies: u64) {
     let rest = PATH_BUDGET - used - (instance_iri(instance).len() + 1 + 2);
     let (filler, over) = ("f".repeat(rest), "f".repeat(rest + 1));
     let size = format!("({len})");
+    let written = format!("[ {} ]", vec!["1.0"; len].join(", "));
 
     let document = with_arrays(
         instance,
-        &[(base, &size, "[ 1.0 ]"), (&filler, "(1)", "[ 2.0 ]")],
+        &[(base, &size, &written), (&filler, "(1)", "[ 2.0 ]")],
     );
     let (result, loaded) = read(&document);
     let model = result.expect("paths that fill the budget exactly are read");
@@ -346,7 +371,7 @@ fn assert_budget_edge(instance: &str, base: &str, len: usize, copies: u64) {
 
     let document = with_arrays(
         instance,
-        &[(base, &size, "[ 1.0 ]"), (&over, "(1)", "[ 2.0 ]")],
+        &[(base, &size, &written), (&over, "(1)", "[ 2.0 ]")],
     );
     let (diagnostics, refusal) = refused(&document);
     let need = PATH_BUDGET - used + 1;
@@ -362,9 +387,12 @@ fn assert_budget_edge(instance: &str, base: &str, len: usize, copies: u64) {
 fn paths_of_long_names_that_fill_the_budget_load_whole_and_one_byte_more_is_refused() {
     // A 65,000-byte name over 1,024 elements, under the constant's 30-byte IRI: the names are
     // nearly all of every path. The name is 32,500 two-byte characters, so a count of characters
-    // instead of bytes would admit one byte more. [measured: a peak of 268,967,071 bytes loaded,
-    // 4.01 times the budget, and 137,993,874 refused; before, both loaded at about 269 MB]
-    assert_budget_edge(CON, &"π".repeat(32_500), 1_024, 5);
+    // instead of bytes would admit one byte more. [measured: a peak of 138,726,946 bytes loaded,
+    // 2.07 times the budget, and 138,214,278 refused, the first array written out (issue #756);
+    // recorded with it broadcast, 268,967,071 and 137,993,874; before issue #710, both loaded at
+    // about 269 MB] The refused peak rose slightly, 137,993,874 to 138,214,278, because the first
+    // array is now written out: its written values replace one broadcast value.
+    assert_budget_edge(CON, &"π".repeat(32_500), 1_024, 3);
 }
 
 #[test]
@@ -373,7 +401,10 @@ fn paths_under_a_long_instance_iri_that_fill_the_budget_load_whole_and_one_byte_
     // its characters two bytes each: the IRI is nearly all of every path, and a count of its
     // characters instead of its bytes would admit one byte more. The reader spells each
     // element's path once to check minted aliases, so the refusal holds the first array's paths
-    // too. [measured: a peak of 208,207,573 bytes loaded, 3.10 times the budget, and
-    // 142,237,593 refused; before, both loaded]
-    assert_budget_edge(&"é".repeat(2 * 1024), "q", 16_000, 5);
+    // too. [measured: a peak of 147,661,442 bytes loaded, 2.20 times the budget, and 146,637,885
+    // refused, the first array written out (issue #756); recorded with it broadcast, 208,207,573
+    // and 142,237,593; before issue #710, both loaded] The refused peak rose slightly, 142,237,593
+    // to 146,637,885, because the first array is now written out: its written values replace one
+    // broadcast value.
+    assert_budget_edge(&"é".repeat(2 * 1024), "q", 16_000, 3);
 }
