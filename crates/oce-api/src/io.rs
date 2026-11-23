@@ -45,6 +45,30 @@ mod frame_alias_tests {
     use super::*;
 
     #[test]
+    fn inputs_sharing_one_path_allocation_fold_into_one_point_only_when_a_boundary_drives_them() {
+        // Two inputs hold one allocation of one path. The walk skips a repeat by its address
+        // only for a boundary-driven input; two ordinary inputs that share one stay two points
+        // (the projection then refuses the duplicate key), as a walk by text alone found them.
+        let path: Arc<str> = Arc::from("urn:shared.u");
+        let input = |id: u32| {
+            let mut connector = oce_model::Connector::new(
+                ConnectorId(id),
+                oce_model::BlockId(id),
+                Dir::In,
+                ValueType::Real,
+                id,
+            );
+            connector.iri = Some(Arc::clone(&path));
+            connector
+        };
+        let mut model = ModelGraph::new();
+        model.connectors = vec![input(0), input(1)];
+        assert_eq!(IoInventory::build_at_load(&model).len(), 2);
+        model.external_inputs = vec![ConnectorId(0), ConnectorId(1)];
+        assert_eq!(IoInventory::build_at_load(&model).len(), 1);
+    }
+
+    #[test]
     fn two_resolver_spellings_cannot_satisfy_one_logical_input_twice() {
         // Public ingest has no input aliases. Inject an alias at the shared identity seam to
         // ensure uniqueness is by logical input, never submitted spelling, if one is added later.

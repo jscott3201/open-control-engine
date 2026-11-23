@@ -49,7 +49,7 @@ so far, and no tag is cut by the bump.
   block's key, and the inventory and the projection built and hashed a boundary input's path again
   for each input it drives. One `Constant` with a 64 KiB IRI fanned out to 256 `Abs` blocks, a
   161 KB document, was held at 17.4 MB. An 8 MiB document projects to about 3 GB at that length,
-  and to about 50 GB per copy at the longest IRI the expansion budget admits (1.3 MiB, 37,000
+  and to about 50 GB per copy at the longest IRI the expansion budget admits (1.3 MiB, 37,600
   edges); both figures are computed, not run.
   - **What changed.** A key is built once per point and once per block and shared by every
     record that names it. A walk over the connectors recognises a boundary input's further

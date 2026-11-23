@@ -90,8 +90,9 @@ impl Engine {
     /// stays `oce:canon1:` before 1.0.0: a layout change re-stamps ids in place, and the engine
     /// version tells the layouts apart. No decoder is provided
     /// or promised; the bytes are hashed, never parsed. Allocates one
-    /// `Vec<u8>` for the bytes (plus the sorted records it writes them from), bounded by the loaded
-    /// model's size; no engine state changes.
+    /// `Vec<u8>` for the bytes (plus the sorted records it writes them from), and the bytes spell a
+    /// block's name in every record that names it: about one copy of a long name per reference to
+    /// it, which no budget bounds yet (issue #815 adds one); no engine state changes.
     ///
     /// # Errors
     /// As [`Self::content_id`].

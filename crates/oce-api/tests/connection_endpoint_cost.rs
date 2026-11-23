@@ -419,11 +419,36 @@ fn a_state_manifest_names_each_block_once_however_many_keys_carry_it() {
     // boundary outputs 4 / 1 / 1, passed through 60 / 16 / 14; before, measured between 1 KiB
     // and 16 KiB identities, the snapshot peaked at 12.45, 22.65, 41, 6.23, 7 and 82 and the
     // checkpoint at 6.45, 8.65, 21, 3.23, 4 and 44]
+    // Each shape's measured copies (snapshot peak, checkpoint peak), pinned to within half a
+    // copy: one copy of a key restored anywhere in the manifest moves one of them by a whole copy
+    // a reference, which the byte-relative ceilings below alone could absorb.
+    let measured = |shape| match shape {
+        Shape::FanOut => (8.0, 2.0),
+        Shape::FanIn => (22.0, 5.0),
+        Shape::Between => (30.0, 7.0),
+        Shape::BoundaryFanOut | Shape::BoundaryOutputs => (4.0, 1.0),
+        Shape::PassThrough => (60.0, 14.0),
+    };
     for shape in SHAPES {
         let grid = grid(shape);
         let bytes = grid.copies(|c| c.snapshot_len as f64);
         let snapshot = grid.copies(|c| c.snapshot_peak as f64);
         let checkpoint = grid.copies(|c| c.checkpoint_peak as f64);
+        let (snapshot_measured, checkpoint_measured) = measured(shape);
+        for value in &snapshot {
+            assert!(
+                (value - snapshot_measured).abs() < 0.5,
+                "{shape:?}: a snapshot peak of {value} copies a reference, {snapshot_measured} \
+                 measured"
+            );
+        }
+        for value in &checkpoint {
+            assert!(
+                (value - checkpoint_measured).abs() < 0.5,
+                "{shape:?}: a checkpoint peak of {value} copies a reference, \
+                 {checkpoint_measured} measured"
+            );
+        }
         for ((bytes, snapshot), checkpoint) in bytes.iter().zip(&snapshot).zip(&checkpoint) {
             assert!(
                 *snapshot <= 4.0 * bytes + NONE,
