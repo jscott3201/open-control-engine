@@ -43,7 +43,7 @@ so far, and no tag is cut by the bump.
 ### Facade
 
 - **Breaking, in place: a model whose canonical encoding would pass 4 MiB is refused at load**
-  (GitHub #PRNUM, issue #815, owner ruling of 2026-11-23). The canonical encoding, which every
+  (GitHub #816, issue #815, owner ruling of 2026-11-23). The canonical encoding, which every
   content id and blob id hashes and `canonical_content_bytes` returns, spells a block's relative
   name in every record that names it. So a long name a document writes once under a `@context`
   prefix made it about one copy per wire. 4,000 wires to a 256 KiB name took 1.84 s per content id,
@@ -64,7 +64,7 @@ so far, and no tag is cut by the bump.
     boundary input by its shared allocation, rather than by comparing the name.
 
 - **Breaking, in place: a model whose durable snapshot would pass 64 MiB is refused at load**
-  (GitHub #PRNUM, issue #815, owner ruling of 2026-11-23). A snapshot spells a block's IRI in every
+  (GitHub #816, issue #815, owner ruling of 2026-11-23). A snapshot spells a block's IRI in every
   connector key that names the block, and a boundary input's IRI in every input it drives. So a
   long identity a document writes once could make a loaded model's snapshot pass
   `MAX_SNAPSHOT_BYTES`, and every `Engine::state_snapshot` of it was refused (`SnapshotTooLarge`).
@@ -298,7 +298,7 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
-- **Breaking, in place: labels past 8 MiB after unification are refused at load** (GitHub #PRNUM,
+- **Breaking, in place: labels past 8 MiB after unification are refused at load** (GitHub #816,
   issue #815, owner ruling of 2026-11-23). §7.10 unification gives an output's `unit` and
   `quantity` to every input it drives. The inventory, the projection, the point list, the state
   manifest and the export then hold or write a copy per input. A long label spelled once on an
@@ -879,7 +879,7 @@ so far, and no tag is cut by the bump.
 ### CXF import and export
 
 - **The reader looks a boundary input's IRI up once, not once for every input it drives**
-  (GitHub #PRNUM, issue #815). Three reader steps repeated work for every input a boundary input
+  (GitHub #816, issue #815). Three reader steps repeated work for every input a boundary input
   drives:
   - Step 9 sorted the boundary-driven inputs, and the pass-through pairs, with a key that hashed
     the IRI on every comparison.
