@@ -252,49 +252,25 @@ pub(super) fn materialize(
 }
 
 /// Refuse emitted declaration IRIs that collide with identities synthesized for the survivor cone.
-fn refuse_minted_aliases(
-    doc: &CxfDocument,
+///
+/// The export spells the identities it synthesizes from parts: the root, each scalar parameter of
+/// a block it writes as `<instance IRI>.<name>` (a name with no `.`), and each input a boundary
+/// drives as `<instance IRI>.in<position>`. Neither suffix holds a `.`, so an `@id` is one of them
+/// only when the text after its last `.` is the suffix and the text before it a block's instance
+/// IRI. Each emitted declaration is split once there and its parts looked up, so no identity is
+/// built: before, every parameter's and every such input's identity was spelled in full, a copy
+/// of the block's IRI each, whatever the document wrote (issue #807).
+fn refuse_minted_aliases<'a>(
+    doc: &'a CxfDocument,
     represented: &HashSet<&str>,
     graph: &ModelGraph,
     role_aliases: &HashSet<&str>,
     deferred: &BTreeSet<usize>,
     diags: &mut DiagnosticList,
 ) {
-    let mut minted = HashSet::from([EXPORT_ROOT_IRI.to_owned()]);
-    for (position, block) in graph.blocks.iter().enumerate() {
-        if deferred.contains(&position) || is_pass_through_class(&block.class_iri) {
-            continue;
-        }
-        let Some(instance) = block.instance_iri.as_deref() else {
-            continue;
-        };
-        for (name, _) in &block.params.values {
-            if !name.is_empty() && !name.contains('.') {
-                minted.insert(format!("{instance}.{name}"));
-            }
-        }
-    }
-    for connector_id in &graph.external_inputs {
-        let Some(connector) = graph.connectors.get(connector_id.0 as usize) else {
-            continue;
-        };
-        let Some(block) = graph.blocks.get(connector.block.0 as usize) else {
-            continue;
-        };
-        if deferred.contains(&(connector.block.0 as usize))
-            || is_pass_through_class(&block.class_iri)
-        {
-            continue;
-        }
-        let Some(instance) = block.instance_iri.as_deref() else {
-            continue;
-        };
-        let Some(position) = block.inputs.iter().position(|input| input == connector_id) else {
-            continue;
-        };
-        minted.insert(format!("{instance}.in{position}"));
-    }
-
+    let mints = |position: usize, class_iri: &str| {
+        !deferred.contains(&position) && !is_pass_through_class(class_iri)
+    };
     let emitted_boundaries = graph
         .external_inputs
         .iter()
@@ -302,22 +278,103 @@ fn refuse_minted_aliases(
         .filter(|connector| !deferred.contains(&(connector.block.0 as usize)))
         .filter_map(|connector| connector.iri.as_deref())
         .collect::<HashSet<_>>();
+    let candidates = doc
+        .graph
+        .iter()
+        .map(|node| node.id.as_str())
+        .filter(|id| {
+            represented.contains(id)
+                && emitted_boundaries.contains(id)
+                && !role_aliases.contains(id)
+        })
+        .collect::<Vec<_>>();
+    if candidates.is_empty() {
+        return;
+    }
 
-    for node in &doc.graph {
-        if represented.contains(node.id.as_str())
-            && emitted_boundaries.contains(node.id.as_str())
-            && !role_aliases.contains(node.id.as_str())
-            && minted.contains(&node.id)
+    // The blocks each instance IRI names, among those the export writes.
+    let mut blocks_of: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (position, block) in graph.blocks.iter().enumerate() {
+        if let Some(instance) = block.instance_iri.as_deref()
+            && mints(position, &block.class_iri)
         {
+            blocks_of.entry(instance).or_default().push(position);
+        }
+    }
+    // Each boundary-driven input the export mints, as its block and its position there.
+    let mut minted_inputs: HashSet<(usize, usize)> = HashSet::new();
+    for connector_id in &graph.external_inputs {
+        let Some(connector) = graph.connectors.get(connector_id.0 as usize) else {
+            continue;
+        };
+        let owner = connector.block.0 as usize;
+        let Some(block) = graph.blocks.get(owner) else {
+            continue;
+        };
+        if block.instance_iri.is_none() || !mints(owner, &block.class_iri) {
+            continue;
+        }
+        if let Some(position) = block.inputs.iter().position(|input| input == connector_id) {
+            minted_inputs.insert((owner, position));
+        }
+    }
+    // The parameter names of each block some declaration's prefix names, so a declaration costs
+    // a lookup however many parameters its block binds.
+    let split = |id: &'a str| -> Option<(&[usize], &'a str)> {
+        let (instance, suffix) = id.rsplit_once('.')?;
+        Some((blocks_of.get(instance)?.as_slice(), suffix))
+    };
+    let mut named: HashSet<(usize, &str)> = HashSet::new();
+    let mut indexed: HashSet<usize> = HashSet::new();
+    for (blocks, _) in candidates.iter().filter_map(|id| split(id)) {
+        for &position in blocks {
+            if indexed.insert(position) {
+                named.extend(
+                    graph.blocks[position]
+                        .params
+                        .values
+                        .iter()
+                        .map(|(name, _)| (position, &**name))
+                        .filter(|(_, name)| !name.is_empty()),
+                );
+            }
+        }
+    }
+    let collides = |id: &'a str| {
+        if id == EXPORT_ROOT_IRI {
+            return true;
+        }
+        let Some((blocks, suffix)) = split(id) else {
+            return false;
+        };
+        let input = minted_input_position(suffix);
+        blocks.iter().any(|&position| {
+            named.contains(&(position, suffix))
+                || input.is_some_and(|k| minted_inputs.contains(&(position, k)))
+        })
+    };
+
+    for id in candidates {
+        if collides(id) {
             diags.push(
                 Diagnostic::error(
                     DiagCode::MalformedDocument,
                     "boundary input collides with a canonical export node identity",
                 )
-                .with_subject(node.id.clone()),
+                .with_subject(id.to_owned()),
             );
         }
     }
+}
+
+/// The position `suffix` names when it is `in` and a position as the export spells one (decimal,
+/// no sign, no leading zero), else `None`.
+fn minted_input_position(suffix: &str) -> Option<usize> {
+    let digits = suffix.strip_prefix("in")?;
+    let canonical = !digits.is_empty()
+        && digits.bytes().all(|b| b.is_ascii_digit())
+        && (digits == "0" || !digits.starts_with('0'));
+    canonical.then(|| digits.parse().ok()).flatten()
 }
 
 /// Parse the declaration under its derived boundary type. A failed type derivation already carries

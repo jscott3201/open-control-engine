@@ -80,9 +80,10 @@ fn validator_findings_within_the_budget_are_listed_whole_with_no_closing_error()
 
 #[test]
 fn validator_findings_past_the_budget_close_with_a_count_last_in_the_refusal() {
-    let (id, bytes) = document(20);
+    let (id, bytes) = document(15);
     // The `@id` twice (the block and the root's reference to it) and a little more: 1 MiB of
-    // document for 10.5 MiB of findings.
+    // document for 8 MiB and more of findings, and 15 listings whose paths under the `@id` take
+    // 7.5 MiB, inside the reader's instance path budget.
     assert!(
         bytes.len() < 2 * ID_BYTES + 8 * 1024,
         "{} bytes",
@@ -91,7 +92,7 @@ fn validator_findings_past_the_budget_close_with_a_count_last_in_the_refusal() {
     let error = refusal(&bytes);
     assert!(matches!(error, OcError::Validate(_)), "{error:.200}");
     let diagnostics = error.diagnostics();
-    // 21 findings of about 512 KiB each: 15 fit in 8 MiB, 6 are counted.
+    // 16 findings of about 512 KiB each: 15 fit in 8 MiB, 1 is counted.
     let (closing, listed) = diagnostics.split_last().expect("diagnostics");
     assert_eq!(listed.len(), 15);
     assert!(listed.iter().all(|d| {
@@ -103,7 +104,7 @@ fn validator_findings_past_the_budget_close_with_a_count_last_in_the_refusal() {
     assert_eq!(
         closing.message,
         format!(
-            "6 more diagnostic(s) are not listed, the first of them `parameter-out-of-range` on \
+            "1 more diagnostic(s) are not listed, the first of them `parameter-out-of-range` on \
              `{}…`: a diagnostic list holds at most 8388608 bytes of message and subject text",
             &id[..64]
         )
@@ -112,7 +113,7 @@ fn validator_findings_past_the_budget_close_with_a_count_last_in_the_refusal() {
     assert!(
         listed
             .iter()
-            .any(|d| d.message.contains("missing 20 required cells"))
+            .any(|d| d.message.contains("missing 15 required cells"))
     );
     for row in 1..=14 {
         let name = format!("`table_{row}_2`");
@@ -123,5 +124,27 @@ fn validator_findings_past_the_budget_close_with_a_count_last_in_the_refusal() {
         listed
             .windows(2)
             .all(|pair| pair[0].message <= pair[1].message)
+    );
+}
+
+#[test]
+fn listings_past_the_instance_path_budget_never_reach_the_validator() {
+    // 20 listings under the 512 KiB `@id` take 10 MiB of paths: the reader admits the first 15
+    // and refuses the other five (issue #807), so the load ends at the import stage and no
+    // validator finding is raised.
+    let (_, bytes) = document(20);
+    let error = refusal(&bytes);
+    assert!(matches!(error, OcError::Cxf(_)), "{error:.200}");
+    let refused: Vec<&str> = error
+        .diagnostics()
+        .iter()
+        .filter(|d| d.code == DiagCode::ResourceLimitExceeded)
+        .map(|d| d.subject.as_deref().expect("a listing"))
+        .collect();
+    assert_eq!(
+        refused,
+        (16..=20)
+            .map(|row| format!("urn:p{row}.table_{row}_2"))
+            .collect::<Vec<_>>()
     );
 }

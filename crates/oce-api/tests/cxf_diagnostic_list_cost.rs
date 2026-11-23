@@ -179,6 +179,14 @@ fn every_item(items: usize) -> usize {
     items
 }
 
+/// The listings of a parameter node the instance path budget admits on the long `@id`, its `k`
+/// first: each takes the `@id`, `.` and the name, 262,146 bytes, and 31 of them fit 8 MiB
+/// (issue #807). The later ones are refused before their value is read, each with a short
+/// diagnostic raised before any non-finite finding.
+fn listings_the_instance_path_budget_admits(items: usize) -> usize {
+    items.min(30)
+}
+
 const ROUTES: &[Route] = &[
     Route {
         name: "a key written twice",
@@ -417,7 +425,7 @@ const ROUTES: &[Route] = &[
                 .replacen(&node, K_NODE, 1);
             listed_again(&model, "urn:p.q", &double("NaN"), items)
         },
-        raised: every_item,
+        raised: listings_the_instance_path_budget_admits,
     },
     Route {
         name: "an operand of a conditional guard naming no parameter",

@@ -90,6 +90,23 @@ so far, and no tag is cut by the bump.
     capped at `MAX_SNAPSHOT_BYTES`. Measured: a snapshot's peak is at most 4 times its bytes per
     reference and a checkpoint's at most 1 times. The bytes are unchanged.
 
+- **The parameter table holds each block's IRI once** (GitHub #809, issue #807). The table
+  `Engine::params` returns spelled each parameter's dotted path and kept it twice, as the row's
+  path and as its index's key, three times the block's IRI a parameter once the first had grown:
+  16 `PID` instances under 8 KiB IRIs left 5.6 MB held by the engine and its load report, 43
+  times the IRI an instance, 33 of them the table's. Each row now holds its block's IRI shared
+  with the model and its name, and the index the hash of each path beside its row, sorted. The
+  hash is the crate's `StableHash` (FNV-1a over 128 bits) fed one byte at a time, so a row hashed
+  in parts and a lookup hashed whole are the same fold whatever the toolchain, and the index is
+  the same on every load; it only chooses which rows a lookup compares, nothing iterates it, and
+  `ParamTable`'s `Debug` now prints the rows alone. A path is spelled when `ParamTable::iter`
+  hands it out. Nothing a host sees changes: `iter` and `to_vec` give the same paths in the same
+  order, `get_param` and `set_param` find the same row, the first of two that spell one path
+  (`urn:a` with `b.c` and `urn:a.b` with `c`), and rows whose hashes collide are told apart by
+  their parts. Measured, the same instances leave 1.3 MB, about 4.3 times the IRI an instance,
+  for the block and its ports (`oce-api` `params/path_index_tests.rs`;
+  `cxf_instance_path_cost.rs` pins the held bytes at 4, 8 and 16 KiB IRIs).
+
 - **`BlobSummary` says whether this build accepts the blob: `decode_refusal`** (GitHub #699,
   issue #680). `oce_api::inspect_blob` returned a summary for some blobs the engine refuses to
   run (a wrong class signature hash, a wrong initial-state CRC), and the facade had no other
@@ -819,6 +836,80 @@ so far, and no tag is cut by the bump.
   - Measured (release): exporting a boundary input fanned out to 4,000 / 8,000 / 16,000 targets
     takes 6.4 / 13.1 / 27.6 ms (before, 7.6 / 19.6 / 55.7). Sixteen 64 KiB boundary IRIs over
     2,000 / 4,000 / 8,000 targets export in 5.4 / 8.2 / 14.9 ms (before, 45 / 88 / 182).
+
+- **The identities a document holds under its blocks' instance IRIs are held to 8 MiB**
+  (GitHub #809, issue #807; owner ruling of 2026-11-23). **Breaking, in place:** a document
+  whose identities take more is refused. A scalar parameter is held under its block's IRI and
+  exported as `<IRI>.<name>` whatever its node is called, a padded `hasInstance` output is the
+  identity `<IRI>.<name>` the document never writes, and an input a boundary drives is exported
+  as `<IRI>.in<position>`, so none of them costs the document the IRI's length: a node `urn:p.k`
+  that 500 instances list costs each listing about 20 bytes, and each IRI can be 64 KiB written
+  once under a `@context` prefix. No budget counted them: the export of a model the facade loads
+  wrote up to about 296 MiB of them, and the graph `oce_cxf::import_cxf` returned alone, whose
+  undeclared names the facade's load gate never sees, any amount.
+  - **The rule.** `MAX_DOCUMENT_INSTANCE_PATH_BYTES` (8 MiB, `pub(crate)`, in
+    `oce-cxf/src/instance_path_budget.rs`) counts the instance IRI as expanded, `.`, and the name
+    or `in` and the position of every listing of a scalar parameter (declared by its class or
+    not; a node many instances list counted for each listing), every padded output, and every
+    boundary-driven input, with checked arithmetic, on `import_cxf` and so on both facade
+    entry points.
+  - **When.** The padded outputs of each active `hasInstance` instance together, in `@graph`
+    order, before lowering builds any of them; each parameter listing as Step 7 reads it, before
+    anything is built for it (an array listing goes to the array budgets, never here, and a
+    scalar listing's string value to the string budget after this one); each boundary-driven
+    input once Step 9 has found it. Whether a document is refused does not depend on that order;
+    which identity is refused does, and both orders are pinned.
+  - **The refusal.** `resource-limit-exceeded` on the listing, the instance or the boundary
+    input, naming an excerpt of the IRI; it reserves nothing. An instance whose padded outputs do
+    not fit ends the read before lowering.
+  - **Not counted**, and what bounds each: authored port, member and boundary IRIs (the document
+    spells them, so the 8 MiB admission and the 8 MiB expansion budget); array element paths (the
+    array budgets); `<IRI>.out<k>`, which the export mints only for an output with no IRI, which
+    the reader never makes.
+  - **What loads today and is refused.** No tracked or `open-control-library` document holds
+    more than 15,240 bytes of these identities (`cooling_only_controller.jsonld`: 167 parameters,
+    43 boundary-driven inputs, 213 blocks), and none has an instance IRI over 128 bytes; the
+    540-load corpus reads, loads and exports byte-identically.
+  - **The export's worst case**, computed, not run: those identities, written at most three
+    times each, at most 24 MiB; the blocks' `@id`s at most 16 MiB; the array elements about
+    188 MiB, or 216 MiB with strings: about 256 MiB, where it was about 512 MiB. The rest of the
+    document's text (type IRIs, keys, 36 bytes and the value a parameter, about 73 a minted input
+    and 62 a padded output, authored IRIs as written) is in proportion to the document, measured
+    with short IRIs at up to 2.65 times it, about 22 MiB at the 8 MiB admission, and 12 MiB more
+    for authored IRIs written through the `@context` expansion: about 290 MiB in all. A graph
+    `import_cxf` returned is now bounded by the same budgets, plus its blocks' IRIs and the rest
+    of its document's text, which grow with its document. The facade's 8 MiB admission refuses
+    any document large enough to approach the budget with realistic content (these identities
+    are about 3.6% of the corpus's document bytes), so in practice it binds `import_cxf` callers
+    with very large documents, which should split the model.
+  - **Evidence.** `oce-cxf` `instance_path_budget_tests.rs` (the budget's edges at its real size,
+    overflow, a refusal reserving nothing, the excerpt) and `resolve/instance_paths_tests.rs`:
+    every kind at once read at exactly its bytes and refused a byte short, literal and prefixed
+    alike; each kind refused where it is charged; a shared node charged for each listing, the
+    refused listing following `containsBlock` order in both orders; an array listing not charged;
+    eight listings under an IRI of 1 MiB less 2 bytes taking exactly 8 MiB, and refused a byte
+    longer. `oce-api` `cxf_instance_path_cost.rs`: 256, 512 and 1,024 listings under a 64 KiB
+    IRI (16 to 64 MiB of identities, documents of 81 to 126 KB) refused past the first 126 at
+    peaks of 2.6, 3.9 and 6.3 MB, 4,834 bytes a listing.
+
+- **The reader checks boundary inputs against the identities an export mints without spelling
+  them** (GitHub #809, issue #807). Checking that no boundary input is named like a parameter's
+  or a boundary-driven input's exported `@id`, the reader built every one of them into a set,
+  about twice the block's IRI a parameter, whether the class declared the name or not, before
+  the facade's load gate refused an undeclared one. One leaf under an 8 KiB IRI listing 500
+  undeclared parameter nodes, a 63 KB document, read at 10.3 MB, about 5.1 KB + 2.0 × the IRI a
+  parameter, and an 8 MiB document projected to about 80 GB. Both identities end in a suffix
+  with no `.`, so each boundary input is now split once at its last `.` and its parts looked up
+  (a block's instance IRI; one of its parameter names, or `in` and a position as the export
+  writes it, no sign and no leading zero), and nothing is built. Measured, the same document
+  reads at 2.2 MB, and a parameter costs the reader about 5 KB whatever its block's IRI, the
+  reader's fixed cost for each node (issue #808): 256 parameters under 2, 4 and 8 KiB IRIs read
+  at 1,395,107 / 1,425,827 / 1,487,267 bytes. The answers
+  are unchanged: `oce-cxf` `export_declared_input_attrs` pins the spellings the split refuses
+  (`in0`, `in1`, a parameter's name whatever its node) and the ones it leaves alone (`in00`,
+  `in01`, `in2`, `in`, `in+1`, `IN0`, a nameless parameter, a prefix that is not the whole IRI).
+  The cost is pinned at 1x/2x/4x by `oce-api` `cxf_instance_path_cost.rs`.
+
 - **An export peaks at its bytes and a few percent more** (GitHub #806, issue #803). The exporter
   built every node of the document before serializing it: a 1,120-byte node for each array
   element, more while the node vector grew, and its plan held copies of every block's IRI and of

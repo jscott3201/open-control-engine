@@ -243,7 +243,10 @@ fn forward_with_two_reverse_spellings_retains_duplicate_drive() {
     );
 }
 
-/// A node-less synthesized driver still charges its authored target IRI against the byte budget.
+/// A node-less synthesized driver whose padded identity alone passes 8 MiB is refused by the
+/// reader's instance path budget before lowering builds it (issue #807).
+/// `synthesized_output_relation_bytes_are_aggregated` still covers the composite boundary's byte
+/// budget on the synthesized path, with an owner whose padded output fits.
 #[test]
 fn synthesized_output_remains_resource_bounded() {
     let mut document = derived_output_document(false, false);
@@ -260,14 +263,20 @@ fn synthesized_output_remains_resource_bounded() {
         ".sub.y",
         &[&output, "http://example.org#derived_output.post.u"],
     );
+    // The padded output `<owner>.y` alone takes more than the 8 MiB the instance path budget
+    // allows, so the reader refuses the owner before lowering builds the identity (issue #807),
+    // ahead of the composite boundary budget that refused it before. The refusal names the
+    // 8 MiB owner, which does not fit the diagnostic list: it is counted by the closing error.
     let diagnostics = import(&document).expect_err("oversized synthesized output must reject");
-    assert_eq!(
-        diagnostics,
-        vec![Diagnostic::error(
-            DiagCode::MalformedDocument,
-            "composite boundary resolution exceeds the supported aggregate target IRI byte count \
-             (8388608)",
-        )]
+    assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+    assert_eq!(diagnostics[0].code, DiagCode::ResourceLimitExceeded);
+    assert!(
+        diagnostics[0].message.starts_with(
+            "1 more diagnostic(s) are not listed, the first of them `resource-limit-exceeded` on \
+             `http://example.org#xxx"
+        ),
+        "{}",
+        diagnostics[0].message
     );
 }
 
