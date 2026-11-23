@@ -231,19 +231,35 @@ pub fn import_cxf(
 /// an empty document.
 ///
 /// # Memory
-/// The document is written one node at a time into a buffer of exactly its size, which a first
-/// pass that only counts the bytes measures, so an export's peak is about the bytes it returns
-/// (issue #803: 1.75 MB for the 1.67 MB of a `MatrixGain` whose `K` is 128 by 128, where the whole
-/// document built first had peaked at 58.7 MB). Its plan holds a fixed size for each parameter
-/// whatever its block's IRI. The bytes are about twice the parameter paths (each parameter node's
-/// `@id`, its block's IRI, `.` and its name, is written in the block's `S231:hasParameter` and on
-/// the node) plus 36 bytes and the value's text for each parameter. There is no limit: for a
-/// model the facade loads, the reader's array, path and string budgets hold that to about
-/// 188 MiB, 216 MiB with string elements at their budget (computed, not run). A hand-built
-/// graph, or one from [`import_cxf`] that never passed the facade's validation, is bounded only by
-/// that formula applied to the graph: one IRI shared by `N` parameters is written `2N` times, so
-/// bounding such a graph before exporting it is the host's responsibility
-/// (`docs/host-responsibilities.md`).
+/// There is no limit (issue #803). The document is written one node at a time into a buffer of
+/// exactly its size, which a first pass that only counts the bytes measures, and the plan holds
+/// every `@id` borrowed from the graph or in parts, so the peak is the bytes returned and a small
+/// share more: measured, 1.001 times for `CDL.Reals.PID` instances listing shared parameter nodes,
+/// 1.016 for many blocks, 1.026 for many minted ports, 1.034 for a `MatrixGain` whose `K` is 128 by
+/// 128 (1.72 MB for 1.67 MB, where the document built in full peaked at 58.7 MB), and up to about
+/// 1.16 for array elements whose paths are a dozen bytes, where the duplicate check's fixed size
+/// for each `@id` counts.
+///
+/// The bytes, each `@id` written as it is spelled, with `B` the bytes of a block's instance IRI:
+/// - each parameter, scalar or array element: `2 × (B + 1 + name) + 36 +` its value's text (a
+///   Real at most 24 bytes, a string's CDL literal at most 6 times its text plus 4);
+/// - each input port with no IRI of its own, as every input a boundary drives is:
+///   `3 × (B + 3 + digits) +` about 73;
+/// - each output port with no IRI of its own: `2 × (B + 4 + digits) +` about 62;
+/// - each block: `2 × B +` its type IRI `+` about 70;
+/// - each authored port, boundary and boundary-output IRI two or three times, as the document
+///   spells it.
+///
+/// For a model the facade loads, computed from those terms, not run: the array elements' term is
+/// held by the reader's budgets to about 188 MiB (2^20 Real elements whose paths take 64 MiB), or
+/// 216 MiB with string elements at their budget. The scalar parameters' and minted ports' terms
+/// are counted by no loader budget (issue #807): an instance writes its IRI at most 35 times
+/// (`CDL.Reals.PIDWithReset`), and the instance IRIs of a document take at most 8 MiB (each is
+/// spelled at least twice, against the 8 MiB document or the 8 MiB `@context` expansion
+/// budget), so about 280 MiB; about 500 MiB with both. A hand-built graph, or one from
+/// [`import_cxf`] that never passed the facade's validation, is bounded only by these terms
+/// applied to the graph: one IRI shared by `N` parameters is written `2N` times, so bounding such
+/// a graph before exporting it is the host's responsibility (`docs/host-responsibilities.md`).
 ///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics

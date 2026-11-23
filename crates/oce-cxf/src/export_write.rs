@@ -4,37 +4,44 @@
 //! The document is the root, then each block followed by its parameter nodes, then one port node
 //! per connector, then the boundary-input and boundary-output nodes: the order the plan's vectors
 //! give. The bytes are those [`crate::write_document`] writes for the whole
-//! [`crate::CxfDocument`]: the `{"@context":…,"@graph":[…]}` frame is written as `serde_json`'s
-//! compact formatter writes a map and a sequence, the root, port and boundary nodes are each a
-//! [`Node`] serialized with the same derive, and a block node and a parameter node are written by
-//! [`BlockNode`] and [`ParamNode`], which name the same keys in the same order. The tests check the
-//! bytes against the document built in full (`export_write_tests.rs`).
+//! [`crate::CxfDocument`] of [`Node`](crate::Node)(crate::Node)s: the `{"@context":…,"@graph":[…]}` frame is written as
+//! `serde_json`'s compact formatter writes a map and a sequence, and each node by a view
+//! ([`RootNode`], [`BlockNode`], [`ParamNode`], [`PortNode`]) that names the keys a [`Node`](crate::Node) with
+//! the same fields set would name, in its order, an empty edge left out and a one-element edge a
+//! bare object. The tests check the bytes against the document built in full
+//! (`export_write_tests.rs`).
 //!
-//! What it holds. Building every node first held a 1,120-byte [`Node`] for each parameter, more
+//! What it holds. Building every node first held a 1,120-byte [`Node`](crate::Node) for each parameter, more
 //! while the node vector grew: a `MatrixGain` whose `K` is 128 by 128 exported 1.7 MB of bytes at a
-//! peak of 58.7 MB. Now a parameter costs nothing here but its bytes: its `@id`, the block's IRI,
-//! `.` and its name, is spelled straight into the output from the graph, in the block's
-//! `S231:hasParameter` list and in its own node, and its binding is built as it is written. The
-//! document is written twice, first only to count its bytes and then into a buffer of exactly that
-//! size, so the buffer never grows: a growing buffer held up to three times the bytes while it
-//! moved. One root, port or boundary node is built at a time, from the plan.
+//! peak of 58.7 MB. Now nothing is built for a node: each `@id` (a block's IRI, a parameter's
+//! `<block>.<name>`, a port's own IRI or `<block>.in<k>`) is spelled straight into the output from
+//! the graph through `collect_str`, a string parameter's CDL literal is escaped as it is written,
+//! and the other bindings and attributes are numbers. The document is written twice, first only
+//! to count its bytes and then into a buffer of exactly that size, so the buffer never grows: a
+//! growing buffer held up to three times the bytes while it moved.
 
-use std::collections::BTreeMap;
-use std::fmt;
+use std::fmt::{self, Display};
 use std::io;
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::Value;
-use serde::ser::{SerializeSeq, SerializeStruct};
+use serde::ser::{SerializeMap, SerializeSeq};
 use serde::{Serialize, Serializer};
 
 use crate::CxfError;
-use crate::dto::{Context, CxfValue, IriRef, Node, OneOrMany};
-use crate::export_attrs::emit_port_attrs;
+use crate::dto::CxfValue;
+use crate::export_attrs::PortAttrs;
+use crate::translation_software::LABEL;
 
-use super::{EXPORT_ROOT_IRI, MSG_STRUCTURE, Plan, S231_CONTEXT_IRI, param_binding};
+use super::{
+    EXPORT_ROOT_IRI, MSG_STRUCTURE, Plan, PlannedBlock, PlannedBoundary, PlannedBoundaryOutput,
+    PortId, S231_CONTEXT_IRI,
+};
 
+#[cfg(test)]
+#[path = "export_write_generated_tests.rs"]
+mod generated_tests;
 #[cfg(test)]
 #[path = "export_write_tests.rs"]
 mod tests;
@@ -51,33 +58,22 @@ pub(super) fn write(plan: &Plan<'_>) -> Result<Vec<u8>, CxfError> {
     emit(plan, &mut size)?;
     let mut out = Vec::with_capacity(size.0);
     emit(plan, &mut out)?;
+    // The two passes write the same bytes, so the buffer never grew.
+    debug_assert_eq!(out.len(), size.0);
+    debug_assert_eq!(out.capacity(), size.0);
     Ok(out)
 }
 
 /// Write the document for `plan` into `out`.
 fn emit<W: io::Write>(plan: &Plan<'_>, out: &mut W) -> Result<(), CxfError> {
-    out.write_all(b"{\"@context\":")
+    out.write_all(b"{\"@context\":{\"S231\":")
         .map_err(serde_json::Error::io)?;
-    serde_json::to_writer(&mut *out, &context())?;
-    out.write_all(b",\"@graph\":[")
+    serde_json::to_writer(&mut *out, S231_CONTEXT_IRI)?;
+    out.write_all(b"},\"@graph\":[")
         .map_err(serde_json::Error::io)?;
-
-    let mut root = blank_node(EXPORT_ROOT_IRI.to_owned());
-    root.r#type = Some(OneOrMany::One("S231:Block".to_owned()));
-    root.has_input = refs(plan.boundaries.iter().map(|b| b.iri.clone()).collect());
-    root.has_output = refs(
-        plan.boundary_outputs
-            .iter()
-            .map(|output| output.iri.clone())
-            .collect(),
-    );
-    root.contains_block = refs(plan.blocks.iter().map(|b| b.iri.clone()).collect());
-    crate::translation_software::stamp(&mut root);
-    serde_json::to_writer(&mut *out, &root)?;
-    drop(root);
+    serde_json::to_writer(&mut *out, &RootNode(plan))?;
 
     for b in &plan.blocks {
-        out.write_all(b",").map_err(serde_json::Error::io)?;
         let node = BlockNode {
             id: &b.iri,
             r#type: &b.type_iri,
@@ -88,43 +84,43 @@ fn emit<W: io::Write>(plan: &Plan<'_>, out: &mut W) -> Result<(), CxfError> {
                 params: b.params,
             },
         };
-        serde_json::to_writer(&mut *out, &node)?;
+        next_node(out, &node)?;
         for (name, value) in b.params {
-            let Some(binding) = param_binding(value) else {
-                return Err(unbound());
-            };
-            out.write_all(b",").map_err(serde_json::Error::io)?;
             let node = ParamNode {
                 id: ParamId {
                     block: &b.iri,
-                    name: name.as_ref(),
+                    name,
                 },
-                value: binding,
+                value: Binding::of(value).ok_or_else(unbound)?,
             };
-            serde_json::to_writer(&mut *out, &node)?;
+            next_node(out, &node)?;
         }
     }
-
     for port in &plan.ports {
-        let mut node = blank_node(port.iri.clone());
-        node.is_of_data_type = Some(iri_ref(port.datatype.to_owned()));
-        node.is_connected_to = refs(port.targets.clone());
-        emit_port_attrs(&mut node, &port.attrs);
+        let node = PortNode {
+            id: &port.iri,
+            targets: &port.targets,
+            datatype: port.datatype,
+            attrs: &port.attrs,
+        };
         next_node(out, &node)?;
     }
-
     for boundary in &plan.boundaries {
-        let mut node = blank_node(boundary.iri.clone());
-        node.is_of_data_type = Some(iri_ref(boundary.datatype.to_owned()));
-        node.is_connected_to = refs(boundary.targets.clone());
-        emit_port_attrs(&mut node, &boundary.attrs);
+        let node = PortNode {
+            id: &boundary.iri,
+            targets: &boundary.targets,
+            datatype: boundary.datatype,
+            attrs: &boundary.attrs,
+        };
         next_node(out, &node)?;
     }
-
     for output in &plan.boundary_outputs {
-        let mut node = blank_node(output.iri.clone());
-        node.is_of_data_type = Some(iri_ref(output.datatype.to_owned()));
-        emit_port_attrs(&mut node, &output.attrs);
+        let node = PortNode {
+            id: &output.iri,
+            targets: &[],
+            datatype: output.datatype,
+            attrs: &output.attrs,
+        };
         next_node(out, &node)?;
     }
 
@@ -134,14 +130,14 @@ fn emit<W: io::Write>(plan: &Plan<'_>, out: &mut W) -> Result<(), CxfError> {
 }
 
 /// Write `node` as a further element of `@graph`: the root is always the first.
-fn next_node<W: io::Write>(out: &mut W, node: &Node) -> Result<(), CxfError> {
+fn next_node<W: io::Write, N: Serialize>(out: &mut W, node: &N) -> Result<(), CxfError> {
     out.write_all(b",").map_err(serde_json::Error::io)?;
     serde_json::to_writer(&mut *out, node)?;
     Ok(())
 }
 
 /// The refusal of a planned parameter with no binding: unreachable, as the plan refuses every
-/// value [`param_binding`] has no binding for.
+/// value [`Binding::of`] has no binding for.
 fn unbound() -> CxfError {
     CxfError::Validation(vec![Diagnostic::error(
         DiagCode::ExportUnsupported,
@@ -163,45 +159,48 @@ impl io::Write for ByteCount {
     }
 }
 
-/// A block node as [`Node`] writes it with `@id`, `@type` and the three edges set: the same keys
-/// in the same order, an empty edge left out, a one-element edge a bare object.
-struct BlockNode<'a> {
-    id: &'a str,
-    r#type: &'a str,
-    has_input: &'a [String],
-    has_output: &'a [String],
-    has_parameter: ParamRefs<'a>,
+/// Something a reference edge names: the `@id` it spells.
+trait Named {
+    /// The `@id`.
+    fn id(&self) -> &dyn Display;
 }
 
-impl Serialize for BlockNode<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut node = serializer.serialize_struct("Node", 5)?;
-        node.serialize_field("@id", self.id)?;
-        node.serialize_field("@type", self.r#type)?;
-        if !self.has_input.is_empty() {
-            node.serialize_field("S231:hasInput", &Refs(self.has_input))?;
-        }
-        if !self.has_output.is_empty() {
-            node.serialize_field("S231:hasOutput", &Refs(self.has_output))?;
-        }
-        if !self.has_parameter.params.is_empty() {
-            node.serialize_field("S231:hasParameter", &self.has_parameter)?;
-        }
-        node.end()
+impl Named for PortId<'_> {
+    fn id(&self) -> &dyn Display {
+        self
     }
 }
 
-/// An edge of `@id`s as [`OneOrMany<IriRef>`] writes it: one `{"@id":…}` bare, more as an array.
-struct Refs<'a>(&'a [String]);
+impl Named for PlannedBlock<'_> {
+    fn id(&self) -> &dyn Display {
+        &self.iri
+    }
+}
 
-impl Serialize for Refs<'_> {
+impl Named for PlannedBoundary<'_> {
+    fn id(&self) -> &dyn Display {
+        &self.iri
+    }
+}
+
+impl Named for PlannedBoundaryOutput<'_> {
+    fn id(&self) -> &dyn Display {
+        &self.iri
+    }
+}
+
+/// An edge as a [`crate::OneOrMany`] of [`crate::IriRef`]s writes it: one `{"@id":…}` bare, more
+/// as an array; an empty edge is left out by the node that holds it.
+struct Refs<'a, T>(&'a [T]);
+
+impl<T: Named> Serialize for Refs<'_, T> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self.0 {
-            [one] => IdRef(one.as_str()).serialize(serializer),
+            [one] => IdRef(one.id()).serialize(serializer),
             many => {
                 let mut seq = serializer.serialize_seq(Some(many.len()))?;
-                for id in many {
-                    seq.serialize_element(&IdRef(id.as_str()))?;
+                for item in many {
+                    seq.serialize_element(&IdRef(item.id()))?;
                 }
                 seq.end()
             }
@@ -209,8 +208,81 @@ impl Serialize for Refs<'_> {
     }
 }
 
-/// A block's `S231:hasParameter` edge, one `{"@id":"<block>.<name>"}` for each of its parameters,
-/// as [`OneOrMany<IriRef>`] writes it.
+/// A `{"@id":…}` reference, as an [`crate::IriRef`] with no other key writes it.
+struct IdRef<T>(T);
+
+impl<T: Display> Serialize for IdRef<T> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut reference = serializer.serialize_map(Some(1))?;
+        reference.serialize_entry("@id", &Spelled(&self.0))?;
+        reference.end()
+    }
+}
+
+/// A value written as the one JSON string its [`Display`] spells, never built.
+struct Spelled<T>(T);
+
+impl<T: Display> Serialize for Spelled<T> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(&self.0)
+    }
+}
+
+/// The root composite as [`Node`](crate::Node) writes it with `@id`, `@type`, its three edges and the
+/// translation-software label (`crate::translation_software::stamp`: two keys of the node's map of
+/// other keys, after its fields, in that map's sorted order).
+struct RootNode<'a, 'g>(&'a Plan<'g>);
+
+impl Serialize for RootNode<'_, '_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let plan = self.0;
+        let mut node = serializer.serialize_map(None)?;
+        node.serialize_entry("@id", EXPORT_ROOT_IRI)?;
+        node.serialize_entry("@type", "S231:Block")?;
+        if !plan.boundaries.is_empty() {
+            node.serialize_entry("S231:hasInput", &Refs(&plan.boundaries))?;
+        }
+        if !plan.boundary_outputs.is_empty() {
+            node.serialize_entry("S231:hasOutput", &Refs(&plan.boundary_outputs))?;
+        }
+        if !plan.blocks.is_empty() {
+            node.serialize_entry("S231:containsBlock", &Refs(&plan.blocks))?;
+        }
+        for (key, value) in LABEL {
+            node.serialize_entry(key, value)?;
+        }
+        node.end()
+    }
+}
+
+/// A block node as [`Node`](crate::Node) writes it with `@id`, `@type` and the three edges set.
+struct BlockNode<'a> {
+    id: &'a str,
+    r#type: &'a str,
+    has_input: &'a [PortId<'a>],
+    has_output: &'a [PortId<'a>],
+    has_parameter: ParamRefs<'a>,
+}
+
+impl Serialize for BlockNode<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut node = serializer.serialize_map(None)?;
+        node.serialize_entry("@id", self.id)?;
+        node.serialize_entry("@type", self.r#type)?;
+        if !self.has_input.is_empty() {
+            node.serialize_entry("S231:hasInput", &Refs(self.has_input))?;
+        }
+        if !self.has_output.is_empty() {
+            node.serialize_entry("S231:hasOutput", &Refs(self.has_output))?;
+        }
+        if !self.has_parameter.params.is_empty() {
+            node.serialize_entry("S231:hasParameter", &self.has_parameter)?;
+        }
+        node.end()
+    }
+}
+
+/// A block's `S231:hasParameter` edge, one `{"@id":"<block>.<name>"}` for each of its parameters.
 struct ParamRefs<'a> {
     block: &'a str,
     params: &'a [(Arc<str>, Value)],
@@ -218,18 +290,16 @@ struct ParamRefs<'a> {
 
 impl<'a> Serialize for ParamRefs<'a> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let id = |name: &'a Arc<str>| {
-            IdRef(ParamId {
-                block: self.block,
-                name: name.as_ref(),
-            })
+        let id = |name: &'a Arc<str>| ParamId {
+            block: self.block,
+            name,
         };
         match self.params {
-            [(name, _)] => id(name).serialize(serializer),
+            [(name, _)] => IdRef(id(name)).serialize(serializer),
             many => {
                 let mut seq = serializer.serialize_seq(Some(many.len()))?;
                 for (name, _) in many {
-                    seq.serialize_element(&id(name))?;
+                    seq.serialize_element(&IdRef(id(name)))?;
                 }
                 seq.end()
             }
@@ -237,25 +307,14 @@ impl<'a> Serialize for ParamRefs<'a> {
     }
 }
 
-/// A `{"@id":…}` reference, as an [`IriRef`] with no other key writes it.
-struct IdRef<T>(T);
-
-impl<T: Serialize> Serialize for IdRef<T> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut reference = serializer.serialize_struct("IriRef", 1)?;
-        reference.serialize_field("@id", &self.0)?;
-        reference.end()
-    }
-}
-
-/// A parameter node's `@id`, `<block>.<name>`, written as one JSON string and never built.
+/// A parameter node's `@id`, `<block>.<name>`.
 #[derive(Clone, Copy)]
 struct ParamId<'a> {
     block: &'a str,
     name: &'a str,
 }
 
-impl fmt::Display for ParamId<'_> {
+impl Display for ParamId<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.block)?;
         f.write_str(".")?;
@@ -263,86 +322,126 @@ impl fmt::Display for ParamId<'_> {
     }
 }
 
-impl Serialize for ParamId<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.collect_str(self)
-    }
-}
-
-/// A parameter node as [`Node`] writes it with `@id` and `S231:value` set.
+/// A parameter node as [`Node`](crate::Node) writes it with `@id` and `S231:value` set.
 struct ParamNode<'a> {
     id: ParamId<'a>,
-    value: CxfValue,
+    value: Binding<'a>,
 }
 
 impl Serialize for ParamNode<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut node = serializer.serialize_struct("Node", 2)?;
-        node.serialize_field("@id", &self.id)?;
-        node.serialize_field("S231:value", &self.value)?;
+        let mut node = serializer.serialize_map(None)?;
+        node.serialize_entry("@id", &Spelled(self.id))?;
+        node.serialize_entry("S231:value", &self.value)?;
         node.end()
     }
 }
 
-/// The export's `@context`: the one `S231` prefix binding.
-fn context() -> Context {
-    let mut context = BTreeMap::new();
-    context.insert(
-        "S231".to_owned(),
-        serde_json::Value::String(S231_CONTEXT_IRI.to_owned()),
-    );
-    Context::Map(context)
+/// A parameter's binding as written: a bare literal, or a string's CDL literal (the bytes the
+/// tests' reference `string_literal` builds), escaped as it is written.
+enum Binding<'a> {
+    /// A Real, Integer or Boolean literal.
+    Literal(CxfValue),
+    /// A string value, written as the CDL literal of the text.
+    Text(&'a str),
 }
 
-/// A [`Node`] with only its `@id` set — every other field absent/empty.
-fn blank_node(id: String) -> Node {
-    Node {
-        id,
-        r#type: None,
-        has_input: OneOrMany::None,
-        has_output: OneOrMany::None,
-        has_parameter: OneOrMany::None,
-        has_constant: OneOrMany::None,
-        contains_block: OneOrMany::None,
-        has_instance: OneOrMany::None,
-        is_connected_to: OneOrMany::None,
-        is_of_data_type: None,
-        label: None,
-        access: None,
-        value: None,
-        min: None,
-        max: None,
-        nominal: None,
-        unit: None,
-        quantity: None,
-        display_unit: None,
-        is_final: None,
-        is_array: None,
-        n_dims: None,
-        size_dims: None,
-        fmu_path: None,
-        is_conditional: None,
-        cond_expr: None,
-        is_replaceable: None,
-        other: BTreeMap::new(),
+impl<'a> Binding<'a> {
+    /// The binding of `value`: `None` exactly where the plan's `bindable` refuses it.
+    fn of(value: &'a Value) -> Option<Self> {
+        match value {
+            Value::Real(r) if r.is_finite() => Some(Binding::Literal(CxfValue::Float(*r))),
+            Value::Integer(i) => Some(Binding::Literal(CxfValue::Int(*i))),
+            Value::Boolean(b) => Some(Binding::Literal(CxfValue::Bool(*b))),
+            Value::String(text) => Some(Binding::Text(text)),
+            Value::Real(_) | Value::Enum { .. } => None,
+        }
     }
 }
 
-/// A bare `{"@id": …}` cross-reference.
-fn iri_ref(id: String) -> IriRef {
-    IriRef {
-        id,
-        other: BTreeMap::new(),
+impl Serialize for Binding<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Binding::Literal(value) => value.serialize(serializer),
+            Binding::Text(text) => serializer.collect_str(&CdlLiteral(text)),
+        }
     }
 }
 
-/// Wrap `@id`s as a [`OneOrMany`] edge: absent for zero, a bare object for one (the producer
-/// byte style [`OneOrMany::One`] serializes to), an array otherwise.
-fn refs(ids: Vec<String>) -> OneOrMany<IriRef> {
-    let mut ids = ids;
-    match ids.len() {
-        0 => OneOrMany::None,
-        1 => OneOrMany::One(iri_ref(ids.remove(0))),
-        _ => OneOrMany::Many(ids.into_iter().map(iri_ref).collect()),
+/// A CDL string literal of a text: `"`, the text with each `"` and `\` escaped by a `\`, `"`.
+struct CdlLiteral<'a>(&'a str);
+
+impl Display for CdlLiteral<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("\"")?;
+        let mut rest = self.0;
+        while let Some(at) = rest.find(['"', '\\']) {
+            f.write_str(&rest[..at])?;
+            f.write_str("\\")?;
+            f.write_str(&rest[at..=at])?;
+            rest = &rest[at + 1..];
+        }
+        f.write_str(rest)?;
+        f.write_str("\"")
+    }
+}
+
+/// A port, boundary-input or boundary-output node as [`Node`](crate::Node) writes it with `@id`,
+/// `S231:isConnectedTo`, `S231:isOfDataType` and the classified attributes set: the
+/// Bare-Scalar Canonical keys, in [`Node`](crate::Node)'s order.
+struct PortNode<'a, I> {
+    id: &'a I,
+    targets: &'a [PortId<'a>],
+    datatype: &'static str,
+    attrs: &'a PortAttrs,
+}
+
+impl<I: Display> Serialize for PortNode<'_, I> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut node = serializer.serialize_map(None)?;
+        node.serialize_entry("@id", &Spelled(self.id))?;
+        if !self.targets.is_empty() {
+            node.serialize_entry("S231:isConnectedTo", &Refs(self.targets))?;
+        }
+        node.serialize_entry("S231:isOfDataType", &IdRef(self.datatype))?;
+        match self.attrs {
+            PortAttrs::Real {
+                unit,
+                quantity,
+                display_unit,
+                min,
+                max,
+                nominal,
+            } => {
+                if let Some(min) = min {
+                    node.serialize_entry("S231:min", &CxfValue::Float(*min))?;
+                }
+                if let Some(max) = max {
+                    node.serialize_entry("S231:max", &CxfValue::Float(*max))?;
+                }
+                if let Some(nominal) = nominal {
+                    node.serialize_entry("S231:nominal", &CxfValue::Float(*nominal))?;
+                }
+                if let Some(unit) = unit {
+                    node.serialize_entry("S231:unit", &**unit)?;
+                }
+                if let Some(quantity) = quantity {
+                    node.serialize_entry("S231:quantity", &**quantity)?;
+                }
+                if let Some(display_unit) = display_unit {
+                    node.serialize_entry("S231:displayUnit", &**display_unit)?;
+                }
+            }
+            PortAttrs::Integer { min, max } => {
+                if let Some(min) = min {
+                    node.serialize_entry("S231:min", &CxfValue::Int(*min))?;
+                }
+                if let Some(max) = max {
+                    node.serialize_entry("S231:max", &CxfValue::Int(*max))?;
+                }
+            }
+            PortAttrs::None => {}
+        }
+        node.end()
     }
 }

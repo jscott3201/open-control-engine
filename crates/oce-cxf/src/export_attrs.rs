@@ -5,6 +5,7 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
 use oce_model::Attrs;
 
+#[cfg(test)]
 use crate::dto::{CxfValue, Node, TermAttr};
 
 /// The connector carries a non-default `unbounded` attribute (the importer hardcodes
@@ -92,7 +93,10 @@ fn reject(message: &str, subject: &str) -> Diagnostic {
     Diagnostic::error(DiagCode::ExportUnsupported, message).with_subject(subject.to_owned())
 }
 
-/// Emit a port node's classified attributes under the Bare-Scalar Canonical wire shape.
+/// Emit a port node's classified attributes under the Bare-Scalar Canonical wire shape, on a
+/// [`Node`]: the tests' reference for the document built in full. The writer writes the same
+/// keys from the classified attributes without building a node (`export_write.rs`).
+#[cfg(test)]
 pub(super) fn emit_port_attrs(node: &mut Node, attrs: &PortAttrs) {
     match attrs {
         PortAttrs::Real {

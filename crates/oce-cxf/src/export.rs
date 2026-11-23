@@ -37,11 +37,11 @@
 //! engine-loaded graph, §7.10 unification may have filled an unset child or boundary-output value
 //! from its peer; boundary-input unification is a separately reviewed acceptance change. Each attr
 //! is emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
-//! `displayUnit` as bare strings ([`crate::dto::TermAttr::Bare`], Real only), `S231:min`/`max` as bare
-//! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer), and `S231:nominal` as a
-//! bare [`CxfValue::Float`] (Real only; imported since issue #379). Bare is the unique
-//! shape that survives the importer's `as_term()` collapse and reproduces itself, so the RT-2
-//! render fixpoint holds on an imported `G`. Attributes are emitted iff `Some` (the stored
+//! `displayUnit` as bare strings ([`crate::dto::TermAttr::Bare`], Real only), `S231:min`/`max`
+//! as bare numbers ([`crate::CxfValue::Float`] for Real, [`crate::CxfValue::Int`] for
+//! Integer), and `S231:nominal` as a bare [`crate::CxfValue::Float`] (Real only; imported since
+//! issue #379). Bare is the unique shape that survives the importer's `as_term()` collapse and
+//! reproduces itself, so the RT-2 render fixpoint holds on an imported `G`. Attributes are emitted iff `Some` (the stored
 //! field default is `None`); `None` fields are omitted, so an all-default connector emits zero
 //! attr keys — byte-identical to an attr-free port node. `unbounded` (the importer hardcodes
 //! `None`) and a non-finite Real `min`/`max`/`nominal` (which serialize as JSON `null`) are
@@ -101,6 +101,7 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic, DiagnosticList, has_errors};
 use oce_model::{Connector, Dir, ModelGraph, Value, ValueType};
 
+#[cfg(test)]
 use crate::dto::CxfValue;
 use crate::export_attrs::{PortAttrs, classify_attrs};
 use crate::export_defer::deferral_set;
@@ -117,7 +118,7 @@ mod single_assignment;
 #[path = "export_write.rs"]
 mod write;
 
-use emitted_ids::EmittedId;
+use emitted_ids::{EmittedId, PortId};
 
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
 /// root IRI, so every export uses this fixed, collision-improbable URN. A (contrived) block whose
@@ -213,45 +214,48 @@ const MSG_DUPLICATE_ID: &str =
 /// can miss. Produced by [`plan`] only when the subset checks all pass.
 struct Plan<'g> {
     blocks: Vec<PlannedBlock<'g>>,
-    ports: Vec<PlannedPort>,
-    boundaries: Vec<PlannedBoundary>,
-    boundary_outputs: Vec<PlannedBoundaryOutput>,
+    ports: Vec<PlannedPort<'g>>,
+    boundaries: Vec<PlannedBoundary<'g>>,
+    boundary_outputs: Vec<PlannedBoundaryOutput<'g>>,
 }
 
-/// One block node plus its parameter nodes. Every `@id` but the parameters' is minted; a
-/// parameter node's `@id` is `<iri>.<name>`, spelled where it is written (issue #803).
+/// One block node plus its parameter nodes. Every `@id` is borrowed from the graph or held in
+/// parts ([`PortId`]), and spelled only where it is written (issue #803); a parameter node's is
+/// `<iri>.<name>`.
 struct PlannedBlock<'g> {
-    iri: String,
+    /// The block's IRI, borrowed (owned only for the synthetic `block#N` of an IRI-less block,
+    /// which the plan refuses).
+    iri: Cow<'g, str>,
     type_iri: String,
     /// The block's whole parameter table, in `ParamTable` order: a plan exists only when every
-    /// entry has a bare member name and a value with a binding ([`param_binding`]).
+    /// entry has a bare member name and a value with a binding ([`bindable`]).
     params: &'g [(Arc<str>, Value)],
-    input_ports: Vec<String>,
-    output_ports: Vec<String>,
+    input_ports: Vec<PortId<'g>>,
+    output_ports: Vec<PortId<'g>>,
 }
 
-/// One port node: minted `@id`, `isOfDataType` term, `isConnectedTo` targets (outputs only),
+/// One port node: its `@id`, `isOfDataType` term, `isConnectedTo` targets (outputs only),
 /// and the classified §7.4.1 attributes to emit (Bare-Scalar Canonical).
-struct PlannedPort {
-    iri: String,
+struct PlannedPort<'g> {
+    iri: PortId<'g>,
     datatype: &'static str,
-    targets: Vec<String>,
+    targets: Vec<PortId<'g>>,
     attrs: PortAttrs,
 }
 
-/// One boundary-input node: stored boundary IRI, datatype, declaration attrs, and minted child
+/// One boundary-input node: stored boundary IRI, datatype, declaration attrs, and the child
 /// ports it drives.
-struct PlannedBoundary {
-    iri: String,
+struct PlannedBoundary<'g> {
+    iri: &'g str,
     datatype: &'static str,
-    targets: Vec<String>,
+    targets: Vec<PortId<'g>>,
     attrs: PortAttrs,
 }
 
 /// One declared boundary-output node: authored IRI, datatype, and its classified §7.4.1
 /// attributes (the DECLARED node's own, never the driving connector's).
-struct PlannedBoundaryOutput {
-    iri: String,
+struct PlannedBoundaryOutput<'g> {
+    iri: &'g str,
     datatype: &'static str,
     attrs: PortAttrs,
 }
@@ -341,7 +345,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
     // diag, no `PlannedBlock`); its connectors are placeholder-indexed but never emitted.
     let mut diags = DiagnosticList::new();
     let deferred = deferral_set(g, &mut diags);
-    let mut port_iri: Vec<Option<String>> = vec![None; g.connectors.len()];
+    let mut port_iri: Vec<Option<PortId<'_>>> = vec![None; g.connectors.len()];
     let mut blocks: Vec<PlannedBlock<'_>> = Vec::with_capacity(g.blocks.len());
     // Every @id the document will carry, for duplicate detection only — membership checks,
     // never iteration, so emission order still derives from the ModelGraph vectors alone. A
@@ -414,12 +418,15 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
             // boundary IRI. Keep synthesising that child port so the boundary node and child port
             // remain distinct; all other imported connectors retain their authored identity.
             let minted = if g.external_inputs.contains(cid) {
-                format!("{subject}.in{k}")
+                PortId::minted(subject.clone(), true, k)
             } else {
                 g.connectors
                     .get(cid.0 as usize)
                     .and_then(|connector| connector.iri.as_deref())
-                    .map_or_else(|| format!("{subject}.in{k}"), str::to_owned)
+                    .map_or_else(
+                        || PortId::minted(subject.clone(), true, k),
+                        PortId::Authored,
+                    )
             };
             if claim_port(
                 g,
@@ -431,7 +438,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
                 &subject,
                 &mut diags,
             ) {
-                let id = EmittedId::Whole(Cow::Owned(minted.clone()));
+                let id = EmittedId::Port(minted.clone());
                 claim_emitted_id(&mut seen, id, &subject, &mut diags);
                 input_ports.push(minted);
             }
@@ -442,7 +449,10 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
                 .connectors
                 .get(cid.0 as usize)
                 .and_then(|connector| connector.iri.as_deref())
-                .map_or_else(|| format!("{subject}.out{k}"), str::to_owned);
+                .map_or_else(
+                    || PortId::minted(subject.clone(), false, k),
+                    PortId::Authored,
+                );
             if claim_port(
                 g,
                 bi,
@@ -453,14 +463,14 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
                 &subject,
                 &mut diags,
             ) {
-                let id = EmittedId::Whole(Cow::Owned(minted.clone()));
+                let id = EmittedId::Port(minted.clone());
                 claim_emitted_id(&mut seen, id, &subject, &mut diags);
                 output_ports.push(minted);
             }
         }
 
         blocks.push(PlannedBlock {
-            iri: subject.into_owned(),
+            iri: subject,
             type_iri,
             params: &b.params.values,
             input_ports,
@@ -580,8 +590,8 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
     // in-degree, and the target guard keeps a multiply-driven input on a deferred block from being
     // counted at all. Move the increment above either one and the count stops describing the
     // emitted document.
-    let mut targets: Vec<Vec<String>> = vec![Vec::new(); g.connectors.len()];
-    let mut boundary_outputs: Vec<PlannedBoundaryOutput> = Vec::new();
+    let mut targets: Vec<Vec<PortId<'_>>> = vec![Vec::new(); g.connectors.len()];
+    let mut boundary_outputs: Vec<PlannedBoundaryOutput<'_>> = Vec::new();
     // Surviving drivers per connector, for the §7.10 single-assignment check after this loop, as
     // two flags rather than a count. Recorded at the `targets` push site so they describe exactly
     // the edges the document will carry.
@@ -668,7 +678,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
         let iri = output.iri.as_ref();
         let id = EmittedId::Whole(Cow::Borrowed(iri));
         claim_emitted_id(&mut seen, id, &owner_subject(g, source, idx), &mut diags);
-        targets[idx].push(iri.to_owned());
+        targets[idx].push(PortId::Authored(iri));
         // Same R5 tag guard as the Phase 4 connector scan: `BoundaryOutput.attrs` is a plain
         // field, so a host can hand Real attrs to a Boolean output, and emitting that would
         // produce bytes the import refuses. Subject = the declared node — the thing a host
@@ -682,7 +692,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
             PortAttrs::None
         };
         boundary_outputs.push(PlannedBoundaryOutput {
-            iri: iri.to_owned(),
+            iri,
             datatype: datatypes[idx],
             attrs,
         });
@@ -725,7 +735,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
     // an export whose only defect sits in a block the document omits. Reserved endpoint checks run
     // in Phase 3 before this skip. The ordinary arm is pinned by
     // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
-    let mut boundaries: Vec<PlannedBoundary> = Vec::new();
+    let mut boundaries: Vec<PlannedBoundary<'_>> = Vec::new();
     // Survivor `external_inputs` connectors already seen, for the duplicate-entry rejection below.
     // Scoped to survivors on purpose: the `deferred.contains` skip runs first, so a duplicate on a
     // deferred block never reaches the check and never aborts an export whose document omits it.
@@ -799,11 +809,11 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
             // survived the deferred-owner skip above, so the slot is not a placeholder. A second
             // guard here would add a duplicate diagnostic naming the innocent input connector.
             boundary_outputs.push(PlannedBoundaryOutput {
-                iri: output_iri.to_owned(),
+                iri: output_iri,
                 datatype,
                 attrs: classified[output_idx].clone(),
             });
-            output_iri.to_owned()
+            PortId::Authored(output_iri)
         } else {
             let Some(target) = port_iri[idx].as_ref() else {
                 continue; // orphan connector: already rejected above
@@ -831,7 +841,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
                     None => PortAttrs::None,
                 };
                 boundaries.push(PlannedBoundary {
-                    iri: boundary_iri.to_owned(),
+                    iri: boundary_iri,
                     datatype,
                     targets: vec![target],
                     attrs,
@@ -907,13 +917,13 @@ fn listed(diags: DiagnosticList) -> Vec<Diagnostic> {
 /// by a different block, points the other way, or was already claimed.
 #[allow(clippy::too_many_arguments)] // A claim needs the graph, the claim key, and the two
 // accumulators; bundling them into a one-shot struct would only rename the arguments.
-fn claim_port(
+fn claim_port<'g>(
     g: &ModelGraph,
     bi: usize,
     raw_cid: u32,
     dir: Dir,
-    minted: &str,
-    port_iri: &mut [Option<String>],
+    minted: &PortId<'g>,
+    port_iri: &mut [Option<PortId<'g>>],
     subject: &str,
     diags: &mut DiagnosticList,
 ) -> bool {
@@ -924,14 +934,14 @@ fn claim_port(
         .is_some_and(|c| c.block.0 as usize == bi && c.dir == dir)
         && port_iri.get(idx).is_some_and(Option::is_none);
     if claimable {
-        port_iri[idx] = Some(minted.to_owned());
+        port_iri[idx] = Some(minted.clone());
     } else {
         diags.raise(|| reject(MSG_STRUCTURE, subject));
     }
     claimable
 }
 
-/// Whether one ground parameter value has a canonical CXF binding ([`param_binding`]), raising
+/// Whether one ground parameter value has a canonical CXF binding, raising
 /// the refusal when it has none (enumeration values have no literal form here; non-finite Reals
 /// would serialize as JSON `null`). Builds no binding: the writer builds each one as it writes it.
 fn bindable(name: &str, value: &Value, subject: &str, diags: &mut DiagnosticList) -> bool {
@@ -965,8 +975,10 @@ fn bindable(name: &str, value: &Value, subject: &str, diags: &mut DiagnosticList
     }
 }
 
-/// The canonical CXF binding of one ground parameter value: `None` exactly where [`bindable`]
-/// refuses it.
+/// The canonical CXF binding of one ground parameter value, as the whole document built in full
+/// binds it: `None` exactly where [`bindable`] refuses it. The tests' reference; the writer
+/// writes a string literal without building it (`export_write.rs`).
+#[cfg(test)]
 fn param_binding(value: &Value) -> Option<CxfValue> {
     match value {
         Value::Real(r) if r.is_finite() => Some(CxfValue::Float(*r)),
@@ -979,7 +991,9 @@ fn param_binding(value: &Value) -> Option<CxfValue> {
 
 /// Quote a `Value::String` payload as a CDL string-literal expression. Only `\` and `"` need
 /// escaping (the `oce-expr` lexer resolves both; every other character — including raw control
-/// characters — passes through the JSON string layer verbatim).
+/// characters — passes through the JSON string layer verbatim). The tests' reference, as
+/// [`param_binding`].
+#[cfg(test)]
 fn string_literal(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 2);
     out.push('"');

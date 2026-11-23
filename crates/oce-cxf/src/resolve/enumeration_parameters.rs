@@ -249,3 +249,7 @@ fn g36_enum_expr_refusal<'a>(
     }
     None
 }
+
+#[cfg(test)]
+#[path = "enumeration_parameters_tests.rs"]
+mod tests;

@@ -3,6 +3,7 @@
 //! #803): for every fixture the exporter accepts and for hand-built graphs whose identities and
 //! values need escaping.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -12,26 +13,85 @@ use oce_model::{
     Value, ValueType,
 };
 
-use super::super::plan;
-use super::{ByteCount, Plan, blank_node, emit, iri_ref, refs, write};
-use crate::dto::{Context, CxfDocument, OneOrMany};
+use super::super::{S231_CONTEXT_IRI, param_binding, plan};
+use super::{ByteCount, Plan, emit, write};
+use crate::dto::{Context, CxfDocument, IriRef, Node, OneOrMany};
 use crate::export::EXPORT_ROOT_IRI;
+use crate::export_attrs::emit_port_attrs;
 use crate::{ResolveOptions, import_cxf, write_document};
 
+/// A [`Node`] with only its `@id` set — every other field absent/empty.
+fn blank_node(id: String) -> Node {
+    Node {
+        id,
+        r#type: None,
+        has_input: OneOrMany::None,
+        has_output: OneOrMany::None,
+        has_parameter: OneOrMany::None,
+        has_constant: OneOrMany::None,
+        contains_block: OneOrMany::None,
+        has_instance: OneOrMany::None,
+        is_connected_to: OneOrMany::None,
+        is_of_data_type: None,
+        label: None,
+        access: None,
+        value: None,
+        min: None,
+        max: None,
+        nominal: None,
+        unit: None,
+        quantity: None,
+        display_unit: None,
+        is_final: None,
+        is_array: None,
+        n_dims: None,
+        size_dims: None,
+        fmu_path: None,
+        is_conditional: None,
+        cond_expr: None,
+        is_replaceable: None,
+        other: BTreeMap::new(),
+    }
+}
+
+/// A bare `{"@id": …}` cross-reference.
+fn iri_ref(id: String) -> IriRef {
+    IriRef {
+        id,
+        other: BTreeMap::new(),
+    }
+}
+
+/// `@id`s as a [`OneOrMany`] edge: absent for zero, a bare object for one, an array otherwise.
+fn refs(ids: Vec<String>) -> OneOrMany<IriRef> {
+    let mut ids = ids;
+    match ids.len() {
+        0 => OneOrMany::None,
+        1 => OneOrMany::One(iri_ref(ids.remove(0))),
+        _ => OneOrMany::Many(ids.into_iter().map(iri_ref).collect()),
+    }
+}
+
+/// Each of `ids` spelled as a `String`.
+fn spelled<T: ToString>(ids: &[T]) -> Vec<String> {
+    ids.iter().map(ToString::to_string).collect()
+}
+
 /// The document for `plan` built in full, every node at once, as the exporter built it before
-/// it wrote one node at a time.
+/// it wrote one node at a time: [`Node`]s, `emit_port_attrs`, `param_binding` and
+/// `crate::translation_software::stamp`.
 fn document_built_in_full(plan: &Plan<'_>) -> CxfDocument {
     let mut graph = Vec::new();
     let mut root = blank_node(EXPORT_ROOT_IRI.to_owned());
     root.r#type = Some(OneOrMany::One("S231:Block".to_owned()));
-    root.has_input = refs(plan.boundaries.iter().map(|b| b.iri.clone()).collect());
+    root.has_input = refs(plan.boundaries.iter().map(|b| b.iri.to_owned()).collect());
     root.has_output = refs(
         plan.boundary_outputs
             .iter()
-            .map(|o| o.iri.clone())
+            .map(|o| o.iri.to_owned())
             .collect(),
     );
-    root.contains_block = refs(plan.blocks.iter().map(|b| b.iri.clone()).collect());
+    root.contains_block = refs(plan.blocks.iter().map(|b| b.iri.to_string()).collect());
     crate::translation_software::stamp(&mut root);
     graph.push(root);
     for b in &plan.blocks {
@@ -40,48 +100,53 @@ fn document_built_in_full(plan: &Plan<'_>) -> CxfDocument {
             .iter()
             .map(|(name, _)| format!("{}.{name}", b.iri))
             .collect();
-        let mut node = blank_node(b.iri.clone());
+        let mut node = blank_node(b.iri.to_string());
         node.r#type = Some(OneOrMany::One(b.type_iri.clone()));
-        node.has_input = refs(b.input_ports.clone());
-        node.has_output = refs(b.output_ports.clone());
+        node.has_input = refs(spelled(&b.input_ports));
+        node.has_output = refs(spelled(&b.output_ports));
         node.has_parameter = refs(ids.clone());
         graph.push(node);
         for (id, (_, value)) in ids.into_iter().zip(b.params) {
             let mut pnode = blank_node(id);
-            pnode.value = Some(super::param_binding(value).expect("a planned binding"));
+            pnode.value = Some(param_binding(value).expect("a planned binding"));
             graph.push(pnode);
         }
     }
     for port in &plan.ports {
-        let mut node = blank_node(port.iri.clone());
+        let mut node = blank_node(port.iri.to_string());
         node.is_of_data_type = Some(iri_ref(port.datatype.to_owned()));
-        node.is_connected_to = refs(port.targets.clone());
-        super::emit_port_attrs(&mut node, &port.attrs);
+        node.is_connected_to = refs(spelled(&port.targets));
+        emit_port_attrs(&mut node, &port.attrs);
         graph.push(node);
     }
     for boundary in &plan.boundaries {
-        let mut node = blank_node(boundary.iri.clone());
+        let mut node = blank_node(boundary.iri.to_owned());
         node.is_of_data_type = Some(iri_ref(boundary.datatype.to_owned()));
-        node.is_connected_to = refs(boundary.targets.clone());
-        super::emit_port_attrs(&mut node, &boundary.attrs);
+        node.is_connected_to = refs(spelled(&boundary.targets));
+        emit_port_attrs(&mut node, &boundary.attrs);
         graph.push(node);
     }
     for output in &plan.boundary_outputs {
-        let mut node = blank_node(output.iri.clone());
+        let mut node = blank_node(output.iri.to_owned());
         node.is_of_data_type = Some(iri_ref(output.datatype.to_owned()));
-        super::emit_port_attrs(&mut node, &output.attrs);
+        emit_port_attrs(&mut node, &output.attrs);
         graph.push(node);
     }
+    let mut context = BTreeMap::new();
+    context.insert(
+        "S231".to_owned(),
+        serde_json::Value::String(S231_CONTEXT_IRI.to_owned()),
+    );
     CxfDocument {
-        context: super::context(),
+        context: Context::Map(context),
         graph,
-        other: Default::default(),
+        other: BTreeMap::new(),
     }
 }
 
 /// Assert that the export of `g` writes the bytes of its document built in full, that the
 /// counting pass counts exactly those bytes, and return how many parameters it wrote.
-fn assert_written_as_built_in_full(g: &ModelGraph, what: &str) -> usize {
+pub(super) fn assert_written_as_built_in_full(g: &ModelGraph, what: &str) -> usize {
     let (plan, _) = plan(g).unwrap_or_else(|d| panic!("{what}: the plan is refused: {d:?}"));
     let written = write(&plan).expect("the plan writes");
     let built = write_document(&document_built_in_full(&plan)).expect("the document serializes");
@@ -166,7 +231,7 @@ fn constants(blocks: Vec<(&str, Params)>) -> ModelGraph {
 }
 
 /// The parameter `name` bound to `value`.
-fn param(name: &str, value: Value) -> (Arc<str>, Value) {
+pub(super) fn param(name: &str, value: Value) -> (Arc<str>, Value) {
     (Arc::from(name), value)
 }
 
@@ -194,6 +259,14 @@ fn identities_and_values_that_need_escaping_are_written_as_built_in_full() {
             Value::String(Arc::from("\u{0}\n\t\u{1b}\u{2029}é\u{1F600}")),
         ),
         param("n\"\\\u{2}é", Value::Integer(3)),
+        // Names the plan admits (it refuses only an empty name and one with a `.`) whose JSON
+        // spelling escapes or keeps a character a lossy writer could change.
+        param("n\u{2028}", Value::Integer(4)),
+        param("n\u{2029}", Value::Integer(5)),
+        param("n\u{7f}", Value::Integer(6)),
+        param("n\u{1}\u{1f}", Value::Integer(7)),
+        param("n\u{1F600}", Value::Integer(8)),
+        param("n\u{10FFFF}", Value::Integer(9)),
     ];
     let shapes = [
         (
@@ -351,4 +424,46 @@ fn a_parameter_id_held_in_parts_collides_with_the_same_id_spelled_whole_in_eithe
     // A parameter named like the block's minted output port: one `@id`, refused once.
     let port = constants(vec![("urn:x", vec![param("out0", Value::Real(1.0))])]);
     assert_eq!(plan(&port).err(), Some(vec![duplicate("urn:x")]));
+}
+
+#[test]
+fn reals_of_every_written_form_are_counted_as_written() {
+    // The counting pass and the writing pass spell each Real the same way, so the buffer is the
+    // bytes' size: whole numbers with a `.0`, exponents both ways, subnormals, the extremes and
+    // both zeros, as bindings and as connector bounds and nominals.
+    let reals = [
+        0.0,
+        -0.0,
+        1.0,
+        -2.0,
+        0.1,
+        1.0 / 3.0,
+        1e15,
+        1e16,
+        1e17,
+        1e21,
+        -7.25e22,
+        1e-6,
+        1e-7,
+        1e-300,
+        5e-324,
+        f64::MIN_POSITIVE,
+        f64::MAX,
+        f64::MIN,
+        123_456_789.012_345_68,
+    ];
+    let params = reals
+        .iter()
+        .enumerate()
+        .map(|(i, r)| param(&format!("r_{i}"), Value::Real(*r)))
+        .collect();
+    let mut g = constants(vec![("urn:reals", params)]);
+    g.connectors[0].attrs = oce_model::Attrs::Real(oce_model::RealAttrs {
+        min: Some(1e-300),
+        max: Some(-7.25e22),
+        nominal: Some(5e-324),
+        unit: Some(Arc::from("K")),
+        ..Default::default()
+    });
+    assert_eq!(assert_written_as_built_in_full(&g, "reals"), reals.len());
 }

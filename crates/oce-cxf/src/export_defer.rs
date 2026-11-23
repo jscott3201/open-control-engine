@@ -32,6 +32,7 @@
 //! algorithm; nothing checked it, and a hand-built graph that broke it exported `Ok` with bytes
 //! that failed re-import.
 
+use std::borrow::Cow;
 use std::collections::{BTreeSet, HashMap};
 
 use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
@@ -104,11 +105,13 @@ fn msg_enum_defer_cascade(subject: &str, conn: &str) -> String {
 
 /// The diagnostic subject for block `bi`: its `instance_iri`, else a synthetic `block#bi` tag
 /// (mirrors the resolver's convention and `crate::export::owner_subject` for IRI-less blocks).
-fn block_subject(g: &ModelGraph, bi: usize) -> String {
+/// Borrowed from the graph when the block has an IRI: a warning copies it when it is raised, and
+/// nothing is copied once the list has ended (issue #799).
+fn block_subject(g: &ModelGraph, bi: usize) -> Cow<'_, str> {
     g.blocks
         .get(bi)
         .and_then(|b| b.instance_iri.as_deref())
-        .map_or_else(|| format!("block#{bi}"), str::to_owned)
+        .map_or_else(|| Cow::Owned(format!("block#{bi}")), Cow::Borrowed)
 }
 
 /// Whether block `bi` carries any enumeration-typed connector, returning the class id of the
