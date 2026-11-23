@@ -167,7 +167,10 @@ fn mutations() -> Vec<Mutation> {
         ),
         (
             "connector path",
-            |i| i.manifest.connectors[0].path.push_str(".changed"),
+            |i| {
+                let path = &mut i.manifest.connectors[0].path;
+                *path = format!("{path}.changed").into();
+            },
             I("connector http://example.org#MinLoop.gt:In:0"),
         ),
         (

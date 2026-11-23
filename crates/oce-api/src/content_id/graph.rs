@@ -11,37 +11,41 @@ use crate::io::IoInventory;
 /// A reduced IRI. `form` 0 is the name after the namespace (relative); 1 is the whole IRI
 /// (absolute), kept when the remainder is empty or collides with another of the same kind.
 /// Ordered by `(form, UTF-8 bytes)`, which is the derived order of these fields.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) struct Name {
+///
+/// The text is borrowed from the model's IRI (a relative name is its tail), so a name that many
+/// records carry (a fanned-out block in every connection it drives) is never copied: each record
+/// holds a pointer and a length, whatever the name's length (issue #811).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(super) struct Name<'a> {
     pub(super) form: u8,
-    pub(super) text: String,
+    pub(super) text: &'a str,
 }
 
 /// One boundary input record.
 pub(super) struct InputRecord<'a> {
-    pub(super) name: Name,
+    pub(super) name: Name<'a>,
     pub(super) value_type: ValueType,
     pub(super) labels: Labels<'a>,
     pub(super) min: Option<&'a Value>,
     pub(super) max: Option<&'a Value>,
     /// `(block name, input port index)`, sorted; pass-through blocks excluded.
-    pub(super) targets: Vec<(Name, u32)>,
+    pub(super) targets: Vec<(Name<'a>, u32)>,
 }
 
 /// One boundary output record.
 pub(super) struct OutputRecord<'a> {
-    pub(super) name: Name,
+    pub(super) name: Name<'a>,
     pub(super) value_type: ValueType,
     pub(super) labels: Labels<'a>,
-    pub(super) driver: Driver,
+    pub(super) driver: Driver<'a>,
 }
 
 /// What drives a boundary output.
-pub(super) enum Driver {
+pub(super) enum Driver<'a> {
     /// A block's output port, by index.
-    Block(Name, u32),
+    Block(Name<'a>, u32),
     /// A boundary input, through a reserved pass-through block.
-    Input(Name),
+    Input(Name<'a>),
 }
 
 /// A boundary's `quantity`, `unit` and `displayUnit`, each optional, as loaded.
@@ -54,7 +58,7 @@ pub(crate) struct Labels<'a> {
 
 /// One non-reserved block record, parameters sorted by name.
 pub(super) struct BlockRecord<'a> {
-    pub(super) name: Name,
+    pub(super) name: Name<'a>,
     pub(super) class_path: &'a str,
     pub(super) signature_hash: u64,
     pub(super) params: Vec<(&'a str, &'a Value)>,
@@ -62,10 +66,10 @@ pub(super) struct BlockRecord<'a> {
 
 /// One connection: target block and input port, then source block and output port.
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
-pub(super) struct ConnectionRecord {
-    pub(super) target: Name,
+pub(super) struct ConnectionRecord<'a> {
+    pub(super) target: Name<'a>,
     pub(super) input_port: u32,
-    pub(super) source: Name,
+    pub(super) source: Name<'a>,
     pub(super) output_port: u32,
 }
 
@@ -74,7 +78,7 @@ pub(super) struct CanonicalGraph<'a> {
     pub(super) inputs: Vec<InputRecord<'a>>,
     pub(super) outputs: Vec<OutputRecord<'a>>,
     pub(super) blocks: Vec<BlockRecord<'a>>,
-    pub(super) connections: Vec<ConnectionRecord>,
+    pub(super) connections: Vec<ConnectionRecord<'a>>,
 }
 
 /// The namespace is the IRI up to and including its last `#`, `/` or `:`; the rest is the name.
@@ -87,7 +91,7 @@ fn relative_name(iri: &str) -> Option<&str> {
 /// Name every IRI of one kind: relative unless its remainder is empty or another IRI of the same
 /// kind reduces to the same remainder, in which case every IRI in that collision stays whole.
 /// Full IRIs are unique per kind in a loadable document, so the names are unique too.
-fn name_all<'i>(iris: impl Iterator<Item = &'i str> + Clone) -> BTreeMap<&'i str, Name> {
+fn name_all<'i>(iris: impl Iterator<Item = &'i str> + Clone) -> BTreeMap<&'i str, Name<'i>> {
     let mut seen: BTreeMap<&str, usize> = BTreeMap::new();
     for relative in iris.clone().filter_map(relative_name) {
         *seen.entry(relative).or_default() += 1;
@@ -96,12 +100,9 @@ fn name_all<'i>(iris: impl Iterator<Item = &'i str> + Clone) -> BTreeMap<&'i str
         let name = match relative_name(iri) {
             Some(relative) if seen.get(relative) == Some(&1) => Name {
                 form: 0,
-                text: relative.to_owned(),
+                text: relative,
             },
-            _ => Name {
-                form: 1,
-                text: iri.to_owned(),
-            },
+            _ => Name { form: 1, text: iri },
         };
         (iri, name)
     })
@@ -118,11 +119,48 @@ pub(crate) fn labels(attrs: &Attrs) -> Labels<'_> {
     })
 }
 
-fn port_index(ports: &[oce_model::ConnectorId], id: oce_model::ConnectorId) -> Option<u32> {
-    ports
-        .iter()
-        .position(|port| *port == id)
-        .and_then(|index| u32::try_from(index).ok())
+/// Each connector's index among its owner's input or output ports, by dense connector index:
+/// what a search of the owner's port list for the connector finds, its first position, built in
+/// one pass over the blocks. A wired port is then found at a fixed cost, where searching the
+/// owner's ports for each wire was quadratic in the width of a block every port of which is wired
+/// (issue #811). `None` for a connector its owner does not list on that side, as the search's.
+struct PortIndex {
+    inputs: Vec<Option<u32>>,
+    outputs: Vec<Option<u32>>,
+}
+
+impl PortIndex {
+    fn new(model: &ModelGraph) -> Self {
+        let mut inputs = vec![None; model.connectors.len()];
+        let mut outputs = vec![None; model.connectors.len()];
+        for (index, block) in model.blocks.iter().enumerate() {
+            for (ports, table) in [(&block.inputs, &mut inputs), (&block.outputs, &mut outputs)] {
+                for (position, id) in ports.iter().enumerate() {
+                    // Only the owner's own list is searched for a connector, and only its first
+                    // listing found.
+                    let owned_here = model
+                        .connectors
+                        .get(id.0 as usize)
+                        .is_some_and(|connector| connector.block.0 as usize == index);
+                    if let Some(slot) = table.get_mut(id.0 as usize)
+                        && owned_here
+                        && slot.is_none()
+                    {
+                        *slot = u32::try_from(position).ok();
+                    }
+                }
+            }
+        }
+        Self { inputs, outputs }
+    }
+
+    fn input(&self, id: oce_model::ConnectorId) -> Option<u32> {
+        self.inputs.get(id.0 as usize).copied().flatten()
+    }
+
+    fn output(&self, id: oce_model::ConnectorId) -> Option<u32> {
+        self.outputs.get(id.0 as usize).copied().flatten()
+    }
 }
 
 /// Whether a class path is an engine-reserved lowering identity: the catalog's `reserved` flag,
@@ -162,14 +200,16 @@ pub(super) fn canonical_graph<'a>(
         }
     }
     let block_names = name_all(block_iris.iter().flatten().copied());
-    let block_name = |index: usize| -> Result<&Name, ContentIdError> {
+    let block_name = |index: usize| -> Result<Name<'a>, ContentIdError> {
         block_iris
             .get(index)
             .copied()
             .flatten()
             .and_then(|iri| block_names.get(iri))
+            .copied()
             .ok_or(ContentIdError::MalformedModel)
     };
+    let ports = PortIndex::new(model);
     let connector = |id: oce_model::ConnectorId| {
         model
             .connectors
@@ -198,13 +238,13 @@ pub(super) fn canonical_graph<'a>(
             if reserved.get(block).copied().unwrap_or(false) {
                 continue;
             }
-            let port =
-                port_index(&owner(block)?.inputs, *target).ok_or(ContentIdError::MalformedModel)?;
-            targets.push((block_name(block)?.clone(), port));
+            owner(block)?;
+            let port = ports.input(*target).ok_or(ContentIdError::MalformedModel)?;
+            targets.push((block_name(block)?, port));
         }
         targets.sort_unstable();
         inputs.push(InputRecord {
-            name: input_names[path].clone(),
+            name: input_names[path],
             value_type: definition.value_type,
             labels: declared_inputs
                 .get(path)
@@ -242,17 +282,19 @@ pub(super) fn canonical_graph<'a>(
             let input = input_names
                 .get(feed_path)
                 .ok_or(ContentIdError::MalformedModel)?;
-            (&source_connector.attrs, Driver::Input(input.clone()))
+            (&source_connector.attrs, Driver::Input(*input))
         } else {
-            let port = port_index(&block.outputs, *source).ok_or(ContentIdError::MalformedModel)?;
+            let port = ports
+                .output(*source)
+                .ok_or(ContentIdError::MalformedModel)?;
             let attrs = declared_outputs
                 .get(path.as_str())
                 .copied()
                 .ok_or(ContentIdError::MalformedModel)?;
-            (attrs, Driver::Block(block_name(block_index)?.clone(), port))
+            (attrs, Driver::Block(block_name(block_index)?, port))
         };
         outputs.push(OutputRecord {
-            name: output_names[path.as_str()].clone(),
+            name: output_names[path.as_str()],
             value_type: source_connector.value_type,
             labels: labels(attrs),
             driver,
@@ -287,7 +329,7 @@ pub(super) fn canonical_graph<'a>(
             .collect();
         params.sort_unstable_by(|left, right| left.0.as_bytes().cmp(right.0.as_bytes()));
         blocks.push(BlockRecord {
-            name: block_name(index)?.clone(),
+            name: block_name(index)?,
             class_path,
             signature_hash,
             params,
@@ -300,13 +342,19 @@ pub(super) fn canonical_graph<'a>(
         let from = connector(edge.from)?;
         let to = connector(edge.to)?;
         let (source, target) = (from.block.0 as usize, to.block.0 as usize);
+        let target_name = block_name(target)?;
+        owner(target)?;
+        let input_port = ports.input(edge.to).ok_or(ContentIdError::MalformedModel)?;
+        let source_name = block_name(source)?;
+        owner(source)?;
+        let output_port = ports
+            .output(edge.from)
+            .ok_or(ContentIdError::MalformedModel)?;
         connections.push(ConnectionRecord {
-            target: block_name(target)?.clone(),
-            input_port: port_index(&owner(target)?.inputs, edge.to)
-                .ok_or(ContentIdError::MalformedModel)?,
-            source: block_name(source)?.clone(),
-            output_port: port_index(&owner(source)?.outputs, edge.from)
-                .ok_or(ContentIdError::MalformedModel)?,
+            target: target_name,
+            input_port,
+            source: source_name,
+            output_port,
         });
     }
     connections.sort_unstable();

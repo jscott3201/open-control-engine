@@ -215,7 +215,9 @@ fn shared_and_separate_source_allocations_collect_identically() {
         "connection source not found",
         "boundary-output source not found",
         "boundary-input target not found",
-        "boundary-input:urn:top:u",
+        // The pass-through pair, and the boundary input recorded as its output's driver.
+        "(SharedIri(\"urn:top:u\"), SharedIri(\"urn:top:y\"))",
+        "(\"urn:top:y\", [BoundaryInput(",
     ] {
         assert!(shared.contains(expected), "missing {expected}: {shared}");
     }

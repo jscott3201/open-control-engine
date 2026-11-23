@@ -36,7 +36,7 @@ impl ExpectedWriter {
         self.0.extend_from_slice(value.as_bytes());
     }
 
-    fn optional_text(&mut self, value: &Option<String>) {
+    fn optional_text(&mut self, value: Option<&str>) {
         self.byte(u8::from(value.is_some()));
         if let Some(value) = value {
             self.string(value);
@@ -152,7 +152,7 @@ fn vector_image() -> StateImage {
     {
         connectors.push(ConnectorManifestEntry {
             key: outputs[index].clone(),
-            path: format!("urn:test:output:{index}"),
+            path: format!("urn:test:output:{index}").into(),
             declaration_order: index as u32,
             value_type,
             unit: None,
@@ -293,8 +293,8 @@ fn expected_manifest(manifest: &ExecutionManifest) -> Vec<u8> {
         out.string(&connector.path);
         out.u32(connector.declaration_order);
         out.value_type(&connector.value_type);
-        out.optional_text(&connector.unit);
-        out.optional_text(&connector.quantity);
+        out.optional_text(connector.unit.as_deref());
+        out.optional_text(connector.quantity.as_deref());
     }
     out.u32(manifest.connections.len() as u32);
     for (from, to) in &manifest.connections {

@@ -4,14 +4,24 @@ use std::collections::{HashMap, HashSet};
 
 use oce_diag::DiagCode;
 
+use oce_model::ConnectorId;
+
 use super::refuse_multiply_driven;
+use crate::resolve::connections::OutputDriver;
 use oce_diag::DiagnosticList;
 
-fn drivers(outputs: &[(&str, &[&str])]) -> HashMap<String, HashSet<String>> {
+/// The drivers of each output, each source named by a letter standing for a distinct connector.
+fn drivers(outputs: &[(&str, &[&str])]) -> HashMap<String, HashSet<OutputDriver>> {
     outputs
         .iter()
         .map(|(output, sources)| {
-            let sources = sources.iter().map(|source| (*source).to_owned()).collect();
+            let sources = sources
+                .iter()
+                .map(|source| {
+                    let letter = source.bytes().last().expect("a named source");
+                    OutputDriver::Connector(ConnectorId(u32::from(letter)))
+                })
+                .collect();
             ((*output).to_owned(), sources)
         })
         .collect()

@@ -33,31 +33,25 @@ fn colliding_and_empty_remainders_keep_the_whole_iri_for_every_member() {
         "http://a.example/",
     ];
     let names = name_all(iris.iter().copied());
-    let form = |iri: &str| (names[iri].form, names[iri].text.clone());
-    assert_eq!(form(iris[0]), (1, iris[0].to_owned()));
-    assert_eq!(form(iris[1]), (1, iris[1].to_owned()));
-    assert_eq!(form(iris[2]), (0, "seq.y".to_owned()));
-    assert_eq!(form(iris[3]), (1, iris[3].to_owned()));
+    let form = |iri: &str| (names[iri].form, names[iri].text);
+    assert_eq!(form(iris[0]), (1, iris[0]));
+    assert_eq!(form(iris[1]), (1, iris[1]));
+    assert_eq!(form(iris[2]), (0, "seq.y"));
+    assert_eq!(form(iris[3]), (1, iris[3]));
 }
 
 #[test]
 fn names_order_by_form_then_bytes() {
-    let relative = Name {
-        form: 0,
-        text: "z".to_owned(),
-    };
-    let absolute = Name {
-        form: 1,
-        text: "a".to_owned(),
-    };
+    let relative = Name { form: 0, text: "z" };
+    let absolute = Name { form: 1, text: "a" };
     assert!(relative < absolute);
     let upper = Name {
         form: 0,
-        text: "delayOnInit".to_owned(),
+        text: "delayOnInit",
     };
     let lower = Name {
         form: 0,
-        text: "delayTime".to_owned(),
+        text: "delayTime",
     };
     assert!(upper < lower, "`O` (0x4f) precedes `T` (0x54)");
 }

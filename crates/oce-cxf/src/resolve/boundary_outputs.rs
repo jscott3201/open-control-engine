@@ -10,6 +10,7 @@ use crate::dto::{CxfDocument, Node};
 use oce_diag::DiagnosticList;
 
 use super::attrs::connector_attrs;
+use super::connections::OutputDriver;
 
 /// Materialize outputs in their boundary nodes' source-document positions, parsing each declared
 /// node's §7.4.1 attributes through the same path instance-port connectors use. `boundary_types`
@@ -61,7 +62,7 @@ pub(super) fn check_declared_interface(
     boundary_out: &HashSet<&str>,
     conn_of_iri: &HashMap<&str, ConnectorId>,
     by_id: &HashMap<&str, &Node>,
-    drivers: &HashMap<String, HashSet<String>>,
+    drivers: &HashMap<String, HashSet<OutputDriver>>,
     diags: &mut DiagnosticList,
 ) {
     let shadowed = refuse_shadowed(top, boundary_in, boundary_out, conn_of_iri, diags);
@@ -110,7 +111,10 @@ fn refuse_shadowed<'doc>(
 
 /// Refuse every boundary output with more than one distinct driver (§7.10 single assignment):
 /// post-specialization multiplicity means two surviving values claim one declared name.
-fn refuse_multiply_driven(drivers: &HashMap<String, HashSet<String>>, diags: &mut DiagnosticList) {
+fn refuse_multiply_driven(
+    drivers: &HashMap<String, HashSet<OutputDriver>>,
+    diags: &mut DiagnosticList,
+) {
     // Emit in output-IRI order rather than hash order. `finalize_diags` re-sorts the resolver's
     // diagnostics before they leave the crate; sorting here keeps the push order canonical too.
     let mut multiply_driven: Vec<(&String, usize)> = drivers
@@ -142,7 +146,7 @@ fn warn_undriven(
     top: &Node,
     boundary_out: &HashSet<&str>,
     by_id: &HashMap<&str, &Node>,
-    drivers: &HashMap<String, HashSet<String>>,
+    drivers: &HashMap<String, HashSet<OutputDriver>>,
     shadowed: &HashSet<&str>,
     diags: &mut DiagnosticList,
 ) {

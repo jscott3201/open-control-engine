@@ -12,6 +12,7 @@
 //! rule keeps its content semantics.
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Connection, Connector, ConnectorId, Dir};
@@ -23,6 +24,42 @@ use super::boundary_inputs::AssignmentTracker;
 use super::connection_endpoints::{EndpointId, EndpointLookups, EndpointTable};
 use super::connection_orientation::orient_edge;
 
+/// A boundary endpoint's IRI as Step 9 hands it on: the endpoint table's own subject, one
+/// allocation shared by every pair and connector that names the endpoint. A boundary input passed
+/// straight through to many outputs is held once, not once a pair (issue #811).
+#[derive(Clone, Debug)]
+pub(super) struct SharedIri(Arc<str>);
+
+impl SharedIri {
+    /// The IRI.
+    pub(super) fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// The shared allocation, for a connector to hold.
+    pub(super) fn into_shared(self) -> Arc<str> {
+        self.0
+    }
+}
+
+#[cfg(test)]
+impl From<&str> for SharedIri {
+    fn from(iri: &str) -> Self {
+        Self(Arc::from(iri))
+    }
+}
+
+/// One distinct driver of a declared boundary output: a boundary input passed through, by its
+/// interned endpoint (equal exactly when the IRIs are byte-equal), or a connector. Counted, never
+/// spelled, so recording one copies nothing of an IRI.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub(super) enum OutputDriver {
+    /// A boundary input passed straight through.
+    BoundaryInput(EndpointId),
+    /// A block's output connector.
+    Connector(ConnectorId),
+}
+
 /// What Step 9 collected for the steps after it.
 pub(super) struct CollectedConnections<'a> {
     /// Connector-to-connector wires, in edge order.
@@ -32,9 +69,9 @@ pub(super) struct CollectedConnections<'a> {
     /// Assignment cardinality for those child inputs.
     pub(super) boundary_input_assignments: AssignmentTracker,
     /// Distinct boundary-input → boundary-output pass-through pairs, in first-seen order.
-    pub(super) pass_through_pairs: Vec<(String, String)>,
+    pub(super) pass_through_pairs: Vec<(SharedIri, SharedIri)>,
     /// Distinct drivers per declared boundary output.
-    pub(super) boundary_output_drivers: HashMap<String, HashSet<String>>,
+    pub(super) boundary_output_drivers: HashMap<String, HashSet<OutputDriver>>,
     /// The first connector driving each declared boundary output.
     pub(super) boundary_output_sources: HashMap<String, ConnectorId>,
     /// Declared boundary inputs that appear as an endpoint of any edge, in either role.
@@ -61,9 +98,9 @@ pub(super) fn collect<'a>(
     let mut connections: Vec<Connection> = Vec::new();
     let mut external_inputs: Vec<ConnectorId> = Vec::new();
     let mut boundary_input_assignments = AssignmentTracker::default();
-    let mut pass_through_pairs: Vec<(String, String)> = Vec::new();
+    let mut pass_through_pairs: Vec<(SharedIri, SharedIri)> = Vec::new();
     let mut seen_pass_through_pairs: HashSet<(EndpointId, EndpointId)> = HashSet::new();
-    let mut boundary_output_drivers: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut boundary_output_drivers: HashMap<String, HashSet<OutputDriver>> = HashMap::new();
     let mut boundary_output_sources: HashMap<String, ConnectorId> = HashMap::new();
     let mut seen_output_drivers: HashSet<(EndpointId, ConnectorId)> = HashSet::new();
     let mut inactive_connection_sources: HashSet<EndpointId> = HashSet::new();
@@ -146,8 +183,11 @@ pub(super) fn collect<'a>(
                 boundary_output_drivers
                     .entry(t.iri.to_owned())
                     .or_default()
-                    .insert(format!("boundary-input:{}", s.iri));
-                pass_through_pairs.push((s.iri.to_owned(), t.iri.to_owned()));
+                    .insert(OutputDriver::BoundaryInput(source));
+                pass_through_pairs.push((
+                    SharedIri(table.subject(source)),
+                    SharedIri(table.subject(target)),
+                ));
             }
             continue;
         }
@@ -231,7 +271,7 @@ pub(super) fn collect<'a>(
                         boundary_output_drivers
                             .entry(t.iri.to_owned())
                             .or_default()
-                            .insert(format!("connector:{}", from.0));
+                            .insert(OutputDriver::Connector(from));
                         boundary_output_sources
                             .entry(t.iri.to_owned())
                             .or_insert(from);

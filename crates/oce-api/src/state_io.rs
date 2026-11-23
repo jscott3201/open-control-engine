@@ -1,6 +1,7 @@
 //! Exact complete-frame acceptance domains in the execution-state manifest.
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::state::{EngineStateError, ExecutionManifest, WireValue, WireValueType};
 use crate::state_manifest_codec::{read_value, read_value_type, write_value, write_value_type};
@@ -47,7 +48,7 @@ pub(crate) fn build_inputs(
 
 pub(crate) fn write_optional_text(
     writer: &mut Writer,
-    value: &Option<String>,
+    value: Option<&str>,
 ) -> Result<(), EngineStateError> {
     match value {
         None => writer.u8(0),
@@ -61,10 +62,10 @@ pub(crate) fn write_optional_text(
 
 pub(crate) fn read_optional_text(
     reader: &mut Reader<'_>,
-) -> Result<Option<String>, EngineStateError> {
+) -> Result<Option<Arc<str>>, EngineStateError> {
     match reader.u8()? {
         0 => Ok(None),
-        1 => Ok(Some(reader.string()?)),
+        1 => Ok(Some(Arc::from(reader.string()?))),
         tag => reader.malformed(format!("invalid optional text tag {tag}")),
     }
 }
@@ -139,7 +140,7 @@ pub(crate) fn validate_inputs(
             .get(key)
             .ok_or_else(|| malformed("unknown external input".into()))?;
         if expected
-            .insert(connector.path.as_str(), &connector.value_type)
+            .insert(&*connector.path, &connector.value_type)
             .is_some_and(|old| old != &connector.value_type)
         {
             return Err(malformed("input path has inconsistent types".into()));

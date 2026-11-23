@@ -9,11 +9,27 @@ use crate::state::{
 use crate::state_wire::{DecodeBudget, Reader, Writer};
 use oce_blocks::BlockKind;
 
+/// The canonical bytes of `manifest`, counted first and then written into a buffer of exactly
+/// that length, so the buffer never grows past them; a manifest past `MAX_SNAPSHOT_BYTES` is
+/// refused by the count, before any byte is held.
 pub(crate) fn encode_manifest(
     manifest: &ExecutionManifest,
     allow_dense: bool,
 ) -> Result<Vec<u8>, EngineStateError> {
-    let mut writer = Writer::new();
+    let mut counted = Writer::counting();
+    write_manifest(&mut counted, manifest, allow_dense)?;
+    let length = counted.position();
+    counted.finish()?;
+    let mut writer = Writer::with_capacity(length);
+    write_manifest(&mut writer, manifest, allow_dense)?;
+    writer.finish()
+}
+
+fn write_manifest(
+    writer: &mut Writer,
+    manifest: &ExecutionManifest,
+    allow_dense: bool,
+) -> Result<(), EngineStateError> {
     match &manifest.portability {
         Portability::Portable => writer.u8(0),
         Portability::TargetBound { arch, os } => {
@@ -22,17 +38,17 @@ pub(crate) fn encode_manifest(
             writer.string(os)?;
         }
     }
-    write_count(&mut writer, manifest.enums.len())?;
+    write_count(writer, manifest.enums.len())?;
     for entry in &manifest.enums {
         writer.string(&entry.class_path)?;
-        write_count(&mut writer, entry.members.len())?;
+        write_count(writer, entry.members.len())?;
         for member in &entry.members {
             writer.string(member)?;
         }
     }
-    write_count(&mut writer, manifest.blocks.len())?;
+    write_count(writer, manifest.blocks.len())?;
     for entry in &manifest.blocks {
-        write_block_key(&mut writer, &entry.key, allow_dense)?;
+        write_block_key(writer, &entry.key, allow_dense)?;
         writer.string(&entry.class_path)?;
         writer.u8(match entry.kind {
             BlockKind::Algebraic => 0,
@@ -40,49 +56,49 @@ pub(crate) fn encode_manifest(
         });
         writer.u32(entry.state_revision);
         writer.u64(entry.state_len);
-        write_count(&mut writer, entry.params.len())?;
+        write_count(writer, entry.params.len())?;
         for (name, value) in &entry.params {
             writer.string(name)?;
-            write_value(&mut writer, value)?;
+            write_value(writer, value)?;
         }
-        write_connector_keys(&mut writer, &entry.inputs, allow_dense)?;
-        write_connector_keys(&mut writer, &entry.outputs, allow_dense)?;
+        write_connector_keys(writer, &entry.inputs, allow_dense)?;
+        write_connector_keys(writer, &entry.outputs, allow_dense)?;
     }
-    write_count(&mut writer, manifest.connectors.len())?;
+    write_count(writer, manifest.connectors.len())?;
     for entry in &manifest.connectors {
-        write_connector_key(&mut writer, &entry.key, allow_dense)?;
+        write_connector_key(writer, &entry.key, allow_dense)?;
         writer.string(&entry.path)?;
         writer.u32(entry.declaration_order);
-        write_value_type(&mut writer, &entry.value_type)?;
-        crate::state_io::write_optional_text(&mut writer, &entry.unit)?;
-        crate::state_io::write_optional_text(&mut writer, &entry.quantity)?;
+        write_value_type(writer, &entry.value_type)?;
+        crate::state_io::write_optional_text(writer, entry.unit.as_deref())?;
+        crate::state_io::write_optional_text(writer, entry.quantity.as_deref())?;
     }
-    write_count(&mut writer, manifest.connections.len())?;
+    write_count(writer, manifest.connections.len())?;
     for (from, to) in &manifest.connections {
-        write_connector_key(&mut writer, from, allow_dense)?;
-        write_connector_key(&mut writer, to, allow_dense)?;
+        write_connector_key(writer, from, allow_dense)?;
+        write_connector_key(writer, to, allow_dense)?;
     }
-    write_block_keys(&mut writer, &manifest.schedule, allow_dense)?;
-    write_connector_keys(&mut writer, &manifest.connector_order, allow_dense)?;
-    write_count(&mut writer, manifest.driver_of.len())?;
+    write_block_keys(writer, &manifest.schedule, allow_dense)?;
+    write_connector_keys(writer, &manifest.connector_order, allow_dense)?;
+    write_count(writer, manifest.driver_of.len())?;
     for (connector, driver) in &manifest.driver_of {
-        write_connector_key(&mut writer, connector, allow_dense)?;
-        write_connector_key(&mut writer, driver, allow_dense)?;
+        write_connector_key(writer, connector, allow_dense)?;
+        write_connector_key(writer, driver, allow_dense)?;
     }
-    write_count(&mut writer, manifest.state_slots.len())?;
+    write_count(writer, manifest.state_slots.len())?;
     for (block, offset, length) in &manifest.state_slots {
-        write_block_key(&mut writer, block, allow_dense)?;
+        write_block_key(writer, block, allow_dense)?;
         writer.u64(*offset);
         writer.u64(*length);
     }
-    write_connector_keys(&mut writer, &manifest.external_inputs, allow_dense)?;
-    write_count(&mut writer, manifest.boundary_outputs.len())?;
+    write_connector_keys(writer, &manifest.external_inputs, allow_dense)?;
+    write_count(writer, manifest.boundary_outputs.len())?;
     for (iri, source) in &manifest.boundary_outputs {
         writer.string(iri)?;
-        write_connector_key(&mut writer, source, allow_dense)?;
+        write_connector_key(writer, source, allow_dense)?;
     }
-    crate::state_io::write_inputs(&mut writer, &manifest.input_definitions)?;
-    writer.finish()
+    crate::state_io::write_inputs(writer, &manifest.input_definitions)?;
+    Ok(())
 }
 
 pub(crate) fn decode_manifest(
@@ -190,7 +206,7 @@ pub(crate) fn decode_manifest(
     let mut connectors = reader.bounded_vec(connector_count, 19, "connectors")?;
     for _ in 0..connector_count {
         let key = read_connector_key(&mut reader)?;
-        let path = reader.string()?;
+        let path = Arc::from(reader.string()?);
         let declaration_order = reader.u32()?;
         let value_type = read_value_type(&mut reader)?;
         let unit = crate::state_io::read_optional_text(&mut reader)?;
@@ -474,10 +490,10 @@ pub(crate) fn read_value_type(reader: &mut Reader<'_>) -> Result<WireValueType, 
 
 fn read_block_key(reader: &mut Reader<'_>) -> Result<BlockKey, EngineStateError> {
     Ok(match reader.u8()? {
-        0 => BlockKey::Authored(reader.string()?),
+        0 => BlockKey::Authored(Arc::from(reader.string()?)),
         1 => BlockKey::PassThrough {
-            input_path: reader.string()?,
-            output_path: reader.string()?,
+            input_path: Arc::from(reader.string()?),
+            output_path: Arc::from(reader.string()?),
         },
         2 => return reader.malformed("dense block key is not valid in durable bytes"),
         tag => return reader.malformed(format!("invalid block-key tag {tag}")),

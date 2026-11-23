@@ -72,9 +72,16 @@ impl Engine {
     /// [`OcError::State`] when no model is loaded or parameter edits are pending (the same
     /// preconditions as [`Self::compile_blob`]); [`OcError::ContentId`] for a hand-built model
     /// with an unnamed non-reserved block or another inconsistency no public load produces.
+    ///
+    /// # Memory
+    /// The bytes are written straight into the hash and never held, so minting an id costs the
+    /// sorted records alone: each holds its names borrowed from the model, whatever their length
+    /// and however many records repeat them (issue #811). [`Self::canonical_content_bytes`]
+    /// returns the same bytes whole.
     pub fn content_id(&self) -> Result<ContentId, OcError> {
-        let bytes = self.canonical_content_bytes()?;
-        Ok(ContentId::from_digest(hash::sha256(&bytes)))
+        self.capture_preconditions()?;
+        let graph = graph::canonical_graph(&self.model, &self.io)?;
+        Ok(ContentId::from_digest(encode::digest(&graph)?))
     }
 
     /// The `OCECANON` v1 canonical bytes [`Self::content_id`] hashes, intended for recomputing the
@@ -83,8 +90,9 @@ impl Engine {
     /// stays `oce:canon1:` before 1.0.0: a layout change re-stamps ids in place, and the engine
     /// version tells the layouts apart. No decoder is provided
     /// or promised; the bytes are hashed, never parsed. Allocates one
-    /// `Vec<u8>` for the bytes (plus the sorted records it writes them from), bounded by the loaded
-    /// model's size; no engine state changes.
+    /// `Vec<u8>` for the bytes (plus the sorted records it writes them from), and the bytes spell a
+    /// block's name in every record that names it: about one copy of a long name per reference to
+    /// it, which no budget bounds yet (issue #815 adds one); no engine state changes.
     ///
     /// # Errors
     /// As [`Self::content_id`].
@@ -95,5 +103,9 @@ impl Engine {
     }
 }
 
+#[cfg(test)]
+mod canonical_reference;
+#[cfg(test)]
+mod canonical_reference_tests;
 #[cfg(test)]
 mod topology_agreement_tests;

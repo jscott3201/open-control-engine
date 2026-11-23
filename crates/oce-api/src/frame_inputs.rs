@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use oce_model::{Attrs, ConnectorId, ModelGraph, Value, ValueType, enum_descriptor};
 
-use crate::io::connector_path;
+use crate::io::{connector_path, shared_path_address};
 
 /// Owned definition of one required executable boundary input for complete-frame construction.
 ///
@@ -49,28 +49,53 @@ pub(crate) fn build_inputs(
     model: &ModelGraph,
 ) -> (HashMap<String, InputBinding>, Vec<InputDefinition>) {
     let external: HashSet<_> = model.external_inputs.iter().copied().collect();
-    let mut bindings: HashMap<String, InputBinding> = HashMap::new();
-    let mut paths = Vec::new();
+    // Each path's binding, in first-seen order, found by its text, or first by the address of a
+    // connector's shared path allocation: every input a boundary input drives holds the boundary's
+    // IRI as one allocation, so its fan-out builds and hashes the path once rather than once an
+    // input (issue #811). Equal addresses spell equal paths, so the answer is the text lookup's.
+    let mut entries: Vec<(String, InputBinding)> = Vec::new();
+    let mut position_of: HashMap<String, usize> = HashMap::new();
+    let mut position_of_allocation = HashMap::new();
+    let mut boundary_positions = Vec::new();
     for connector in model
         .connectors
         .iter()
         .filter(|c| c.dir == oce_model::Dir::In)
     {
-        let path = connector_path(connector.iri.as_deref(), connector.id);
-        let binding = bindings
-            .entry(path.clone())
-            .or_insert_with(|| InputBinding {
-                targets: Vec::new(),
-                value_type: connector.value_type,
-                boundary_index: None,
-            });
+        let address = shared_path_address(connector);
+        let known = address.and_then(|address| position_of_allocation.get(&address).copied());
+        let at = known.unwrap_or_else(|| {
+            let path = connector_path(connector.iri.as_deref(), connector.id);
+            *position_of.entry(path.clone()).or_insert_with(|| {
+                entries.push((
+                    path,
+                    InputBinding {
+                        targets: Vec::new(),
+                        value_type: connector.value_type,
+                        boundary_index: None,
+                    },
+                ));
+                entries.len() - 1
+            })
+        });
+        if let Some(address) = address {
+            position_of_allocation.entry(address).or_insert(at);
+        }
+        let binding = &mut entries[at].1;
         binding.targets.push(connector.id);
         if external.contains(&connector.id) && binding.boundary_index.is_none() {
             binding.boundary_index = Some(0);
-            paths.push(path);
+            boundary_positions.push(at);
         }
     }
-    paths.sort_unstable();
+    drop(position_of);
+    // Distinct paths, so the order is total.
+    boundary_positions.sort_unstable_by(|left, right| entries[*left].0.cmp(&entries[*right].0));
+    let paths: Vec<String> = boundary_positions
+        .iter()
+        .map(|at| entries[*at].0.clone())
+        .collect();
+    let mut bindings: HashMap<String, InputBinding> = entries.into_iter().collect();
     let declarations: HashMap<_, _> = model
         .boundary_inputs
         .iter()

@@ -174,12 +174,18 @@ pub enum EngineStateError {
     },
 }
 
+/// A block's identity in an execution manifest.
+///
+/// The paths are shared with the loaded graph, so the key that every one of a block's ports and
+/// wires carries in a manifest is a pointer, not a copy of the block's IRI: a block named by
+/// many connector keys costs its IRI once however many keys name it (issue #811). The keys
+/// compare and encode as the text they hold.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum BlockKey {
-    Authored(String),
+    Authored(Arc<str>),
     PassThrough {
-        input_path: String,
-        output_path: String,
+        input_path: Arc<str>,
+        output_path: Arc<str>,
     },
     Dense(u32),
 }
@@ -187,7 +193,7 @@ pub(crate) enum BlockKey {
 impl BlockKey {
     pub(crate) fn subject(&self) -> String {
         match self {
-            Self::Authored(value) => value.clone(),
+            Self::Authored(value) => value.to_string(),
             Self::PassThrough {
                 input_path,
                 output_path,
@@ -327,11 +333,16 @@ pub(crate) struct BlockManifestEntry {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct ConnectorManifestEntry {
     pub(crate) key: ConnectorKey,
-    pub(crate) path: String,
+    /// Shared with the connector, so the inputs a boundary input drives, which all carry its
+    /// IRI, hold it once between them (issue #811).
+    pub(crate) path: Arc<str>,
     pub(crate) declaration_order: u32,
     pub(crate) value_type: WireValueType,
-    pub(crate) unit: Option<String>,
-    pub(crate) quantity: Option<String>,
+    /// Shared with the connector's attributes, which §7.10 unification may have propagated to
+    /// many connectors from one.
+    pub(crate) unit: Option<Arc<str>>,
+    /// Shared as `unit` is.
+    pub(crate) quantity: Option<Arc<str>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

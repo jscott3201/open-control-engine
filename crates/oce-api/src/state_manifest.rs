@@ -155,15 +155,15 @@ pub(crate) fn build_manifest(
             });
         }
         let value_type = wire_value_type(connector.value_type, &mut enum_classes)?;
-        let path = match connector.iri.as_deref() {
-            Some(path) => path.to_owned(),
+        let path = match &connector.iri {
+            Some(path) => Arc::clone(path),
             None if durable => {
                 return Err(EngineStateError::IneligibleModel {
                     subject: connector_keys_by_dense[dense].owner.subject(),
                     detail: "durable connector has no authored host-visible path".into(),
                 });
             }
-            None => crate::io::connector_path(None, connector.id),
+            None => Arc::from(crate::io::connector_path(None, connector.id)),
         };
         let (unit, quantity) = match &connector.attrs {
             oce_model::Attrs::Real(attrs) => (attrs.unit.clone(), attrs.quantity.clone()),
@@ -174,8 +174,8 @@ pub(crate) fn build_manifest(
             path,
             declaration_order: connector.decl_order,
             value_type,
-            unit: unit.map(|value| value.to_string()),
-            quantity: quantity.map(|value| value.to_string()),
+            unit,
+            quantity,
         });
     }
     connectors.sort_by(|left, right| left.key.cmp(&right.key));
@@ -510,7 +510,7 @@ pub(crate) fn target_bound_classes() -> Vec<&'static str> {
 fn block_key(engine: &Engine, index: usize, durable: bool) -> Result<BlockKey, EngineStateError> {
     let block = &engine.model.blocks[index];
     if let Some(instance_iri) = &block.instance_iri {
-        return Ok(BlockKey::Authored(instance_iri.to_string()));
+        return Ok(BlockKey::Authored(Arc::clone(instance_iri)));
     }
     if block.class_iri.starts_with(PASS_THROUGH_PREFIX)
         && block.inputs.len() == 1
@@ -520,8 +520,8 @@ fn block_key(engine: &Engine, index: usize, durable: bool) -> Result<BlockKey, E
         let output = &engine.model.connectors[block.outputs[0].0 as usize];
         if let (Some(input_path), Some(output_path)) = (&input.iri, &output.iri) {
             return Ok(BlockKey::PassThrough {
-                input_path: input_path.to_string(),
-                output_path: output_path.to_string(),
+                input_path: Arc::clone(input_path),
+                output_path: Arc::clone(output_path),
             });
         }
     }
