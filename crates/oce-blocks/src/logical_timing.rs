@@ -6,6 +6,7 @@
 use oce_model::{ParamTable, Value, determinism::det_max};
 
 use crate::dynamics::{PREV_T_UNSET, is_first_tick, tick_dt};
+use crate::settled::{fire, settled_input};
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool};
 
 fn bool_word(b: bool) -> u64 {
@@ -133,7 +134,10 @@ impl Block for Timer {
 const TA_PREV_RESET_WORD: usize = 3;
 const TA_PASSED_WORD: usize = 4;
 
-/// `CDL.Logical.TimerAccumulating` — accumulated true-time, cleared by a reset rising edge.
+/// `CDL.Logical.TimerAccumulating` — accumulated true-time, cleared by a `reset` event. `reset`
+/// takes the settled-value rule of issue #800 (`docs/design/pulse-event-inputs.md`; its previous
+/// word holds `w`, read only by the event test), so a pulse true on consecutive frames resets at
+/// each; `u`, read for its duration, keeps the rising edge.
 /// Outputs `(y, passed)`. `y` accumulates true-time and holds while `u` is false; reset clears the
 /// accumulation to zero. `passed` is a Modelica discrete latch: reset sets it to `t <= 0`, a rising
 /// `u` samples the accumulated value before the new interval, crossing the threshold while `u` is
@@ -145,11 +149,17 @@ pub struct TimerAccumulating {
 }
 
 impl TimerAccumulating {
+    /// Whether `when reset` fires at this frame, by the settled-value rule (issue #800): at the
+    /// initial frame (initialisation leaves the `when` inactive) it fires on `i -> w -> s`.
+    fn reset_event(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
+        let initial = ctx.is_initial() || is_first_tick(region[PREV_T_WORD]);
+        let reset = settled_input(inputs, 1, 2, 0);
+        fire(initial, word_bool(region[TA_PREV_RESET_WORD]), reset).any()
+    }
+
     fn y_now(self, ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> f64 {
         let u = read_bool(inputs, 0);
-        let reset = read_bool(inputs, 1);
-        let reset_rising = reset && !word_bool(region[TA_PREV_RESET_WORD]);
-        if reset_rising {
+        if Self::reset_event(ctx, inputs, region) {
             return 0.0;
         }
         let acc = f64::from_bits(region[ACC_WORD]);
@@ -160,10 +170,9 @@ impl TimerAccumulating {
         }
     }
 
-    fn passed_now(self, inputs: &[Value], region: &[u64], live_y: f64) -> bool {
+    fn passed_now(self, ctx: &Ctx<'_>, inputs: &[Value], region: &[u64], live_y: f64) -> bool {
         let u = read_bool(inputs, 0);
-        let reset = read_bool(inputs, 1);
-        let reset_rising = reset && !word_bool(region[TA_PREV_RESET_WORD]);
+        let reset_rising = Self::reset_event(ctx, inputs, region);
         let u_rising = u && !word_bool(region[PREV_U_WORD]);
         let pre_passed = word_bool(region[TA_PASSED_WORD]);
         if reset_rising {
@@ -197,6 +206,10 @@ impl Block for TimerAccumulating {
         in_idx < 2 && out_idx < 2
     }
 
+    fn settled_event_inputs(&self) -> &[usize] {
+        &[1]
+    }
+
     fn state_len(&self) -> usize {
         5
     }
@@ -217,18 +230,18 @@ impl Block for TimerAccumulating {
         emit: &mut dyn FnMut(usize, Value),
     ) {
         let y = self.y_now(ctx, inputs, region);
-        let passed = self.passed_now(inputs, region, y);
+        let passed = self.passed_now(ctx, inputs, region, y);
         emit_real(0, y, emit);
         emit(1, Value::Boolean(passed));
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
         let y = self.y_now(ctx, inputs, region);
-        let passed = self.passed_now(inputs, region, y);
+        let passed = self.passed_now(ctx, inputs, region, y);
         region[ACC_WORD] = y.to_bits();
         region[PREV_T_WORD] = ctx.t().to_bits();
         region[PREV_U_WORD] = bool_word(read_bool(inputs, 0));
-        region[TA_PREV_RESET_WORD] = bool_word(read_bool(inputs, 1));
+        region[TA_PREV_RESET_WORD] = bool_word(settled_input(inputs, 1, 2, 0).w);
         region[TA_PASSED_WORD] = bool_word(passed);
     }
 }

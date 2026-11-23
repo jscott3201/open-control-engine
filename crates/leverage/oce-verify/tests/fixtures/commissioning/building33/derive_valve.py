@@ -12,7 +12,7 @@ is written out here from the vendored Modelica sources, read directly:
 - the CDL blocks it instantiates, under `third_party/modelica-buildings-cdl/Buildings/Controls/
   OBC/CDL/`: `Reals/PIDWithReset.mo` (PI: `e = revAct/r*u_s - revAct/r*u_m`, `yP = k*e`,
   `yUnl = yP + I`, `y = min(yMax, max(yMin, yUnl))`, `der(I) = k/Ti*(e - (yUnl - y)/(k*Ni))`,
-  and on a rising `trigger` `I := y_reset - yP`), `Reals/Line.mo` (`b = (f2-f1)/(x2-x1)`,
+  and at a `trigger` event `I := y_reset - yP`), `Reals/Line.mo` (`b = (f2-f1)/(x2-x1)`,
   `a = f2 - b*x2`, `y = a + b*min(x2, max(x1, u))`), `Reals/Hysteresis.mo`
   (`y = not pre(y) and u > uHigh or pre(y) and u >= uLow`, `pre(y)` false at the start),
   `Logical/Change.mo` (`y = change(u)`, `pre(u)` false at the start), `Logical/And.mo`,
@@ -24,12 +24,14 @@ is the engine's declared discretisation, its documented tick convention for a PI
 (forward Euler; a frame emits from the state before it, then the state advances by the gain
 times the frame's integrand times the time since the previous frame, zero at the first frame).
 A reset is applied at the event, as Modelica's `when trigger then reinit(...)` is: at a frame
-after the first where the trigger rises, the integrator is set to `y_reset - yP` from that
+after the first where the trigger is an event, the integrator is set to `y_reset - yP` from that
 frame's error before the PI emits, and that frame's update takes no Euler step (the step covers
-the interval before the event). The first frame is initialisation, where no `when` fires.
-That convention is the engine's choice, and this derivation checks the transcription (the
-wiring, the parameters, every branch), not the choice: the OpenModelica comparison in the
-README is where the continuous model is compared.
+the interval before the event). The trigger is `Change(enable)`, a pulse that is true only at the
+instant of each change, so every frame where the enable changes is an event, also a frame right
+after another change (the settled-value rule, issue #800). The first frame is initialisation,
+where no `when` fires. That convention is the engine's choice, and this derivation checks the
+transcription (the wiring, the parameters, every branch), not the choice: the OpenModelica
+comparison in the README is where the continuous model is compared.
 
 The inputs are synthetic and in CDL units (K, the fan feedback as a fraction, as the port
 takes it), chosen so that the valve signal goes through every branch the README lists: off
@@ -39,8 +41,8 @@ at its lower end), the fan feedback hysteresis holding and then disabling, the f
 disabling, the outdoor air below upstream's `uLow`, each re-enable resetting the integrator,
 and the PI driven below `yMin` (its lower saturation, with the anti-windup acting) and back.
 The last four frames, appended after the first 74, disable the valve for exactly one frame:
-`Change` is still true at the re-enable, so the integrator reset happens at the disable, not at
-the re-enable.
+`Change` is true at the disable and again at the re-enable, two events, so the integrator resets
+at both, as OpenModelica does.
 Irregular frame steps exercise the time step. The PI's upper saturation at `yMax` is reached
 under the high limit, where the line cuts it; the line's own upper clamp (`limitAbove`) can never
 show in the valve signal, because the PI's output never exceeds `yMax = 1 = f2`, so only the
@@ -114,13 +116,12 @@ def scenario():
     add(4, 5.0, 288.0, 285.0, 290.0, 0.2, True, "pi: re-enabled by the outdoor air")
     add(6, 5.0, 280.0, 290.0, 290.0, 0.2, True, "pi: saturated at yMin, the anti-windup acting")
     add(4, 5.0, 288.0, 285.0, 290.0, 0.2, True, "pi: recovering from the lower saturation")
-    # Appended after the first 74 rows, which keep their times: a one-frame disable. `Change`
-    # rises at the disable (an event that resets the integrator while the valve is off) and is
-    # still true at the re-enable, so no reset fires there; a reset triggered by the enable's
-    # level would fire at the re-enable instead, and the valve differs from the next frame on.
+    # Appended after the first 74 rows, which keep their times: a one-frame disable. `Change` is
+    # an event at the disable (a reset while the valve is off) and again at the re-enable, the
+    # next frame, so the integrator resets there too (issue #800).
     add(1, 5.0, 288.0, 285.0, 290.0, 0.2, False, "off: the fan status false for one frame")
     add(3, 5.0, 288.0, 285.0, 290.0, 0.2, True,
-        "pi: re-enabled after one frame off, Change still true at the re-enable")
+        "pi: re-enabled after one frame off, a second Change event resets again")
     return rows
 
 
@@ -133,7 +134,6 @@ def main():
     intercept = f2 - slope * x2
     t_out_thr = fan_thr = False  # Hysteresis pre(y) at the start
     enable_before = False  # Change pre(u) at the start
-    trigger_before = False  # the integrator's `when trigger` edge
     integral = 0.0  # IntegratorWithReset y_start = xi_start = 0
     t_before = None
     out = ["# derived by derive_valve.py from the vendored Modelica sources; never edited by hand",
@@ -145,11 +145,12 @@ def main():
         enable = (t_out_thr and fan_thr) and fan_sta
         change = enable != enable_before
         enable_before = enable
-        # PI. A rising trigger after the first frame resets the integrator at this frame, before
-        # the PI emits; otherwise it emits from the integrator state before this frame.
+        # PI. A `Change` event after the first frame resets the integrator at this frame, before
+        # the PI emits; otherwise it emits from the integrator state before this frame. `Change`
+        # is a pulse: every frame it is true is an event (issue #800).
         e = REV_ACT / R * t_sup_set - REV_ACT / R * t_sup
         y_p = K * e
-        reset = t_before is not None and change and not trigger_before
+        reset = t_before is not None and change
         if reset:
             integral = Y_RESET - y_p
         y_unl = y_p + integral
@@ -167,7 +168,6 @@ def main():
         if not reset:
             integrand = e - (1 / (K * NI)) * (y_unl - y_pi)
             integral = integral + K / TI * integrand * dt
-        trigger_before = change
         t_before = t
     print("\n".join(out))
 

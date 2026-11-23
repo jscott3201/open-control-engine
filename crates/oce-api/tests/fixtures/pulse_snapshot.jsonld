@@ -1,0 +1,386 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#pulse_snapshot",
+      "@type": "S231:Block",
+      "S231:label": "pulse_snapshot",
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#pulse_snapshot.fal"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.cha"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.cnt"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.lat"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.s1"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.ts"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.u"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.uR"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.y_cnt"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.y_lat"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.y_ts"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.y_s1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.fal",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:label": "fal",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#pulse_snapshot.fal.k"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.fal.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.fal.k",
+      "S231:value": {
+        "@value": "false",
+        "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.fal.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#pulse_snapshot.cnt.reset"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.lat.clr"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.cha",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Change",
+      "S231:label": "cha",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.cha.u"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.cha.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.cha.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.cha.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#pulse_snapshot.cnt.trigger"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.lat.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.cnt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.OnCounter",
+      "S231:label": "cnt",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#pulse_snapshot.cnt.y_start"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.cnt.trigger"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.cnt.reset"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.cnt.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.cnt.y_start",
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#integer"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.cnt.trigger",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.cnt.reset",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.cnt.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#pulse_snapshot.y_cnt"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.lat",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.lat.u"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.lat.clr"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.lat.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.lat.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.lat.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.lat.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#pulse_snapshot.y_lat"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.s1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+      "S231:label": "s1",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#pulse_snapshot.s1.period"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.s1.shift"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.s1.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.s1.period",
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.s1.shift",
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.s1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#pulse_snapshot.ts.trigger"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.y_s1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.ts",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.TriggeredSampler",
+      "S231:label": "ts",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#pulse_snapshot.ts.y_start"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.ts.u"
+        },
+        {
+          "@id": "http://example.org#pulse_snapshot.ts.trigger"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#pulse_snapshot.ts.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.ts.y_start",
+      "S231:value": {
+        "@value": "7.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.ts.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.ts.trigger",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.ts.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#pulse_snapshot.y_ts"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "pulse_snapshot.u",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#pulse_snapshot.cha.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.uR",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "pulse_snapshot.uR",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#pulse_snapshot.ts.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.y_cnt",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.y_lat",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.y_ts",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#pulse_snapshot.y_s1",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    }
+  ]
+}

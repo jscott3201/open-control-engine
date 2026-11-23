@@ -100,7 +100,7 @@ event at the frame of the event (issue #768; design note
 | Event instant | Frame `k > 0` is the event instant of every Boolean event condition true at frame `k` and false at frame `k - 1`. |
 | Event frame's outputs | The values after the event, computed from frame `k`'s inputs: the frame emits from the reinitialised or re-assigned state. |
 | Integrators | The reset frame's update stores the reset value with no Euler step (that step covers `[t(k-1), t(k)]`, before the event); from frame `k + 1` on, the state is what the engine stored before this rule. |
-| Frame 0 | Initialisation: no `when` fires unless its condition holds `initial()`. An event input true at frame 0 becomes its `pre` value for frame 1, so the first event is its next false-to-true transition. |
+| Frame 0 | Initialisation: no `when` fires unless its condition holds `initial()`. An event input true at frame 0 becomes its `pre` value for frame 1, so the first event is its next false-to-true transition. This holds for every level, and for every input with no pulse or sample upstream; an input fed by a pulse or a sample follows the initial-frame rule of [Pulses on an event input](#pulses-on-an-event-input), under which a level still never fires at frame 0 (issue #800, decision 3 as revised). |
 | Feedthrough graph | An input the event reads at emission feeds through to the output, so the block waits for its producer, and feedback from the output into it is an `algebraic-loop`. |
 
 The blocks this concerns are `Reals.PIDWithReset` (PI and PID modes: `trigger` feeds through; the
@@ -161,6 +161,53 @@ would schedule.
 transition can be seen at frame 0, whatever `trigger` is there; the frame-0 update stores frame
 0's `trigger`. The word stays a canonical Boolean in every state, and `state_len` is unchanged.
 
+## Pulses on an event input
+
+A pulse that Modelica holds true for part of one instant (`Logical.Change`, `Integers.Change`,
+`Edge`, `FallingEdge`, `Logical.Sources.SampleTrigger`, and logic over them) is true for a whole
+frame here, and a frame can follow another where it was true. The settled-value rule (issue #800;
+design note [Event inputs fed by one-frame pulses](design/pulse-event-inputs.md), option (g),
+ruled by the owner on 2026-11-22) decides when an event input fires on such a signal:
+
+| Boundary | HostTick v1 behavior |
+| --- | --- |
+| Cone | The stateless Boolean logic upstream of an event input (`And`, `Or`, `Not`, `Nand`, `Nor`, `Xor`, `MultiAnd`, `MultiOr`, `Logical.Switch`, the Boolean routing classes), classified at load, from the wiring, down to its leaves: a *sample* (a `SampleTrigger` output), a *primitive pulse* (a `Change`, `Integers.Change`, `Edge` or `FallingEdge` that nothing upstream of it, through any chain of blocks, connects to a pulse, a sample or a `Pre`), a *fallback leaf* (a `Pre`, any other edge block, or any other block such a chain reaches) and a *level* (everything else). |
+| Three values | `v`, the frame value; `w`, the cone with every pulse and sample false; `s`, the cone with every pulse false and every sample at its frame value. They are what Modelica's event iteration at the frame's instant takes: before, during, settled. |
+| Event | At a frame after the first, the input fires iff `(v(k) and not w(k-1)) or (not v(k) and s(k))`; the block stores `w(k)` where it stored the previous trigger. A direct pulse or sample fires on every frame it is true, `Not` of a pulse fires at the pulse's frame, and `Not` of a sample never fires, as in Modelica. Where no pulse or sample is upstream, `w = s = v` and the rule is the rising edge above, bit for bit. |
+| Fallback | A cone with a fallback leaf keeps the rising edge: a `Pre` settles in Modelica's second event iteration and a frame later here, and an edge block of a pulse can change more than once in one instant. The `Pre` remedy for feedback into an event input is such a cone. A block with two event inputs (`OnCounter`, `Latch`, `Toggle`) keeps the rising edge on both when either input's cone falls back, frame 0 included. So does every event input of a block whose *data* inputs (`TriggeredSampler.u`, `TriggeredMax.u`, `TriggeredMovingMean.u`, `IntegratorWithReset.u` and `.y_reset_in`, `PIDWithReset.u_s` and `.u_m`, `TimerAccumulating.u`) a pulse, a sample or a `Pre` reaches through any chain of blocks: data cones are not traced, and such an input can read another value in Modelica's second iteration (a converted pulse, already false) or another block's second-iteration event. |
+| Frame 0 | A fourth value, `i`: the cone at initialisation, every pulse at its frame value (the initialisation pulse of a `Change` whose input starts different from `pre_u_start`) and every sample false. At the initial frame the input goes `i -> w -> s` and fires on `(w and not i) or (s and not w)`, at most once: a sample instant at the start fires, and so does a negated initialisation pulse (`Not(Change(x))` with `x(0) = true`); a pulse, a level and a fallback cone never do (issue #768's "no event at frame 0 for a trigger already true" holds for every level). The body of the step reads that step's values (`OnCounter`'s `reset`). `TriggeredMovingMean` samples once for `initial()` and once more when the input fires there. `Latch` and `Toggle` run their initial equations on `i`, then their `when` on each step. This is decision 3 as revised by the owner on 2026-11-22 after two pinned-class probes (`InitNegatedPilot`, `InitMixturesPilot`). |
+
+The consumers are `OnCounter.trigger` and `.reset`, `TriggeredSampler`, `TriggeredMax` and
+`TriggeredMovingMean` `.trigger`, `IntegratorWithReset.trigger`, `PIDWithReset.trigger` (PI and
+PID), `Latch.u` and `.clr`, `Toggle.u` and `.clr`, and `TimerAccumulating.reset`. A block with two
+of them runs its `when` once per step that fires, with that step's values: `OnCounter` takes
+`reset`'s value in the iteration that fired, so a trigger in the first iteration and a reset rising
+in the second count once and then reset; `Latch` (`when {clr, u} then y = not clr and u`) and
+`Toggle` (its `when`/`elsewhen` chain) clear in the first step and set in the second when `clr`
+is a pulse and `u` rises after it, as Modelica does. `clr`'s value before a frame is not stored
+(the state layout is unchanged): `clr` true at a frame is read as rising, which is exact unless
+`clr`'s cone holds a negated sample (true between instants, false at one), where a latch set at an
+instant is cleared at the next frame and Modelica keeps it (`DVG-000008`).
+
+`SampleTrigger` emits `true` at frame 0 only when the start is one of its instants (within
+`1e-9 · period`, the tolerance of its index; Modelica rounds its first instant to 1e-6 s). A frame
+that spans several of its instants fires once; the first time that happens it warns, once per
+instance: the state word records it (an unwarned word is the index, `-1` before the first
+instant; a warned one `-(index + 2)`, for an index of at least 1), so a snapshot carries it and a
+`resume` (which re-seeds state) re-arms it.
+
+**What a host must keep.** At most one instant of a `SampleTrigger` per frame interval (a frame
+step at or below its `period`), and at most one change of a `Change`'s input per frame interval,
+which frame sampling gives anyway. Everything inside a frame interval is shown at the frame's
+time with the frame's values: an instant between frames is sampled with the frame's inputs, not
+the instant's (a `TriggeredSampler` behind `SampleTrigger(1.4 s)` at 1 s frames samples `u` at
+2 s for the instant at 1.4 s).
+
+The plan costs nothing where no event input has a pulse or sample upstream. Elsewhere load adds
+one linear pass over the wiring (and the blob decoder repeats it: no blob byte carries it), and
+each frame evaluates every logic block of an active cone twice more, once per block however many
+consumers share it, into buffers sized at load.
+
 ## Host observation
 
 `get_output` and `watch` are latest-state, non-receipt inspections. Load, restore and parameter
@@ -202,32 +249,57 @@ authorize actuation.
 
 ## Conformance boundary
 
-**A Boolean true on consecutive frames is one event to an event input** (open: issue #800 needs
-an owner decision; this is the observed behaviour, not settled design). An event input sees one
-false-to-true transition however many frames its Boolean stays true, so the receiving block applies
-one event where Modelica, whose pulses are true only at an instant, fires the `when` at each. The
-sources that do this:
+**Pulses on an event input follow the settled-value rule above**, checked against OpenModelica
+1.25.1 running the pinned Buildings classes
+(`crates/oce-conformance/tests/open_modelica_pulse_events.rs`, nine pilot runs): every consumer class
+behind `Change` of a signal that changes on consecutive frames, `Not(Change)`, `Or(Change, level)`,
+`SampleTrigger` at 0.5, 1, 1.4 and 2 s from an instant at the start and from an off-grid start,
+`Not(SampleTrigger)`, G36 `TrimAndRespond`'s hold latch (`Latch` with `u` a sample and `clr`
+`And(Not(hold), sample)`), `Latch` and `Toggle` whose `clr` is `Change` of the same or another
+signal or `Not(Edge)`, every consumer at frame 0 behind a negated initialisation pulse
+(`Not(Change(x))`, `Not(Edge(x))`) and behind `Not(SampleTrigger)` on and off the grid, mixed cones
+at frame 0 (`Or`, `And`, `Xor` of an initialisation pulse and a sample, a three-leaf mixture, a
+level), and `Latch` and `Toggle` reading the initialisation pulse, equal OpenModelica
+at every frame (bit for bit; a timer within 1e-6 s and a mean within 1e-12, OpenModelica's printed
+precision). Building 33's re-enable one frame after a disable resets as OpenModelica does
+(`building_33_openmodelica_reenable.rs`). The two divergences registered before the rule,
+`DVG-000001` and `DVG-000002`, are resolved. Ten remain, registered
+(`crates/oce-conformance/tests/fixtures/known_divergence/register.json`) and documented here as
+the owner ruled (decision 2); in each the engine gives what it gave before this rule or differs
+from OpenModelica at fewer frames, but for frames inside `DVG-000008`'s shape below and
+`DVG-000006`'s frame 1:
 
-- `Logical.Change` and `Integers.Change`, when their input changes on two consecutive frames.
-- `Logical.Sources.SampleTrigger` with a `period` at or below the frame step: it is `true` on
-  every frame, so an event input it feeds sees at most the frame-0 transition, where no `when`
-  fires, and never fires after it. `SampleTrigger(period = 1 s)` or `(period = 0.5 s)` into
-  `TriggeredSampler` at 1 s frames holds `y_start` at every frame; at `period = 2 s` it samples at
-  2, 4 and 6 s (`crates/oce-conformance/tests/sample_trigger_event_inputs.rs`, engine only).
-- Pulses combined through `Or` or `And`, for example `Or(Edge(a), Edge(b))` with `a` and `b`
-  rising on consecutive frames. `Edge` and `FallingEdge` alone cannot be true on two consecutive
-  frames: two rising edges need a fall between them.
+- `DVG-000003`, `DVG-000006`: a cone with a `Pre` keeps the rising edge. `OnCounter` behind
+  `Or(Change(u), Pre(b))` counts one event where OpenModelica counts three; behind
+  `Pre(SampleTrigger)`, one where OpenModelica counts one per instant.
+- `DVG-000004`: several instants of a `SampleTrigger` in one frame fire once (0.5 s at 1 s frames:
+  10 counts against 19), with the once-only warning above.
+- `DVG-000005`, `DVG-000011`: an event between frames is shown at the next frame with that
+  frame's values (`SampleTrigger(1.4 s)` at 1 s frames samples `u(2 s)` for the instant at
+  1.4 s; a `TimerAccumulating` reset by a change at 3 s on frames at 0.25 + k s restarts at 3.25 s).
+- `DVG-000007`: a fallback cone at frame 0 (`Or(Not(Change(x1)), Pre(false))`) never fires there;
+  OpenModelica's initialisation pulse does.
+- `DVG-000008`: `Latch` and `Toggle` whose `clr` holds a negated sample (above). Frames can
+  differ where the engine before this rule matched OpenModelica, for `Latch` and `Toggle`,
+  possibly several consecutive frames, never a whole column where the engine before this rule
+  was right: `Latch(u = Not(SampleTrigger(2 s, shift 0.5)), clr = Xor(SampleTrigger(2 s, shift 0.5), a))` at 1 s frames with `a` = F,T,T,F,F,T,F,T gives T,T,F,F,F,F,F,F here, T,T,F,F,T,T,T,T before this rule, and T throughout in the reviewer's Modelica model. The exact fix, storing `clr`'s previous settled value, is
+  issue #810.
+- `DVG-000012`: a `Pre` on one event input of a two-input consumer: the block keeps the rising
+  edge on both, and the `Pre` shows its value a frame after OpenModelica's `pre` settles.
+- `DVG-000009`: a data input carrying a converted pulse (`BooleanToReal(Change(a))` into
+  `TriggeredSampler.u`, `IntegratorWithReset.y_reset_in` or `PIDWithReset.u_m`, the trigger
+  `Not(Change(a))`) puts the block on the rising edge, a frame after OpenModelica's second
+  iteration, which reads the pulse already false.
+- `DVG-000010`: OpenModelica reinitialises `IntegratorWithReset` and `PIDWithReset` when a negated
+  sample's `sample()` falls after its instant, in continuous time, though no when-only class
+  behind the same signal fires there; the engine fires none of them.
 
-OpenModelica shows two cases, registered as known divergences
-(`crates/oce-conformance/tests/fixtures/known_divergence/register.json`). `DVG-000001`: upstream's
-`CoolingCoilValve` re-enabled one frame after a disable, where OpenModelica resets its PI again at
-the re-enable and the engine does not (`building_33_openmodelica_reenable.rs`). In that probe
-(PI unsaturated, a constant error from the re-enable on, uniform 5 s steps) the valve stays `k`
-times the change in the error above OpenModelica's; other conditions give other offsets.
-`DVG-000002`: `OnCounter` counting `Change` pulses of a signal that changes on consecutive frames
-(`open_modelica_event_pulses.rs`; OpenModelica counts six, the engine three). Agreement on finer
-frames is shown for `DVG-000001` only: on 1/64 s frames the engine resets at the re-enable too and
-equals OpenModelica there exactly, and within 1e-3 after it.
+Not compared, and not matched by any event rule: a pulse read for its duration (`TrueDelay`,
+`Timer`, `TrueFalseHold`, `TrueHoldWithReset`, a `MovingAverage` of a converted pulse) lasts a
+frame here and no time in Modelica; and events at different times inside one frame are treated as
+simultaneous, so `And(Change(a), b)` with `b` rising after `a` changes inside the frame fires here
+and not in Modelica. No host cadence removes that, only frames short enough that no two sources
+change inside one.
 
 Open Control Engine supports the `CDL.Logical.Pre` interface and the HostTick v1 behavior above. It
 does **not** claim exact Modelica or OpenModelica same-time event-iteration equivalence for `Pre`, or

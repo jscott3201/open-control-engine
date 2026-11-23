@@ -97,6 +97,13 @@ which the same equation gives false; HostTick has one frame at `t_0` and keeps t
 value (decision 6). A downstream reset never sees that pulse as an event: at initialisation because
 the `when` is inactive, and at frame 1 because the pulse has fallen.
 
+**Later (issue #800).** An event input fed by a pulse or a sample now follows the initial-frame rule
+of the settled-value rule (`i -> w -> s`, design note
+[Event inputs fed by one-frame pulses](pulse-event-inputs.md), decision 3 as revised): a sample
+instant at the start and a negated initialisation pulse fire at frame 0, as OpenModelica does.
+The rule above still holds for every level and for every input with no pulse or sample upstream,
+and every frame-0 test of GitHub #789 passes unchanged.
+
 **Evaluation order.** To emit the post-event value, the block must read this frame's event input at
 emission, so the input must be declared direct feedthrough: `PIDWithReset` `trigger → y` in the
 modes with an integrator; `IntegratorWithReset` `trigger → y` and `y_reset_in → y` (its `u` stays a

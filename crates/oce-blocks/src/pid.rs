@@ -45,14 +45,16 @@ use crate::dynamics::{
     PREV_T_UNSET, first_order_filter_implicit, forward_euler_accumulate,
     is_first_tick as prev_t_is_unset, tick_dt,
 };
+use crate::settled::{fire, settled_input};
 use crate::{
-    Block, BlockKind, BlockSignature, Ctx, EventInputRole, PortKind, emit_real, read_bool,
-    read_real,
+    Block, BlockKind, BlockSignature, Ctx, EventInputRole, PortKind, emit_real, read_real,
 };
 
 const CDL_EPS: f64 = 1e-15;
 /// `PIDWithReset`'s `trigger` input index.
 const TRIGGER_PORT: usize = 2;
+/// `PIDWithReset`'s declared inputs `u_s`, `u_m`, `trigger`; hidden settled values follow them.
+const PID_WITH_RESET_INPUTS: usize = 3;
 /// The upstream `min=100*Constants.eps` parameter floor (Buildings `Constants.mo`: `eps=1E-15`),
 /// shared with the registry's load-time PID range rules so validation and the runtime
 /// defense-in-depth floor agree bit-exactly.
@@ -229,13 +231,14 @@ fn is_first_tick(region: &[u64], state: StateLayout) -> bool {
 }
 
 /// Whether this frame is a reset event of `PIDWithReset`: the layout has a trigger word (a mode
-/// with an integrator), this is not the first frame, and `trigger` is true now and was false at the
-/// previous frame. Frame 0 never is: initialisation leaves the upstream `when` inactive.
-fn reset_event(inputs: &[Value], region: &[u64], state: StateLayout) -> bool {
+/// with an integrator) and `trigger` fires by the settled-value rule (issue #800): at a later
+/// frame, `trigger` rose from its stored `w` or rises to its settled value; at the initial frame
+/// (initialisation leaves the upstream `when` inactive) it fires on `i -> w -> s`.
+fn reset_event(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64], state: StateLayout) -> bool {
     state.prev_trigger.is_some_and(|prev_trigger| {
-        !is_first_tick(region, state)
-            && read_bool(inputs, TRIGGER_PORT)
-            && region[prev_trigger] == 0
+        let initial = ctx.is_initial() || is_first_tick(region, state);
+        let trigger = settled_input(inputs, TRIGGER_PORT, PID_WITH_RESET_INPUTS, 0);
+        fire(initial, region[prev_trigger] != 0, trigger).any()
     })
 }
 
@@ -268,6 +271,7 @@ fn derivative_output(e: f64, config: ControllerConfig, region: &[u64], state: St
 }
 
 fn current_terms(
+    ctx: &Ctx<'_>,
     inputs: &[Value],
     config: ControllerConfig,
     region: Option<&[u64]>,
@@ -282,7 +286,7 @@ fn current_terms(
     let y_i = match (state.i, region) {
         // The reset frame back-solves the integrator from this frame's `P + D` and emits through
         // the normal path, `P + D + (y_reset - (P + D))` (`addPID` in `PIDWithReset.mo`).
-        (Some(_), Some(r)) if reset_event(inputs, r, state) => {
+        (Some(_), Some(r)) if reset_event(ctx, inputs, r, state) => {
             canonicalize_real(config.y_reset - y_pd)
         }
         (Some(i), Some(r)) => f64::from_bits(r[i]),
@@ -294,13 +298,14 @@ fn current_terms(
 }
 
 fn emit_pid(
+    ctx: &Ctx<'_>,
     inputs: &[Value],
     config: ControllerConfig,
     region: Option<&[u64]>,
     state: StateLayout,
     emit: &mut dyn FnMut(usize, Value),
 ) {
-    let (_, _, _, y) = current_terms(inputs, config, region, state);
+    let (_, _, _, y) = current_terms(ctx, inputs, config, region, state);
     emit_real(0, y, emit);
 }
 
@@ -314,12 +319,12 @@ fn update_pid_state(
     let state = layout(config, with_reset);
     let first_tick = is_first_tick(region, state);
     let step_dt = dt(ctx, region, state);
-    let (e, y_i, y_u, y) = current_terms(inputs, config, Some(region), state);
+    let (e, y_i, y_u, y) = current_terms(ctx, inputs, config, Some(region), state);
 
     if let Some(i) = state.i {
         // On the reset frame `current_terms` already holds the reset integrator in `y_i`; the
         // frame's Euler step covers the interval before the event and is discarded.
-        let next_i = if reset_event(inputs, region, state) {
+        let next_i = if reset_event(ctx, inputs, region, state) {
             y_i
         } else {
             let ant_win_gai = (y_u - y) / (config.k_eff() * config.ni_eff());
@@ -343,7 +348,8 @@ fn update_pid_state(
         region[prev_t] = ctx.t().to_bits();
     }
     if let Some(prev_trigger) = state.prev_trigger {
-        region[prev_trigger] = u64::from(read_bool(inputs, TRIGGER_PORT));
+        region[prev_trigger] =
+            u64::from(settled_input(inputs, TRIGGER_PORT, PID_WITH_RESET_INPUTS, 0).w);
     }
 }
 
@@ -396,18 +402,26 @@ impl Block for Pid {
         crate::state_contract::validate_pid(region, prev_t, state.prev_t, None)
     }
 
-    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_pid(inputs, self.config, None, layout(self.config, false), emit);
+    fn step_algebraic(&self, ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit_pid(
+            ctx,
+            inputs,
+            self.config,
+            None,
+            layout(self.config, false),
+            emit,
+        );
     }
 
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
         emit_pid(
+            ctx,
             inputs,
             self.config,
             Some(region),
@@ -421,9 +435,9 @@ impl Block for Pid {
     }
 }
 
-/// `CDL.Reals.PIDWithReset` — limited PID plus a rising-edge integrator reset. The data path feeds
-/// through on `u_s,u_m`. In the PI and PID modes `trigger` feeds through as well: the frame where it
-/// rises (after frame 0) emits the reset controller, with the integrator back-solved to
+/// `CDL.Reals.PIDWithReset` — limited PID plus an integrator reset on `trigger` events. The data
+/// path feeds through on `u_s,u_m`. In the PI and PID modes `trigger` feeds through as well: the
+/// frame of a `trigger` event (after frame 0) emits the reset controller, with the integrator back-solved to
 /// `y_reset - (yP + yD)` from that frame's terms. The reset target is the build-time `y_reset`
 /// parameter, which follows `PIDWithReset.mo` and defaults to the resolved `xi_start`. In modes
 /// without integral action, reset is dormant, no trigger state is allocated, and `trigger` does not
@@ -432,10 +446,12 @@ impl Block for Pid {
 /// OpenModelica 1.25.1 agrees exactly at every frame of a PI with `Ti = 1e20` s (integral held),
 /// with the trigger true from frame 0 and with it rising at frame 1 (`oce-conformance`'s
 /// `open_modelica_event_triggers.rs`, issue #670), and to 1e-12 at each engine reset of the
-/// Building 33 valve sequence (`oce-verify`, issue #787). A trigger fed by a pulse that is true on
-/// two consecutive frames (`Change` of an enable that falls and rises on consecutive frames) is one
-/// rising edge here and two events in OpenModelica, which then resets where this block does not:
-/// a registered known divergence, open in issue #800.
+/// Building 33 valve sequence (`oce-verify`, issue #787). `trigger` takes the settled-value rule
+/// (issue #800, `docs/design/pulse-event-inputs.md`): fed by a pulse true on consecutive frames
+/// (`Change` of an enable that falls and rises on consecutive frames) it resets at each, as
+/// OpenModelica does; at the initial frame it resets on `i -> w -> s` (a sample instant at the
+/// start, a negated initialisation pulse; never a level). A tainted `u_s` or `u_m` keeps the
+/// rising edge.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PidWithReset {
     pub(crate) config: ControllerConfig,
@@ -464,6 +480,14 @@ impl Block for PidWithReset {
         (in_idx == TRIGGER_PORT && self.config.with_i()).then_some(EventInputRole::Condition)
     }
 
+    fn settled_event_inputs(&self) -> &[usize] {
+        if self.config.with_i() {
+            &[TRIGGER_PORT]
+        } else {
+            &[]
+        }
+    }
+
     fn state_len(&self) -> usize {
         layout(self.config, true).len
     }
@@ -489,18 +513,26 @@ impl Block for PidWithReset {
         crate::state_contract::validate_pid(region, prev_t, state.prev_t, state.prev_trigger)
     }
 
-    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_pid(inputs, self.config, None, layout(self.config, true), emit);
+    fn step_algebraic(&self, ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit_pid(
+            ctx,
+            inputs,
+            self.config,
+            None,
+            layout(self.config, true),
+            emit,
+        );
     }
 
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
         emit_pid(
+            ctx,
             inputs,
             self.config,
             Some(region),

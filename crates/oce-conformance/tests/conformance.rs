@@ -116,6 +116,7 @@ mod open_modelica_event_pulses;
 mod open_modelica_event_triggers;
 mod open_modelica_integrator_ramp;
 mod open_modelica_line;
+mod open_modelica_pulse_events;
 mod open_modelica_reliefs;
 mod open_modelica_toggle;
 mod per_block_conversions;
@@ -130,6 +131,8 @@ mod per_block_routing_reals;
 mod per_block_routing_typed;
 mod per_block_source_timetable;
 mod per_block_utilities_assert;
+mod pulse_event_documents;
+mod pulse_event_init_documents;
 mod sample_trigger_event_inputs;
 mod tiers;
 

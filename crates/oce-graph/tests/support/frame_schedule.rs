@@ -145,6 +145,15 @@ impl RunDigest {
 /// The checked-in digest table: one `name<TAB>digest` line per fixture, sorted by name.
 pub const DIGEST_TABLE: &str = "tests/fixtures/blob_frame_digests.tsv";
 
+/// The checked-in outputs-only digest table: one `name<TAB>digest` line per fixture, each the
+/// [`RunDigest`] of the 160 frames' boundary outputs alone (no connector value, no state word).
+/// It was recorded at `development` 56f93247, the commit before the settled-value rule of issue
+/// #800, and that rule left it byte-identical: of the three run digests the rule moved
+/// (`multizone_vav_supply_fan`, `multizone_vav_supply_temperature`,
+/// `trim_and_respond_have_hol_false`), every move is in stored words, not outputs. A change that
+/// moves it changes what a host sees and must say so.
+pub const OUTPUT_DIGEST_TABLE: &str = "tests/fixtures/blob_frame_output_digests.tsv";
+
 /// Parse the digest table text into `(name, digest)` pairs.
 pub fn parse_digests(text: &str) -> Vec<(String, String)> {
     text.lines()

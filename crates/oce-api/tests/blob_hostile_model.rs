@@ -32,6 +32,8 @@ fn the_hand_built_models_decode_and_tick() {
         blocks: &decoded.blocks,
         diagnostics: &oce_blocks::NoopDiagnostics,
         state: &mut decoded.state,
+        // The frame driver's first frame is the initial one (issue #800).
+        initial: true,
     };
     eval_tick(&mut ctx, 0.0);
     assert_eq!(

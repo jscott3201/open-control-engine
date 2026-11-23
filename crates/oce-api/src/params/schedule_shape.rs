@@ -17,7 +17,9 @@ use crate::engine::Engine;
 /// What a block's place in the frozen schedule is derived from: its port counts, which inputs
 /// feed through to which outputs (the connector feedthrough DAG), which inputs it reads when it
 /// fires (the block-level emit-before order: every input of an `[A]` block, the feeding-through
-/// inputs of an `[S]` block), and each input's event role (the loop diagnostic's remedy).
+/// inputs of an `[S]` block), each input's event role (the loop diagnostic's remedy), and what the
+/// event plan was derived from (issue #800): the inputs that take the settled-value rule and what
+/// the block's outputs are to an event input's cone.
 /// `kind()` and `state_len` enter only through the reads-at-emit set: `resume` re-allocates state.
 #[derive(PartialEq, Eq)]
 struct ScheduleShape {
@@ -26,6 +28,8 @@ struct ScheduleShape {
     feeds_through: Vec<bool>,
     reads_at_emit: Vec<bool>,
     event_roles: Vec<Option<oce_blocks::EventInputRole>>,
+    settled_inputs: Vec<usize>,
+    event_signal: oce_blocks::EventSignal,
 }
 
 impl ScheduleShape {
@@ -53,6 +57,8 @@ impl ScheduleShape {
             feeds_through,
             reads_at_emit,
             event_roles,
+            settled_inputs: block.settled_event_inputs().to_vec(),
+            event_signal: block.event_signal(),
         }
     }
 }

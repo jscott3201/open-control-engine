@@ -290,3 +290,155 @@ fn registry_constructs_logical_conversion_and_integer_classes() {
     });
     assert_one_out(le.as_ref(), &[i(4)], b(false));
 }
+
+mod sample_trigger_rule {
+    //! `SampleTrigger` under issue #800: the initial frame emits `true` only on an instant (decision
+    //! 3), a frame that spans several instants warns once (decision 2), and the warned mark lives
+    //! in the state word without losing the index.
+
+    use std::cell::Cell;
+
+    use oce_model::{ParamTable, Value};
+
+    use crate::logical::{sample_trigger_encode, sample_trigger_word};
+    use crate::{Block, Ctx, Diagnostics, Time, lookup};
+
+    #[derive(Default)]
+    struct Count(Cell<usize>);
+    impl Diagnostics for Count {
+        fn warn(&self, _source: &str, _message: &str, _t: Time) {
+            self.0.set(self.0.get() + 1);
+        }
+    }
+
+    fn trigger(period: f64, shift: f64) -> Box<dyn Block> {
+        let table = ParamTable {
+            values: vec![
+                (std::sync::Arc::from("period"), Value::Real(period)),
+                (std::sync::Arc::from("shift"), Value::Real(shift)),
+            ],
+        };
+        (lookup("CDL.Logical.Sources.SampleTrigger").unwrap().make)(&table)
+    }
+
+    /// Run frames at `times` (the first is the initial frame); the outputs, the warnings and the
+    /// final word.
+    fn run(block: &dyn Block, times: &[f64]) -> (Vec<bool>, usize, u64) {
+        let mut region = vec![0u64; block.state_len()];
+        block.init_state(&mut region, &ParamTable::default());
+        let count = Count::default();
+        let mut outs = Vec::new();
+        for (k, &t) in times.iter().enumerate() {
+            let cx = Ctx::new(t, &count).with_initial(k == 0);
+            block.emit_from_state(&cx, &[], &region, &mut |_, v| {
+                outs.push(matches!(v, Value::Boolean(true)));
+            });
+            block.update_state(&cx, &[], &mut region);
+        }
+        (outs, count.0.get(), region[0])
+    }
+
+    #[test]
+    fn the_initial_frame_fires_only_on_an_instant() {
+        // On the grid (t = 0, shift 0) and a hair before or after it (within 1e-9 * period).
+        for t0 in [0.0, -1e-10, 1e-10, 5.0] {
+            let (outs, _, _) = run(trigger(1.0, 0.0).as_ref(), &[t0, t0 + 1.0]);
+            assert_eq!(outs, [true, true], "t0 {t0}");
+        }
+        // Off the grid: no instant at the start; the next frame reaches the next instant.
+        for t0 in [0.25, 0.5, 0.999, 100.3] {
+            let (outs, _, _) = run(trigger(1.0, 0.0).as_ref(), &[t0, t0 + 1.0]);
+            assert_eq!(outs, [false, true], "t0 {t0}");
+        }
+        // Before the first instant (shift 0.5): false, then the instant at 0.5 s.
+        let (outs, _, _) = run(trigger(1.0, 0.5).as_ref(), &[0.0, 1.0]);
+        assert_eq!(outs, [false, true]);
+    }
+
+    #[test]
+    fn a_frame_spanning_several_instants_warns_once_and_keeps_the_index() {
+        let block = trigger(1.0, 0.0);
+        // 0 -> 2.5 spans the instants 1 and 2: one warning; 2.5 -> 6 spans 3 to 6: none more.
+        let (outs, warnings, word) = run(block.as_ref(), &[0.0, 2.5, 6.0, 7.0]);
+        assert_eq!(outs, [true, true, true, true]);
+        assert_eq!(warnings, 1);
+        assert_eq!(sample_trigger_word(word), (7, true));
+        assert_eq!(word.cast_signed(), -(7 + 2));
+        // One instant per frame never warns; a large first step does not either (the start).
+        assert_eq!(run(block.as_ref(), &[0.0, 1.0, 2.0, 3.0]).1, 0);
+        assert_eq!(run(block.as_ref(), &[1000.0, 1001.0]).1, 0);
+        // Before any instant (index -1) a frame that reaches two instants is a span too.
+        let late = trigger(1.0, 0.5);
+        let (_, warnings, word) = run(late.as_ref(), &[0.0, 2.0]);
+        assert_eq!((warnings, sample_trigger_word(word)), (1, (1, true)));
+    }
+
+    #[test]
+    fn the_warned_mark_does_not_change_what_the_block_emits() {
+        let block = trigger(1.0, 0.0);
+        let times = [0.0, 2.5, 3.0, 3.5, 4.0, 9.0, 9.5];
+        // The same run, with the mark cleared after every frame: the same outputs.
+        let mut a = vec![0u64; 1];
+        let mut b = vec![0u64; 1];
+        block.init_state(&mut a, &ParamTable::default());
+        block.init_state(&mut b, &ParamTable::default());
+        let count = Count::default();
+        for (k, &t) in times.iter().enumerate() {
+            let cx = Ctx::new(t, &count).with_initial(k == 0);
+            let (mut ya, mut yb) = (None, None);
+            block.emit_from_state(&cx, &[], &a, &mut |_, v| {
+                ya = Some(matches!(v, Value::Boolean(true)))
+            });
+            block.emit_from_state(&cx, &[], &b, &mut |_, v| {
+                yb = Some(matches!(v, Value::Boolean(true)))
+            });
+            assert_eq!(ya, yb, "t {t}");
+            block.update_state(&cx, &[], &mut a);
+            block.update_state(&cx, &[], &mut b);
+            let (index, _) = sample_trigger_word(b[0]);
+            b[0] = sample_trigger_encode(index, false);
+            assert_eq!(sample_trigger_word(a[0]).0, index, "t {t}");
+        }
+    }
+
+    #[test]
+    fn the_state_contract_accepts_exactly_the_word_s_domain() {
+        let block = trigger(1.0, 0.0);
+        let ok = |word: i64, t: f64| block.validate_state(&[word.cast_unsigned()], t, t).is_ok();
+        // Unwarned: the index of the model time, -1 before the first instant.
+        assert!(ok(3, 3.5));
+        assert!(ok(-1, -0.5));
+        // Warned: `-(index + 2)` for an index of at least 1.
+        assert!(ok(-(3 + 2), 3.5));
+        // Refused: another index, ahead or behind, warned or not; a warned index below 1; the
+        // extremes; a negative that decodes to an index ahead of the model time.
+        for word in [
+            2,
+            4,
+            -1,
+            -2,
+            -3,
+            -(4 + 2),
+            i64::MIN,
+            i64::MAX,
+            -(1_000_000 + 2),
+        ] {
+            assert!(!ok(word, 3.5), "word {word}");
+        }
+        assert!(!ok(-2, 0.5), "a warned index 0");
+        // Encoding at the integer limit never overflows: an index that cannot carry the mark is
+        // stored unwarned.
+        assert_eq!(
+            sample_trigger_word(sample_trigger_encode(i64::MAX, true)),
+            (i64::MAX, false)
+        );
+        assert_eq!(
+            sample_trigger_word(sample_trigger_encode(i64::MAX - 2, true)),
+            (i64::MAX - 2, true)
+        );
+        assert_eq!(
+            sample_trigger_word(i64::MIN.cast_unsigned()),
+            (i64::MAX - 1, true)
+        );
+    }
+}

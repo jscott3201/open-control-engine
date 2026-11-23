@@ -8,7 +8,7 @@
   "msl_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
   "model": "Buildings.Utilities.Plotters.Examples.BaseClasses.CoolingCoilValve",
   "model_source_sha256": "cc2ca542cb7269d172e725abc7ed8efd36f0e4f1d1a05d535edd198f475f0bea",
-  "oracle_sha256": "abdda0f0a62ba3ff673b076636a144b2f06387b825855aa4df78828eec5ddae2",
+  "oracle_sha256": "06c4fc72642f597e76e6125252f41bc5b3cdb850ae8044a8b606b922fa5c66d2",
   "simulate_template_sha256": "61c011c07555c09e64fed376331b6c60e5cb5329ab6a8a3d72068d8ae554c0d9",
   "wrapper": "CoolingCoilValveFrames.mo",
   "wrapper_sha256": "5076ed55b50fa68b153f608fa22dbb99edec3c63408c3fa2e3451ec45c0befc4",

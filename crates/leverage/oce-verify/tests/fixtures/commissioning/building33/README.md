@@ -31,7 +31,7 @@ under the spec's `data/` paths, and the CLI test copies them into a scratch dire
 | `openmodelica/yCooVal_day.csv`, `provenance.json` | That signal (17,281 rows, as OpenModelica printed it) and the record of the run (image digest, `omc` version, architecture, the two library commits and trees). | `sh openmodelica/run_openmodelica.sh <buildings checkout> <msl checkout>`, by hand |
 | `openmodelica/frames_wrapper.py`, `CoolingCoilValveFrames.mo`, `CoolingCoilValveReenableProbe.mo`, `simulate_frames.mos`, `extract_frames.py`, `run_openmodelica_frames.sh` | Run upstream's `CoolingCoilValve`, unmodified, on the 78 synthetic frames of `valve_oracle.txt` (its input columns only, each frame's inputs held until the next frame) in the same container, and take its `yCooVal` at the frame instants, with where it reinitialised the PI's integrator (issue #787); then again with the supply air at 290 K from 382 s, the probe of issue #800. | by hand; the two wrappers by `python3 -I frames_wrapper.py ../valve_oracle.txt [probe]`, which the run script repeats and compares |
 | `openmodelica/CoolingCoilValveFrames.raw.csv`, `CoolingCoilValveReenableProbe.raw.csv`, `yCooVal_frames.csv`, `yCooVal_reenable_probe.csv`, `provenance_frames.json` | Each run's result as OpenModelica wrote it (about 43 KB each), the two at the 78 frames, `x,y,reset`, and the record of both runs (as for the day, plus the wrappers', the oracle's, the script's and each signal's digests and the command line). | `sh openmodelica/run_openmodelica_frames.sh <buildings checkout> <msl checkout>`, by hand |
-| `openmodelica/yCooVal_reenable_probe.engine.csv` | The engine's valve signal over the probe frames, as bits: the engine evidence of the known divergence `DVG-000001` (issue #800). | by hand, from the engine; `building_33_openmodelica_reenable.rs` holds the engine to it |
+| `openmodelica/yCooVal_reenable_probe.engine.csv` | The engine's valve signal over the probe frames before the settled-value rule of issue #800, as bits: the evidence of the resolved known divergence `DVG-000001`. | never regenerated; `building_33_openmodelica_reenable.rs` checks it is the engine before 377 s and 0.036 above OpenModelica at 382 s |
 
 The Building 33 day of the funnel differential is in `../../funnel/recorded/building_33_day/`
 (its inputs are this run's two series) and `../../funnel/expected/building_33_day/` (what the
@@ -58,11 +58,9 @@ Four checks, each from outside the authored file:
    the outdoor air below upstream's `uLow`; each re-enable resetting the integrator; and the PI
    driven below `yMin`, its lower saturation with the anti-windup acting, and its recovery; and,
    appended after those 74 frames (issue #768), a one-frame disable and its re-enable, where
-   `Change` is still true at the re-enable, so under the engine's discrete time the reset happens
-   at the disable, not at the re-enable: the case that tells, under that rule, a reset triggered
-   by `Change` from one triggered by the enable's level. Under Modelica it tells them apart in
-   no such way: `Change` fires at both instants and both variants reset at 382 s; the engine and
-   OpenModelica differ there (check 3, issue #800). One
+   `Change` is true on both frames, two events, so the integrator resets at the disable and again
+   at the re-enable, as Modelica's `Change` fires at both instants (the settled-value rule, issue
+   #800). One
    modifier no input can show: the line's upper clamp (`higLim.limitAbove`) acts only above the
    line's upper support point, where the line would pass `f2 = 1`, and the valve is the minimum
    of the line and a PI signal that never exceeds `yMax = 1`. Only check 1 sees it, and a test
@@ -72,7 +70,8 @@ Four checks, each from outside the authored file:
    gives at the event, and that frame takes no integration step (issue #768; before it, a reset
    showed one frame late and those frames read 0.09, 0.045, 0.018 and 0.018). Of the original
    74 rows of `valve_oracle.txt` those four moved, to 0, and 70 are byte-identical; the four
-   appended rows are new. Check 3 is the comparison with the continuous model.
+   appended rows are new. Issue #800 moved the last two (387 s to 0, 392 s to 0.009): the reset
+   at the re-enable. Check 3 is the comparison with the continuous model.
 3. **Upstream's model in OpenModelica** (`building_33_openmodelica.rs`): over the day, the
    engine's signal stays within **0.0034** of OpenModelica's at every 5 s instant (largest at
    67,375 s, the valve near 0.71; mean absolute difference under 1.5e-4). OpenModelica's run is
@@ -84,18 +83,18 @@ Four checks, each from outside the authored file:
    **On the 78 synthetic frames** (`building_33_openmodelica_frames.rs`, issue #787), with the
    inputs held at the frames as the engine holds them, the comparison sees the resets the day
    cannot (the day's enable is on throughout). OpenModelica reinitialises the integrator at all
-   nine changes of the enable (25, 207, 237, 257, 272, 292, 307, 377 and 382 s); **eight of those
-   are engine resets**. At 382 s, the re-enable one frame after the disable, OpenModelica resets
-   again, because Modelica's `Change` is true only at each change's instant, while under HostTick
-   v1 `Change` is true at 377 s and at 382 s, one rising edge, and the engine does not reset. The
-   78 frames cannot show it: their inputs at 377 s and 382 s are the same, so both give 0.
+   nine changes of the enable (25, 207, 237, 257, 272, 292, 307, 377 and 382 s), **and so does
+   the engine**. At 382 s, the re-enable one frame after the disable, Modelica's `Change` is true
+   only at each change's instant; under HostTick v1 it is true at 377 s and at 382 s, and the
+   settled-value rule of issue #800 makes each frame an event. The 78 frames cannot show the
+   difference that rule made (their inputs at 377 s and 382 s are the same, so both give 0);
    `building_33_openmodelica_reenable.rs` reruns them with the supply air at 290 K from 382 s
    (`CoolingCoilValveReenableProbe.mo`): OpenModelica gives 0, 0.015 and 0.030 at 382, 387 and
-   392 s, the engine 0.036, 0.051 and 0.066, a constant `k * (5 K - 3 K)` above it. That is a
-   known divergence, `DVG-000001` in `oce-conformance`'s register, pinned by the test until the
-   owner decides issue #800.
+   392 s, the engine 0, 0 and 0.015, the reset and then the one frame of integral action every
+   engine reset trails by. Before the rule the engine gave 0.036, 0.051 and 0.066, a constant
+   `k * (5 K - 3 K)` above: `DVG-000001`, now resolved.
 
-   At the engine's eight resets, and wherever the enable is off or the line cuts the PI (31 of the
+   At the engine's nine resets, and wherever the enable is off or the line cuts the PI (32 of the
    78 frames; the line's two evaluations differ by 1.6e-15), the engine equals OpenModelica to
    1e-12; the engine before issue #768 is 0.09, 0.045, 0.018 and 0.018 away at the four re-enables
    (25, 237, 272 and 307 s), more than 1e10 times that bound. After each re-enable OpenModelica

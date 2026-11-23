@@ -84,6 +84,7 @@ pub fn topo_sort(
         order,
         connector_order,
         driver_of: Vec::new(),
+        events: crate::EventPlan::default(),
     })
 }
 

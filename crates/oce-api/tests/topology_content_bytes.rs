@@ -328,7 +328,7 @@ fn the_content_bytes_of_every_loadable_document_are_rebuilt_from_its_topology() 
     // The engine crates' documents: those that load, and those the loader refuses (the
     // refusal fixtures). The leverage crates' are a floor, so a fixture added there moves
     // nothing here: `oce-author`'s six emit goldens load by that crate's own contract.
-    assert_eq!((engine_side, refused), (116, 74));
+    assert_eq!((engine_side, refused), (117, 74));
     assert!(leverage >= 6, "{leverage} leverage documents loaded");
 }
 

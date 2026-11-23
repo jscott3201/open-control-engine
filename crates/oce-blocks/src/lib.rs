@@ -115,6 +115,7 @@ pub use resolved_ports::{
 mod routing;
 mod routing_boolean;
 mod routing_integer;
+mod settled;
 mod source_pulse;
 mod source_timetable;
 mod state_contract;
@@ -168,6 +169,7 @@ pub use routing_integer::{
     IntegerExtractSignal, IntegerExtractor, IntegerScalarReplicator, IntegerVectorFilter,
     IntegerVectorReplicator,
 };
+pub use settled::EventSignal;
 pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
 pub use source_timetable::{
     IntegerTimeTable, LogicalTimeTable, RealTimeTable, TimeTableExtrapolation, TimeTableSmoothness,
@@ -326,13 +328,36 @@ pub trait Diagnostics {
 pub struct Ctx<'a> {
     t: Time,
     diag: &'a dyn Diagnostics,
+    initial: bool,
 }
 
 impl<'a> Ctx<'a> {
-    /// Build a per-tick context from scheduler-owned time and diagnostics sink.
+    /// Build a per-tick context from scheduler-owned time and diagnostics sink. The context is not
+    /// the initial frame; see [`Ctx::with_initial`].
     #[must_use]
     pub fn new(t: Time, diag: &'a dyn Diagnostics) -> Self {
-        Self { t, diag }
+        Self {
+            t,
+            diag,
+            initial: false,
+        }
+    }
+
+    /// The same context, marked as the initial frame when `initial` is true: the first frame after
+    /// every state region was seeded by [`Block::init_state`] (a load, a `resume` after parameter
+    /// edits, or a restore of a snapshot taken before any frame). The frame driver sets it from
+    /// its previous accepted time being unset. Blocks whose `when` is inactive at initialisation
+    /// read it through [`Ctx::is_initial`] (issue #800, decision 3).
+    #[must_use]
+    pub fn with_initial(mut self, initial: bool) -> Self {
+        self.initial = initial;
+        self
+    }
+
+    /// Whether this is the initial frame ([`Ctx::with_initial`]).
+    #[must_use]
+    pub fn is_initial(&self) -> bool {
+        self.initial
     }
 
     /// Current model time in seconds.
@@ -399,6 +424,21 @@ pub trait Block: Send + Sync {
     /// The default is `None`. Never panics.
     fn event_input_role(&self, _in_idx: usize) -> Option<EventInputRole> {
         None
+    }
+
+    /// The declared inputs (indices into the resolved signature, ascending) whose `when` events
+    /// follow the settled-value rule of issue #800 (`docs/design/pulse-event-inputs.md`). For
+    /// each, `oce-graph` may append two Boolean values after the declared inputs, `w` then `s`, in
+    /// this order; when it appends none the block reads `w = s = v` (see the `settled` module).
+    /// Every listed input feeds through to an output. The default is none. Never panics.
+    fn settled_event_inputs(&self) -> &[usize] {
+        &[]
+    }
+
+    /// What this block's outputs are to an event input's cone ([`EventSignal`]). A class property,
+    /// independent of parameter values. The default is [`EventSignal::Level`].
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Level
     }
 
     /// Word count of this block's `[S]` state region within `RunState.words` (0 for `[A]`). Fixed
@@ -828,6 +868,8 @@ mod tests;
 
 #[cfg(test)]
 mod catalog_tests;
+#[cfg(test)]
+mod settled_tests;
 
 #[cfg(test)]
 mod class_signature_tests;
