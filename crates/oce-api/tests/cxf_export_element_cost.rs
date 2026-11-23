@@ -272,6 +272,12 @@ fn a_connector_with_no_finding_copies_nothing_of_its_blocks_iri() {
     for count in [256, 512, 1_024] {
         let (result, info) = exported_graph(&many_outputs(64 * 1024, count));
         let bytes = result.expect("the block exports");
+        // The block's IRI is written twice (the root's `containsBlock`, the block's `@id`), and
+        // each output adds its own short port node.
+        assert!(
+            bytes <= 2 * 64 * 1024 + count * 128,
+            "{count}: {bytes} bytes"
+        );
         totals.push(info.bytes_total);
     }
     let per_output = (totals[2] - totals[0]) / (1_024 - 256);

@@ -209,8 +209,8 @@ const MSG_CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection end
 const MSG_DUPLICATE_ID: &str =
     "export subset: emitted node @id collides with another emitted node @id";
 
-/// Everything [`write`] needs, fully validated: no `Option` left to unwrap, no index that can
-/// miss. Produced by [`plan`] only when the subset checks all pass.
+/// Everything [`write::write`] needs, fully validated: no `Option` left to unwrap, no index that
+/// can miss. Produced by [`plan`] only when the subset checks all pass.
 struct Plan<'g> {
     blocks: Vec<PlannedBlock<'g>>,
     ports: Vec<PlannedPort>,
@@ -259,8 +259,8 @@ struct PlannedBoundaryOutput {
 /// Export `model` as the bytes of a CXF document plus the deferral warnings (empty for a
 /// fully-in-subset graph). The warnings are `ExportDeferred` (Warning, non-aborting) — they
 /// surface via [`crate::export_with_report`] and are discarded by `crate::export`. The bytes are
-/// written one node at a time ([`write`]), and are those [`crate::write_document`] writes for the
-/// whole document.
+/// written one node at a time ([`write::write`]), and are those [`crate::write_document`] writes
+/// for the whole document.
 ///
 /// # Errors
 /// [`CxfError::Validation`] when any **error**-severity subset check fails (the three-state gate
