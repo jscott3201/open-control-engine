@@ -42,6 +42,7 @@ use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable};
 
 use crate::dto::{CxfDocument, Node};
+use crate::instance_path_budget::InstancePathBudget;
 use crate::{CxfError, bridge};
 use oce_diag::DiagnosticList;
 
@@ -70,6 +71,7 @@ mod enumeration_parameters;
 pub(crate) mod extension_blocks;
 mod instance_interface;
 mod instance_params;
+mod instance_paths;
 mod parameter_attrs;
 mod pass_through;
 mod port_binding;
@@ -230,6 +232,14 @@ pub(crate) fn resolve(
         return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new())));
     }
     array_nodes::reject_unsupported(doc, &specialization, &mut diags);
+    // The identities held under instance IRIs (issue #807): padded outputs now, before lowering
+    // builds them; parameter listings in Step 7; boundary-driven inputs after Step 9.
+    let mut instance_paths = InstancePathBudget::per_document();
+    if !instance_paths::charge_padded_outputs(doc, &specialization, &mut instance_paths, &mut diags)
+    {
+        withheld.emit_unvisited(&HashSet::new(), &mut diags);
+        return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new())));
+    }
     // One set for the whole resolve: lowering's declarations and Step 7's leaf parameters both
     // shape-check through it, so a parameter node read twice is reported once (issue #559).
     let mut checked_parameters = parameter_attrs::CheckedParameters::default();
@@ -525,6 +535,7 @@ pub(crate) fn resolve(
         &by_id,
         &mut blocks,
         &mut checked_parameters,
+        &mut instance_paths,
         &mut diags,
     );
 
@@ -670,6 +681,7 @@ pub(crate) fn resolve(
         boundary_inputs: Vec::new(),
         boundary_outputs,
     };
+    instance_paths::charge_boundary_inputs(&graph, &mut instance_paths, &mut diags);
     let boundary_inputs =
         boundary_inputs::materialize(doc, &graph, &role_aliases, &boundary_types, &mut diags);
     graph.boundary_inputs = boundary_inputs;

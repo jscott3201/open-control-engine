@@ -124,3 +124,60 @@ fn a_wire_whose_source_is_out_of_range_is_not_counted() {
     tracker.emit_diagnostics(&[wire(99, 2)], &wiring_table(), &mut diags);
     assert!(diags.is_empty(), "{diags:?}");
 }
+
+/// Two blocks under one instance IRI, `urn:a`, that differ: the first binds `k`, the second binds
+/// `m` and has its two inputs driven by boundary inputs named `urn:a.m` and `urn:a.in0`. The
+/// reader builds such a graph only for a document it refuses anyway (a child listed twice), where
+/// both blocks agree; the check is held here to every block under the IRI, as the set of spelled
+/// identities it replaced was (issue #807).
+#[test]
+fn every_block_under_one_instance_iri_mints_its_own_identities() {
+    use std::collections::{BTreeSet, HashSet};
+    use std::sync::Arc;
+
+    use oce_model::{BlockInstance, ModelGraph, ParamTable, Value};
+
+    let block = |id: u32, name: &str, inputs: Vec<ConnectorId>| BlockInstance {
+        id: BlockId(id),
+        class_iri: Arc::from("CDL.Reals.Add"),
+        inputs,
+        outputs: vec![],
+        params: ParamTable {
+            values: vec![(Arc::from(name), Value::Real(1.0))],
+        },
+        decl_order: id,
+        instance_iri: Some(Arc::from("urn:a")),
+    };
+    let mut graph = ModelGraph::new();
+    graph.blocks = vec![
+        block(0, "k", vec![]),
+        block(1, "m", vec![ConnectorId(0), ConnectorId(1)]),
+    ];
+    graph.connectors = vec![
+        Connector::new(ConnectorId(0), BlockId(1), Dir::In, ValueType::Real, 0).with_iri("urn:a.m"),
+        Connector::new(ConnectorId(1), BlockId(1), Dir::In, ValueType::Real, 1)
+            .with_iri("urn:a.in0"),
+    ];
+    graph.external_inputs = vec![ConnectorId(0), ConnectorId(1)];
+    let doc = crate::parse_document(
+        br#"{"@context":{},"@graph":[{"@id":"urn:a.m"},{"@id":"urn:a.in0"}]}"#,
+    )
+    .expect("parses");
+    let represented: HashSet<&str> = ["urn:a.m", "urn:a.in0"].into_iter().collect();
+    let mut diags = DiagnosticList::new();
+    super::refuse_minted_aliases(
+        &doc,
+        &represented,
+        &graph,
+        &HashSet::new(),
+        &BTreeSet::new(),
+        &mut diags,
+    );
+    let subjects: Vec<&str> = diags
+        .iter()
+        .map(|d| d.subject.as_deref().expect("a declaration"))
+        .collect();
+    assert_eq!(subjects, ["urn:a.m", "urn:a.in0"]);
+    assert!(diags.iter().all(|d| d.code == DiagCode::MalformedDocument
+        && d.message == "boundary input collides with a canonical export node identity"));
+}

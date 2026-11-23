@@ -288,6 +288,90 @@ fn boundary_input_identity_cannot_collide_with_a_minted_parameter_node() {
     );
 }
 
+/// The attribute document with its first boundary input renamed `alias`, and, when `parameter`
+/// is given, the block binding one parameter whose node is `parameter`.
+fn aliased_boundary_document(alias: &str, parameter: Option<&str>) -> JsonValue {
+    let mut document = attr_input_document("Real", "CDL.Reals.Add", serde_json::json!({}));
+    node_mut(&mut document, "AttrInput")["S231:hasInput"][0]["@id"] = serde_json::json!(alias);
+    node_mut(&mut document, "uExt")["@id"] = serde_json::json!(alias);
+    if let Some(parameter) = parameter {
+        node_mut(&mut document, "AttrInput.add")["S231:hasParameter"] =
+            serde_json::json!({ "@id": parameter });
+        document["@graph"]
+            .as_array_mut()
+            .expect("@graph array")
+            .push(serde_json::json!({ "@id": parameter, "S231:value": 1.0 }));
+    }
+    document
+}
+
+#[test]
+fn only_an_identity_the_export_spells_collides_with_a_boundary_input() {
+    // The export mints `<block>.in<position>` for each boundary-driven input, the position in
+    // decimal as written, and `<block>.<name>` for each parameter with a name. A declaration is
+    // split at its last `.` to be compared with them (issue #807): these are the spellings that
+    // split must refuse and the ones it must leave alone.
+    let add = "http://example.org#AttrInput.add";
+    // The document with the block renamed `block`, its ports and wiring with it.
+    let collides_under = |block: &str, alias: &str, parameter: Option<&str>| {
+        let text = serde_json::to_string(&aliased_boundary_document(alias, parameter))
+            .expect("document serializes")
+            .replace(&format!("{add}\""), &format!("{block}\""))
+            .replace(&format!("{add}."), &format!("{block}."));
+        match import_cxf(text.as_bytes(), &ResolveOptions::default()) {
+            Ok(_) => false,
+            Err(CxfError::Validation(diagnostics)) => {
+                assert_eq!(
+                    diagnostics,
+                    vec![
+                        Diagnostic::error(
+                            DiagCode::MalformedDocument,
+                            "boundary input collides with a canonical export node identity",
+                        )
+                        .with_subject(alias.to_owned())
+                    ],
+                    "{alias}"
+                );
+                true
+            }
+            Err(other) => panic!("{alias}: {other:?}"),
+        }
+    };
+    let collides = |alias: &str, parameter: Option<&str>| collides_under(add, alias, parameter);
+    for suffix in ["in0", "in1"] {
+        assert!(collides(&format!("{add}.{suffix}"), None), "{suffix}");
+    }
+    for suffix in [
+        "in00", "in01", "in2", "in", "in+1", "in-0", "in1x", "IN0", "0", "u3",
+    ] {
+        assert!(!collides(&format!("{add}.{suffix}"), None), "{suffix}");
+    }
+    // A parameter collides by its name alone, whatever its node is called; one with no name
+    // (its node's IRI ends in `.`) is never written under its block and collides with nothing.
+    assert!(collides(&format!("{add}.k"), Some("urn:elsewhere.k")));
+    assert!(!collides(&format!("{add}.k"), Some("urn:elsewhere.kk")));
+    assert!(!collides(&format!("{add}."), Some("urn:elsewhere.")));
+    // The block's IRI must be the whole text before the last `.`.
+    assert!(!collides("http://example.org#AttrInput.in0", None));
+    assert!(!collides(&format!("{add}.u1.in0"), None));
+    // A block whose own IRI ends in `.in0`: only the last `.` splits, so its parameter and its
+    // driven input collide under it, and the text before its `.in0` names no block.
+    let block = "http://example.org#AttrInput.in0";
+    assert!(collides_under(
+        block,
+        &format!("{block}.k"),
+        Some("urn:elsewhere.k")
+    ));
+    assert!(collides_under(block, &format!("{block}.in0"), None));
+    assert!(collides_under(block, &format!("{block}.in1"), None));
+    assert!(!collides_under(
+        block,
+        &format!("{block}.in0.k"),
+        Some("urn:elsewhere.k")
+    ));
+    assert!(!collides_under(block, &format!("{block}.in2"), None));
+}
+
 #[test]
 fn boundary_input_identity_cannot_collide_with_the_canonical_export_root() {
     let mut document = attr_input_document("Real", "CDL.Reals.Add", serde_json::json!({}));
@@ -581,4 +665,48 @@ fn duplicate_sidecars_refuse_before_owner_deferral() {
             .with_subject("http://example.org#Mini.bIn".to_owned()),
         ]
     );
+}
+
+#[test]
+fn blocks_sharing_an_instance_iri_are_each_checked_for_a_colliding_boundary_input() {
+    // A root listing its child twice makes two blocks under one instance IRI, a document the
+    // reader refuses anyway (`shared-instance`). Every block under the IRI is looked up, never
+    // only the first, and the refusal lists the collision once, as before the split (issue #807).
+    for (alias, parameter) in [
+        ("http://example.org#AttrInput.add.in0", None),
+        (
+            "http://example.org#AttrInput.add.k",
+            Some("urn:elsewhere.k"),
+        ),
+    ] {
+        let mut document = aliased_boundary_document(alias, parameter);
+        node_mut(&mut document, "AttrInput")["S231:containsBlock"] = serde_json::json!([
+            { "@id": "http://example.org#AttrInput.add" },
+            { "@id": "http://example.org#AttrInput.add" }
+        ]);
+        let bytes = serde_json::to_vec(&document).expect("document serializes");
+        let diagnostics = match import_cxf(&bytes, &ResolveOptions::default()) {
+            Err(CxfError::Validation(diagnostics)) => diagnostics,
+            other => panic!("{alias}: {other:?}"),
+        };
+        assert_eq!(
+            diagnostics,
+            vec![
+                Diagnostic::error(
+                    DiagCode::SharedInstance,
+                    "containsBlock child http://example.org#AttrInput.add is reached a second \
+                     time (listed again by http://example.org#AttrInput); a CDL component \
+                     instance has exactly one parent, so the second reach is refused rather than \
+                     expanded again",
+                )
+                .with_subject("http://example.org#AttrInput.add".to_owned()),
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    "boundary input collides with a canonical export node identity",
+                )
+                .with_subject(alias.to_owned()),
+            ],
+            "{alias}"
+        );
+    }
 }
