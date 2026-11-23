@@ -230,6 +230,39 @@ pub fn import_cxf(
 /// graph whose every block is deferred has no runtime composite left to emit and is an error, not
 /// an empty document.
 ///
+/// # Memory
+/// There is no limit (issue #803). The document is written one node at a time into a buffer of
+/// exactly its size, which a first pass that only counts the bytes measures, and the plan holds
+/// every `@id` borrowed from the graph or in parts, so the peak is the bytes returned and a small
+/// share more: measured, 1.001 times for `CDL.Reals.PID` instances listing shared parameter nodes,
+/// 1.016 for many blocks, 1.026 for many minted ports, 1.034 for a `MatrixGain` whose `K` is 128 by
+/// 128 (1.72 MB for 1.67 MB, where the document built in full peaked at 58.7 MB), and up to about
+/// 1.16 for array elements whose paths are a dozen bytes, where the duplicate check's fixed size
+/// for each `@id` counts.
+///
+/// The bytes, each `@id` written as it is spelled, with `B` the bytes of a block's instance IRI:
+/// - each parameter, scalar or array element: `2 × (B + 1 + name) + 36 +` its value's text (a
+///   Real at most 24 bytes, a string's CDL literal at most 6 times its text plus 4);
+/// - each input port with no IRI of its own, as every input a boundary drives is:
+///   `3 × (B + 3 + digits) +` about 73;
+/// - each output port with no IRI of its own: `2 × (B + 4 + digits) +` about 62;
+/// - each block: `2 × B +` its type IRI `+` about 70;
+/// - each authored port, boundary and boundary-output IRI two or three times, as the document
+///   spells it.
+///
+/// For a model the facade loads, computed from those terms, not run: the array elements' term is
+/// held by the reader's budgets to about 188 MiB (2^20 Real elements whose paths take 64 MiB), or
+/// 216 MiB with string elements at their budget. The scalar parameters' and minted ports' terms
+/// are counted by no loader budget (issue #807): an instance writes its IRI at most 37 times
+/// (`CDL.Reals.PIDWithReset`: twice for each of 12 scalar parameters, three times for each of 3
+/// boundary-driven inputs, twice for its output, whose `@id` the `hasInstance` dialect pads as
+/// `<IRI>.<name>` when the document lists no output, and twice for the block), and the instance
+/// IRIs of a document take at most 8 MiB (each is spelled at least twice, against the 8 MiB
+/// document or the 8 MiB `@context` expansion budget), so about 296 MiB; about 512 MiB with both. A hand-built graph, or one from
+/// [`import_cxf`] that never passed the facade's validation, is bounded only by these terms
+/// applied to the graph: one IRI shared by `N` parameters is written `2N` times, so bounding such
+/// a graph before exporting it is the host's responsibility (`docs/host-responsibilities.md`).
+///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
 ///   (subject identifies the offending block, connector owner, or declared boundary node) for
@@ -270,8 +303,8 @@ pub fn import_cxf(
 ///   error makes the export a refusal even when everything left out was a warning.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
-    let (doc, _warnings) = export::document(model)?;
-    write_document(&doc)
+    let (bytes, _warnings) = export::document_bytes(model)?;
+    Ok(bytes)
 }
 
 /// The result of [`export_with_report`]: the emitted CXF bytes plus the deferral warnings
@@ -309,6 +342,8 @@ pub struct ExportReport {
 /// block (an enum-carrying block plus its transitive downstream consumers). Use this when a host
 /// needs to know which blocks were omitted; use [`export()`] when it does not.
 ///
+/// What it holds while it writes, and what bounds it, is as for [`export()`] (its `# Memory`).
+///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
 ///   for any error-severity subset failure (same surface as [`export()`]), with the deferral
@@ -319,7 +354,6 @@ pub struct ExportReport {
 ///   [`export()`]: so this never returns `Ok` with warnings left out.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export_with_report(model: &ModelGraph) -> Result<ExportReport, CxfError> {
-    let (doc, warnings) = export::document(model)?;
-    let bytes = write_document(&doc)?;
+    let (bytes, warnings) = export::document_bytes(model)?;
     Ok(ExportReport { bytes, warnings })
 }

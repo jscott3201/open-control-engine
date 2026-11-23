@@ -16,8 +16,10 @@
 //! The version is this crate's package version, which is the workspace version. Every exported
 //! document therefore changes when the workspace version does.
 
+#[cfg(test)]
 use serde_json::Value as Json;
 
+#[cfg(test)]
 use crate::dto::Node;
 
 /// The property naming the software that wrote a document.
@@ -29,10 +31,16 @@ pub(crate) const SOFTWARE: &str = "open-control-engine";
 /// The version this engine writes: the workspace version.
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Write the label on `root`, the document's root composite node.
+/// The label's two properties and their values, in the order a node's map of other keys writes
+/// them (sorted by key): what the exporter writes on the root, after the root's fields.
+pub(crate) const LABEL: [(&str, &str); 2] = [(SOFTWARE_KEY, SOFTWARE), (VERSION_KEY, VERSION)];
+
+/// Write the label on `root`, the document's root composite node: the tests' reference for the
+/// document built in full, which the exporter writes from [`LABEL`] without building a node.
+#[cfg(test)]
 pub(crate) fn stamp(root: &mut Node) {
-    root.other
-        .insert(SOFTWARE_KEY.to_owned(), Json::String(SOFTWARE.to_owned()));
-    root.other
-        .insert(VERSION_KEY.to_owned(), Json::String(VERSION.to_owned()));
+    for (key, value) in LABEL {
+        root.other
+            .insert(key.to_owned(), Json::String(value.to_owned()));
+    }
 }
