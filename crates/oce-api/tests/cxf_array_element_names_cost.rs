@@ -390,8 +390,9 @@ fn paths_of_long_names_that_fill_the_budget_load_whole_and_one_byte_more_is_refu
     // instead of bytes would admit one byte more. [measured: a peak of 138,726,946 bytes loaded,
     // 2.07 times the budget, and 138,214,278 refused, the first array written out (issue #756);
     // recorded with it broadcast, 268,967,071 and 137,993,874; before issue #710, both loaded at
-    // about 269 MB]
-    assert_budget_edge(CON, &"π".repeat(32_500), 1_024, 5);
+    // about 269 MB] The refused peak rose slightly, 137,993,874 to 138,214,278, because the first
+    // array is now written out: its written values replace one broadcast value.
+    assert_budget_edge(CON, &"π".repeat(32_500), 1_024, 3);
 }
 
 #[test]
@@ -402,6 +403,8 @@ fn paths_under_a_long_instance_iri_that_fill_the_budget_load_whole_and_one_byte_
     // element's path once to check minted aliases, so the refusal holds the first array's paths
     // too. [measured: a peak of 147,661,442 bytes loaded, 2.20 times the budget, and 146,637,885
     // refused, the first array written out (issue #756); recorded with it broadcast, 208,207,573
-    // and 142,237,593; before issue #710, both loaded]
-    assert_budget_edge(&"é".repeat(2 * 1024), "q", 16_000, 5);
+    // and 142,237,593; before issue #710, both loaded] The refused peak rose slightly, 142,237,593
+    // to 146,637,885, because the first array is now written out: its written values replace one
+    // broadcast value.
+    assert_budget_edge(&"é".repeat(2 * 1024), "q", 16_000, 3);
 }

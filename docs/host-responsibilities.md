@@ -684,7 +684,7 @@ changes.
 | Absent elements of a parameter-declared shape (a `TimeTable`'s cells, an `ExtractSignal`'s defaulted selectors) | one finding a shape, naming the count and the first four | `crates/oce-validate/src/rules/params_absent.rs` | `parameter-out-of-range`, found from the elements bound, never by walking the shape |
 | Preserved array parameters of one document | 1,048,576 elements, and 64 MiB (67,108,864 bytes) of element paths together, each path the instance IRI, `.` and the element's name | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses either, before its value is read or any of its names is built; it draws on neither |
 | Array elements one document mints: every element of a broadcast (`k[n]` with the value `[v]`, `n` of 2 or more) and of an array expression of any kind (`fill(v, n)`, `1:n`, brace literals `{a, b}`), and every element of a further listing of an array node already listed, whatever its spelling; the first listing of a JSON list mints none | 65,536 elements (`MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS`, issue #756), counted against the element budget too | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses it, after the element and path budgets and before its value is read or any element is built; it reserves nothing from any budget |
-| Paths of the array elements one document mints (instance IRI, `.`, element name) | 8 MiB (8,388,608 bytes; `MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES`, issue #756), counted against the path budget too. At both minted budgets together a document reads at a peak of 25.9 MB (65,536 elements, 8,377,502 bytes of paths) and a `MatrixGain` whose 256 × 256 `K` is broadcast under a 116-byte root loads at 49.7 MB, 140.3 MB requested. Exporting such a model is not bounded yet: about 3.6 KB at the peak for each array element (issue #803, open) | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses it, after every other array budget and before any name or element is built; it reserves nothing |
+| Paths of the array elements one document mints (instance IRI, `.`, element name) | 8 MiB (8,388,608 bytes; `MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES`, issue #756), counted against the path budget too. At both minted budgets together a document reads at a peak of 25.9 MB as one broadcast (65,536 elements, 8,377,502 bytes of paths) and of 27.5 MB as a written `q[1024]` listed by 65 instances with 120-byte IRIs, and a `MatrixGain` whose 256 × 256 `K` is broadcast under a 116-byte root loads at 49.7 MB, 140.3 MB requested. Exporting such a model is not bounded yet: about 3.6 KB at the peak for each array element (issue #803, open) | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses it, after every other array budget and before any name or element is built; it reserves nothing |
 | String parameter values of one document | 8 MiB (8,388,608 bytes) over every parameter table, each entry counted whether or not entries share one allocation | `crates/oce-cxf/src/parameter_reads.rs` | `resource-limit-exceeded` diagnostic on the parameter whose value does not fit, before the value enters the table; an array mints none of its later elements |
 | Constructed blocks, model-wide | 4,194,304 words (32 MiB) held by the blocks outside their state: tables, gain matrices, resolved port kinds; charged by every pass that constructs blocks, each to a budget of its own | `crates/oce-blocks/src/constructed.rs` | on a CXF load, the resolver's signature probes first: a `resource-limit-exceeded` diagnostic on the block that crosses, at the `Import` stage (`OcError::Cxf`), and no later block is constructed; on a graph that passes them, the validator's probes the same way at the `Validation` stage (`OcError::Validate`); then `OcError::Build(BuildError::ConstructedTooLarge { block, requested, limit })` at instantiation, recorded as `resource-limit-exceeded`; `BlobError::ConstructedTooLarge` from the blob decoder |
 | Run state, model-wide | 4,194,304 words (32 MiB) | `crates/oce-graph/src/lib.rs` | `OcError::Build(BuildError::StateTooLarge { block, requested, limit })`, recorded as `resource-limit-exceeded`; `BlobError::StateTooLarge` from the blob decoder |
@@ -707,32 +707,40 @@ Direct leaf wiring is outside those budgets. Below the limits the walk keeps tar
 duplicate paths intact for single-assignment validation.
 
 The elements a document mints, rather than writes out, have a budget of their own (issue #756):
-65,536 a document. A broadcast (`k[n]` with the value `[v]`) and an array expression (`fill(v,
-n)`) make `n` elements from one value written once, and a further listing of an array node makes
-all its elements again, so the element budget alone admitted `q[1048576]` broadcasting `1.5`, a
-5.6 KB document the reader expanded at about 339 bytes an element (a 355 MB peak), and a written
-`q[1024]` listed a thousand times. Every element of a broadcast, of an array expression of any
-kind and of a further listing of a node is counted, before the value is read: the issue's document
-is now refused at a peak of 127 KB. A document may therefore hold at most 65,536 elements written
-as array expressions, brace literals included (owner ruling of 2026-11-22), or made by listing an
-array node again: 17 brace literals of 4,000 elements are refused, where the same values written
-as JSON lists read. Large arrays belong in JSON lists, whose first listing writes each element out
-and keeps the element budget alone. The paths of minted elements have a budget too, 8 MiB, so the
-cost at both budgets does not grow with the instance IRI: a broadcast of 65,536 under a
-1,005-byte IRI, a 12 KB document whose paths take 66 MB, is refused at a peak of 152 KB, where it
-would have read at about 142 MB. A parameter either minted budget refuses reserves nothing, so a
-later parameter the element budget used to refuse may fit: a document refused before is still
-refused, but its diagnostics can differ. A leaf listing one array node twice is still refused as
-`duplicate-parameter` by the validator, after the reader has read it: at the minted budget that
-comes after a reader peak of about 19.5 MB (25.7 MB for the facade load). No tracked or
-`open-control-library` model mints more than 12 elements or about 1.1 KB of paths (the vendored
-`ReliefFanGroup` translation, refused for other reasons), none lists a written array twice, and
-none that loads mints one.
+65,536 a document. A broadcast (`k[n]` with the value `[v]`) and an array expression (`fill(v, n)`)
+make `n` elements from one value written once, and a further listing of an array node makes all its
+elements again, so the element budget alone admitted `q[1048576]` broadcasting `1.5`, a 5.6 KB
+document the reader expanded at about 339 bytes an element (a 355 MB peak), and a written `q[1024]`
+listed a thousand times. Every element of a broadcast, of an array expression of any kind and of a
+further listing of a node is counted, before the value is read: the issue's document is now refused
+at a peak of 127 KB. A document may therefore hold at most 65,536 elements written as array
+expressions, brace literals included (owner ruling of 2026-11-22), or made by listing an array node
+again: one brace literal holds at most 4,095 elements, and 17 brace literals of 4,000 elements are
+refused, where the same values written as JSON lists read. Large arrays belong in JSON lists, whose
+first listing writes each element out and keeps the element budget alone. The paths of minted
+elements have a budget too, 8 MiB, so the cost at both budgets does not grow with the instance IRI:
+a broadcast of 65,536 under a 1,005-byte IRI, a 12 KB document whose paths take 66 MB, is refused at
+a peak of 152 KB, where it would have read at about 142 MB. A parameter either minted budget refuses
+reserves nothing, so a later parameter the element budget used to refuse may fit: a document refused
+before is still refused, but its diagnostics can differ.
+
+Which listing of a written array node is its first, the one that writes, follows `containsBlock`
+order, and each further listing's minted paths are spelled under the IRI of the instance that lists
+it. So when a node's owners have IRIs of different lengths, a document's outcome can depend on that
+order: a written `q[8322]` listed by `urn:c0` and then by an instance with a 1,005-byte IRI is
+refused (8,420,757 bytes of minted paths, at a peak of 4.7 MB), and listed in the other order reads
+(107,079 bytes, at 21.7 MB). The outcome is deterministic, and no bound escapes it: the long first
+listing is charged to the 64 MiB path budget, as a separate node's would be. A leaf listing one
+array node twice is still refused as `duplicate-parameter` by the validator, after the reader has
+read it: at the minted budget that comes after a reader peak of about 19.5 MB (25.7 MB for the
+facade load). No tracked or `open-control-library` model mints more than 12 elements or about 1.1 KB
+of paths (the vendored `ReliefFanGroup` translation, refused for other reasons), none lists a
+written array twice, and none that loads mints one.
 
 The element budget's edge, 1,048,576, is pinned per PR by arrays that reserve their elements and
 are then refused for their length (`oce-cxf` `resolve_load_bounds.rs`, `oce-api`
 `hostile_load_bounds.rs`), which builds no 2^20-element table: a document of 2^20 written
-elements would read at about 640 MB. No test reads a document of that size.
+elements would read at about 640 MB. No test reads a document of that size (issue #804).
 
 An array parameter `k[n]` of an instance `c` is minted as `n` scalar parameters named `k_1` to
 `k_n`, and `Engine::params()` keys each by its path, `c.k_1` to `c.k_n`, with `c` the instance's
@@ -744,9 +752,11 @@ together; 933,610 elements under 64 bytes of the two, and 494,264 under 128. Rea
 are often longer than 56 bytes (the corpus's parameter paths run to 137 bytes), so for a
 million-element array this budget, not the element budget, is the one that binds. No tracked or
 `open-control-library` model holds more than 12,217 bytes of parameter paths in all. A load holds
-at most about four copies of the paths at its peak: measured, 269 MB for a document whose paths
-fill the budget with long names, and 208 MB when a long instance IRI fills it. Nothing is built for
-a parameter refused for its size or for its value's shape.
+about two copies of the paths at its peak: measured, 138.7 MB (2.07 times the budget) for a
+document whose paths fill the budget with a long name, and 147.7 MB (2.20 times) when a long
+instance IRI fills it, the first array written out in each (a broadcast filling the budget is the
+minted path budget's to refuse). Nothing is built for a parameter refused for its size or for its
+value's shape.
 
 The two budgets bound how many elements an array mints and the bytes of their names and paths.
 Their values are bounded by two rules of their own (issue #736). The one value of a broadcast array

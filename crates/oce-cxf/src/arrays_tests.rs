@@ -332,17 +332,33 @@ fn a_minted_refusal_reserves_nothing_and_comes_after_the_other_budgets() {
         budget.take(70_000, 10, 70_000),
         Err(minted_refusal(70_000, 100))
     );
-    // Nothing of the refused parameter was reserved: the rest of each budget is still there.
+    // Nothing of the refused parameter was reserved, from any budget: its paths would have been
+    // minted, and the minted path budget is checked after the minted element budget, so it still
+    // holds every byte the first parameter left.
+    assert_remaining(
+        &budget,
+        [
+            MAX_DOCUMENT_ARRAY_ELEMENTS - 100,
+            PATH_BUDGET - 10,
+            MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS - 100,
+            MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES - 10,
+        ],
+    );
     budget
-        .take(65_436, 0, 65_436)
-        .expect("the refused parameter minted nothing");
+        .take(
+            65_436,
+            MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES as u128 - 10,
+            65_436,
+        )
+        .expect("the refused parameter minted nothing, elements or paths");
     budget
         .take(
             MAX_DOCUMENT_ARRAY_ELEMENTS - 100 - 65_436,
-            PATH_BUDGET as u128 - 10,
+            (PATH_BUDGET - MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES) as u128,
             0,
         )
         .expect("the refused parameter drew nothing");
+    assert_remaining(&budget, [0; 4]);
     // Over the element budget and the minted one: the element budget is named, as before.
     let mut fresh = ArrayElementBudget::per_document();
     let refusal = fresh
@@ -492,6 +508,20 @@ fn further_listings_of_a_written_node_fill_the_minted_budget_exactly() {
     assert_eq!(budget.remaining, MAX_DOCUMENT_ARRAY_ELEMENTS - 65 * 1_024);
 }
 
+/// Assert what is left of each budget of `budget`: elements, path bytes, minted elements and
+/// minted path bytes, in that order.
+fn assert_remaining(budget: &ArrayElementBudget, expected: [usize; 4]) {
+    assert_eq!(
+        [
+            budget.remaining,
+            budget.remaining_path_bytes,
+            budget.remaining_minted,
+            budget.remaining_minted_path_bytes,
+        ],
+        expected
+    );
+}
+
 /// The minted-path refusal of `minted` elements whose paths need `bytes` when `used` bytes of
 /// minted paths are already taken, stated by hand.
 fn minted_path_refusal(minted: usize, bytes: usize, used: usize) -> String {
@@ -510,12 +540,31 @@ fn the_minted_path_budget_is_eight_mebibytes_and_admits_exactly_its_limit() {
     budget.take(2, cap as u128 - 1, 2).expect("within");
     budget.take(2, 1, 2).expect("the last byte fits");
     assert_eq!(budget.take(2, 1, 2), Err(minted_path_refusal(2, 1, cap)));
+    // The refused parameter reserved nothing from any budget: its elements, its paths and its
+    // minted elements were checked before its minted paths, and are all still there. Minted
+    // paths count against the path budget too.
+    assert_remaining(
+        &budget,
+        [
+            MAX_DOCUMENT_ARRAY_ELEMENTS - 4,
+            PATH_BUDGET - cap,
+            MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS - 4,
+            0,
+        ],
+    );
     // Paths of elements written out draw nothing from it.
     budget
         .take(2, 1_000, 0)
         .expect("written paths fit an exhausted minted path budget");
-    // Minted paths count against the path budget too.
-    assert_eq!(budget.remaining_path_bytes, PATH_BUDGET - cap - 1_000);
+    assert_remaining(
+        &budget,
+        [
+            MAX_DOCUMENT_ARRAY_ELEMENTS - 6,
+            PATH_BUDGET - cap - 1_000,
+            MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS - 4,
+            0,
+        ],
+    );
     let mut fresh = ArrayElementBudget::per_document();
     assert_eq!(
         fresh.take(3, cap as u128 + 1, 3),
@@ -532,7 +581,16 @@ fn a_minted_path_refusal_reserves_nothing_and_comes_after_every_other_budget() {
         budget.take(10, cap as u128, 10),
         Err(minted_path_refusal(10, cap, 100))
     );
-    // Nothing of the refused parameter was reserved.
+    // Nothing of the refused parameter was reserved, from any budget.
+    assert_remaining(
+        &budget,
+        [
+            MAX_DOCUMENT_ARRAY_ELEMENTS - 10,
+            PATH_BUDGET - 100,
+            MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS - 10,
+            cap - 100,
+        ],
+    );
     budget
         .take(65_526, cap as u128 - 100, 65_526)
         .expect("the refused parameter drew nothing");

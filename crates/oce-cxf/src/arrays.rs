@@ -124,9 +124,11 @@ pub(crate) const MAX_DOCUMENT_ARRAY_ELEMENTS: usize = 1 << 20;
 /// element budget does not count bytes. A 1 KiB name over 262,144 elements, a 7.5 KB document,
 /// once asked for 860 MB, and a 4 KiB instance name over an array of 65,536, a 38 KB document, for
 /// 854 MB. An element's path is counted as the facade spells it: the instance IRI, a `.`, the
-/// element's name. A load holds at most about four copies of the paths at its peak (the IRIs and
-/// the names are copied a different number of times), so this budget holds their memory to about
-/// 256 MiB.
+/// element's name. A load holds about two copies of the paths at its peak (the IRIs and the names
+/// are copied a different number of times): measured, 138.7 MB (2.07 times the budget) for a
+/// document whose paths fill the budget with a long name and 147.7 MB (2.20 times) when a long
+/// instance IRI fills it, the first array written out, so this budget holds their memory to about
+/// 150 MB.
 ///
 /// What the value admits: a one-dimensional array of the whole element budget, `k[1048576]`, only
 /// while the instance IRI and the base name take at most 56 bytes together (each element adds its
@@ -187,8 +189,10 @@ pub(crate) const MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS: usize = 1 << 16;
 /// elements: a broadcast of 65,536 under a 1,005-byte IRI is a 12 KB document whose paths take
 /// 66 MB, and which would read at about 142 MB (projected from 9.0 MB measured at 4,096). Held to
 /// 8 MiB, the paths a document mints add at most about 16 MB: a document at both minted budgets
-/// (65,536 elements whose paths take 8,377,502 bytes) reads at a peak of 25.9 MB, and a
-/// `MatrixGain` of 256 by 256 whose `K` is broadcast under a 116-byte root loads at 49.7 MB.
+/// reads at a peak of 25.9 MB as one broadcast (65,536 elements whose paths take 8,377,502
+/// bytes) and of 27.5 MB as a written `q[1024]` listed by 65 instances with 120-byte IRIs (the
+/// most of any shape measured), and a `MatrixGain` of 256 by 256 whose `K` is broadcast under a
+/// 116-byte root loads at 49.7 MB.
 /// Minted path bytes are counted against [`MAX_DOCUMENT_ARRAY_PATH_BYTES`] too, as every element
 /// path is. No tracked or `open-control-library` model mints more than about 1.1 KB of paths (the
 /// vendored `ReliefFanGroup` translation, refused for other reasons). Crossing it is
@@ -232,6 +236,14 @@ impl ArrayElementBudget {
     /// once. A listing counts as the node's first when its elements are reserved: one refused
     /// by a budget reserves nothing and leaves the next listing the first, and one refused later
     /// (for its value's shape, say) has reserved them and is the first.
+    ///
+    /// "First" is first in the order the reader lists the node, which is `containsBlock` order.
+    /// A further listing's minted paths are spelled under the IRI of the instance that lists it,
+    /// so when a node's owners have IRIs of different lengths a document's outcome can depend on
+    /// that order: a written `q[8322]` listed by `urn:c0` and then by an instance with a 1,005-byte
+    /// IRI mints 8,420,757 bytes of paths and is refused, and listed in the other order mints
+    /// 107,079 and reads. That is deterministic, and no bound escapes it: the long first listing
+    /// is charged to [`MAX_DOCUMENT_ARRAY_PATH_BYTES`], as a listing of a separate node would be.
     fn take_listing(
         &mut self,
         node: &Node,
