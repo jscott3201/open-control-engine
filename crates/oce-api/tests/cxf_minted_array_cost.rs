@@ -173,11 +173,14 @@ fn a_refused_broadcast_costs_the_same_however_many_elements_it_asks_for() {
     );
 }
 
+/// A document of `n` minted elements along one minting path.
+type Builder = Box<dyn Fn(usize) -> Vec<u8>>;
+
 #[test]
 fn exactly_the_budget_is_minted_and_one_element_more_is_refused_on_every_minting_path() {
     // A broadcast, a two-dimensional broadcast, an array expression, two arrays together, and
     // one array node two leaves list (each listing mints its own elements, as two nodes would).
-    let cases: Vec<(&str, Box<dyn Fn(usize) -> Vec<u8>>)> = vec![
+    let cases: Vec<(&str, Builder)> = vec![
         ("broadcast", Box::new(|n| one(&[n], "[ 1.5 ]"))),
         (
             "two-dimensional broadcast",
