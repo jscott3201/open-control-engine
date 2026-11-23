@@ -19,6 +19,12 @@
 //! on every load and every build. It decides only which rows are compared, never which one is
 //! found, and nothing iterates it or prints it: `iter` walks the rows in their order, and
 //! `ParamTable`'s `Debug` shows the rows alone.
+//!
+//! The hash is unkeyed, so a document can craft paths that collide. A lookup then compares its
+//! path with every colliding row: linear in those rows, which the document bounds by the paths
+//! it spells. A load does no lookup; only a host that calls `get_param` or `set_param` once for
+//! each of the colliding paths sees a quadratic total. Ordering the rows of one hash by their
+//! path bytes, so a lookup searches them instead of scanning, is issue #813.
 
 use std::sync::Arc;
 

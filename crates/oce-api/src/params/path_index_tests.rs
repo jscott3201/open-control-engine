@@ -165,3 +165,50 @@ fn the_table_shows_its_rows_and_never_its_index() {
         "{text}"
     );
 }
+
+/// `count` rows spelling few paths many times over: `urn:d<i % 7>` with `k`, and every third row
+/// one of the split-ambiguous pair `urn:e` with `b.c<i % 3>` and `urn:e.b` with `c<i % 3>`.
+fn duplicated_rows(count: usize) -> Vec<(PathBase, String)> {
+    (0..count)
+        .map(|i| match i % 3 {
+            0 => (
+                PathBase::Iri(Arc::from(format!("urn:d{}", i % 7))),
+                "k".to_owned(),
+            ),
+            1 => (
+                PathBase::Iri(Arc::from("urn:e")),
+                format!("b.c{}", i % 3 + i % 2),
+            ),
+            _ => (
+                PathBase::Iri(Arc::from("urn:e.b")),
+                format!("c{}", i % 3 + i % 2),
+            ),
+        })
+        .collect()
+}
+
+/// Whether, under the hasher `H`, every path `rows` spell finds its first row.
+fn every_duplicated_path_finds_its_first_row<H: PathHash>(rows: &[(PathBase, String)]) {
+    let index = PathIndex::hashed_by::<H>(rows.iter().map(|(base, name)| (base, name.as_str())));
+    let mut first: BTreeMap<String, usize> = BTreeMap::new();
+    for (row, (base, name)) in rows.iter().enumerate() {
+        first.entry(base.path(name)).or_insert(row);
+    }
+    assert!(first.len() < rows.len() / 10, "{} paths", first.len());
+    for (path, row) in &first {
+        let found = index.find_hashed_by::<H>(path, |r| (&rows[r].0, rows[r].1.as_str()));
+        assert_eq!(found, Some(*row), "{path}");
+    }
+}
+
+#[test]
+fn hundreds_of_rows_repeating_a_few_paths_find_each_path_s_first_row() {
+    // Enough rows that sorting the index is no insertion sort, which keeps equal keys in order
+    // whatever it sorts by: the index sorts by hash and then row, so the first of the rows that
+    // spell a path is the one found, under the real hasher and with every hash colliding.
+    for count in [200, 300, 999] {
+        let rows = duplicated_rows(count);
+        every_duplicated_path_finds_its_first_row::<StablePathHash>(&rows);
+        every_duplicated_path_finds_its_first_row::<Colliding>(&rows);
+    }
+}
