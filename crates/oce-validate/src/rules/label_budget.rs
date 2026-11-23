@@ -22,7 +22,7 @@ use oce_model::{Attrs, ModelGraph};
 
 /// The most label bytes a document's connectors and declared outputs may carry after
 /// unification: 8 MiB (8,388,608). The largest tracked or `open-control-library` model carries
-/// 201.
+/// 274 (`cooling_only_controller.jsonld`).
 pub(crate) const MAX_DOCUMENT_LABEL_BYTES: usize = 8 * 1024 * 1024;
 
 /// The label bytes one attribute set carries.

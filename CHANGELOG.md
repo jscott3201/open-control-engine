@@ -313,7 +313,11 @@ so far, and no tag is cut by the bump.
     propagated-crossing refusals, any of which refuses the document alone.
   - **What is not counted.** No other attribute set carries text, and the semantic layer's
     `description` and `controlledDevice` are never set from a document.
-  - **Corpus.** The largest tracked or `open-control-library` model carries 201 bytes of labels, and
+  - **It pre-empts later refusals.** Because it runs during attribute unification, a document past the
+    label budget that also has, for example, an unknown parameter or an algebraic loop now reports
+    `resource-limit-exceeded` where it reported its own defect before. Moving the check after
+    validation is issue #817.
+  - **Corpus.** The largest tracked or `open-control-library` model carries 274 bytes of labels, and
     no model is refused.
 
 - **The validator handles a boundary input's path once, not once for every input it drives**
