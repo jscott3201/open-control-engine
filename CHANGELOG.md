@@ -680,7 +680,7 @@ so far, and no tag is cut by the bump.
 ### CXF import and export
 
 - **The array elements a document mints from one written value are held to 65,536** (GitHub
-  #PRNUM, issue #756; owner ruling of 2026-11-22). **Breaking, in place:** a document whose
+  #802, issue #756; owner ruling of 2026-11-22). **Breaking, in place:** a document whose
   broadcasts and array expressions together mint more than 65,536 elements is refused, where it
   loaded (or was refused later, after the reader had built every element) while it fit the
   1,048,576-element budget. No tracked or `open-control-library` model mints more than 12
