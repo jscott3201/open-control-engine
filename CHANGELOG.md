@@ -42,7 +42,7 @@ so far, and no tag is cut by the bump.
 
 ### Facade
 
-- **The parameter table holds each block's IRI once** (GitHub #PRNUM, issue #807). The table
+- **The parameter table holds each block's IRI once** (GitHub #809, issue #807). The table
   `Engine::params` returns spelled each parameter's dotted path and kept it twice, as the row's
   path and as its index's key, three times the block's IRI a parameter once the first had grown:
   16 `PID` instances under 8 KiB IRIs left 5.6 MB held by the engine and its load report, 43
@@ -695,7 +695,7 @@ so far, and no tag is cut by the bump.
 ### CXF import and export
 
 - **The identities a document holds under its blocks' instance IRIs are held to 8 MiB**
-  (GitHub #PRNUM, issue #807; owner ruling of 2026-11-23). **Breaking, in place:** a document
+  (GitHub #809, issue #807; owner ruling of 2026-11-23). **Breaking, in place:** a document
   whose identities take more is refused. A scalar parameter is held under its block's IRI and
   exported as `<IRI>.<name>` whatever its node is called, a padded `hasInstance` output is the
   identity `<IRI>.<name>` the document never writes, and an input a boundary drives is exported
@@ -743,7 +743,7 @@ so far, and no tag is cut by the bump.
     peaks of 2.6, 3.9 and 6.3 MB, 4,834 bytes a listing.
 
 - **The reader checks boundary inputs against the identities an export mints without spelling
-  them** (GitHub #PRNUM, issue #807). Checking that no boundary input is named like a parameter's
+  them** (GitHub #809, issue #807). Checking that no boundary input is named like a parameter's
   or a boundary-driven input's exported `@id`, the reader built every one of them into a set,
   about twice the block's IRI a parameter, whether the class declared the name or not, before
   the facade's load gate refused an undeclared one. One leaf under an 8 KiB IRI listing 500
