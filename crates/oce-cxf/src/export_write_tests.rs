@@ -467,3 +467,52 @@ fn reals_of_every_written_form_are_counted_as_written() {
     });
     assert_eq!(assert_written_as_built_in_full(&g, "reals"), reals.len());
 }
+
+#[test]
+fn minted_port_ids_of_two_digit_positions_are_spelled_in_full() {
+    // One block, `urn:m`, with 11 inputs and 12 outputs, none with an IRI of its own, its output
+    // at position 11 wired to its input at position 10: every port's `@id` is minted, and the
+    // bytes are stated by hand, not spelled by the writer's own id type.
+    let mut g = constants(vec![("urn:m", vec![])]);
+    g.connectors.clear();
+    g.blocks[0].outputs.clear();
+    for (dir, count) in [(Dir::In, 11), (Dir::Out, 12)] {
+        for k in 0..count {
+            let cid = ConnectorId(g.connectors.len() as u32);
+            g.connectors
+                .push(Connector::new(cid, BlockId(0), dir, ValueType::Real, k));
+            match dir {
+                Dir::In => g.blocks[0].inputs.push(cid),
+                Dir::Out => g.blocks[0].outputs.push(cid),
+            }
+        }
+    }
+    g.connections.push(oce_model::Connection {
+        from: ConnectorId(11 + 11),
+        to: ConnectorId(10),
+    });
+    let (plan, _) = plan(&g).expect("plans");
+    let written = String::from_utf8(write(&plan).expect("writes")).expect("UTF-8");
+    let ids = |prefix: &str, count: usize| {
+        (0..count)
+            .map(|k| format!("{{\"@id\":\"urn:m.{prefix}{k}\"}}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    };
+    let block = format!(
+        "{{\"@id\":\"urn:m\",\"@type\":\"http://example.org#Buildings.Controls.OBC.CDL.Reals.\
+         Sources.Constant\",\"S231:hasInput\":[{}],\"S231:hasOutput\":[{}]}}",
+        ids("in", 11),
+        ids("out", 12)
+    );
+    for expected in [
+        block.as_str(),
+        ",{\"@id\":\"urn:m.in10\",\"S231:isOfDataType\":{\"@id\":\"S231:Real\"}},",
+        ",{\"@id\":\"urn:m.out11\",\"S231:isConnectedTo\":{\"@id\":\"urn:m.in10\"},\
+         \"S231:isOfDataType\":{\"@id\":\"S231:Real\"}}]}",
+    ] {
+        assert!(written.contains(expected), "{expected}\nnot in\n{written}");
+    }
+    assert!(block.contains("{\"@id\":\"urn:m.in10\"}]"));
+    assert!(block.contains("{\"@id\":\"urn:m.out11\"}]"));
+}

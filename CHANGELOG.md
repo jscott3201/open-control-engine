@@ -715,9 +715,11 @@ so far, and no tag is cut by the bump.
     16.8 MB. For a model the facade loads, computed from those terms, not run: the array elements
     about 188 MiB (2^20 Real elements whose paths take the 64 MiB path budget) or 216 MiB (strings
     at the string budget); the scalar parameters and minted ports, which **no loader budget counts
-    today (issue #807)**, at most 35 copies of each instance IRI (`CDL.Reals.PIDWithReset`) over
-    at most 8 MiB of instance IRIs (each spelled at least twice, against the 8 MiB document or
-    the 8 MiB `@context` expansion budget), about 280 MiB; about 500 MiB with both, the peak a few
+    today (issue #807)**, at most 37 copies of each instance IRI (`CDL.Reals.PIDWithReset`: 12
+    scalar parameters, 3 boundary-driven inputs, and its output, whose `@id` the `hasInstance`
+    dialect pads as `<IRI>.<name>` when the document lists no output) over at most 8 MiB of
+    instance IRIs (each spelled at least twice, against the 8 MiB document or the 8 MiB
+    `@context` expansion budget), about 296 MiB; about 512 MiB with both, the peak a few
     percent more. A hand-built graph, or one from `oce_cxf::import_cxf` that never passed the
     facade's validation, is bounded only by these terms applied to the graph: an IRI shared by `N`
     parameters is written `2N` times, and bounding such a graph is the host's responsibility
@@ -731,8 +733,10 @@ so far, and no tag is cut by the bump.
       strings; a partial export beside deferred blocks; an export whose list ends partway
       (nothing written); a parameter's `@id` held in parts colliding with the same `@id` spelled
       whole, in either order.
-    - `export_write_generated_tests.rs`: 4,000 hand-built graphs drawn from a fixed seed (1,198
-      accepted and compared, 2,802 refused).
+    - `export_write_generated_tests.rs`: 4,000 hand-built graphs drawn from a fixed seed (1,058
+      accepted and compared, 62 of them with ports at two-digit positions; 2,942 refused).
+      Minted port ids at two-digit positions (`.in10`, `.out11`) are also pinned by bytes stated
+      by hand.
     - `export_emitted_ids_tests.rs`: an `@id` in parts, a parameter's or a minted port's,
       compares and dedupes as the `String` it spells.
 

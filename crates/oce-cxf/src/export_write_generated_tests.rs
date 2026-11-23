@@ -142,7 +142,10 @@ fn graph(d: &mut Draw) -> ModelGraph {
             decl_order: id.0,
             instance_iri: (!d.one_in(25)).then(|| Arc::from(spelling(d, BLOCK_IRIS, bi))),
         };
-        for (dir, count) in [(Dir::In, d.below(3)), (Dir::Out, d.below(3))] {
+        // Now and then a block of 12 ports a side, so minted ids reach two-digit positions.
+        let wide = d.one_in(12);
+        let count = |d: &mut Draw| if wide { 12 } else { d.below(3) };
+        for (dir, count) in [(Dir::In, count(d)), (Dir::Out, count(d))] {
             for k in 0..count {
                 let cid = ConnectorId(g.connectors.len() as u32);
                 let value_type = *d.pick(&types);
@@ -207,7 +210,7 @@ fn graph(d: &mut Draw) -> ModelGraph {
 fn graphs_drawn_from_a_seed_are_written_as_built_in_full() {
     let mut d = Draw(0x9e37_79b9_7f4a_7c15);
     let (mut accepted, mut refused, mut params) = (0, 0, 0);
-    let (mut with_boundary, mut with_output, mut with_strings) = (0, 0, 0);
+    let (mut with_boundary, mut with_output, mut with_strings, mut wide) = (0, 0, 0, 0);
     for i in 0..4_000 {
         let g = graph(&mut d);
         if plan(&g).is_err() {
@@ -223,16 +226,18 @@ fn graphs_drawn_from_a_seed_are_written_as_built_in_full() {
                 .iter()
                 .any(|(_, v)| matches!(v, Value::String(_)))
         }));
+        wide += usize::from(g.blocks.iter().any(|b| b.inputs.len() > 10));
         params += assert_written_as_built_in_full(&g, &format!("graph {i}"));
     }
     // Floors, so a generator that stops drawing a shape cannot pass by comparing nothing.
-    // [measured: 1,198 accepted and 2,802 refused; 4,050 parameters written; 500 with a boundary
-    // input, 448 with a boundary output, 830 with a string]
+    // [measured: 1,058 accepted and 2,942 refused; 3,290 parameters written; 440 with a boundary
+    // input, 415 with a boundary output, 710 with a string, 62 with ports at two-digit positions]
     assert!(
         accepted >= 1_000 && refused >= 1_000,
         "{accepted} accepted, {refused} refused"
     );
     assert!(params >= 1_000, "{params} parameters written");
+    assert!(wide >= 30, "{wide} with ports at two-digit positions");
     assert!(
         with_boundary >= 50 && with_output >= 50 && with_strings >= 50,
         "{with_boundary} with a boundary input, {with_output} with a boundary output, \
