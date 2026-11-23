@@ -679,6 +679,55 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
+- **The array elements a document mints from one written value are held to 65,536** (GitHub
+  #PRNUM, issue #756; owner ruling of 2026-11-22). **Breaking, in place:** a document whose
+  broadcasts and array expressions together mint more than 65,536 elements is refused, where it
+  loaded (or was refused later, after the reader had built every element) while it fit the
+  1,048,576-element budget. No tracked or `open-control-library` model mints more than 12
+  elements (the vendored `ReliefFanGroup` translation, refused for other reasons), and none that
+  loads mints one.
+  - **What was wrong.** A broadcast (`q[n]` with the value `[v]`) and an array expression
+    (`fill(v, n)`) make `n` elements from one value the document writes once, at about 339 bytes
+    an element at the reader's peak and about 1 KB requested over a load. The element budget let
+    `q[1048576]` broadcasting `1.5`, a 5.6 KB document, read at a peak of about 355 MB (11.2 /
+    22.3 / 44.4 MB measured at 32,768 / 65,536 / 131,072) and once load at 786 MB.
+  - **The budget.** `oce_cxf`'s `MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS`, beside
+    `MAX_DOCUMENT_ARRAY_ELEMENTS`. Every element of a broadcast on two or more elements and of an
+    array expression is minted; a positional list mints none and keeps the element budget alone,
+    and an array expression that writes its elements out holds at most 4,096 of them. Each
+    listing of an array node mints its elements, so a node many leaves list is charged as
+    separate nodes would be, its grounding shared or not (issue #749). A minted element still
+    counts against the element budget. The charge is made with the element and path budgets,
+    after them, before the value is read or any element or name is built; crossing it is
+    `resource-limit-exceeded` on the parameter node: ``array parameter mints 1048576 element(s)
+    from a value it writes once (a broadcast or an array expression) but the document's array
+    parameters already mint 0 of the 65536 minted elements a document may hold``. A document
+    either earlier budget refuses is refused as before.
+  - **What it costs now.** The issue's document and its `fill(1.5, 1048576)` spelling are refused
+    at peaks of 126,587 and 126,425 bytes, the same at 262,144 and 524,288 elements. At the
+    budget the reader peaks at 22.3 MB (a broadcast), 22.5 MB (two dimensions) and 23.8 MB
+    (`fill`), and a whole load of a `MatrixGain` whose 256 × 256 `K` is broadcast peaks at
+    30.6 MB, 95.0 MB requested.
+  - **Where elements are made, swept.** Only the reader's expansion of a preserved array mints
+    table elements. Array connectors, array instances and composite array declarations are
+    refused before they are grounded; a class whose port count comes from a parameter is refused
+    in the `hasInstance` derivation; authored vector ports are each written in the document; the
+    buffers a width parameter or `MatrixGain`'s `K` sizes inside a block are the constructed
+    budget's (GitHub #721, #788); and an evaluation that builds an array it does not keep (a
+    symbolic `sizeOfDimensions`, a leaf's array member read in a guard scope, an expression longer
+    than its declared shape) is held to `oce-expr`'s 2^20 elements an array and the evaluation
+    budget, and dropped at once.
+  - **Evidence.** `oce-api` `cxf_minted_array_cost.rs`: the issue's broadcast and its `fill`
+    refused with the peak pinned, flat at 1x/2x/4x the elements; exactly 65,536 read and 65,537
+    refused for a broadcast, a two-dimensional broadcast, an array expression and two arrays
+    together; a node two leaves list matching two nodes at 32,768 and 32,769 elements each; the
+    same refusal whatever order the owners come in; a written-out list of 65,537 reading; and the
+    whole `MatrixGain` load. `oce-cxf` `arrays_tests.rs` pins the budget's edge, its order after
+    the other budgets, its count against the element budget, and that a written-out list draws
+    nothing from it. `resolve_load_bounds.rs`'s element-budget cases now write their arrays out,
+    since a broadcast of a million is refused first. Documented in
+    [host responsibilities](docs/host-responsibilities.md) and the composite subset.
+
 - **A value many owners read is grounded once for the document, and each owner is charged what
   grounding it again would spend** (GitHub #797, issue #749). A parameter node that many leaves
   list was grounded again by each leaf in resolver Step 7, and a declaration many composites list

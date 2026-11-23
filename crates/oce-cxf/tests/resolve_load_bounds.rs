@@ -146,6 +146,16 @@ fn broadcast(owner: &str, name: &str, len: usize) -> Json {
             "S231:sizeOfDimensions": format!("({len})"), "S231:value": [ 1.0 ] })
 }
 
+/// The array `name[len]` on `owner` written out element by element: a positional list mints no
+/// element, so only the element budget holds it, where a broadcast of more than 65,536 is
+/// refused by the minted-element budget first (issue #756). Reading a million written elements
+/// holds about as much as the broadcast these cases used before.
+fn written(owner: &str, name: &str, len: usize) -> Json {
+    let mut node = broadcast(owner, name, len);
+    node["S231:value"] = Json::Array(vec![json!(1.0); len]);
+    node
+}
+
 #[test]
 fn the_array_budget_spans_every_instance_of_the_document() {
     // Two leaves, 2^19 elements each, exactly fill the 2^20 document budget; one element more
@@ -153,8 +163,8 @@ fn the_array_budget_spans_every_instance_of_the_document() {
     let half = 1usize << 19;
     let build = |second: usize| {
         let mut nodes = vec![composite("M", &["M.a", "M.b"])];
-        nodes.extend(constant("M.a", &[broadcast("M.a", "p", half)]));
-        nodes.extend(constant("M.b", &[broadcast("M.b", "p", second)]));
+        nodes.extend(constant("M.a", &[written("M.a", "p", half)]));
+        nodes.extend(constant("M.b", &[written("M.b", "p", second)]));
         doc(nodes)
     };
     let graph = import(&build(half)).expect("exactly the budget loads");
@@ -186,7 +196,7 @@ fn an_exhausted_budget_refuses_the_next_element_but_admits_an_empty_array() {
     nodes.extend(constant(
         "M.a",
         &[
-            broadcast("M.a", "big", 1 << 20),
+            written("M.a", "big", 1 << 20),
             broadcast("M.a", "over", 1),
             zero,
         ],
@@ -307,7 +317,7 @@ fn a_parameter_refused_for_its_paths_draws_no_element() {
     let mut nodes = vec![composite("M", &["M.a"])];
     nodes.extend(constant(
         "M.a",
-        &[broadcast("M.a", &long, 65_536), broadcast("M.a", "p", rest)],
+        &[broadcast("M.a", &long, 65_536), written("M.a", "p", rest)],
     ));
     let subject = id(&format!("M.a.{long}"));
     assert_eq!(

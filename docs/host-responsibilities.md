@@ -683,6 +683,7 @@ changes.
 | Diagnostic text of one CXF export, its deferral warnings included | the same 8 MiB, the same count | `crates/oce-diag/src/diagnostic_list.rs`, `crates/oce-cxf/src/export.rs` | the same: the list ends with the closing error, and the export is refused (`CxfError::Validation`) even when everything left out was a warning |
 | Absent elements of a parameter-declared shape (a `TimeTable`'s cells, an `ExtractSignal`'s defaulted selectors) | one finding a shape, naming the count and the first four | `crates/oce-validate/src/rules/params_absent.rs` | `parameter-out-of-range`, found from the elements bound, never by walking the shape |
 | Preserved array parameters of one document | 1,048,576 elements, and 64 MiB (67,108,864 bytes) of element paths together, each path the instance IRI, `.` and the element's name | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses either, before its value is read or any of its names is built; it draws on neither |
+| Array elements one document mints: every element of a broadcast (`k[n]` with the value `[v]`, `n` of 2 or more) and of an array expression (`fill(v, n)`, `1:n`, `{a, b}`), each listing of an array node counted, shared or not; a positional list mints none | 65,536 elements (`MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS`, issue #756), counted against the element budget too. At the budget the reader peaks at 22.3 MB (a broadcast; 23.8 MB as `fill`), and a whole load of a `MatrixGain` whose 256 × 256 `K` is broadcast peaks at 30.6 MB, 95.0 MB requested | `crates/oce-cxf/src/arrays.rs` | `resource-limit-exceeded` diagnostic on the parameter that crosses it, after the element and path budgets and before its value is read or any element is built; it draws on no budget |
 | String parameter values of one document | 8 MiB (8,388,608 bytes) over every parameter table, each entry counted whether or not entries share one allocation | `crates/oce-cxf/src/parameter_reads.rs` | `resource-limit-exceeded` diagnostic on the parameter whose value does not fit, before the value enters the table; an array mints none of its later elements |
 | Constructed blocks, model-wide | 4,194,304 words (32 MiB) held by the blocks outside their state: tables, gain matrices, resolved port kinds; charged by every pass that constructs blocks, each to a budget of its own | `crates/oce-blocks/src/constructed.rs` | on a CXF load, the resolver's signature probes first: a `resource-limit-exceeded` diagnostic on the block that crosses, at the `Import` stage (`OcError::Cxf`), and no later block is constructed; on a graph that passes them, the validator's probes the same way at the `Validation` stage (`OcError::Validate`); then `OcError::Build(BuildError::ConstructedTooLarge { block, requested, limit })` at instantiation, recorded as `resource-limit-exceeded`; `BlobError::ConstructedTooLarge` from the blob decoder |
 | Run state, model-wide | 4,194,304 words (32 MiB) | `crates/oce-graph/src/lib.rs` | `OcError::Build(BuildError::StateTooLarge { block, requested, limit })`, recorded as `resource-limit-exceeded`; `BlobError::StateTooLarge` from the blob decoder |
@@ -703,6 +704,18 @@ traversal is iterative, so an accepted path does not consume one call-stack fram
 budgets also bound shallow fan-out and repeated long IRIs that a depth limit alone would miss.
 Direct leaf wiring is outside those budgets. Below the limits the walk keeps target order and
 duplicate paths intact for single-assignment validation.
+
+The elements a document mints, rather than writes out, have a budget of their own (issue #756):
+65,536 a document. A broadcast (`k[n]` with the value `[v]`) and an array expression (`fill(v,
+n)`) make `n` elements from one value written once, so the element budget alone admitted
+`q[1048576]` broadcasting `1.5`, a 5.6 KB document, which the reader expanded at about 339 bytes
+an element (a 355 MB peak) before anything refused it. Every element of a broadcast or an array
+expression is counted, each listing of an array node counted as a node of its own would be, and
+before the value is read: that document is now refused at a peak of 127 KB. A positional list
+writes its elements out and pays for them in document bytes, so it keeps the element budget
+alone; an array expression that writes its elements out (`{a, b}`) holds at most 4,096 of them.
+No tracked or `open-control-library` model mints more than 12 elements (the vendored
+`ReliefFanGroup` translation, refused for other reasons), and none that loads mints one.
 
 An array parameter `k[n]` of an instance `c` is minted as `n` scalar parameters named `k_1` to
 `k_n`, and `Engine::params()` keys each by its path, `c.k_1` to `c.k_n`, with `c` the instance's
@@ -909,7 +922,9 @@ The byte cap does not bound peak memory, CPU time, expansion, or total graph com
 a sandbox, cancellation/deadline guarantee, or evidence that every below-cap document is safe.
 Below the cap the pipeline refuses the known amplification shapes with typed diagnostics (issue
 #365): a `containsBlock` child reached twice (`shared-instance`), array parameters past a
-1,048,576-element per-document budget or past 64 MiB of element paths (issue #710), string
+1,048,576-element per-document budget or past 64 MiB of element paths (issue #710), array
+elements minted from one written value (broadcasts and array expressions) past 65,536 a document
+(issue #756), string
 parameter values past 8 MiB, each table entry counted (issue #736), run state past 4,194,304
 words, since issue #700
 what the constructed blocks hold outside their state (tables, gain matrices, resolved port kinds)

@@ -41,6 +41,7 @@ mod cxf_constructed_budget;
 mod cxf_context_expansion_cost;
 mod cxf_diagnostic_list_cost;
 mod cxf_export_diagnostic_list_cost;
+mod cxf_minted_array_cost;
 mod cxf_parameter_value_cost;
 mod cxf_pass_through_attribute_cost;
 mod cxf_pass_through_key_cost;

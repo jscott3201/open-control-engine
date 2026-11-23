@@ -1,11 +1,14 @@
 //! The element names of an array parameter and what they cost the document's budgets (issue
 //! #710): the names in row-major order, the bytes of their paths counted without building them,
-//! and the two per-document budgets at their edges.
+//! and the per-document budgets at their edges, the minted-element budget (issue #756) among
+//! them.
 
 use super::{
     ArrayElementBudget, ElementNames, MAX_DOCUMENT_ARRAY_ELEMENTS, MAX_DOCUMENT_ARRAY_PATH_BYTES,
-    array_element_count, array_element_path_bytes, index_digits,
+    MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS, array_element_count, array_element_path_bytes,
+    index_digits, minted_elements,
 };
+use crate::dto::CxfValue;
 
 /// The path budget, restated: a change to the constant fails here until it is reviewed.
 const PATH_BUDGET: usize = 64 * 1024 * 1024;
@@ -231,18 +234,18 @@ fn path_refusal(count: usize, bytes: u128, used: usize) -> String {
 #[test]
 fn the_path_budget_admits_exactly_its_limit_and_refuses_one_byte_more() {
     let mut budget = ArrayElementBudget::per_document();
-    budget.take(3, PATH_BUDGET as u128 - 1).expect("within");
-    budget.take(1, 1).expect("the last byte fits");
+    budget.take(3, PATH_BUDGET as u128 - 1, 0).expect("within");
+    budget.take(1, 1, 0).expect("the last byte fits");
     // Nothing is left: one more byte refuses.
-    assert_eq!(budget.take(1, 1), Err(path_refusal(1, 1, PATH_BUDGET)));
+    assert_eq!(budget.take(1, 1, 0), Err(path_refusal(1, 1, PATH_BUDGET)));
     // An empty array needs nothing, so it still fits.
     budget
-        .take(0, 0)
+        .take(0, 0, 0)
         .expect("an empty array fits an exhausted budget");
 
     let mut fresh = ArrayElementBudget::per_document();
     assert_eq!(
-        fresh.take(7, PATH_BUDGET as u128 + 1),
+        fresh.take(7, PATH_BUDGET as u128 + 1, 0),
         Err(path_refusal(7, PATH_BUDGET as u128 + 1, 0))
     );
 }
@@ -250,14 +253,18 @@ fn the_path_budget_admits_exactly_its_limit_and_refuses_one_byte_more() {
 #[test]
 fn a_refusal_for_path_bytes_reserves_no_element_and_no_byte() {
     let mut budget = ArrayElementBudget::per_document();
-    budget.take(10, 100).expect("within");
+    budget.take(10, 100, 0).expect("within");
     assert_eq!(
-        budget.take(5, PATH_BUDGET as u128),
+        budget.take(5, PATH_BUDGET as u128, 0),
         Err(path_refusal(5, PATH_BUDGET as u128, 100))
     );
     // The whole of what was left is still there to take.
     budget
-        .take(MAX_DOCUMENT_ARRAY_ELEMENTS - 10, PATH_BUDGET as u128 - 100)
+        .take(
+            MAX_DOCUMENT_ARRAY_ELEMENTS - 10,
+            PATH_BUDGET as u128 - 100,
+            0,
+        )
         .expect("the refused parameter drew nothing");
 }
 
@@ -266,7 +273,7 @@ fn a_refusal_for_elements_reserves_no_byte_and_is_reported_first() {
     let mut budget = ArrayElementBudget::per_document();
     // Over both budgets: the element budget, checked first, is the one named.
     assert_eq!(
-        budget.take(MAX_DOCUMENT_ARRAY_ELEMENTS + 1, u128::MAX),
+        budget.take(MAX_DOCUMENT_ARRAY_ELEMENTS + 1, u128::MAX, 0),
         Err(format!(
             "array parameter needs {} element(s) but the document's array parameters already \
              use 0 of the 1048576-element per-document budget",
@@ -274,7 +281,7 @@ fn a_refusal_for_elements_reserves_no_byte_and_is_reported_first() {
         ))
     );
     budget
-        .take(MAX_DOCUMENT_ARRAY_ELEMENTS, PATH_BUDGET as u128)
+        .take(MAX_DOCUMENT_ARRAY_ELEMENTS, PATH_BUDGET as u128, 0)
         .expect("the refused parameter drew nothing");
 }
 
@@ -282,5 +289,114 @@ fn a_refusal_for_elements_reserves_no_byte_and_is_reported_first() {
 fn a_byte_count_past_usize_is_refused_and_stated_whole() {
     let mut budget = ArrayElementBudget::per_document();
     let bytes = usize::MAX as u128 * 4;
-    assert_eq!(budget.take(2, bytes), Err(path_refusal(2, bytes, 0)));
+    assert_eq!(budget.take(2, bytes, 0), Err(path_refusal(2, bytes, 0)));
+}
+
+/// The minted-element refusal of `minted` elements when `used` are already minted, stated by
+/// hand.
+fn minted_refusal(minted: usize, used: usize) -> String {
+    format!(
+        "array parameter mints {minted} element(s) from a value it writes once (a broadcast or \
+         an array expression) but the document's array parameters already mint {used} of the \
+         65536 minted elements a document may hold"
+    )
+}
+
+#[test]
+fn the_minted_budget_is_sixty_five_thousand_five_hundred_thirty_six() {
+    assert_eq!(MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS, 65_536);
+}
+
+#[test]
+fn the_minted_budget_admits_exactly_its_limit_and_refuses_one_element_more() {
+    let mut budget = ArrayElementBudget::per_document();
+    budget.take(65_535, 0, 65_535).expect("within");
+    budget.take(1, 0, 1).expect("the last minted element fits");
+    assert_eq!(budget.take(2, 0, 2), Err(minted_refusal(2, 65_536)));
+    // Elements written out draw nothing from it, so they still fit.
+    budget
+        .take(1_000, 0, 0)
+        .expect("written-out elements fit an exhausted minted budget");
+    let mut fresh = ArrayElementBudget::per_document();
+    assert_eq!(
+        fresh.take(65_537, 0, 65_537),
+        Err(minted_refusal(65_537, 0))
+    );
+}
+
+#[test]
+fn a_minted_refusal_reserves_nothing_and_comes_after_the_other_budgets() {
+    let mut budget = ArrayElementBudget::per_document();
+    budget.take(100, 10, 100).expect("within");
+    assert_eq!(
+        budget.take(70_000, 10, 70_000),
+        Err(minted_refusal(70_000, 100))
+    );
+    // Nothing of the refused parameter was reserved: the rest of each budget is still there.
+    budget
+        .take(
+            MAX_DOCUMENT_ARRAY_ELEMENTS - 100,
+            PATH_BUDGET as u128 - 10,
+            65_436,
+        )
+        .expect("the refused parameter drew nothing");
+    // Over the element budget and the minted one: the element budget is named, as before.
+    let mut fresh = ArrayElementBudget::per_document();
+    let refusal = fresh
+        .take(
+            MAX_DOCUMENT_ARRAY_ELEMENTS + 1,
+            0,
+            MAX_DOCUMENT_ARRAY_ELEMENTS + 1,
+        )
+        .expect_err("refused");
+    assert!(refusal.starts_with("array parameter needs"), "{refusal}");
+    // Over the path budget and the minted one: the path budget is named, as before.
+    let refusal = fresh
+        .take(70_000, PATH_BUDGET as u128 + 1, 70_000)
+        .expect_err("refused");
+    assert!(
+        refusal.starts_with("array parameter's 70000 element path(s)"),
+        "{refusal}"
+    );
+}
+
+#[test]
+fn minted_elements_also_count_against_the_element_budget() {
+    let mut budget = ArrayElementBudget::per_document();
+    budget.take(65_536, 0, 65_536).expect("within");
+    budget
+        .take(MAX_DOCUMENT_ARRAY_ELEMENTS - 65_536, 0, 0)
+        .expect("the rest of the element budget");
+    assert!(
+        budget
+            .take(1, 0, 0)
+            .expect_err("refused")
+            .starts_with("array parameter needs")
+    );
+}
+
+#[test]
+fn a_broadcast_and_an_array_expression_mint_every_element_and_a_written_list_none() {
+    let one = CxfValue::List(vec![CxfValue::Float(1.5)]);
+    let three = CxfValue::List(vec![CxfValue::Float(1.5); 3]);
+    // A broadcast mints all its elements, on one dimension or many (the count is the product).
+    assert_eq!(minted_elements(&one, 2), 2);
+    assert_eq!(minted_elements(&one, 1_048_576), 1_048_576);
+    // One written value on one element is that element written out, as a list of three on three.
+    assert_eq!(minted_elements(&one, 1), 0);
+    assert_eq!(minted_elements(&three, 3), 0);
+    // A written-out list draws nothing however long: the rule reads only the list's length
+    // against the count, so a list of the whole element budget is accounted as this one is.
+    assert_eq!(minted_elements(&three, 1_048_576), 0);
+    // An array expression mints every element, whatever it spells.
+    for text in ["fill(1.5, 7)", "1:7", "{1, 2, 3, 4, 5, 6, 7}"] {
+        assert_eq!(
+            minted_elements(&CxfValue::Expr(text.to_owned()), 7),
+            7,
+            "{text}"
+        );
+    }
+    // Any other value is refused before an element is made, and mints none.
+    assert_eq!(minted_elements(&CxfValue::Float(1.5), 7), 0);
+    assert_eq!(minted_elements(&CxfValue::List(Vec::new()), 0), 0);
 }
