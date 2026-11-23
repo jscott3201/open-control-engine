@@ -43,7 +43,7 @@ so far, and no tag is cut by the bump.
 ### Facade
 
 - **A load holds each long identity once, however many wires, ports or boundary targets name it**
-  (GitHub #PRNUM, issue #811). A document can spell a long IRI once, under a `@context` prefix,
+  (GitHub #812, issue #811). A document can spell a long IRI once, under a `@context` prefix,
   and name its node from any number of short nodes. The facade then held a copy of that IRI for
   each reference: every `ConnectionDto` copied its source point's key, every `PointDto` its owner
   block's key, and the inventory and the projection built and hashed a boundary input's path again
@@ -68,7 +68,7 @@ so far, and no tag is cut by the bump.
     that read `key.0` as a `Box<str>` reads it as an `Arc<str>`. Sharing is the reason: a shared
     key is what lets a `ConnectionDto` and a `PointDto` name a point without copying its IRI.
 
-- **A content id costs its records, whatever the names they repeat** (GitHub #PRNUM, issue #811).
+- **A content id costs its records, whatever the names they repeat** (GitHub #812, issue #811).
   Every canonical record held its own copy of each block name it carried, and the id hashed a
   `Vec` of the whole encoding. That came to two copies of a long name for each wire that names
   its block, four with both ends long. The records now borrow the names from the model, and the
@@ -80,7 +80,7 @@ so far, and no tag is cut by the bump.
   - A wired port is found in a table built once, not by searching its owner's port list for
     every wire. That search was quadratic in the width of a block whose every port is wired.
 
-- **A state snapshot or checkpoint shares each block's IRI across its manifest** (GitHub #PRNUM,
+- **A state snapshot or checkpoint shares each block's IRI across its manifest** (GitHub #812,
   issue #811). Every connector key in the execution manifest copied its block's IRI, and every
   connector entry copied its path and labels. A snapshot peaked at 6 to 82 copies of a long IRI
   per reference, and a checkpoint at 3 to 44. The keys and entries now share the graph's
@@ -240,7 +240,7 @@ so far, and no tag is cut by the bump.
 ### Execution core
 
 - **The validator handles a boundary input's path once, not once for every input it drives**
-  (GitHub #PRNUM, issue #811). Two `oce-validate` steps repeated work for every input a boundary
+  (GitHub #812, issue #811). Two `oce-validate` steps repeated work for every input a boundary
   input drives. The map that resolves a diagnostic's subject to its connector hashed every
   connector's path. The combined-domain check looked up its path group by text for every input,
   and searched `external_inputs` for each. A boundary's fan-out therefore cost its path's length
@@ -801,7 +801,7 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
-- **A boundary input passed through to many outputs is held once** (GitHub #PRNUM, issue #811).
+- **A boundary input passed through to many outputs is held once** (GitHub #812, issue #811).
   The reader copied the input's IRI twice for each pass-through pair it collected, and the
   lowered pass-through block's input connector kept one of those copies. One long input passed to
   `n` outputs read at 2 copies of its IRI per output and held 1. Each pair now carries the
@@ -809,7 +809,7 @@ so far, and no tag is cut by the bump.
   identity instead of formatted text. No outcome, diagnostic or graph field changes. Measured:
   0.00 copies per output, read and held.
 
-- **The export and the reader find boundary-driven inputs by set, not by search** (GitHub #PRNUM,
+- **The export and the reader find boundary-driven inputs by set, not by search** (GitHub #812,
   issue #811). The export plan searched `external_inputs` for every block input. It searched the
   boundary-driven inputs again, comparing IRIs, for every declared boundary input. And it searched
   its planned boundary nodes by IRI for every boundary-driven input. The reader's single-assignment
