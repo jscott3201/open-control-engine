@@ -72,10 +72,19 @@ struct ParamEntry {
 /// spelled: a path is spelled when [`Self::iter`] hands it out, and found by its hash
 /// (`path_index`), so the table holds a fixed size for each parameter whatever the IRI's length
 /// (issue #807).
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct ParamTable {
     entries: Vec<ParamEntry>,
     index: PathIndex,
+}
+
+/// The rows, in their order; the index, a function of them, is left out.
+impl std::fmt::Debug for ParamTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ParamTable")
+            .field("entries", &self.entries)
+            .finish_non_exhaustive()
+    }
 }
 
 impl ParamTable {

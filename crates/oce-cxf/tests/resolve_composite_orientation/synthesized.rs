@@ -243,7 +243,10 @@ fn forward_with_two_reverse_spellings_retains_duplicate_drive() {
     );
 }
 
-/// A node-less synthesized driver still charges its authored target IRI against the byte budget.
+/// A node-less synthesized driver whose padded identity alone passes 8 MiB is refused by the
+/// reader's instance path budget before lowering builds it (issue #807).
+/// `synthesized_output_relation_bytes_are_aggregated` still covers the composite boundary's byte
+/// budget on the synthesized path, with an owner whose padded output fits.
 #[test]
 fn synthesized_output_remains_resource_bounded() {
     let mut document = derived_output_document(false, false);

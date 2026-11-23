@@ -47,9 +47,11 @@ so far, and no tag is cut by the bump.
   path and as its index's key, three times the block's IRI a parameter once the first had grown:
   16 `PID` instances under 8 KiB IRIs left 5.6 MB held by the engine and its load report, 43
   times the IRI an instance, 33 of them the table's. Each row now holds its block's IRI shared
-  with the model and its name, and the index the hash of each path beside its row, sorted (a
-  fixed hasher, `DefaultHasher::new()`, so the index is the same on every load; it only chooses
-  which rows a lookup compares, and nothing iterates it). A path is spelled when `ParamTable::iter`
+  with the model and its name, and the index the hash of each path beside its row, sorted. The
+  hash is the crate's `StableHash` (FNV-1a over 128 bits) fed one byte at a time, so a row hashed
+  in parts and a lookup hashed whole are the same fold whatever the toolchain, and the index is
+  the same on every load; it only chooses which rows a lookup compares, nothing iterates it, and
+  `ParamTable`'s `Debug` now prints the rows alone. A path is spelled when `ParamTable::iter`
   hands it out. Nothing a host sees changes: `iter` and `to_vec` give the same paths in the same
   order, `get_param` and `set_param` find the same row, the first of two that spell one path
   (`urn:a` with `b.c` and `urn:a.b` with `c`), and rows whose hashes collide are told apart by
@@ -793,9 +795,16 @@ so far, and no tag is cut by the bump.
     540-load corpus reads, loads and exports byte-identically.
   - **The export's worst case**, computed, not run: those identities, written at most three
     times each, at most 24 MiB; the blocks' `@id`s at most 16 MiB; the array elements about
-    188 MiB, or 216 MiB with strings. So about 256 MiB for a model the facade loads, where it was
-    about 512 MiB, plus authored IRIs as the document spells them; and a graph `import_cxf`
-    returned is now bounded by the same budgets, plus the IRIs its document spells.
+    188 MiB, or 216 MiB with strings: about 256 MiB, where it was about 512 MiB. The rest of the
+    document's text (type IRIs, keys, 36 bytes and the value a parameter, about 73 a minted input
+    and 62 a padded output, authored IRIs as written) is in proportion to the document, measured
+    with short IRIs at up to 2.65 times it, about 22 MiB at the 8 MiB admission, and 12 MiB more
+    for authored IRIs written through the `@context` expansion: about 290 MiB in all. A graph
+    `import_cxf` returned is now bounded by the same budgets, plus its blocks' IRIs and the rest
+    of its document's text, which grow with its document. The facade's 8 MiB admission refuses
+    any document large enough to approach the budget with realistic content (these identities
+    are about 3.6% of the corpus's document bytes), so in practice it binds `import_cxf` callers
+    with very large documents, which should split the model.
   - **Evidence.** `oce-cxf` `instance_path_budget_tests.rs` (the budget's edges at its real size,
     overflow, a refusal reserving nothing, the excerpt) and `resolve/instance_paths_tests.rs`:
     every kind at once read at exactly its bytes and refused a byte short, literal and prefixed
@@ -816,8 +825,9 @@ so far, and no tag is cut by the bump.
   with no `.`, so each boundary input is now split once at its last `.` and its parts looked up
   (a block's instance IRI; one of its parameter names, or `in` and a position as the export
   writes it, no sign and no leading zero), and nothing is built. Measured, the same document
-  reads at 2.2 MB, and a parameter costs the reader about 5 KB whatever its block's IRI (256
-  parameters under 2, 4 and 8 KiB IRIs: 1,395,107 / 1,425,827 / 1,487,267 bytes). The answers
+  reads at 2.2 MB, and a parameter costs the reader about 5 KB whatever its block's IRI, the
+  reader's fixed cost for each node (issue #808): 256 parameters under 2, 4 and 8 KiB IRIs read
+  at 1,395,107 / 1,425,827 / 1,487,267 bytes. The answers
   are unchanged: `oce-cxf` `export_declared_input_attrs` pins the spellings the split refuses
   (`in0`, `in1`, a parameter's name whatever its node) and the ones it leaves alone (`in00`,
   `in01`, `in2`, `in`, `in+1`, `IN0`, a nameless parameter, a prefix that is not the whole IRI).

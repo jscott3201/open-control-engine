@@ -281,3 +281,79 @@ fn a_document_past_the_expansion_budget_too_is_refused_by_that_budget_alone() {
             .all(|d| d.message.starts_with("parameter path of"))
     );
 }
+
+#[test]
+fn a_position_is_counted_as_the_digits_the_export_writes() {
+    for (position, digits) in [
+        (0, 1),
+        (9, 1),
+        (10, 2),
+        (99, 2),
+        (100, 3),
+        (999, 3),
+        (1_000, 4),
+    ] {
+        assert_eq!(super::decimal_digits(position), digits, "{position}");
+    }
+    assert_eq!(
+        super::decimal_digits(usize::MAX),
+        usize::MAX.to_string().len()
+    );
+}
+
+/// A root whose twelve boundary inputs `urn:M.u0` to `urn:M.u11` drive the twelve inputs of a
+/// `MultiSum` named by `sum`, its `nin` the shared node `urn:p.nin`.
+fn twelve_driven(sum: &str) -> Vec<u8> {
+    let boundary: Vec<String> = (0..12)
+        .map(|k| {
+            format!(
+                r#"{{"@id":"urn:M.u{k}","@type":"S231:RealInput","S231:isOfDataType":{{"@id":"S231:Real"}},"S231:isConnectedTo":{{"@id":"{sum}.u{}"}}}}"#,
+                k + 1
+            )
+        })
+        .collect();
+    let declared = (0..12)
+        .map(|k| format!(r#"{{"@id":"urn:M.u{k}"}}"#))
+        .collect::<Vec<_>>()
+        .join(",");
+    let ports: Vec<String> = (1..=12)
+        .map(|k| {
+            format!(
+                r#"{{"@id":"{sum}.u{k}","@type":"S231:RealInput","S231:isOfDataType":{{"@id":"S231:Real"}}}}"#
+            )
+        })
+        .collect();
+    let inputs = (1..=12)
+        .map(|k| format!(r#"{{"@id":"{sum}.u{k}"}}"#))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!(
+        r#"{{"@context":{{"S231":"{S231}"}},"@graph":[
+{{"@id":"urn:M","@type":"S231:Block","S231:containsBlock":{{"@id":"{sum}"}},"S231:hasInput":[{declared}]}},
+{},
+{{"@id":"{sum}","@type":"{CDL}.Reals.MultiSum","S231:hasParameter":{{"@id":"urn:p.nin"}},"S231:hasInput":[{inputs}],"S231:hasOutput":{{"@id":"{sum}.y"}}}},
+{},
+{{"@id":"{sum}.y","@type":"S231:RealOutput","S231:isOfDataType":{{"@id":"S231:Real"}}}},
+{{"@id":"urn:p.nin","@type":"S231:Parameter","S231:isOfDataType":{{"@id":"S231:Integer"}},"S231:value":12}}
+]}}"#,
+        boundary.join(",\n"),
+        ports.join(",\n")
+    )
+    .into_bytes()
+}
+
+#[test]
+fn inputs_at_two_digit_positions_are_charged_their_two_digits() {
+    // Twelve boundary-driven inputs at positions 0 to 11: `in0` to `in9` take the IRI and 4
+    // bytes, `in10` and `in11` the IRI and 5, and `nin` the IRI and 4. At exactly that total the
+    // document reads; a byte short, the input charged last is refused.
+    let sum = stem(1_024, 's');
+    let total = (sum.len() + 4) + 10 * (sum.len() + 4) + 2 * (sum.len() + 5);
+    assert_eq!(total, 13 * 1_024 + 54);
+    let document = twelve_driven(&sum);
+    let warnings = read_with(total, &document).expect("exactly at the budget, it reads");
+    assert!(refused(&warnings).is_empty(), "{warnings:?}");
+    let refusal = read_with(total - 1, &document).expect_err("a byte short, it is refused");
+    assert_eq!(refused(&refusal).len(), 1, "{refusal:?}");
+    assert!(refused(&refusal)[0].starts_with("urn:M.u"), "{refusal:?}");
+}

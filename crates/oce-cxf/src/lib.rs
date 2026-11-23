@@ -267,10 +267,15 @@ pub fn import_cxf(
 /// IRIs take at most 8 MiB: each is spelled at least twice, against the 8 MiB document or the
 /// 8 MiB `@context` expansion budget); the array elements', held by the reader's array budgets,
 /// about 188 MiB (2^20 Real elements whose paths take 64 MiB), or 216 MiB with string elements at
-/// their budget. So about 256 MiB, where it was about 512 MiB, and authored port and boundary IRIs
-/// on top as the document spells them. A graph [`import_cxf`] returned is held to the same
-/// budgets, so the same 24 MiB and 216 MiB bound it, plus the IRIs its document spells, which grow
-/// with that document since `import_cxf` admits one of any size. A hand-built graph is bounded
+/// their budget. So about 256 MiB, where it was about 512 MiB. The rest of the document's text
+/// comes on top, in proportion to the document's own bytes: each block's type IRI and keys, each
+/// parameter's 36 bytes and value, about 73 bytes a minted input and 62 a padded output, and
+/// authored IRIs as the document spells them; measured with short IRIs, at most 2.65 times the
+/// document, so about 22 MiB at the 8 MiB admission and 12 MiB more for authored IRIs written
+/// through the `@context` expansion: about 290 MiB in all. A graph [`import_cxf`] returned is
+/// held to the same budgets, so the same 24 MiB and 216 MiB bound it, plus its blocks' IRIs and
+/// the rest of its document's text, which grow with that document since `import_cxf` admits one
+/// of any size. A hand-built graph is bounded
 /// only by these terms applied to the graph: one IRI shared by `N` parameters is written `2N`
 /// times, so bounding such a graph before exporting it is the host's responsibility
 /// (`docs/host-responsibilities.md`).

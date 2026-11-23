@@ -12,15 +12,47 @@
 //!
 //! The answers are the ones a map from the spelled path to the first row would give: the rows
 //! with one hash are kept in row order, and the first whose parts spell the path is the one
-//! found, so two rows whose hashes collide are told apart by their parts. The hash is fixed
-//! (`DefaultHasher::new()`, the same keys for every table), so the index is the same for one
-//! model on every load; it decides only which rows are compared, never which one is found, and
-//! nothing iterates it: `iter` walks the rows in their order.
+//! found, so two rows whose hashes collide are told apart by their parts. The hash is the
+//! crate's [`StableHash`] fed the path's bytes one at a time (FNV-1a over 128 bits, defined byte
+//! by byte), so a row hashed as its base, `.` and name and a lookup hashed as one string are the
+//! same fold over the same bytes whatever the toolchain, and the index is the same for one model
+//! on every load and every build. It decides only which rows are compared, never which one is
+//! found, and nothing iterates it or prints it: `iter` walks the rows in their order, and
+//! `ParamTable`'s `Debug` shows the rows alone.
 
-use std::hash::{DefaultHasher, Hasher};
 use std::sync::Arc;
 
 use oce_model::BlockId;
+
+use crate::stable_hash::StableHash;
+
+/// A hash of a path's bytes, fed in pieces whose concatenation is the path. Each implementation
+/// is a fold over the bytes alone, so how the path is cut into pieces never changes the result.
+pub(super) trait PathHash: Default {
+    /// Fold `bytes` in, one byte at a time.
+    fn write(&mut self, bytes: &[u8]);
+    /// The hash of the bytes folded so far.
+    fn finish(self) -> u128;
+}
+
+/// The index's hash: [`StableHash`], whose `write_bytes` folds one byte at a time.
+pub(super) struct StablePathHash(StableHash);
+
+impl Default for StablePathHash {
+    fn default() -> Self {
+        Self(StableHash::new())
+    }
+}
+
+impl PathHash for StablePathHash {
+    fn write(&mut self, bytes: &[u8]) {
+        self.0.write_bytes(bytes);
+    }
+
+    fn finish(self) -> u128 {
+        self.0.finish()
+    }
+}
 
 /// What a parameter's path starts with: its block's instance IRI, shared with the model, or the
 /// synthetic `b<id>` of a hand-built block that has none.
@@ -39,7 +71,7 @@ impl PathBase {
     }
 
     /// Feed the path's bytes, base, `.` and `name`, to `hasher`, as one string would be fed.
-    fn hash_path(&self, name: &str, hasher: &mut impl Hasher) {
+    fn hash_path(&self, name: &str, hasher: &mut impl PathHash) {
         match self {
             Self::Iri(iri) => hasher.write(iri.as_bytes()),
             Self::Unnamed(block) => {
@@ -74,15 +106,15 @@ impl PathBase {
 }
 
 /// The rows' positions sorted by the hash of their spelled paths, row order within one hash.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub(super) struct PathIndex {
-    by_hash: Vec<(u64, usize)>,
+    by_hash: Vec<(u128, usize)>,
 }
 
 impl PathIndex {
     /// Index the rows `parts` yields, in row order, as `(base, name)`.
     pub(super) fn of<'a>(parts: impl Iterator<Item = (&'a PathBase, &'a str)>) -> Self {
-        Self::hashed_by::<DefaultHasher>(parts)
+        Self::hashed_by::<StablePathHash>(parts)
     }
 
     /// The first row whose path is `path`, `part(row)` giving each row's `(base, name)`.
@@ -91,14 +123,12 @@ impl PathIndex {
         path: &str,
         part: impl Fn(usize) -> (&'a PathBase, &'a str),
     ) -> Option<usize> {
-        self.find_hashed_by::<DefaultHasher>(path, part)
+        self.find_hashed_by::<StablePathHash>(path, part)
     }
 
     /// [`Self::of`] with the hasher `H`, which tests replace with one whose hashes collide.
-    fn hashed_by<'a, H: Hasher + Default>(
-        parts: impl Iterator<Item = (&'a PathBase, &'a str)>,
-    ) -> Self {
-        let mut by_hash: Vec<(u64, usize)> = parts
+    fn hashed_by<'a, H: PathHash>(parts: impl Iterator<Item = (&'a PathBase, &'a str)>) -> Self {
+        let mut by_hash: Vec<(u128, usize)> = parts
             .enumerate()
             .map(|(row, (base, name))| {
                 let mut hasher = H::default();
@@ -111,7 +141,7 @@ impl PathIndex {
     }
 
     /// [`Self::find`] with the hasher `H` the index was built with.
-    fn find_hashed_by<'a, H: Hasher + Default>(
+    fn find_hashed_by<'a, H: PathHash>(
         &self,
         path: &str,
         part: impl Fn(usize) -> (&'a PathBase, &'a str),
