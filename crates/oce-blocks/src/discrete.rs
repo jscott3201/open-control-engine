@@ -15,7 +15,8 @@ use oce_model::{
 use crate::discrete_sampled::{
     at_sample_instant, initial_sample_time, sample_due, valid_sample_period,
 };
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
+use crate::settled::{fire, settled_input};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_real};
 
 const TRIGGERED_SAMPLER_HELD_WORD: usize = 0;
 const TRIGGERED_SAMPLER_PREV_TRIGGER_WORD: usize = 1;
@@ -175,7 +176,7 @@ impl Block for UnitDelay {
     }
 }
 
-/// `CDL.Discrete.TriggeredSampler` — sample `u` on a rising Boolean `trigger`.
+/// `CDL.Discrete.TriggeredSampler` — sample `u` on each `trigger` event.
 ///
 /// Before the first trigger instant, `y` is the parameter `y_start` (default `0`): the source's
 /// `initial equation y = y_start`. Frame 0 is initialisation, where the `when trigger` clause is
@@ -188,19 +189,26 @@ impl Block for UnitDelay {
 /// same-tick rising trigger emits the current `u`. Real outputs and stored samples are NaN-canonicalized for deterministic
 /// traces. The block does not panic for finite or non-finite `Real` values; validated callers must
 /// provide a `Real` then a `Boolean` input.
+/// `trigger` takes the settled-value rule of issue #800 (`docs/design/pulse-event-inputs.md`): with
+/// a pulse or a sample upstream the event plan appends `w` and `s`, the block fires on
+/// `(v and not w(k-1)) or (not v and s)` and stores `w` in its previous-trigger word, which nothing
+/// but that test reads. At the initial frame
+/// only a sample instant samples (the frame driver's initial flag; the seeded word answers a
+/// direct call).
 /// OpenModelica 1.25.1 agrees exactly at every frame, with the trigger true from frame 0 and with
-/// it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`, issue #670).
+/// it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`, issue #670), and
+/// behind `Change` and `SampleTrigger` pulses (`open_modelica_pulse_events.rs`, issue #800).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TriggeredSampler {
     pub(crate) y_start: f64,
 }
 
 impl TriggeredSampler {
-    fn output(inputs: &[Value], region: &[u64]) -> f64 {
+    fn output(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> f64 {
         let u = read_real(inputs, 0);
-        let trigger = read_bool(inputs, 1);
+        let trigger = settled_input(inputs, 1, 2, 0);
         let prev_trigger = word_bool(region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD]);
-        if trigger && !prev_trigger {
+        if fire(ctx.is_initial(), prev_trigger, trigger).any() {
             u
         } else {
             f64::from_bits(region[TRIGGERED_SAMPLER_HELD_WORD])
@@ -227,6 +235,10 @@ impl Block for TriggeredSampler {
         in_idx < 2 && out_idx == 0
     }
 
+    fn settled_event_inputs(&self) -> &[usize] {
+        &[1]
+    }
+
     fn state_len(&self) -> usize {
         2
     }
@@ -239,22 +251,22 @@ impl Block for TriggeredSampler {
 
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit_real(0, Self::output(inputs, region), emit);
+        emit_real(0, Self::output(ctx, inputs, region), emit);
     }
 
-    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
+    fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
         region[TRIGGERED_SAMPLER_HELD_WORD] =
-            canonicalize_real(Self::output(inputs, region)).to_bits();
-        region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD] = bool_word(read_bool(inputs, 1));
+            canonicalize_real(Self::output(ctx, inputs, region)).to_bits();
+        region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD] = bool_word(settled_input(inputs, 1, 2, 0).w);
     }
 }
 
-/// `CDL.Discrete.TriggeredMax` — track the maximum absolute sampled `u` on rising `trigger`.
+/// `CDL.Discrete.TriggeredMax` — track the maximum absolute sampled `u` at `trigger` events.
 ///
 /// The source has no current parameters. Its `initial equation y = u` makes frame 0 emit the
 /// current input exactly (a negative `u` or `-0.0` included): frame 0 is initialisation, where the
@@ -265,21 +277,31 @@ impl Block for TriggeredSampler {
 /// rising-trigger event depend on same-tick inputs. Real outputs and stored samples are NaN-canonicalized; `max` uses the same
 /// deterministic NaN and signed-zero policy as `CDL.Reals.Max`. The block never panics for finite
 /// or non-finite `Real` values; validated callers must provide a `Real` then a `Boolean` input.
+/// `trigger` takes the settled-value rule of issue #800 (`docs/design/pulse-event-inputs.md`): with
+/// a pulse or a sample upstream the event plan appends `w` and `s`, the block fires on
+/// `(v and not w(k-1)) or (not v and s)` and stores `w` in its previous-trigger word, which nothing
+/// but that test reads. At the initial frame
+/// a sample instant applies `max(u, abs(u))` to the initial `y = u`, as OpenModelica does.
 /// OpenModelica 1.25.1 agrees exactly at every frame, with the trigger true from frame 0 and with
-/// it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`, issue #670).
+/// it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`, issue #670), and
+/// behind `Change` and `SampleTrigger` pulses (`open_modelica_pulse_events.rs`, issue #800).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TriggeredMax;
 
 impl TriggeredMax {
-    fn output(inputs: &[Value], region: &[u64]) -> f64 {
+    fn output(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> f64 {
         let u = read_real(inputs, 0);
-        let trigger = read_bool(inputs, 1);
-        if !word_bool(region[TRIGGERED_MAX_HAS_HISTORY_WORD]) {
-            return u;
-        }
-        let held = f64::from_bits(region[TRIGGERED_MAX_HELD_WORD]);
+        let trigger = settled_input(inputs, 1, 2, 0);
+        let has_history = word_bool(region[TRIGGERED_MAX_HAS_HISTORY_WORD]);
+        // `initial equation y = u`: at the initial frame `pre(y)` is the current input.
+        let held = if has_history {
+            f64::from_bits(region[TRIGGERED_MAX_HELD_WORD])
+        } else {
+            u
+        };
+        let initial = ctx.is_initial() || !has_history;
         let prev_trigger = word_bool(region[TRIGGERED_MAX_PREV_TRIGGER_WORD]);
-        if trigger && !prev_trigger {
+        if fire(initial, prev_trigger, trigger).any() {
             det_max(held, u.abs())
         } else {
             held
@@ -306,6 +328,10 @@ impl Block for TriggeredMax {
         in_idx < 2 && out_idx == 0
     }
 
+    fn settled_event_inputs(&self) -> &[usize] {
+        &[1]
+    }
+
     fn state_len(&self) -> usize {
         3
     }
@@ -318,17 +344,18 @@ impl Block for TriggeredMax {
 
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit_real(0, Self::output(inputs, region), emit);
+        emit_real(0, Self::output(ctx, inputs, region), emit);
     }
 
-    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        region[TRIGGERED_MAX_HELD_WORD] = canonicalize_real(Self::output(inputs, region)).to_bits();
-        region[TRIGGERED_MAX_PREV_TRIGGER_WORD] = bool_word(read_bool(inputs, 1));
+    fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
+        region[TRIGGERED_MAX_HELD_WORD] =
+            canonicalize_real(Self::output(ctx, inputs, region)).to_bits();
+        region[TRIGGERED_MAX_PREV_TRIGGER_WORD] = bool_word(settled_input(inputs, 1, 2, 0).w);
         region[TRIGGERED_MAX_HAS_HISTORY_WORD] = bool_word(true);
     }
 }
@@ -337,8 +364,10 @@ impl Block for TriggeredMax {
 ///
 /// The source parameter is `Integer n(min=1)` with no default; validation requires it, while the
 /// registry's direct-construction fallback uses `n = 1`. The source samples on
-/// `when {initial(), trigger}`: the first tick always samples exactly once, then later ticks sample
-/// only on false-to-true trigger edges. The block owns `4 + n` `[S]` words: held output, previous
+/// `when {initial(), trigger}`: the first tick samples once for `initial()` and once more when a
+/// sample instant fires there (`s and not w`; the `when` fires again in the start's event
+/// iteration, as OpenModelica 1.25.1 shows), then later ticks sample on `trigger` events by the
+/// settled-value rule of issue #800 (`docs/design/pulse-event-inputs.md`). The block owns `4 + n` `[S]` words: held output, previous
 /// trigger bit, populated-sample counter, next zero-based ring slot, and the `n` sampled `Real`
 /// words. `n` is input-derived and has no class-level upper bound; the window is bounded by
 /// `oce-graph`'s model-wide `MAX_STATE_WORDS` budget, which refuses an over-large window at BUILD
@@ -371,20 +400,35 @@ impl TriggeredMovingMean {
         (region[TRIGGERED_MOVING_MEAN_NEXT_INDEX_WORD] as usize) % self.window()
     }
 
-    fn should_sample(self, inputs: &[Value], region: &[u64]) -> bool {
-        let trigger = read_bool(inputs, 1);
+    /// How many samples of the current `u` this frame takes, by `when {initial(), trigger}`. The
+    /// initial frame (no sample yet) takes one for `initial()`, and a second when a sample instant
+    /// fires there (`s and not w`): the `when` fires at initialisation and again in the start's
+    /// event iteration, as OpenModelica does (`Discrete/TriggeredMovingMean.mo:36`; issue #800,
+    /// a refinement of decision 3). A later frame takes one when the settled-value rule fires.
+    fn samples(self, ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> usize {
+        let trigger = settled_input(inputs, 1, 2, 0);
         let prev_trigger = word_bool(region[TRIGGERED_MOVING_MEAN_PREV_TRIGGER_WORD]);
-        self.sample_count(region) == 0 || (trigger && !prev_trigger)
+        if self.sample_count(region) == 0 {
+            1 + usize::from(fire(true, prev_trigger, trigger).first)
+        } else {
+            usize::from(fire(ctx.is_initial(), prev_trigger, trigger).any())
+        }
     }
 
-    fn sampled_mean(self, u: f64, region: &[u64]) -> f64 {
+    /// Whether slot `i` is among the `samples` slots written from the next one on (`samples` is
+    /// at most 2, so at most two distinct slots).
+    fn takes(self, i: usize, samples: usize, region: &[u64]) -> bool {
+        let first = self.next_sample_index(region);
+        (0..samples).any(|j| (first + j) % self.window() == i)
+    }
+
+    fn sampled_mean(self, u: f64, samples: usize, region: &[u64]) -> f64 {
         let n = self.window();
-        let sample_index = self.next_sample_index(region);
-        let next_counter = (self.sample_count(region) + 1).min(n);
+        let next_counter = (self.sample_count(region) + samples).min(n);
         let sample = canonicalize_real(u);
         let mut sum = 0.0;
         for i in 0..n {
-            let value = if i == sample_index {
+            let value = if self.takes(i, samples, region) {
                 sample
             } else {
                 f64::from_bits(region[TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START + i])
@@ -394,11 +438,10 @@ impl TriggeredMovingMean {
         sum / next_counter as f64
     }
 
-    fn output(self, inputs: &[Value], region: &[u64]) -> f64 {
-        if self.should_sample(inputs, region) {
-            self.sampled_mean(read_real(inputs, 0), region)
-        } else {
-            f64::from_bits(region[TRIGGERED_MOVING_MEAN_HELD_WORD])
+    fn output(self, ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> f64 {
+        match self.samples(ctx, inputs, region) {
+            0 => f64::from_bits(region[TRIGGERED_MOVING_MEAN_HELD_WORD]),
+            samples => self.sampled_mean(read_real(inputs, 0), samples, region),
         }
     }
 }
@@ -422,6 +465,10 @@ impl Block for TriggeredMovingMean {
         in_idx < 2 && out_idx == 0
     }
 
+    fn settled_event_inputs(&self) -> &[usize] {
+        &[1]
+    }
+
     fn state_len(&self) -> usize {
         // Saturating: an unvalidated huge window reports `usize::MAX`, which the checked BUILD
         // allocation refuses as over budget instead of overflowing here.
@@ -440,26 +487,30 @@ impl Block for TriggeredMovingMean {
 
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit_real(0, self.output(inputs, region), emit);
+        emit_real(0, self.output(ctx, inputs, region), emit);
     }
 
-    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        if self.should_sample(inputs, region) {
+    fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
+        let samples = self.samples(ctx, inputs, region);
+        if samples > 0 {
             let n = self.window();
             let sample_index = self.next_sample_index(region);
-            let next_counter = (self.sample_count(region) + 1).min(n);
-            let output = self.sampled_mean(read_real(inputs, 0), region);
+            let next_counter = (self.sample_count(region) + samples).min(n);
+            let output = self.sampled_mean(read_real(inputs, 0), samples, region);
             region[TRIGGERED_MOVING_MEAN_HELD_WORD] = canonicalize_real(output).to_bits();
-            region[TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START + sample_index] =
-                canonicalize_real(read_real(inputs, 0)).to_bits();
+            for j in 0..samples {
+                region[TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START + (sample_index + j) % n] =
+                    canonicalize_real(read_real(inputs, 0)).to_bits();
+            }
             region[TRIGGERED_MOVING_MEAN_COUNTER_WORD] = next_counter as u64;
-            region[TRIGGERED_MOVING_MEAN_NEXT_INDEX_WORD] = ((sample_index + 1) % n) as u64;
+            region[TRIGGERED_MOVING_MEAN_NEXT_INDEX_WORD] = ((sample_index + samples) % n) as u64;
         }
-        region[TRIGGERED_MOVING_MEAN_PREV_TRIGGER_WORD] = bool_word(read_bool(inputs, 1));
+        region[TRIGGERED_MOVING_MEAN_PREV_TRIGGER_WORD] =
+            bool_word(settled_input(inputs, 1, 2, 0).w);
     }
 }

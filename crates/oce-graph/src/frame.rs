@@ -448,6 +448,7 @@ impl FrameDriver<'_> {
             blocks: self.blocks,
             diagnostics,
             state: self.state,
+            initial: self.prev_t.is_none(),
         };
         eval_tick(&mut ctx, time);
         *self.prev_t = Some(time);

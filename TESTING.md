@@ -192,9 +192,12 @@ Detected disagreements may be recorded in
 `crates/oce-conformance/tests/fixtures/known_divergence/register.json` after human adjudication.
 The register is evidence only: membership does not change discrepancies, comparison settings,
 tier status, goldens, or test results. Its initial revision was empty because no clean-room Nand
-discrepancy reproduces; it now holds two entries, `DVG-000001` and `DVG-000002`, the engine and
-OpenModelica apart where a pulse is true on two consecutive frames (GitHub #796, issue #800, open
-for the owner's decision), each pinned by a test that holds the engine to its registered evidence. A
+discrepancy reproduces; it now holds six entries. `DVG-000001` and `DVG-000002`, the engine and
+OpenModelica apart where a pulse was true on two consecutive frames (GitHub #796), are resolved by
+the settled-value rule of issue #800 and keep their evidence; `DVG-000003` to `DVG-000006` are the
+limits that rule leaves (a cone with a `Pre`, several sample instants in one frame, an instant
+sampled at the next frame), open by the owner's ruling and each pinned by a test that holds the
+engine to its registered evidence. A
 private test reader validates the closed schema and local evidence
 digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.
 The separate OpenModelica evidence profiles execute four cases against OMC 1.25.1 and the pinned
@@ -229,14 +232,15 @@ ten frames, the integrators with their integral held (`open_modelica_event_trigg
 pilots and `regenerate.sh` under `tools/openmodelica-event-reference/`, provenance per pilot).
 `open_modelica_integrator_ramp.rs` compares `IntegratorWithReset` on a nonzero input: an exact
 one-frame lag at its uniform frame step with held inputs, the same after a reset as after the start,
-halving on finer frames. `open_modelica_event_pulses.rs` pins a known divergence (issue #800). These
+halving on finer frames. `open_modelica_event_pulses.rs` and `open_modelica_pulse_events.rs`
+check the settled-value rule (issue #800), the second against the pinned Buildings classes. These
 runs are not repeated and carry no OCI manifest or projection mutation, unlike the four cases above;
 a provenance record binds each one's pilot, simulation script, raw result and canonical tables by
 digest, and the class source OpenModelica ran to the vendored copy. `oce-verify`'s
 `building_33_openmodelica_frames.rs` compares upstream's `CoolingCoilValve` on 78 synthetic frames
 (issue #787): exact at every engine reset, a pinned, unbounded integration difference elsewhere,
-first-order convergence on uniform finer frames; `building_33_openmodelica_reenable.rs` pins the
-second divergence of issue #800.
+first-order convergence on uniform finer frames; `building_33_openmodelica_reenable.rs` checks the
+re-enable one frame after a disable, the resolved second divergence of issue #800.
 
 `CDL.Logical.Pre` is not an expected-green OpenModelica case. Its upstream same-time event iteration
 differs from the fixed HostTick v1 projection, which advances once per HostTick transition.

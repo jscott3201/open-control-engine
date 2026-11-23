@@ -191,6 +191,53 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
+- **An event input fed by a pulse fires on every frame the pulse is true** (GitHub #PRNUM, issue
+  #800; owner rulings of 2026-11-22 on design note
+  [Event inputs fed by one-frame pulses](docs/design/pulse-event-inputs.md), option (g), the
+  settled-value rule). **Breaking, in place:** the outputs of models that still load change
+  wherever a pulse or a sample reaches an event input and is true on consecutive frames, or a
+  pulse reaches one through `Not` or through logic with a level. A `Logical.Change`,
+  `Integers.Change`, `Edge` or `FallingEdge` holds `true` for a frame where Modelica's pulse lasts
+  an instant, so a `Change` true on two consecutive frames was one rising edge to the input and
+  Modelica fires twice. Now load classifies the stateless Boolean logic upstream of each event
+  input (its cone) down to samples (`SampleTrigger`), primitive pulses, levels and fallback leaves
+  (any `Pre`, and anything a chain of blocks connects to a pulse, a sample or a `Pre`), and each
+  frame evaluates the cone twice more: `w` with pulses and samples false, `s` with pulses false.
+  The input fires on `(v and not w(k-1)) or (not v and s)` and the block stores `w` where it stored
+  the previous trigger. A cone with a fallback leaf, and every cone with no pulse or sample, keeps
+  the rising edge bit for bit (all 46 G36 traces, the goldens and the blob outputs are unchanged).
+  The consumers are `OnCounter.trigger` and `.reset`, the `.trigger` of `TriggeredSampler`,
+  `TriggeredMax`, `TriggeredMovingMean`, `IntegratorWithReset` and `PIDWithReset` (PI, PID),
+  `Latch.u`, `Toggle.u` and `TimerAccumulating.reset`. `DVG-000001` and `DVG-000002` are
+  resolved. The plan adds no scheduling edge and no algebraic loop; the blob decoder derives it
+  from the wiring it validates, so no blob byte changes; `state_len` and every
+  `state_contract_revision` stay as they are. A snapshot written by a 0.6.0 build before this
+  change still loads: its stored words hold the frame value where `w` is now expected, so at
+  most one event merges at the restore boundary, none is counted twice.
+- **At the first frame, a sample instant fires; `SampleTrigger` is `true` there only on an
+  instant** (GitHub #PRNUM, issue #800, decision 3). **Breaking, in place.** `OnCounter`,
+  `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset`, `PIDWithReset` and
+  `TimerAccumulating.reset` fire at frame 0 only on a sample instant at the start, as OpenModelica
+  fires `when sample(...)` there (a `Change` or `Edge` true at initialisation fires nothing, as
+  before); `TriggeredMovingMean` samples twice there, for `initial()` and for the instant;
+  `Latch` and `Toggle` keep reading `u`'s frame-0 value. `SampleTrigger`'s own frame-0 output is
+  `true` only when the start is an instant (within `1e-9 * period`); before, it was `true` at any
+  start at or after its phase, so `Pre(SampleTrigger)` fired at frame 1 after an off-grid start.
+- **`SampleTrigger` warns once when a frame spans more than one of its instants** (GitHub
+  #PRNUM, issue #800, decision 2): the frame fires once for all of them, a host-cadence
+  violation. The mark lives in the block's state word (an index, `-1` before the first instant,
+  or `-(index + 2)` once warned), so a snapshot carries it; `validate_state` accepts exactly that
+  domain. Three blob run digests move with the stored words (`blob_frame_digests.tsv`:
+  `multizone_vav_supply_fan`, `multizone_vav_supply_temperature`,
+  `trim_and_respond_have_hol_false`); a new outputs-only table recorded before the change
+  (`blob_frame_output_digests.tsv`) shows every output unchanged.
+- **API for the rule** (GitHub #PRNUM, issue #800). `oce_blocks`: `Block::settled_event_inputs`,
+  `Block::event_signal` and `EventSignal`; `Ctx::with_initial` and `Ctx::is_initial`, which the
+  frame driver sets on its first frame. `oce_graph`: `Schedule::events`, `EventPlan`,
+  `ShadowSource`, `needs_plan`, the `RunState` shadow buffers, and `EvalContext::initial`, which
+  a direct `eval_tick` caller now sets. `set_param`'s schedule-shape guard also compares the
+  settled inputs and the event signal; no parameter edit changes either.
+
 - **A reset applies at the frame where its trigger rises** (GitHub #789, issue #768; owner
   ruling of 2026-11-22, "fix both to match Modelica"; design note
   [Reset timing at the event](docs/design/reset-timing.md)). **Breaking, in place:** the outputs
@@ -2911,6 +2958,26 @@ so far, and no tag is cut by the bump.
     other count there is unchanged.
 
 ### Verification
+
+- **The settled-value rule against OpenModelica on the pinned Buildings classes** (GitHub
+  #PRNUM, issue #800). Three pilots (`PulseConsumersPilot`, `SampleTriggerPilot`,
+  `SampleTriggerOffGridPilot`; `regenerate.sh ... pulses`) run the Buildings classes, not
+  transcriptions, and `open_modelica_pulse_events.rs` compares the engine at every frame: every
+  consumer behind `Change` of a signal that changes on consecutive frames, `Not(Change)`,
+  `Or(Change, level)`, `SampleTrigger` at 1, 1.4 and 2 s and shifted, from an instant at the start
+  and from an off-grid start, `Not(SampleTrigger)`, `Latch` and `Toggle` reading the
+  initialisation pulse, and `TriggeredMovingMean` sampling twice at the start, equal OpenModelica
+  bit for bit (a timer within 1e-6, a mean within 1e-12). Four differences are registered,
+  documented limits: a cone with a `Pre` (`DVG-000003`, `DVG-000006`), two instants a frame
+  (`DVG-000004`) and an instant sampled at the next frame with that frame's value (`DVG-000005`).
+  `DVG-000001` and `DVG-000002` move to `resolved` with their evidence kept. Building 33: the
+  engine resets at all nine changes of the enable (`valve_oracle.txt` and `derive_valve.py`
+  change at 387 and 392 s), and at the re-enable probe it reads 0, 0 and 0.015 against
+  OpenModelica's 0, 0.015 and 0.030 (`building_33_openmodelica_reenable.rs`). The Building 33
+  mutant that triggers the reset from the enable's level instead of its `Change` is now
+  equivalent, as it is in Modelica (both reset at every re-enable and the valve is 0 while
+  disabled), so it moves from the caught mutants to a test that says no behaviour can show it
+  (`building_33_mutants.rs`; ten caught mutants, two equivalent).
 
 - **OpenModelica agrees with the engine's trigger timing in all five event-triggered classes,
   except where a pulse is true on two consecutive frames** (GitHub #796, issue #670). A pilot per

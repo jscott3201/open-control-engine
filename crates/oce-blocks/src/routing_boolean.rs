@@ -11,8 +11,8 @@ use oce_model::Value;
 
 use crate::constructed::{buffer_words, index_buffer_words};
 use crate::{
-    Block, BlockKind, BlockSignature, Ctx, MAX_RESOLVED_PORT_WIDTH, PortKind, PortShape,
-    ResolvedBlockSignature, read_bool, read_int,
+    Block, BlockKind, BlockSignature, Ctx, EventSignal, MAX_RESOLVED_PORT_WIDTH, PortKind,
+    PortShape, ResolvedBlockSignature, read_bool, read_int,
 };
 
 const EXTRACTOR_WARNING: &str = "The extract index is out of the range.";
@@ -87,6 +87,10 @@ impl Block for BooleanExtractSignal {
         BlockKind::Algebraic
     }
 
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
+    }
+
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
         self.source_input_index(out_idx) == Some(in_idx)
     }
@@ -150,6 +154,10 @@ impl Block for BooleanExtractor {
 
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
     }
 
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
@@ -223,6 +231,10 @@ impl Block for BooleanScalarReplicator {
         BlockKind::Algebraic
     }
 
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
+    }
+
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
         in_idx == 0 && out_idx < self.outputs.len()
     }
@@ -291,6 +303,10 @@ impl Block for BooleanVectorFilter {
         BlockKind::Algebraic
     }
 
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
+    }
+
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
         self.selected.get(out_idx).copied() == Some(in_idx)
     }
@@ -356,6 +372,10 @@ impl Block for BooleanVectorReplicator {
 
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
     }
 
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {

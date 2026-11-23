@@ -491,25 +491,25 @@ What the implementation PR owes, derived from the rulings; section 5 has the ful
 
 ## 4. Blast radius
 
-Measured by the static scan and the second probe; no implementation was run. The rows hold under
-(g) with the rulings of 2026-11-22, and would have held with any choice of decisions 3 to 6.
+Measured by the static scan and the second probe before any implementation, and corrected after
+the implementation ran them (two rows, marked; see [As landed](#as-landed)).
 
 | Corpus | Pulse into a consumer | Moves under (g) |
 | --- | --- | --- |
-| Building 33 (`crates/leverage/oce-verify/tests/fixtures/commissioning/building33/`) | `Change(enable)` → `PIDWithReset.trigger`, direct | Yes: `valve_oracle.txt` from the appended re-enable at 382 s on, `derive_valve.py`, `yCooVal_reenable_probe.engine.csv` (resetting at 382 s, as OpenModelica does), and the two OpenModelica tests' claims ("eight of nine" resets becomes nine of nine) |
+| Building 33 (`crates/leverage/oce-verify/tests/fixtures/commissioning/building33/`) | `Change(enable)` → `PIDWithReset.trigger`, direct | Yes: `valve_oracle.txt` at 387 and 392 s (382 s reads 0 under both rules), `derive_valve.py`, and the two OpenModelica tests' claims ("eight of nine" resets becomes nine of nine); `yCooVal_reenable_probe.engine.csv` stays as the resolved divergence's evidence (corrected) |
 | G36 `cooling_only_controller`, `generic_time_suppression` (and `oce-author`'s emitted `generic_time_suppression.cxf.json`) | `Edge` → two `TriggeredSampler.trigger`, direct; `Edge` → `Latch.clr` | No: an `Edge` is never true on consecutive frames, so `w ≡ s ≡ false` and today's edge give the same bits; `clr` is unchanged (C4) |
 | G36 `multizone_vav_freeze_protection` | `Or(tim.passed, Edge(endStaTwo))` → `lat.u`; `Edge` → `lat.clr`, `lat2.clr` | No: the probe ran the 111 trace frames and `endStaTwo` never pulses |
-| G36 `multizone_vav_supply_fan`, `multizone_vav_supply_temperature`, `trim_and_respond_have_hol_false` | `SampleTrigger(120 s)` → `Latch.u`, direct; `And(Not(false), SampleTrigger)` → `Latch.clr` | No: `have_hol = false`, frame steps of 1, 1 and 60 s, and runs that start at t = 0 on the grid |
+| G36 `multizone_vav_supply_fan`, `multizone_vav_supply_temperature`, `trim_and_respond_have_hol_false` | `SampleTrigger(120 s)` → `Latch.u`, direct; `And(Not(false), SampleTrigger)` → `Latch.clr` | No output: `have_hol = false`, frame steps of 1, 1 and 60 s, and runs that start at t = 0 on the grid. Their blob run digests move (next row) |
 | The other 40 G36 fixtures, the CDL fixtures, `tools/golden-gen` goldens | none | No |
 | `crates/oce-api/tests/fixtures/library_rules/AHU-0004/rule.cxf.jsonld` and its vectors, `crates/leverage/oce-verify/tests/fixtures/canonical/AHU-0004.json` | `Integers.Change` → `BooleanToInteger` → `IntegerToReal` → `MovingAverage` | No: no event input |
-| Compiled-schedule blobs, `blob_frame_digests.tsv`, `class_signatures.tsv` | — | No (C6; no trace moves; no `state_len` changes) |
+| Compiled-schedule blobs, `blob_frame_digests.tsv`, `class_signatures.tsv` | — | Blob bytes and `class_signatures.tsv`: no (C6; no `state_len` changes). `blob_frame_digests.tsv`: **three lines move** (corrected), because those digests fold the state words after every frame, not only the outputs: `multizone_vav_supply_fan`, `multizone_vav_supply_temperature` and `trim_and_respond_have_hol_false`, whose `Latch` now stores `w` (false for a direct sample) where it stored `v`, and whose `SampleTrigger` word carries the warning mark |
 | `oce-replay` traces (`controller_minute_day`, `controller_grid_hold`) | `cooling_only_controller`'s `Edge` → `TriggeredSampler` | No |
 | `open-control-library` at fe7060a: 140 documents | 11 fault rules (AHU-0004, CHW-0009, FCU-0001, HP-0002, HW-0001, HW-0011 ×2, PMP-0004, RTU-0001, TOWER-0003, VAV-0005, VFD-0004 ×2): `Change`, `Integers.Change` or `Edge` → `BooleanToInteger` → `IntegerToReal` → `MovingAverage` → `MultiplyByParameter` → `GreaterThreshold` | No: no event input; they count one-frame pulses, which their cards document, and a consecutive change counts twice, as Modelica counts events |
 | Engine tests that pin today's merging | `open_modelica_event_pulses.rs`, `sample_trigger_event_inputs.rs`, `building_33_openmodelica_reenable.rs`, `building_33_openmodelica_frames.rs` | Rewritten to the new rule; `DVG-000001` and `DVG-000002` move to `resolved` |
 
 No tracked or library document has a cone that falls back, so decision 5 moves nothing in the
-corpus. The 46 fixture goldens and 422 provenance goldens are expected byte-identical, and no G36
-trace or blob moves; the implementation PR proves that by running them. Docs that change with it:
+corpus. The 46 fixture goldens, 422 provenance goldens, every G36 trace and every blob output are
+byte-identical; the implementation PR ran them. Docs that change with it:
 the execution profile's "Events on a Boolean input" and "Conformance boundary",
 `docs/cdl-coverage.md`, `docs/verification-evidence.md`, `TESTING.md`'s line on
 `open_modelica_event_pulses.rs`, the Building 33 README, the rustdoc of `SampleTrigger` and of the
@@ -598,3 +598,80 @@ Per [TESTING.md](../../TESTING.md):
 - `sh docs/design/pulse-event-inputs/om/run.sh <dir>` reruns the four OpenModelica probes into a
   directory, and `python3 -I docs/design/pulse-event-inputs/om/fires.py <dir>` prints what
   `om/results.txt` holds.
+
+## As landed
+
+GitHub #PRNUM implements option (g) with the six rulings of 2026-11-22 in one PR (C8). Where the
+implementation found the note wrong, read it more narrowly or had to decide something it left
+open, the record is here; the decided text above is unchanged, except section 4's two corrected
+rows.
+
+- **Taint is any chain of inputs: a conservative reading of decision 5.** Section 3 sends to the
+  rising edge "any cone with an edge block fed by a pulse, a sample or a `Pre`". The plan marks
+  every block that a pulse, sample or `Pre` reaches through any chain of inputs, Boolean or not
+  (`oce_graph::events`, one breadth-first pass over a reader table built once). A leaf of a cone
+  that is so marked is a fallback leaf, so `Integers.Change(BooleanToInteger(Change(u)))`, and a
+  level such as `GreaterThreshold(BooleanToReal(Change(u)))`, send their cone to the rising edge
+  instead of being read as a primitive pulse or a level. A primitive pulse is an edge block whose
+  own input is untainted. No tracked or library cone is affected (section 4).
+- **`TriggeredMovingMean` samples twice at a sample instant at the start: a refinement of decision
+  3 found by the pinned-class pilots.** Decision 3 says it "samples as today", once, for
+  `initial()`. `CDL/Discrete/TriggeredMovingMean.mo:36` is `when {initial(),trigger} then`; with
+  `trigger = sample(...)` true at the start, OpenModelica fires the `when` for `initial()` and again
+  in the start's event iteration (the second sample is taken when `trigger` becomes true after
+  initialisation: `s and not w` at the initial frame). The engine now does the same, and the
+  sample-trigger pilot agrees (2.8333 at 1 s, which one sample at the start does not give); it is
+  not registered as a divergence. A `Change` or `Edge` leaf true from the start, whose pulse is
+  initialisation's, adds no second sample, and an off-grid start adds none. The other classes,
+  checked against their `.mo` and the pilots: `TriggeredMax` applies `max(pre(y), abs(u))` to its
+  initial `y = u` at an instant at the start, so a negative `u` gives `abs(u)` (OpenModelica 2.5
+  for `u = -2.5`); #789 pinned `y(0) = u(0)` for a level trigger true at the start, which is no
+  event, so the two do not contradict. `OnCounter` counts 1, `TriggeredSampler` samples,
+  `IntegratorWithReset` and `PIDWithReset` reset, `Toggle` and `Latch` read `true` and
+  `TimerAccumulating`'s reset shows 0 either way, each as OpenModelica does.
+- **The stored word is read only by the event test.** Each consumer stores `w` in the word that
+  held the previous input: `OnCounter` words 1 and 2 (trigger, reset), `TriggeredSampler`,
+  `TriggeredMax` and `TriggeredMovingMean` word 1, `IntegratorWithReset` word 2, `PIDWithReset`'s
+  trigger word (PI and PID only), `Latch` and `Toggle` word 1, `TimerAccumulating` word 3. In
+  every class that word is read only by `fire(...)`, the event test, never by an output, by
+  `event_input_role` or by another state word's update; each validator still requires `0` or `1`
+  there, which `w` satisfies.
+- **`SampleTrigger`'s warning mark lives in its state word.** C7's once-per-instance warning must
+  survive capture and restore, and the class has one word and no spare (a second would change
+  `state_len`, which the blob's class signature fixes); `MovingAverage`'s coalesced-warning word
+  is the precedent for a warning mark in state. The word holds the last instant index `k` as
+  before (`-1` before the first instant), or `-(k + 2)` once the span warning fired (`k >= 1`, so
+  the two ranges cannot meet). The index is recovered exactly, so sampling is the same with or
+  without the mark (`sample_trigger_event_inputs.rs`); `validate_state` accepts exactly the index the
+  state's model time gives, warned or not, and refuses with the typed state error any other
+  index and a warned index below 1 (the word `-2`); decoding and encoding use no unchecked
+  arithmetic, `i64::MIN` and `i64::MAX` included. A snapshot captured after the warning restores as already warned, one
+  before it as not yet; a 0.6.0 snapshot from before this change holds a plain index and restores
+  as not yet warned (`crates/oce-api/tests/settled_event_state.rs`, with the snapshot captured at
+  56f93247 committed as `fixtures/state_before_settled_rule.hex`). `set_param` on `period` or
+  `shift` is accepted (it changes neither the plan nor the signal); `resume` re-seeds the word.
+- **Section 4 was wrong about the blob run digests.** `blob_frame_digests.tsv` folds the state
+  words of every frame as well as the outputs, so three lines move (the corrected row). The proof
+  that no output moved is now committed: `blob_frame_output_digests.tsv`, the outputs alone over
+  the same 160-frame schedule (steps 0.75, 1, 15, 60 and 300 s), recorded at 56f93247 and equal
+  on this change for all 46 fixtures (`blob_execution.rs`). Blob bytes, initial-state CRCs,
+  content ids, class signatures, the replay traces and the strict-bit and determinism fixtures do
+  not move.
+- **A pre-change snapshot (C6).** Its stored words hold the frame value `v` where `w` is now
+  expected. Between two consecutive pulses that is a stored `true` where `w = false`: the pulse
+  after the restore merges with the one before it, as the old rule did, and none is counted twice
+  (`[1, 1, 2]` against `[3, 3, 4]` from the start in the test above); from the next frame the
+  words are this build's.
+- **The decoder.** `decode` derives the plan from the wiring right after `build_order`, the last
+  of its validation steps, so a hostile blob is refused before any plan buffer exists. The plan is
+  thirteen buffers, each sized once from the model's counts, allocated only when some block
+  declares settled inputs and some block is a pulse or a sample; a 1x, 2x and 4x generated model
+  allocates thirteen at each size, with bytes exactly linear (`blob_allocations.rs`), and a
+  100,000-deep `Not` chain derives without recursion.
+- **The hold latch.** Decision 4's evidence ran on transcriptions; the sample-trigger pilot now
+  runs `TrimAndRespond`'s latch on the pinned `Latch`, `And`, `Not` and `SampleTrigger`, with a
+  table column standing for `truHol.y`, and the engine agrees at every frame (it latches at the
+  two held instants, which the rising edge never did).
+- **Firmware.** The `blob-frames` image grows by 5,736 octets of `.text` on `thumbv7em-none-eabihf`
+  (146,396 to 152,132, budget 161,760) and 6,976 on `riscv32imac-unknown-none-elf` (171,820 to
+  178,796, budget 189,664), with about 2.1 KB of `.rodata`; no budget changes.

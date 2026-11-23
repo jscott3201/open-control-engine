@@ -139,6 +139,7 @@ mod prepare_frame_preservation;
 mod real_parameter_literals;
 mod release_fallback;
 mod replay_matrix;
+mod settled_event_state;
 mod state_contract;
 mod state_old_layout;
 mod topology;

@@ -6,7 +6,10 @@
 
 use oce_model::{ParamTable, Value};
 
-use crate::{Block, BlockKind, BlockSignature, Ctx, EventInputRole, PortKind, read_bool, read_int};
+use crate::settled::{fire, settled_input};
+use crate::{
+    Block, BlockKind, BlockSignature, Ctx, EventInputRole, EventSignal, PortKind, read_int,
+};
 
 const COUNT_WORD: usize = 0;
 const PREV_TRIGGER_WORD: usize = 1;
@@ -29,10 +32,10 @@ fn word_i64(word: u64) -> i64 {
     word.cast_signed()
 }
 
-/// `CDL.Integers.OnCounter` — count rising edges on `trigger` unless `reset` is high.
+/// `CDL.Integers.OnCounter` — count `trigger` events unless `reset` is high.
 ///
 /// Stateful `[S]`, with both inputs feeding through to `y`. Per Buildings `OnCounter.mo`, an event
-/// fires when either `trigger` or `reset` rises; if `reset` is currently high the count becomes
+/// fires when either `trigger` or `reset` becomes true; if `reset` is high the count becomes
 /// `y_start`, otherwise it increments. Reset therefore has priority on simultaneous events and
 /// while held high across a trigger edge. The event applies at its own frame: the frame where an
 /// input rises emits the new count, and its update stores it. A condition already true at frame 0
@@ -43,34 +46,51 @@ fn word_i64(word: u64) -> i64 {
 /// wraps two's-complement like the integer arithmetic family. OpenModelica 1.25.1 agrees exactly
 /// at every frame, with the trigger true from frame 0 and with it rising at frame 1, a `reset` held
 /// across a trigger edge included (issue #670; `oce-conformance`'s
-/// `open_modelica_event_triggers.rs`). Fed by `CDL.Logical.Change` of a signal that changes on two
-/// consecutive frames, it counts one event where OpenModelica counts two: `Change` holds `true`
-/// for a frame here and pulses at each instant there (`open_modelica_event_pulses.rs`, a
-/// registered known divergence, open in issue #800).
+/// `open_modelica_event_triggers.rs`).
+///
+/// Both inputs take the settled-value rule (issue #800, `docs/design/pulse-event-inputs.md`):
+/// when the event plan gives them `w` and `s` (a pulse or sample upstream), an input fires on
+/// `(v and not w(k-1)) or (not v and s)` and the block stores `w` as its previous value, so a
+/// `CDL.Logical.Change` true on consecutive frames counts each frame, as OpenModelica does
+/// (`open_modelica_event_pulses.rs`); each firing iteration takes `reset`'s value in that
+/// iteration. Without them `w = s = v` and the rule is the rising edge above. At the initial frame
+/// only a sample instant fires.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OnCounter {
     pub(crate) y_start: i64,
 }
 
 impl OnCounter {
-    /// The count after this frame's event, or the stored count when the frame has none. Frame 0
-    /// (no history yet) never has an event.
-    fn count_after_event(&self, inputs: &[Value], region: &[u64]) -> i64 {
-        let count = word_i64(region[COUNT_WORD]);
-        if !word_bool(region[HAS_HISTORY_WORD]) {
-            return count;
+    /// The count after this frame's events, or the stored count when the frame has none.
+    ///
+    /// Both inputs follow the settled-value rule (issue #800): the `when {trigger, reset}` fires
+    /// once per iteration of the instant in which either input rises, and each firing assigns
+    /// `if reset then y_start else pre(y) + 1` with `reset`'s value in that iteration. At the
+    /// initial frame (no history yet, or the frame driver's initial frame) only a sample instant
+    /// fires, with every pulse taken false.
+    fn count_after_event(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> i64 {
+        let mut count = word_i64(region[COUNT_WORD]);
+        let initial = ctx.is_initial() || !word_bool(region[HAS_HISTORY_WORD]);
+        let trigger = settled_input(inputs, 0, 2, 0);
+        let reset = settled_input(inputs, 1, 2, 1);
+        let on_trigger = fire(initial, word_bool(region[PREV_TRIGGER_WORD]), trigger);
+        let on_reset = fire(initial, word_bool(region[PREV_RESET_WORD]), reset);
+        if on_trigger.first || on_reset.first {
+            let reset_now = if initial { reset.s } else { reset.v };
+            count = if reset_now {
+                self.y_start
+            } else {
+                count.wrapping_add(1)
+            };
         }
-        let trigger = read_bool(inputs, 0);
-        let reset = read_bool(inputs, 1);
-        let trigger_rising = trigger && !word_bool(region[PREV_TRIGGER_WORD]);
-        let reset_rising = reset && !word_bool(region[PREV_RESET_WORD]);
-        if !(trigger_rising || reset_rising) {
-            count
-        } else if reset {
-            self.y_start
-        } else {
-            count.wrapping_add(1)
+        if on_trigger.second || on_reset.second {
+            count = if reset.s {
+                self.y_start
+            } else {
+                count.wrapping_add(1)
+            };
         }
+        count
     }
 }
 
@@ -97,6 +117,10 @@ impl Block for OnCounter {
         (in_idx < 2).then_some(EventInputRole::Condition)
     }
 
+    fn settled_event_inputs(&self) -> &[usize] {
+        &[0, 1]
+    }
+
     fn state_len(&self) -> usize {
         4
     }
@@ -110,20 +134,23 @@ impl Block for OnCounter {
 
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit(0, Value::Integer(self.count_after_event(inputs, region)));
+        emit(
+            0,
+            Value::Integer(self.count_after_event(ctx, inputs, region)),
+        );
     }
 
-    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        let trigger = read_bool(inputs, 0);
-        let reset = read_bool(inputs, 1);
-        region[COUNT_WORD] = i64_word(self.count_after_event(inputs, region));
-        region[PREV_TRIGGER_WORD] = bool_word(trigger);
-        region[PREV_RESET_WORD] = bool_word(reset);
+    fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
+        let trigger = settled_input(inputs, 0, 2, 0);
+        let reset = settled_input(inputs, 1, 2, 1);
+        region[COUNT_WORD] = i64_word(self.count_after_event(ctx, inputs, region));
+        region[PREV_TRIGGER_WORD] = bool_word(trigger.w);
+        region[PREV_RESET_WORD] = bool_word(reset.w);
         region[HAS_HISTORY_WORD] = 1;
     }
 }
@@ -131,7 +158,8 @@ impl Block for OnCounter {
 /// `CDL.Integers.Change` — compare the current integer input against its prior value.
 ///
 /// Stateful `[S]`, but transparent: all three outputs (`y`, `up`, `down`) feed through from the
-/// current `u` because each is a current-vs-prior comparison, not a loop cut.
+/// current `u` because each is a current-vs-prior comparison, not a loop cut. All three are pulses
+/// to an event input's cone (issue #800, [`crate::EventSignal::Pulse`]).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct IntegerChange {
     pub(crate) pre_u_start: i64,
@@ -150,6 +178,10 @@ impl Block for IntegerChange {
 
     fn kind(&self) -> BlockKind {
         BlockKind::Stateful
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Pulse
     }
 
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {

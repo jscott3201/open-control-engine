@@ -75,6 +75,6 @@ row	362.0	288.0	285.0	290.0	0.2	true	3fb15d589d6dda90	0.0678305992458752	pi: rec
 row	367.0	288.0	285.0	290.0	0.2	true	3fb3ab2b8f17d678	0.07683059924587521	pi: recovering from the lower saturation
 row	372.0	288.0	285.0	290.0	0.2	true	3fb5f8fe80c1d25f	0.0858305992458752	pi: recovering from the lower saturation
 row	377.0	288.0	285.0	290.0	0.2	false	0000000000000000	0.0	off: the fan status false for one frame
-row	382.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled after one frame off, Change still true at the re-enable
-row	387.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled after one frame off, Change still true at the re-enable
-row	392.0	288.0	285.0	290.0	0.2	true	3f926e978d4fdf3c	0.018000000000000002	pi: re-enabled after one frame off, Change still true at the re-enable
+row	382.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled after one frame off, a second Change event resets again
+row	387.0	288.0	285.0	290.0	0.2	true	0000000000000000	0.0	pi: re-enabled after one frame off, a second Change event resets again
+row	392.0	288.0	285.0	290.0	0.2	true	3f826e978d4fdf3c	0.009000000000000001	pi: re-enabled after one frame off, a second Change event resets again

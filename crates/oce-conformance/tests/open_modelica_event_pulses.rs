@@ -1,23 +1,19 @@
-//! A known divergence from OpenModelica (issue #800): `CDL.Integers.OnCounter` counting the pulses
-//! of `CDL.Logical.Change` when its input changes on consecutive frames.
+//! `CDL.Integers.OnCounter` counting the pulses of `CDL.Logical.Change` when its input changes on
+//! consecutive frames, against OpenModelica (issue #800; a resolved known divergence).
 //!
 //! `OnCounterChangePilot` (`tools/openmodelica-event-reference/events/`) feeds a held Boolean `u`
 //! through `Change` into `OnCounter` (`y_start = 3`) at 1 s frames; `u` changes at 2 and 3 s,
 //! 5 s, 7 and 8 s, and 9 s. In Modelica `change(u)` is true only at each change's event instant,
 //! so `OnCounter`'s `when trigger` fires at each: six events, and the count reaches 9. Under the
-//! engine's HostTick v1 profile `Change` holds its output for a whole frame, so a change on two
-//! consecutive frames is one `true` lasting two frames, one rising edge to `trigger`, and the
-//! engine counts three events: the count reaches 6. They part at 3 s, the second of two
-//! consecutive changes.
+//! engine's HostTick v1 profile `Change` holds its output for a whole frame; under the
+//! settled-value rule (issue #800, design note `docs/design/pulse-event-inputs.md`) `Change` is a
+//! primitive pulse, so `trigger` fires on every frame it is true and the engine counts every
+//! change too: the count reaches 9 at the same frames.
 //!
-//! This is not settled design: it is the open question of issue #800, registered as
-//! `DVG-000002` in `fixtures/known_divergence/register.json`. The test pins both signals, the
-//! engine's against `change_pulses.engine.csv` (the register's engine evidence) and
-//! OpenModelica's against its run, so an engine change that removes or moves the divergence fails
-//! here and must update the register, the execution profile and the verification-evidence page.
-//! This test is in the `conformance` binary, which no per-PR job runs (it runs nightly in
-//! `release-gate.yml` and in `gate.sh full`): an `OnCounter` or `Change` change that closes the
-//! divergence would merge on `CI OK` and fail first in the nightly run.
+//! Before that rule the engine counted one event per run of consecutive changes (3, 3, 4, 4, 4,
+//! 5, 5, 6, 6, 6), registered as `DVG-000002`, now resolved: `change_pulses.engine.csv` keeps that
+//! count as the register's evidence. This test is in the `conformance` binary, which no per-PR job
+//! runs (it runs nightly in `release-gate.yml` and in `gate.sh full`).
 
 use oce_api::{Engine, Value};
 
@@ -109,7 +105,7 @@ fn engine_counts() -> Vec<f64> {
         .collect()
 }
 
-/// `change_pulses.engine.csv`: `x,y`, one row per frame.
+/// `change_pulses.engine.csv`: `x,y`, one row per frame: the engine before the settled-value rule.
 fn recorded_engine() -> Vec<f64> {
     ENGINE
         .lines()
@@ -125,7 +121,7 @@ fn recorded_engine() -> Vec<f64> {
 }
 
 #[test]
-fn the_engine_counts_one_event_where_openmodelica_counts_two_consecutive_change_pulses() {
+fn the_engine_counts_every_consecutive_change_pulse_as_openmodelica_does() {
     let (_, rows) = columns(&reference());
     let openmodelica: Vec<f64> = rows.iter().map(|row| row[row.len() - 1]).collect();
     let engine = engine_counts();
@@ -134,25 +130,25 @@ fn the_engine_counts_one_event_where_openmodelica_counts_two_consecutive_change_
         openmodelica,
         [3.0, 3.0, 4.0, 5.0, 5.0, 6.0, 6.0, 7.0, 8.0, 9.0]
     );
-    // The engine under HostTick v1: `Change` true at 2-3, 5, 7-9 s is three rising edges.
-    assert_eq!(engine, [3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0, 6.0, 6.0, 6.0]);
+    assert_eq!(engine, openmodelica);
+    // The engine before the rule merged consecutive changes: the resolved divergence's evidence.
     assert_eq!(
-        engine,
         recorded_engine(),
-        "the engine no longer gives the registered divergence (DVG-000002, issue #800): update \
-         register.json, docs/execution-profile.md and docs/verification-evidence.md"
+        [3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0, 6.0, 6.0, 6.0]
     );
-    let differ: Vec<usize> = (0..engine.len())
-        .filter(|k| engine[*k] != openmodelica[*k])
-        .collect();
-    assert_eq!(differ, [3, 4, 5, 6, 7, 8, 9]);
     // A second run repeats every count.
     assert_eq!(engine, engine_counts());
 }
 
 #[test]
-fn the_divergence_is_registered_with_this_evidence() {
+fn the_resolved_divergence_keeps_this_evidence() {
     assert!(REGISTER.contains(r#""id": "DVG-000002""#));
+    let entry = &REGISTER[REGISTER.find(r#""id": "DVG-000002""#).expect("entry")..];
+    let entry = &entry[..entry.find(r#""conformance_effect""#).expect("end")];
+    assert!(
+        entry.contains(r#""state": "resolved""#),
+        "DVG-000002 is resolved"
+    );
     assert!(REGISTER.contains(&format!(r#""sha256": "{}""#, sha256(ENGINE.as_bytes()))));
     assert!(REGISTER.contains(&format!(r#""sha256": "{}""#, sha256(CANONICAL.as_bytes()))));
     assert!(REGISTER.contains("https://github.com/jscott3201/open-control-engine/issues/800"));

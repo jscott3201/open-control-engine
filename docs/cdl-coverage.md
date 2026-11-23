@@ -608,9 +608,10 @@ for the composed G36 `Reliefs` leaf. Beside them, one OpenModelica run per pilot
 timing of `OnCounter`, `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset` and `PIDWithReset`
 (PI) exactly over two ten-frame scenarios each, and `IntegratorWithReset`'s integration on a ramp
 (issue #670); runs of upstream's `CoolingCoilValve` check its resets on the 78 synthetic Building 33
-frames (issue #787). Two of them show the engine and OpenModelica apart where a pulse such as
-`Change` is true on two consecutive frames (one event to the engine, two to Modelica): registered
-known divergences, open in issue #800. The Line and Reliefs results do not cover arbitrary Real
+frames (issue #787). Two of them showed the engine and OpenModelica apart where a pulse such as
+`Change` is true on two consecutive frames; the settled-value rule of issue #800 resolved both, and
+three pilots against the pinned Buildings classes check it, with four registered differences that
+are documented limits ([execution profile](execution-profile.md#pulses-on-an-event-input)). The Line and Reliefs results do not cover arbitrary Real
 inputs, general tolerances, solver behavior, or broader G36 behavior. `CDL.Logical.Pre` is
 explicitly excluded from an expected-green OpenModelica differential under HostTick v1. The global
 Tier-3 report remains skipped, and no number on this page stands in for that deferred coverage.

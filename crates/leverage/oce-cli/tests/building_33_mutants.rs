@@ -14,8 +14,9 @@
 //! every one of them by construction, since each changes the document; these tests ask what the
 //! behaviour shows. Each mutant's row pins which of the two catches it, so a change in the
 //! evidence's power shows here. A mutant neither catches is a survivor and is listed as one: the
-//! one there is, the line's upper clamp turned off, cannot change the valve signal for any input,
-//! and its own test says so.
+//! two there are, the line's upper clamp turned off and the reset triggered by the enable's level
+//! instead of its change, cannot change the valve signal for any input, and their own tests say
+//! so.
 
 mod support;
 
@@ -33,7 +34,7 @@ struct Mutant {
     caught_by_day: bool,
 }
 
-const MUTANTS: [Mutant; 11] = [
+const MUTANTS: [Mutant; 10] = [
     Mutant {
         name: "the setpoint and the measurement swapped at the PI",
         edits: &[
@@ -109,12 +110,6 @@ const MUTANTS: [Mutant; 11] = [
             "uLow = 0.04999999999999999, uHigh = FanFeeCut",
             "uLow = 5.0, uHigh = 15.0",
         )],
-        caught_by_derivation: true,
-        caught_by_day: false,
-    },
-    Mutant {
-        name: "the reset triggered by the enable's level, not its change",
-        edits: &[("cha.y -> limPI.trigger", "andIntErr.y -> limPI.trigger")],
         caught_by_derivation: true,
         caught_by_day: false,
     },
@@ -219,7 +214,7 @@ fn mutants_of_the_enable_are_caught_by_the_derivation_and_the_day_cannot_see_the
     // The fan was enabled, its feedback 60.9 to 72.5 % and the outdoor air above 48.89 degF all
     // day, so the enable is on throughout the day's data and no mistake in it shows there: the
     // derivation's synthetic frames are the evidence for that part of the sequence.
-    check(7..11);
+    check(7..10);
 }
 
 #[test]
@@ -232,6 +227,27 @@ fn the_line_s_upper_clamp_cannot_show_in_behaviour_and_only_the_structural_check
     let cxf = emitted(&mutated(&[(
         "block higLim = CDL.Reals.Line(limitBelow = true, limitAbove = true)",
         "block higLim = CDL.Reals.Line(limitBelow = true, limitAbove = false)",
+    )]));
+    assert!(matches_oracle(&cxf), "the derivation cannot see it");
+    assert_eq!(day_body(cxf.clone()), golden_body(), "nor can the day");
+    assert!(cxf != example_file("cooling_coil_valve.cxf.json"));
+}
+
+#[test]
+fn a_reset_triggered_by_the_enable_s_level_is_equivalent_to_its_change_and_only_the_structural_check_sees_it()
+ {
+    // Under the settled-value rule (issue #800), `Change(enable)` resets the integrator at every
+    // change of the enable, as Modelica's `change` fires at each: at a disable and at the
+    // re-enable after it, even on the next frame. The enable's level resets at its rising edges,
+    // the re-enables. The two differ only at a disable, where the valve is the PI's signal times
+    // the enable, 0 until the re-enable resets the integrator again in both, so no input can
+    // make the mutant's valve differ. Before issue #800 the one-frame disable at 377 s told them
+    // apart (one rising edge of `Change` across 377 and 382 s); upstream's model in OpenModelica
+    // never did. The emitted document differs, which the structural check in `oce-verify`
+    // (`building_33_transcription.rs`, every connection against the `.mo`) refuses.
+    let cxf = emitted(&mutated(&[(
+        "cha.y -> limPI.trigger",
+        "andIntErr.y -> limPI.trigger",
     )]));
     assert!(matches_oracle(&cxf), "the derivation cannot see it");
     assert_eq!(day_body(cxf.clone()), golden_body(), "nor can the day");

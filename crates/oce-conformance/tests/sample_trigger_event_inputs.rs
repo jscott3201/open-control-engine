@@ -1,19 +1,15 @@
-//! `CDL.Logical.Sources.SampleTrigger` feeding an event input at a period at or below the frame
-//! step (issue #800, engine only).
+//! `CDL.Logical.Sources.SampleTrigger` feeding an event input at periods at, below and above the
+//! frame step (issue #800, engine only; `open_modelica_pulse_events.rs` checks the same shapes
+//! against OpenModelica).
 //!
-//! `SampleTrigger` is true on each frame that reaches a new sample instant. When its period is at
-//! or below the host frame step, every frame reaches one, so it is true on every frame: an event
-//! input it feeds sees one false-to-true transition at most, at frame 0, where no `when` fires
-//! (initialisation), and then none. `TriggeredSampler` therefore never samples and holds `y_start`.
-//! In Modelica `sample(...)` is true only at each sample instant, so the `when` would fire at each.
-//! With the period above the frame step the trigger falls between samples and every sample fires.
-//!
-//! This pins the engine's behaviour under HostTick v1, the widest case of the projection limit in
-//! `docs/execution-profile.md` ("Conformance boundary"). It is not registered as a known divergence:
-//! no tool run backs it, only the `.mo` text. Issue #800 waits on the owner's decision; a change
-//! that makes these frames sample fails here and must update that section and this file. The
-//! `conformance` binary runs in no per-PR job (nightly and `gate.sh full` only), so such a change
-//! would merge on `CI OK` and fail first in the nightly run.
+//! Under the settled-value rule (design note `docs/design/pulse-event-inputs.md`, option (g)) a
+//! `SampleTrigger` output is a *sample* to an event input: in Modelica `sample()` stays true
+//! through every event iteration of its instant and falls in continuous time, where no `when` sees
+//! it fall, so an input it feeds fires on every frame it is true. At a period at or below the
+//! frame step that is every frame; at frame 0 the start (t = 0) is an instant, so the sampler
+//! samples there too (decision 3). Below the frame step a frame holds several instants and still
+//! fires once: the block warns once, the first time. The `conformance` binary runs in no per-PR
+//! job (nightly and `gate.sh full` only).
 
 use oce_api::{Engine, Value};
 
@@ -61,8 +57,8 @@ fn document(period: &str) -> String {
     )
 }
 
-/// The trigger and the sample at frames 0, 1, ..., 7 s, with `u = 10 + t`.
-fn run(period: &str) -> (Vec<bool>, Vec<f64>) {
+/// The trigger, the sample and the frame warnings at frames 0, 1, ..., 7 s, with `u = 10 + t`.
+fn run(period: &str) -> (Vec<bool>, Vec<f64>, Vec<usize>) {
     let mut engine = Engine::new();
     let (report, _) = engine
         .load_cxf(document(period).as_bytes())
@@ -72,12 +68,14 @@ fn run(period: &str) -> (Vec<bool>, Vec<f64>) {
     let (pulse, y) = (format!("{MODEL}.pulse"), format!("{MODEL}.y"));
     let mut pulses = Vec::new();
     let mut samples = Vec::new();
+    let mut warnings = Vec::new();
     for k in 0..8 {
         let t = f64::from(k);
         let frame = engine
             .prepare_frame(t, &[(u.as_str(), Value::Real(10.0 + t))])
             .expect("prepares");
         let done = engine.execute_frame(frame).expect("executes");
+        warnings.push(done.diagnostics().len());
         for (path, value) in done.outputs() {
             match value {
                 Value::Boolean(b) if *path == pulse => pulses.push(*b),
@@ -87,23 +85,35 @@ fn run(period: &str) -> (Vec<bool>, Vec<f64>) {
         }
     }
     assert_eq!((pulses.len(), samples.len()), (8, 8));
-    (pulses, samples)
+    (pulses, samples, warnings)
 }
 
 #[test]
-fn a_sample_trigger_at_or_below_the_frame_step_is_true_on_every_frame_and_samples_nothing() {
-    for period in ["0.5", "1.0"] {
-        let (pulses, samples) = run(period);
-        assert_eq!(pulses, [true; 8], "period {period} s");
-        // One `true` from frame 0 on: no false-to-true transition after frame 0, so no sample.
-        assert_eq!(samples, [7.0; 8], "period {period} s");
-    }
+fn a_sample_trigger_at_or_below_the_frame_step_samples_on_every_frame_from_the_start() {
+    let (pulses, samples, warnings) = run("1.0");
+    assert_eq!(pulses, [true; 8]);
+    // The start is an instant: frame 0 samples; then every frame fires.
+    assert_eq!(samples, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
+    assert_eq!(
+        warnings, [0; 8],
+        "one instant per frame is no cadence violation"
+    );
+}
+
+#[test]
+fn a_sample_trigger_below_the_frame_step_fires_once_a_frame_and_warns_once() {
+    let (pulses, samples, warnings) = run("0.5");
+    assert_eq!(pulses, [true; 8]);
+    assert_eq!(samples, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
+    // Frame 1 spans the instants at 0.5 and 1 s: one warning, never again.
+    assert_eq!(warnings, [0, 1, 0, 0, 0, 0, 0, 0]);
 }
 
 #[test]
 fn a_sample_trigger_above_the_frame_step_falls_between_samples_and_each_sample_fires() {
-    let (pulses, samples) = run("2.0");
+    let (pulses, samples, warnings) = run("2.0");
     assert_eq!(pulses, [true, false, true, false, true, false, true, false]);
-    // Frame 0 is initialisation; each later sample instant is a rising edge.
-    assert_eq!(samples, [7.0, 7.0, 12.0, 12.0, 14.0, 14.0, 16.0, 16.0]);
+    // The start is an instant; each later instant samples at its own frame.
+    assert_eq!(samples, [10.0, 10.0, 12.0, 12.0, 14.0, 14.0, 16.0, 16.0]);
+    assert_eq!(warnings, [0; 8]);
 }

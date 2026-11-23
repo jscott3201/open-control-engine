@@ -173,13 +173,15 @@ pub(crate) fn validate_sample_trigger(
     let expected = sample_trigger_index(state_t, period, shift)
         .ok_or_else(|| "sample index is not representable".to_string())?
         .max(-1);
-    if region[0].cast_signed() != expected {
-        return Err(format!(
-            "sample index {} does not match model time ({expected})",
-            region[0].cast_signed()
-        ));
+    // A warned word (issue #800) stores `-(index + 2)`; it marks a span, so its index is `>= 1`.
+    let (index, warned) = crate::logical::sample_trigger_word(region[0]);
+    match (index == expected, warned && index < 1) {
+        (false, _) => Err(format!(
+            "sample index {index} does not match model time ({expected})"
+        )),
+        (true, true) => Err(format!("span warning recorded at sample index {index}")),
+        (true, false) => Ok(()),
     }
-    Ok(())
 }
 
 pub(crate) fn validate_pid(

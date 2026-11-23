@@ -43,9 +43,9 @@
       "comparison_reference": "crates/leverage/oce-verify/tests/commissioning/building_33_openmodelica_reenable.rs",
       "opened_on": "2026-11-22",
       "reviewed_on": "2026-11-22",
-      "reviewed_commit": "a87c1d53b5d37ab57468d9f873044b89dd2b8b4a",
-      "state": "open",
-      "disposition": "Owner decision pending in issue #800 (https://github.com/jscott3201/open-control-engine/issues/800): whether HostTick v1 should count each pulse of a Boolean held true on consecutive frames as an event, as Modelica does, or keep one rising edge; no engine behaviour changed with this entry. Its test is in oce-verify, which the leverage lane runs on every pull request.",
+      "reviewed_commit": "56f932479a4d77f647cf0b62d503d37f6cfd66dd",
+      "state": "resolved",
+      "disposition": "Resolved by the settled-value rule of issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; design note docs/design/pulse-event-inputs.md, option (g)): Change(enable) is a primitive pulse, so PIDWithReset.trigger fires on every frame it is true and the engine resets at 382 s as OpenModelica does. The evidence files are kept as the record of the engine before the rule; building_33_openmodelica_reenable.rs now checks the agreement.",
       "upstream_issue": {
         "status": "not_applicable",
         "url": null
@@ -95,9 +95,217 @@
       "comparison_reference": "crates/oce-conformance/tests/open_modelica_event_pulses.rs",
       "opened_on": "2026-11-22",
       "reviewed_on": "2026-11-22",
-      "reviewed_commit": "a87c1d53b5d37ab57468d9f873044b89dd2b8b4a",
+      "reviewed_commit": "56f932479a4d77f647cf0b62d503d37f6cfd66dd",
+      "state": "resolved",
+      "disposition": "Resolved by the settled-value rule of issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; design note docs/design/pulse-event-inputs.md, option (g)): OnCounter counts every consecutive Change pulse, 3, 3, 4, 5, 5, 6, 6, 7, 8, 9 as OpenModelica does. The evidence files are kept as the record of the engine before the rule; open_modelica_event_pulses.rs now checks the agreement.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000003",
+      "summary": "A cone with a Pre falls back to the rising edge: OnCounter behind Or(Change(u), Pre(b)) counts one event where OpenModelica counts three.",
+      "subject": {
+        "class": "CDL.Integers.OnCounter",
+        "scenario": "PulseConsumersPilot",
+        "signal": "cntPre",
+        "observation": "u changes at 2, 3, 5, 7, 8 and 9 s, b true on [2, 7) s, 1 s frames; counts part from 8 s"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:consumers:cntPre:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:PulseConsumersPilot:cntPre"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/consumers.engine.csv",
+          "sha256": "e65b4a5537df8a6e241a98c3dff96fc5dfefdfd9fdc6ca991350e9afb822a1d4",
+          "summary": "The engine's counts: 3, 3, 4, 4, 4, 4, 4, 4, 4, 4 (the column cntPre)."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/consumers.canonical.csv",
+          "sha256": "2eeeab92b20089375c4e4e2763cbdf40de5dae2cddfc624dcf33661f329328f0",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 3, 3, 4, 4, 4, 4, 4, 4, 5, 6."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "56f932479a4d77f647cf0b62d503d37f6cfd66dd",
       "state": "open",
-      "disposition": "Owner decision pending in issue #800 (https://github.com/jscott3201/open-control-engine/issues/800): whether HostTick v1 should count each pulse of a Boolean held true on consecutive frames as an event, as Modelica does, or keep one rising edge; no engine behaviour changed with this entry. Its test is in oce-conformance's conformance binary, which no per-PR job runs (nightly release-gate.yml and gate.sh full only): a change that closes it would merge on CI OK and fail first in the nightly run.",
+      "disposition": "Documented HostTick v1 limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md): a cone that reads a Pre keeps the rising edge (decision 5), because OpenModelica's Pre settles in the second event iteration of an instant and the engine's a frame later. Nothing is refused.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000004",
+      "summary": "Several sample instants in one frame fire once: OnCounter behind SampleTrigger(0.5 s) at 1 s frames counts 10 where OpenModelica counts 19.",
+      "subject": {
+        "class": "CDL.Integers.OnCounter",
+        "scenario": "SampleTriggerPilot",
+        "signal": "c05",
+        "observation": "SampleTrigger(period = 0.5 s) from an instant at t = 0, 1 s frames"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:sample_triggers:c05:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:SampleTriggerPilot:c05"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/sample_triggers.engine.csv",
+          "sha256": "3901110baffda59abcfbd9207d3968b41b307a1ea2fb62584ac07e03bae54b93",
+          "summary": "The engine's counts: 1, 2, ..., 10 (the column c05)."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/sample_triggers.canonical.csv",
+          "sha256": "9c6157f4e7e053835efb5879abfb08263720759f0019364db6c9c4915c54bf62",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 1, 3, 5, ..., 19."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "56f932479a4d77f647cf0b62d503d37f6cfd66dd",
+      "state": "open",
+      "disposition": "Documented HostTick v1 limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md): the engine evaluates once per frame and shows every event of the frame interval at its end; a frame that spans several instants of a SampleTrigger fires once, and the block warns once (decision 2). The host obligation is a frame step at or below the sample period.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000005",
+      "summary": "An instant between frames is shown at the next frame with that frame's values: TriggeredSampler behind SampleTrigger(1.4 s) at 1 s frames samples the frame's input, OpenModelica the input at the instant.",
+      "subject": {
+        "class": "CDL.Discrete.TriggeredSampler",
+        "scenario": "SampleTriggerPilot",
+        "signal": "t14",
+        "observation": "SampleTrigger(period = 1.4 s), instants at 0, 1.4, 2.8, ... s, 1 s frames, input held from half a frame before each frame"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:sample_triggers:t14:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:SampleTriggerPilot:t14"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/sample_triggers.engine.csv",
+          "sha256": "3901110baffda59abcfbd9207d3968b41b307a1ea2fb62584ac07e03bae54b93",
+          "summary": "The engine's samples: 2.5, 2.5, -1.25, 4.75, 4.75, 8.0, -9.25, 10.5, 10.5, 13.0 (the column t14)."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/sample_triggers.canonical.csv",
+          "sha256": "9c6157f4e7e053835efb5879abfb08263720759f0019364db6c9c4915c54bf62",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 2.5, 2.5, 3.5, 4.75, 4.75, -6.5, -9.25, 10.5, 10.5, -11.75."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "56f932479a4d77f647cf0b62d503d37f6cfd66dd",
+      "state": "open",
+      "disposition": "Documented HostTick v1 limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md): HostTick v1 snaps every event of the frame interval to the frame's time and evaluates it with the frame's inputs (section 6, snapping); the count of samples agrees, the sampled value is the frame's.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000006",
+      "summary": "A cone with a Pre falls back to the rising edge: OnCounter behind Pre(SampleTrigger(1 s)) counts one event where OpenModelica counts one per instant.",
+      "subject": {
+        "class": "CDL.Integers.OnCounter",
+        "scenario": "SampleTriggerOffGridPilot",
+        "signal": "cPre",
+        "observation": "SampleTrigger(period = 1 s), frames at 0.25 + k s, so the start is not an instant"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:sample_trigger_off_grid:cPre:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:SampleTriggerOffGridPilot:cPre"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/sample_trigger_off_grid.engine.csv",
+          "sha256": "ba867a92256cd91258878b0f0af98c7cb51e4708e16faa067dba450d2c7e62d5",
+          "summary": "The engine's counts: 0, 0, 1, 1, 1, 1, 1, 1, 1, 1 (the column cPre)."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/sample_trigger_off_grid.canonical.csv",
+          "sha256": "5ad53000311e8d1bd110d3b959412b207ddb0dfe2460305b6a89bc7c08abfcb4",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 0, 1, 2, ..., 9."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "56f932479a4d77f647cf0b62d503d37f6cfd66dd",
+      "state": "open",
+      "disposition": "Documented HostTick v1 limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md): a cone that reads a Pre keeps the rising edge (decision 5); a sample true on every frame is one rising edge through it. Nothing is refused.",
       "upstream_issue": {
         "status": "not_applicable",
         "url": null

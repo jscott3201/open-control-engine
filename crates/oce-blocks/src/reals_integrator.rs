@@ -12,9 +12,9 @@
 use oce_model::{ParamTable, Value};
 
 use crate::dynamics::{PREV_T_UNSET, forward_euler_accumulate, is_first_tick, tick_dt};
+use crate::settled::{fire, settled_input};
 use crate::{
-    Block, BlockKind, BlockSignature, Ctx, EventInputRole, PortKind, emit_real, read_bool,
-    read_real,
+    Block, BlockKind, BlockSignature, Ctx, EventInputRole, PortKind, emit_real, read_real,
 };
 
 const X_WORD: usize = 0;
@@ -24,16 +24,19 @@ const STATE_WORDS: usize = 3;
 const U_PORT: usize = 0;
 const Y_RESET_IN_PORT: usize = 1;
 const TRIGGER_PORT: usize = 2;
+/// `u`, `y_reset_in`, `trigger`; the hidden settled values of `trigger` follow them.
+const DECLARED_INPUTS: usize = 3;
 
-/// Whether this frame is a reset event: a frame after the first, with `trigger` true now and
-/// false at the previous frame. Frame 0 never is (initialisation leaves the `when` inactive).
-fn reset_event(inputs: &[Value], region: &[u64]) -> bool {
-    !is_first_tick(region[PREV_T_WORD])
-        && read_bool(inputs, TRIGGER_PORT)
-        && region[PREV_TRIGGER_WORD] == 0
+/// Whether this frame is a reset event by the settled-value rule (issue #800): at a later frame
+/// `trigger` rose from its stored `w` or rises to its settled value; at the initial frame
+/// (initialisation leaves the `when` inactive) only a sample instant fires.
+fn reset_event(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
+    let initial = ctx.is_initial() || is_first_tick(region[PREV_T_WORD]);
+    let trigger = settled_input(inputs, TRIGGER_PORT, DECLARED_INPUTS, 0);
+    fire(initial, region[PREV_TRIGGER_WORD] != 0, trigger).any()
 }
 
-/// `CDL.Reals.IntegratorWithReset` — forward-Euler integrator with a rising-edge reset:
+/// `CDL.Reals.IntegratorWithReset` — forward-Euler integrator with a reset on `trigger` events:
 ///
 /// - Integrates `der(y) = k * u` (Buildings `Reals/IntegratorWithReset.mo`): the accumulator
 ///   advances by `k * u * dt`, with the gain `k` defaulting to `1` exactly as upstream.
@@ -44,7 +47,9 @@ fn reset_event(inputs: &[Value], region: &[u64]) -> bool {
 ///   `CDL.Discrete.UnitDelay` on the `y_reset_in` path) breaks it.
 /// - First tick integrates with `dt = 0` because there is no previous model time.
 /// - Reset at the event (upstream `when trigger then reinit(y, y_reset_in)`): at a frame `k > 0`
-///   where `trigger` is true and was false at frame `k - 1`, frame `k` emits `y_reset_in` and its
+///   where `trigger` fires by the settled-value rule of issue #800 (true and false at frame
+///   `k - 1` for a level; every frame a pulse upstream is true; see
+///   `docs/design/pulse-event-inputs.md`), frame `k` emits `y_reset_in` and its
 ///   update stores it **without** an Euler step (the step of frame `k` covers `[t(k-1), t(k)]`,
 ///   which lies before the event). A held-high trigger does not reset again. The reset value is
 ///   **not** scaled by `k` (`reinit` assigns the state directly), and it is not trapped: a NaN or
@@ -103,6 +108,10 @@ impl Block for IntegratorWithReset {
         }
     }
 
+    fn settled_event_inputs(&self) -> &[usize] {
+        &[TRIGGER_PORT]
+    }
+
     fn state_len(&self) -> usize {
         STATE_WORDS
     }
@@ -115,12 +124,12 @@ impl Block for IntegratorWithReset {
 
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        let y = if reset_event(inputs, region) {
+        let y = if reset_event(ctx, inputs, region) {
             read_real(inputs, Y_RESET_IN_PORT)
         } else {
             f64::from_bits(region[X_WORD])
@@ -130,17 +139,17 @@ impl Block for IntegratorWithReset {
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
         let u = read_real(inputs, U_PORT);
-        let trigger = read_bool(inputs, TRIGGER_PORT);
+        let trigger = settled_input(inputs, TRIGGER_PORT, DECLARED_INPUTS, 0);
         let x = f64::from_bits(region[X_WORD]);
         let dt = tick_dt(ctx.t(), region[PREV_T_WORD]);
 
-        let next_x = if reset_event(inputs, region) {
+        let next_x = if reset_event(ctx, inputs, region) {
             read_real(inputs, Y_RESET_IN_PORT)
         } else {
             forward_euler_accumulate(x, self.k * u, dt)
         };
         region[X_WORD] = next_x.to_bits();
         region[PREV_T_WORD] = ctx.t().to_bits();
-        region[PREV_TRIGGER_WORD] = u64::from(trigger);
+        region[PREV_TRIGGER_WORD] = u64::from(trigger.w);
     }
 }

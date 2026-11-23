@@ -1,0 +1,14 @@
+// Simulate one pulse-event pilot (issue #800) in the pinned OpenModelica container. regenerate.sh
+// writes this file with @PILOT@, @START@ and @STOP@ replaced into the run directory and runs it
+// there; the two libraries are mounted read-only at /libs, the pilots at /scripts, and the
+// container has no network. The pilot is simulated from @START@ to @STOP@ s (ten 1 s frames and
+// one second past the last) under cvode at tolerance 1e-6, written every 1 s, every variable kept.
+setCommandLineOptions("-d=nogen");
+loadFile("/libs/msl/Complex.mo"); getErrorString();
+loadFile("/libs/msl/ModelicaServices/package.mo"); getErrorString();
+loadFile("/libs/msl/Modelica/package.mo"); getErrorString();
+loadFile("/libs/buildings/Buildings/package.mo"); getErrorString();
+loadFile("/scripts/@PILOT@.mo"); getErrorString();
+simulate(@PILOT@, startTime=@START@, stopTime=@STOP@, numberOfIntervals=10,
+  tolerance=1e-6, method="cvode", outputFormat="csv");
+getErrorString();

@@ -26,7 +26,9 @@ use std::hint::black_box;
 use std::path::PathBuf;
 
 use allocation_counter::measure;
-use frame_schedule::{DIGEST_TABLE, RunDigest, TICKS, input_value, parse_digests, time_at};
+use frame_schedule::{
+    DIGEST_TABLE, OUTPUT_DIGEST_TABLE, RunDigest, TICKS, input_value, parse_digests, time_at,
+};
 use oce_blocks::Diagnostics;
 use oce_graph::blob::Executable;
 use oce_model::Value;
@@ -97,6 +99,12 @@ fn every_golden_decodes_once_then_runs_its_frames_with_zero_allocations() {
         std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(DIGEST_TABLE))
             .unwrap();
     let expected = parse_digests(&table);
+    let outputs_table = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(OUTPUT_DIGEST_TABLE),
+    )
+    .unwrap();
+    let outputs_expected = parse_digests(&outputs_table);
+    assert_eq!(outputs_expected.len(), 46);
     let goldens = goldens();
     assert_eq!(goldens.len(), 46);
     assert_eq!(expected.len(), goldens.len());
@@ -134,6 +142,7 @@ fn every_golden_decodes_once_then_runs_its_frames_with_zero_allocations() {
         // Replay the same frames on a fresh executable to fold the digest after every frame.
         let mut replay = Executable::from_blob(bytes).unwrap();
         let mut run = RunDigest::default();
+        let mut outputs_only = RunDigest::default();
         for (time, values) in times.iter().zip(&frames) {
             let sequence = replay
                 .execute_frame(*time, values, &oce_blocks::NoopDiagnostics)
@@ -146,7 +155,19 @@ fn every_golden_decodes_once_then_runs_its_frames_with_zero_allocations() {
                 &state.values,
                 &state.words,
             );
+            outputs_only.frame(*time, sequence, replay.output_values(), &[], &[]);
         }
+        let recorded = &outputs_expected
+            .iter()
+            .find(|(n, _)| n == name)
+            .unwrap_or_else(|| panic!("{name}: no outputs-only digest"))
+            .1;
+        assert_eq!(
+            &outputs_only.hex(),
+            recorded,
+            "{name}: the boundary outputs moved over the 160 frames (outputs only: no state word, \
+             no internal connector)"
+        );
         assert_eq!(
             &run.hex(),
             digest,

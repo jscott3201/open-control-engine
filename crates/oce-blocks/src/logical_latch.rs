@@ -6,7 +6,20 @@
 
 use oce_model::{ParamTable, Value};
 
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool};
+use crate::settled::{fire, settled_input};
+use crate::{Block, BlockKind, BlockSignature, Ctx, EventSignal, PortKind, read_bool};
+
+/// `Latch.u` and `Toggle.u`: the `when` event on `u` by the settled-value rule (issue #800). At the
+/// initial frame the initial equation reads `u`'s frame value (decision 3), so a `Change` of a
+/// signal that starts different from its `pre_u_start` sets or toggles there, as in OpenModelica.
+fn u_event(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
+    let u = settled_input(inputs, 0, 2, 0);
+    if ctx.is_initial() {
+        u.v
+    } else {
+        fire(false, word_bool(region[1]), u).any()
+    }
+}
 
 fn bool_word(b: bool) -> u64 {
     u64::from(b)
@@ -17,7 +30,8 @@ fn word_bool(w: u64) -> bool {
 }
 
 /// `CDL.Logical.FallingEdge` — true exactly on a `true -> false` transition.
-/// `[S]`, feedthrough `y <- {u}`, not a loop cut.
+/// `[S]`, feedthrough `y <- {u}`, not a loop cut. Its output is a pulse to an event input's cone
+/// (issue #800, [`crate::EventSignal::Pulse`]).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FallingEdge {
     pub(crate) pre_u_start: bool,
@@ -36,6 +50,10 @@ impl Block for FallingEdge {
 
     fn kind(&self) -> BlockKind {
         BlockKind::Stateful
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Pulse
     }
 
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
@@ -67,7 +85,9 @@ impl Block for FallingEdge {
 }
 
 /// `CDL.Logical.Change` — true when the current Boolean input differs from the prior input.
-/// `[S]`, feedthrough `y <- {u}`, not a loop cut.
+/// `[S]`, feedthrough `y <- {u}`, not a loop cut. Its output is a pulse to an event input's cone
+/// (issue #800, [`crate::EventSignal::Pulse`]): Modelica's `change(u)` is true only at the
+/// instant, so an event input it feeds fires on every frame it is true.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LogicalChange {
     pub(crate) pre_u_start: bool,
@@ -86,6 +106,10 @@ impl Block for LogicalChange {
 
     fn kind(&self) -> BlockKind {
         BlockKind::Stateful
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Pulse
     }
 
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
@@ -119,17 +143,18 @@ impl Block for LogicalChange {
 }
 
 /// `CDL.Logical.Latch` — clear-dominant set/reset latch.
-/// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut.
+/// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut. `u` takes the settled-value rule of issue
+/// #800 (`docs/design/pulse-event-inputs.md`): the second state word holds `u`'s `w`, which only
+/// the event test reads; at the initial frame the initial equation reads `u`'s frame value. `clr`
+/// is read as a level, which gives Modelica's output whether it is a pulse or a level.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Latch;
 
 impl Latch {
-    fn output(inputs: &[Value], region: &[u64]) -> bool {
-        let u = read_bool(inputs, 0);
+    fn output(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
         let clr = read_bool(inputs, 1);
         let held = word_bool(region[0]);
-        let prev_u = word_bool(region[1]);
-        !clr && ((u && !prev_u) || held)
+        !clr && (u_event(ctx, inputs, region) || held)
     }
 }
 
@@ -152,6 +177,10 @@ impl Block for Latch {
         in_idx < 2 && out_idx == 0
     }
 
+    fn settled_event_inputs(&self) -> &[usize] {
+        &[0]
+    }
+
     fn state_len(&self) -> usize {
         2
     }
@@ -163,32 +192,36 @@ impl Block for Latch {
 
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit(0, Value::Boolean(Self::output(inputs, region)));
+        emit(0, Value::Boolean(Self::output(ctx, inputs, region)));
     }
 
-    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        region[0] = bool_word(Self::output(inputs, region));
-        region[1] = bool_word(read_bool(inputs, 0));
+    fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
+        region[0] = bool_word(Self::output(ctx, inputs, region));
+        region[1] = bool_word(settled_input(inputs, 0, 2, 0).w);
     }
 }
 
-/// `CDL.Logical.Toggle` — clear-dominant toggle on each rising edge of `u`.
-/// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut.
+/// `CDL.Logical.Toggle` — clear-dominant toggle on each event of `u`.
+/// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut. `u` takes the settled-value rule of issue
+/// #800 as `Latch.u` does (the second word holds its `w`; the initial frame reads its frame value);
+/// `clr` is read as a level.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Toggle;
 
 impl Toggle {
-    fn output(inputs: &[Value], region: &[u64]) -> bool {
-        let u = read_bool(inputs, 0);
+    fn output(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
         let clr = read_bool(inputs, 1);
         let held = word_bool(region[0]);
-        let prev_u = word_bool(region[1]);
-        !clr && if u && !prev_u { !held } else { held }
+        !clr && if u_event(ctx, inputs, region) {
+            !held
+        } else {
+            held
+        }
     }
 }
 
@@ -211,6 +244,10 @@ impl Block for Toggle {
         in_idx < 2 && out_idx == 0
     }
 
+    fn settled_event_inputs(&self) -> &[usize] {
+        &[0]
+    }
+
     fn state_len(&self) -> usize {
         2
     }
@@ -222,16 +259,16 @@ impl Block for Toggle {
 
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit(0, Value::Boolean(Self::output(inputs, region)));
+        emit(0, Value::Boolean(Self::output(ctx, inputs, region)));
     }
 
-    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        region[0] = bool_word(Self::output(inputs, region));
-        region[1] = bool_word(read_bool(inputs, 0));
+    fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
+        region[0] = bool_word(Self::output(ctx, inputs, region));
+        region[1] = bool_word(settled_input(inputs, 0, 2, 0).w);
     }
 }

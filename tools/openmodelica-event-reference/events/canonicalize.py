@@ -56,7 +56,62 @@ PILOTS = {
 }
 
 
+# The pulse-event pilots of issue #800: pilot -> (table-name stem, file stem, first frame time,
+# [(column, OpenModelica result column)]). Columns are the engine model's inputs, then its
+# outputs. Frame k is at `start + k` s. Unlike the pilots above, frame 0 keeps the LAST row at the
+# start, the values after the start's event iteration: a sample instant at the start fires a
+# `when` there (decision 3 of docs/design/pulse-event-inputs.md), and `Latch` and `Toggle` read
+# the initialisation pulse of a `Change`.
+PULSE_PILOTS = {
+    "PulseConsumersPilot": ("pulse_events", "consumers", 0.0, [
+        ("u", "uB.y"), ("uR", "inputs.y[2]"), ("um", "inputs.y[3]"), ("clr", "clrB.y"),
+        ("lvl", "lvlB.y"), ("b", "bB.y"), ("x", "xB.y"),
+        ("sampler", "sampler.y"), ("maxer", "maxer.y"), ("mean", "mean.y"),
+        ("integ", "integ.y"), ("pid", "pid.y"), ("lat", "lat.y"), ("tog", "tog.y"),
+        ("tim", "tim.y"), ("cntNot", "cntNot.y"), ("cntOr", "cntOr.y"), ("cntPre", "cntPre.y"),
+        ("latX", "latX.y"), ("togX", "togX.y"),
+    ]),
+    "SampleTriggerPilot": ("pulse_events", "sample_triggers", 0.0, [
+        ("uR", "inputs.y[1]"), ("clr", "clrB.y"),
+        ("c05", "c05.y"), ("c1", "c1.y"), ("c2", "c2.y"), ("c14", "c14.y"), ("c1h", "c1h.y"),
+        ("t05", "t05.y"), ("t1", "t1.y"), ("t2", "t2.y"), ("t14", "t14.y"), ("tNot", "tNot.y"),
+        ("lat", "lat.y"), ("mean", "mean.y"), ("maxer", "maxer.y"), ("integ", "integ.y"),
+        ("pid", "pid.y"), ("tim", "tim.y"), ("tog", "tog.y"), ("latHol", "latHol.y"),
+    ]),
+    "SampleTriggerOffGridPilot": ("pulse_events", "sample_trigger_off_grid", 0.25, [
+        ("uR", "inputs.y[1]"), ("clr", "clrB.y"),
+        ("c1", "c1.y"), ("t1", "t1.y"), ("lat", "lat.y"), ("cPre", "cPre.y"),
+    ]),
+}
+
+
+def pulse_main(pilot, result, output):
+    with open(result, newline="") as handle:
+        rows = list(csv.reader(handle))
+    header = rows[0]
+    data = [(float(row[0]), row) for row in rows[1:]]
+    slug, stem, start, columns = PULSE_PILOTS[pilot]
+    index = [header.index(source) for _, source in columns]
+    lines = []
+    for k in range(FRAMES):
+        frame = start + k
+        near = [row for time, row in data if abs(time - frame) <= WINDOW]
+        if not near:
+            raise SystemExit("{}: no row within {} s of t = {}".format(pilot, WINDOW, frame))
+        values = [repr(float(near[-1][i])) for i in index]
+        lines.append(" ".join([repr(frame)] + values))
+    name = "openmodelica_{}_{}".format(slug, stem)
+    text = "#1\n# columns: time {}\ndouble {}({},{})\n{}\n".format(
+        " ".join(column for column, _ in columns), name, FRAMES, len(columns) + 1,
+        "\n".join(lines))
+    with open(os.path.join(output, "{}.canonical.csv".format(stem)), "w", newline="\n") as handle:
+        handle.write(text)
+
+
 def main(pilot, result, output):
+    if pilot in PULSE_PILOTS:
+        pulse_main(pilot, result, output)
+        return
     with open(result, newline="") as handle:
         rows = list(csv.reader(handle))
     header = rows[0]

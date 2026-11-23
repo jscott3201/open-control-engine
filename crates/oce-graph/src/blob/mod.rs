@@ -44,8 +44,14 @@
 //!   allocates (as on the host, and at most
 //!   [`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS) words across the model);
 //!   `Schedule::order` and `driver_of`; the [`RunState`] arrays that
-//!   [`allocate_state`](crate::allocate_state) builds; the input and output tables and one target
-//!   vector per input (a bound is never a String: those are refused);
+//!   [`allocate_state`](crate::allocate_state) builds (with the three shadow buffers of the
+//!   settled-value rule when [`needs_plan`](crate::needs_plan)); the input and output tables and
+//!   one target vector per input (a bound is never a String: those are refused);
+//! * the event plan of issue #800, only when [`needs_plan`](crate::needs_plan): thirteen buffers
+//!   [`EventPlan::derive`](crate::EventPlan::derive) sizes once each (a connector-owner table,
+//!   the blocks' signals, three reader-table arrays, the taint marks and queue, the logic
+//!   summaries, the plan's step, settled and source tables, the marks and the marking stack); the
+//!   plan keeps its three tables when an event input is active and drops them otherwise;
 //! * scratch, freed before return: one default-parameter block per class, built and dropped by
 //!   [`oce_blocks::class_signature_hash`]; the class table; one parameter-name sort buffer sized
 //!   once to the largest parameter list; one 8-byte-per-connector ownership table; one

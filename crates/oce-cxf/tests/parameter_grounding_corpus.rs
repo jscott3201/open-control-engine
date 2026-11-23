@@ -76,12 +76,13 @@ fn outcome_line(rel: &str, bytes: &[u8]) -> String {
 #[test]
 fn every_tracked_fixture_imports_byte_identically() {
     let corpus = corpus();
-    // The workspace tracks 226 `.jsonld` files; a walk that silently shrinks fails here. One of
+    // The workspace tracks 227 `.jsonld` files; a walk that silently shrinks fails here. One of
     // them, the vendored `cxf-core/CXF-Core.jsonld` (issue #499), is the upstream class library
     // rather than a sequence; its import outcome is pinned like every other file's. Two are the
     // extension-block refusal fixtures under `invalid/` (issue #537). One is the vendored
-    // `CoolingCoilValve` translation of the Building 33 example (issue #661).
-    assert_eq!(corpus.len(), 226, "fixture corpus size changed");
+    // `CoolingCoilValve` translation of the Building 33 example (issue #661). One is the pulse
+    // snapshot model of `oce-api`'s settled-value tests (issue #800).
+    assert_eq!(corpus.len(), 227, "fixture corpus size changed");
     let actual: String = corpus
         .iter()
         .map(|(rel, path)| {
