@@ -9,7 +9,7 @@
 //! A malformed graph yields a [`oce_diag::DiagCode::MalformedDocument`] diagnostic, never an abort
 //! (`08` R-ERR-1 / the safety-critical testing standard).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::Diagnostic;
@@ -63,13 +63,26 @@ pub(crate) fn block_subject_of(blk: &BlockInstance) -> Arc<str> {
 
 /// Build the lookup `source-IRI → ConnectorId` map [`finalize_diags`] uses to resolve a real
 /// connector IRI back to its numeric id. Only connectors that carry an `iri` appear (hand-built
-/// connectors typically do not — their diagnostics use the synthetic `connector#N` subject).
+/// connectors typically do not — their diagnostics use the synthetic `connector#N` subject). An
+/// IRI several connectors carry maps to the last of them in arena order.
+///
+/// Every input a boundary input drives holds the boundary's IRI as one shared allocation. The
+/// connectors are walked last to first and an allocation already entered is skipped by its address
+/// and length, which name the same text, so a boundary's IRI is hashed once rather than once for
+/// each input it drives (issue #811). The first entry of a key in that walk is the last connector
+/// carrying it, as when every connector was entered in order and each overwrote the one before.
 pub(crate) fn conn_of_iri(model: &ModelGraph) -> HashMap<&str, ConnectorId> {
-    model
-        .connectors
-        .iter()
-        .filter_map(|c| c.iri.as_deref().map(|iri| (iri, c.id)))
-        .collect()
+    let mut map = HashMap::new();
+    let mut entered: HashSet<(*const u8, usize)> = HashSet::new();
+    for connector in model.connectors.iter().rev() {
+        let Some(iri) = connector.iri.as_deref() else {
+            continue;
+        };
+        if entered.insert((iri.as_ptr(), iri.len())) {
+            map.entry(iri).or_insert(connector.id);
+        }
+    }
+    map
 }
 
 /// In-degree of every connector (count of connections whose `to` is that connector). Out-of-range

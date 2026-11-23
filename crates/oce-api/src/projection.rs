@@ -3,6 +3,7 @@
 //! touched; an internal inconsistency is refused as [`OcError::Load`] before the engine commits.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use oce_model::resolved_model::{
     BlockClassDto, BlockInstanceDto, BlockKind, ConnectionDto, DomainKey, OcValue, PointDirection,
@@ -18,7 +19,9 @@ use crate::error::OcError;
 
 type ProjectionResult<T> = Result<T, OcError>;
 
-use crate::io::point_rows_at_load;
+use crate::io::{
+    PointInventoryRow, external_input_set, point_row, point_row_with_path, shared_path_address,
+};
 use crate::stable_hash::StableHash;
 
 const MODEL_SCHEMA_REV: u32 = 1;
@@ -31,8 +34,10 @@ pub(crate) fn project_resolved_model(
 ) -> ProjectionResult<ResolvedModel> {
     let metadata_by_connector = metadata_index(semantics)?;
     let classes = project_classes(model);
-    let blocks = project_blocks(model)?;
-    let (points, point_keys_by_connector) = project_points(model, &metadata_by_connector)?;
+    let block_keys = block_keys(model);
+    let blocks = project_blocks(model, &block_keys)?;
+    let (points, point_keys_by_connector) =
+        project_points(model, &metadata_by_connector, &block_keys)?;
     let connections = project_connections(model, &point_keys_by_connector)?;
     let mut resolved = ResolvedModel {
         model_id: DomainKey::default(),
@@ -84,12 +89,21 @@ fn project_classes(model: &ModelGraph) -> Vec<BlockClassDto> {
     classes
 }
 
-fn project_blocks(model: &ModelGraph) -> ProjectionResult<Vec<BlockInstanceDto>> {
+/// The key of each block, by dense index: built once a block, so every point a block owns names it
+/// through the one shared key, however many points that is (issue #811).
+fn block_keys(model: &ModelGraph) -> Vec<DomainKey> {
+    model.blocks.iter().map(block_key).collect()
+}
+
+fn project_blocks(
+    model: &ModelGraph,
+    block_keys: &[DomainKey],
+) -> ProjectionResult<Vec<BlockInstanceDto>> {
     model
         .blocks
         .iter()
-        .map(|block| {
-            let key = block_key(block);
+        .zip(block_keys)
+        .map(|(block, key)| {
             if key.as_str().is_empty() {
                 return Err(malformed(format!(
                     "block {} projected an empty DomainKey",
@@ -97,7 +111,7 @@ fn project_blocks(model: &ModelGraph) -> ProjectionResult<Vec<BlockInstanceDto>>
                 )));
             }
             Ok(BlockInstanceDto {
-                key,
+                key: key.clone(),
                 class_iri: block.class_iri.to_string(),
                 params: block
                     .params
@@ -111,86 +125,111 @@ fn project_blocks(model: &ModelGraph) -> ProjectionResult<Vec<BlockInstanceDto>>
         .collect()
 }
 
+/// What the point walk keeps of a path it has projected, to tell a boundary input's further
+/// fan-out targets (which share its key) from a duplicate key (a refusal).
+#[derive(Clone)]
+struct SeenPoint {
+    direction: PointDirection,
+    value_type: PointValueType,
+    key: DomainKey,
+    external_input: bool,
+}
+
 fn project_points(
     model: &ModelGraph,
     metadata_by_connector: &HashMap<ConnectorId, &EffectivePoint>,
+    block_keys: &[DomainKey],
 ) -> ProjectionResult<(Vec<PointDto>, Vec<Option<DomainKey>>)> {
-    #[derive(Clone)]
-    struct SeenPoint {
-        direction: PointDirection,
-        value_type: PointValueType,
-        key: DomainKey,
-        external_input: bool,
-    }
-
     let mut points = Vec::new();
-    let mut seen: HashMap<String, SeenPoint> = HashMap::new();
+    let mut seen: HashMap<Arc<str>, SeenPoint> = HashMap::new();
+    // The same entries by the address of the connector's shared path allocation. A connector at
+    // an address here spells the path of the entry, so it is answered from that entry without
+    // copying or hashing its path: a boundary input's `n` targets cost its path once (issue #811).
+    let mut seen_shared: HashMap<*const u8, SeenPoint> = HashMap::new();
+    let external_inputs = external_input_set(model);
     let mut point_keys_by_connector = vec![None; model.connectors.len()];
-    for row in point_rows_at_load(model) {
-        let connector = model
+    for connector in &model.connectors {
+        let address = shared_path_address(connector);
+        let known = address
+            .and_then(|address| seen_shared.get(&address))
+            .cloned();
+        // A connector the walk knows by its allocation gets its row without its path, which the
+        // known entry already holds.
+        let row = match known {
+            Some(_) => point_row_with_path(connector, String::new),
+            None => point_row(connector),
+        };
+        let Some(PointInventoryRow { info, connector_id }) = row else {
+            continue;
+        };
+        // `connector` is the arena entry at its own position, which the row was built from; the
+        // checks below keep the names and order of the walk they replace.
+        let indexed = model
             .connectors
-            .get(row.connector_id.0 as usize)
-            .ok_or_else(|| {
-                malformed(format!("connector {} is out of range", row.connector_id.0))
-            })?;
-        let metadata = metadata_by_connector
-            .get(&row.connector_id)
-            .ok_or_else(|| {
-                malformed(format!(
-                    "missing semantic metadata for connector {}",
-                    row.connector_id.0
-                ))
-            })?;
-        validate_metadata_key(connector.iri.as_ref(), connector.id, metadata)?;
+            .get(connector_id.0 as usize)
+            .ok_or_else(|| malformed(format!("connector {} is out of range", connector_id.0)))?;
+        let metadata = metadata_by_connector.get(&connector_id).ok_or_else(|| {
+            malformed(format!(
+                "missing semantic metadata for connector {}",
+                connector_id.0
+            ))
+        })?;
+        validate_metadata_key(indexed.iri.as_ref(), indexed.id, metadata)?;
 
-        let key = DomainKey::new(row.info.path.clone());
-        if key.as_str().is_empty() {
-            return Err(malformed(format!(
-                "connector {} projected an empty DomainKey",
-                row.connector_id.0
-            )));
-        }
-        let is_external_input = row.info.direction == PointDirection::In
-            && model.external_inputs.contains(&row.connector_id);
-        if let Some(existing) = seen.get(key.as_str()) {
+        let is_external_input =
+            info.direction == PointDirection::In && external_inputs.contains(&connector_id);
+        let existing = match known {
+            Some(existing) => Some(existing),
+            None => {
+                if info.path.is_empty() {
+                    return Err(malformed(format!(
+                        "connector {} projected an empty DomainKey",
+                        connector_id.0
+                    )));
+                }
+                seen.get(info.path.as_str()).cloned()
+            }
+        };
+        if let Some(existing) = existing {
             if existing.external_input
                 && is_external_input
-                && existing.direction == row.info.direction
-                && existing.value_type == row.info.value_type
+                && existing.direction == info.direction
+                && existing.value_type == info.value_type
             {
-                point_keys_by_connector[row.connector_id.0 as usize] = Some(existing.key.clone());
+                point_keys_by_connector[connector_id.0 as usize] = Some(existing.key.clone());
+                if let Some(address) = address {
+                    seen_shared.entry(address).or_insert(existing);
+                }
                 continue;
             }
             return Err(malformed(format!(
                 "duplicate point DomainKey: {}",
-                key.as_str()
+                existing.key.as_str()
             )));
         }
-        let owner_block = model
-            .blocks
-            .get(connector.block.0 as usize)
+        let owner_block = block_keys
+            .get(indexed.block.0 as usize)
+            .cloned()
             .ok_or_else(|| {
-                malformed(format!(
-                    "connector {} has out-of-range owner",
-                    connector.id.0
-                ))
-            })
-            .map(block_key)?;
-        point_keys_by_connector[row.connector_id.0 as usize] = Some(key.clone());
-        seen.insert(
-            key.as_str().to_owned(),
-            SeenPoint {
-                direction: row.info.direction,
-                value_type: row.info.value_type,
-                key: key.clone(),
-                external_input: is_external_input,
-            },
-        );
+                malformed(format!("connector {} has out-of-range owner", indexed.id.0))
+            })?;
+        let key = DomainKey::new(info.path);
+        point_keys_by_connector[connector_id.0 as usize] = Some(key.clone());
+        let entry = SeenPoint {
+            direction: info.direction,
+            value_type: info.value_type,
+            key: key.clone(),
+            external_input: is_external_input,
+        };
+        if let Some(address) = address {
+            seen_shared.insert(address, entry.clone());
+        }
+        seen.insert(Arc::clone(&key.0), entry);
         points.push(PointDto {
             key,
             owner_block,
-            direction: row.info.direction,
-            value_type: row.info.value_type,
+            direction: info.direction,
+            value_type: info.value_type,
             point_type: projected_point_type(metadata.point_type),
             hardwired: metadata.hardwired,
             trend_interval_s: projected_trend_interval(metadata.trend.interval),
@@ -229,6 +268,7 @@ fn project_connections(
                 malformed(format!("connection to {} is out of range", connection.to.0))
             })?;
         match (from_point, to_point) {
+            // Both keys are shared with the points they name: a connection holds two pointers.
             (Some(from_point), Some(to_point)) => {
                 connections.push(ConnectionDto {
                     from_point: from_point.clone(),

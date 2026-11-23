@@ -25,6 +25,7 @@ mod reals_matrix;
 mod routing_defaulted_selectors;
 mod routing_real;
 mod routing_typed;
+mod shared_paths;
 mod source_timetable;
 mod source_timetable_absent_cells;
 mod structural;

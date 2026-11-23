@@ -1,6 +1,6 @@
 //! Boundary-aware single-assignment validation for resolved connector wiring.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use oce_diag::DiagnosticList;
 use oce_diag::{DiagCode, Diagnostic};
@@ -27,6 +27,9 @@ pub(super) fn check(
     for connection in connections {
         *in_degree.entry(connection.to).or_insert(0) += 1;
     }
+    // A set, so each input asks at a fixed cost: searching the list for every input was quadratic
+    // in a boundary's fan-out (issue #811).
+    let external_inputs: HashSet<ConnectorId> = external_inputs.iter().copied().collect();
     for connector in connectors {
         if connector.dir != Dir::In {
             continue;

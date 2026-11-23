@@ -9,17 +9,24 @@
 //! Nothing here refers to a database type, an adapter handle or an `Arc<dyn …>`; the engine's
 //! tick never reads them.
 
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 use serde::{Deserialize, Serialize};
 
 /// A stable semantic domain key for any storable element — the IRI/dotted-path identity from
 /// CDL/CXF (FRAME §2). It is database-free and **never** carries an adapter handle (Part 1 §1).
+///
+/// The text is shared: cloning a key copies a pointer, never the text, so a key that many
+/// records name (a fanned-out output's point in every [`ConnectionDto`] it drives, a block in
+/// every [`PointDto`] it owns) is held once however many name it (issue #811). It compares,
+/// hashes and serializes as the text alone, exactly as an owned string would, so the
+/// serialized bytes of every DTO are those of a key held as `Box<str>`.
 #[derive(Clone, Default, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
-pub struct DomainKey(pub Box<str>);
+pub struct DomainKey(pub Arc<str>);
 
 impl DomainKey {
-    /// Construct a domain key from any string-like value.
-    pub fn new(s: impl Into<Box<str>>) -> Self {
+    /// Construct a domain key from any string-like value. Copies the text once; clones of the
+    /// result share it.
+    pub fn new(s: impl Into<Arc<str>>) -> Self {
         Self(s.into())
     }
     /// Borrow the key as a string slice.

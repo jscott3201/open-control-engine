@@ -4,16 +4,17 @@
 use std::fmt;
 use std::str::FromStr;
 
-use sha2::{Digest, Sha256};
-
 /// The text every canonical content id starts with. `canon1` names the `OCECANON` encoding
 /// version 1 and SHA-256 together. The tag stays `oce:canon1:` before 1.0.0: a change to either
 /// re-stamps ids in place, and the engine version tells the layouts apart.
 pub(crate) const PREFIX: &str = "oce:canon1:";
 
 /// SHA-256 of `bytes`, in digest output order. A pure function: the `sha2` backend choice
-/// (portable code or a CPU SHA extension) cannot change the output.
+/// (portable code or a CPU SHA extension) cannot change the output. The id itself hashes the
+/// encoding as it is written (`encode::digest`); this whole-buffer form is the tests' reference.
+#[cfg(test)]
 pub(crate) fn sha256(bytes: &[u8]) -> [u8; 32] {
+    use sha2::{Digest, Sha256};
     Sha256::digest(bytes).into()
 }
 

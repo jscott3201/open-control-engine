@@ -12,6 +12,7 @@ use crate::dto::{CxfDocument, Node};
 use oce_diag::DiagnosticList;
 
 use super::attrs::{FindingCount, connector_attrs};
+use super::connections::SharedIri;
 use super::value_types::{first_type, term_of, try_derive_value_type};
 
 /// Derive boundary types, retaining `String` only for endpoints of a native pass-through edge.
@@ -98,7 +99,7 @@ fn try_derive_pass_through_value_type(
 /// readings hold are those of readings made while the list was open: at most what the list
 /// holds and one reading's more. The readings are looked up, never iterated.
 pub(super) fn materialize(
-    pairs: Vec<(String, String)>,
+    pairs: Vec<(SharedIri, SharedIri)>,
     boundary_types: &HashMap<&str, Option<ValueType>>,
     by_id: &HashMap<&str, &Node>,
     blocks: &mut Vec<BlockInstance>,
@@ -124,7 +125,7 @@ pub(super) fn materialize(
                         DiagCode::NonSubsetConstruct,
                         "non-scalar boundary pass-through type is unsupported",
                     )
-                    .with_subject(output_iri),
+                    .with_subject(output_iri.into_shared()),
                 );
                 continue;
             }
@@ -133,7 +134,9 @@ pub(super) fn materialize(
         let input_id = ConnectorId(connectors.len() as u32);
         let output_id = ConnectorId(input_id.0 + 1);
         let mut input = Connector::new(input_id, block_id, Dir::In, value_type, input_id.0);
-        input.iri = Some(Arc::from(input_iri));
+        // The pair's input IRI is the boundary input's one shared allocation: every pass-through
+        // of one input holds it once between them.
+        input.iri = Some(input_iri.into_shared());
         let mut output = Connector::new(output_id, block_id, Dir::Out, value_type, output_id.0);
         // The declared output node's authored §7.4.1 attributes ride the minted connector. A
         // pass-through pair elides to no `Connection`, so no other connector joins this output's
@@ -148,7 +151,7 @@ pub(super) fn materialize(
             raised.raise_again(diags);
             output.attrs = attrs.clone();
         }
-        output.iri = Some(Arc::from(output_iri));
+        output.iri = Some(output_iri.into_shared());
         connectors.push(input);
         connectors.push(output);
         external_inputs.push(input_id);

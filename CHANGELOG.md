@@ -42,6 +42,54 @@ so far, and no tag is cut by the bump.
 
 ### Facade
 
+- **A load holds each long identity once, however many wires, ports or boundary targets name it**
+  (GitHub #PRNUM, issue #811). A document can spell a long IRI once, under a `@context` prefix,
+  and name its node from any number of short nodes. The facade then held a copy of that IRI for
+  each reference: every `ConnectionDto` copied its source point's key, every `PointDto` its owner
+  block's key, and the inventory and the projection built and hashed a boundary input's path again
+  for each input it drives. One `Constant` with a 64 KiB IRI fanned out to 256 `Abs` blocks, a
+  161 KB document, was held at 17.4 MB. An 8 MiB document projects to about 3 GB at that length,
+  and to about 50 GB per copy at the longest IRI the expansion budget admits (1.3 MiB, 37,000
+  edges); both figures are computed, not run.
+  - **What changed.** A key is built once per point and once per block and shared by every
+    record that names it. A walk over the connectors recognises a boundary input's further
+    targets by the address of their one shared path allocation, so it never copies or hashes the
+    path again. Equal address and length mean equal text; a separate allocation is still compared
+    by its text.
+  - **Measured** (debug, `allocation-counter`), as copies of the identity per further reference,
+    for six shapes: fan-out, fan-in, both ends long, a boundary input fanned out, boundary outputs,
+    and a boundary input passed through. The reader's peak and graph, the `LoadedModel`, the
+    engine, the load's peak and every byte the load requests are 0.00. Before, the `LoadedModel`
+    held 1 copy per reference (2 with both ends long), and the load requested 2 copies per
+    boundary target.
+  - **Breaking, in place:** `DomainKey`'s field is now `pub Arc<str>` (it was `pub Box<str>`).
+    `DomainKey::new` takes `impl Into<Arc<str>>`, and `as_str` is unchanged. The key compares,
+    hashes and serializes as its text, so every DTO's serialized bytes are unchanged. A host
+    that read `key.0` as a `Box<str>` reads it as an `Arc<str>`. Sharing is the reason: a shared
+    key is what lets a `ConnectionDto` and a `PointDto` name a point without copying its IRI.
+
+- **A content id costs its records, whatever the names they repeat** (GitHub #PRNUM, issue #811).
+  Every canonical record held its own copy of each block name it carried, and the id hashed a
+  `Vec` of the whole encoding. That came to two copies of a long name for each wire that names
+  its block, four with both ends long. The records now borrow the names from the model, and the
+  encoding is written straight into SHA-256.
+  - The canonical bytes, and therefore every id, are unchanged. A test keeps the old builder as
+    its reference and compares bytes for every fixture that loads and for generated graphs.
+  - Measured: `content_id` and `compile_blob` peak and request 0.00 copies per reference.
+    `canonical_content_bytes` costs the bytes it returns and nothing more.
+  - A wired port is found in a table built once, not by searching its owner's port list for
+    every wire. That search was quadratic in the width of a block whose every port is wired.
+
+- **A state snapshot or checkpoint shares each block's IRI across its manifest** (GitHub #PRNUM,
+  issue #811). Every connector key in the execution manifest copied its block's IRI, and every
+  connector entry copied its path and labels. A snapshot peaked at 6 to 82 copies of a long IRI
+  per reference, and a checkpoint at 3 to 44. The keys and entries now share the graph's
+  allocations, and the manifest is counted before it is written into a buffer of exactly its
+  length.
+  - What is left per reference is the format's own bytes, which spell the IRI in every key and are
+    capped at `MAX_SNAPSHOT_BYTES`. Measured: a snapshot's peak is at most 4 times its bytes per
+    reference and a checkpoint's at most 1 times. The bytes are unchanged.
+
 - **`BlobSummary` says whether this build accepts the blob: `decode_refusal`** (GitHub #699,
   issue #680). `oce_api::inspect_blob` returned a summary for some blobs the engine refuses to
   run (a wrong class signature hash, a wrong initial-state CRC), and the facade had no other
@@ -190,6 +238,16 @@ so far, and no tag is cut by the bump.
     [inspecting a blob](docs/compiled-schedule-blob.md#inspecting-a-blob).
 
 ### Execution core
+
+- **The validator handles a boundary input's path once, not once for every input it drives**
+  (GitHub #PRNUM, issue #811). Two `oce-validate` steps repeated work for every input a boundary
+  input drives. The map that resolves a diagnostic's subject to its connector hashed every
+  connector's path. The combined-domain check looked up its path group by text for every input,
+  and searched `external_inputs` for each. A boundary's fan-out therefore cost its path's length
+  for each input, or quadratic time for the search. Both steps now find a repeat of a path's
+  shared allocation by its address, compare text only for a new allocation, and use a set for
+  `external_inputs`. No diagnostic or order changes; the map still resolves a path to the last
+  connector that carries it.
 
 - **An event input fed by a pulse fires on every frame the pulse is true** (GitHub #805, issue
   #800; owner rulings of 2026-11-22 on design note
@@ -743,6 +801,24 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
+- **A boundary input passed through to many outputs is held once** (GitHub #PRNUM, issue #811).
+  The reader copied the input's IRI twice for each pass-through pair it collected, and the
+  lowered pass-through block's input connector kept one of those copies. One long input passed to
+  `n` outputs read at 2 copies of its IRI per output and held 1. Each pair now carries the
+  endpoint table's shared subject, and the output's distinct drivers are recorded by interned
+  identity instead of formatted text. No outcome, diagnostic or graph field changes. Measured:
+  0.00 copies per output, read and held.
+
+- **The export and the reader find boundary-driven inputs by set, not by search** (GitHub #PRNUM,
+  issue #811). The export plan searched `external_inputs` for every block input. It searched the
+  boundary-driven inputs again, comparing IRIs, for every declared boundary input. And it searched
+  its planned boundary nodes by IRI for every boundary-driven input. The reader's single-assignment
+  check also searched `external_inputs` for every input. Each search was quadratic in a boundary's
+  fan-out, and the IRI comparisons also scaled with the IRI's length. Each is now a set or a map
+  built once, answering exactly what the search answered.
+  - Measured (release): exporting a boundary input fanned out to 4,000 / 8,000 / 16,000 targets
+    takes 6.4 / 13.1 / 27.6 ms (before, 7.6 / 19.6 / 55.7). Sixteen 64 KiB boundary IRIs over
+    2,000 / 4,000 / 8,000 targets export in 5.4 / 8.2 / 14.9 ms (before, 45 / 88 / 182).
 - **An export peaks at its bytes and a few percent more** (GitHub #806, issue #803). The exporter
   built every node of the document before serializing it: a 1,120-byte node for each array
   element, more while the node vector grew, and its plan held copies of every block's IRI and of

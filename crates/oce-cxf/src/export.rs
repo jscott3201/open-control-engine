@@ -111,6 +111,8 @@ use crate::export_pass_through::{
 };
 use crate::{CxfError, bridge};
 
+#[path = "export_boundary_lookups.rs"]
+mod boundary_lookups;
 #[path = "export_emitted_ids.rs"]
 mod emitted_ids;
 #[path = "export_single_assignment.rs"]
@@ -345,6 +347,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
     // diag, no `PlannedBlock`); its connectors are placeholder-indexed but never emitted.
     let mut diags = DiagnosticList::new();
     let deferred = deferral_set(g, &mut diags);
+    let boundary_driven = boundary_lookups::boundary_driven(g);
     let mut port_iri: Vec<Option<PortId<'_>>> = vec![None; g.connectors.len()];
     let mut blocks: Vec<PlannedBlock<'_>> = Vec::with_capacity(g.blocks.len());
     // Every @id the document will carry, for duplicate detection only — membership checks,
@@ -417,7 +420,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
             // Boundary-input elision intentionally replaces the child input's IRI with the
             // boundary IRI. Keep synthesising that child port so the boundary node and child port
             // remain distinct; all other imported connectors retain their authored identity.
-            let minted = if g.external_inputs.contains(cid) {
+            let minted = if boundary_driven.contains(&cid.0) {
                 PortId::minted(subject.clone(), true, k)
             } else {
                 g.connectors
@@ -707,6 +710,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
     // deferral behavior.
     let mut boundary_input_attrs = HashMap::new();
     let mut seen_boundary_inputs: BTreeSet<&str> = BTreeSet::new();
+    let targeted_iris = boundary_lookups::targeted_iris(g);
     for input in &g.boundary_inputs {
         let iri = input.iri.as_ref();
         if !seen_boundary_inputs.insert(iri) {
@@ -714,13 +718,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
             continue;
         }
         boundary_input_attrs.insert(iri, &input.attrs);
-        let has_target = g.external_inputs.iter().any(|id| {
-            g.connectors
-                .get(id.0 as usize)
-                .and_then(|connector| connector.iri.as_deref())
-                == Some(iri)
-        });
-        if !has_target {
+        if !targeted_iris.contains(iri) {
             diags.raise(|| reject(MSG_ORPHAN_BOUNDARY_INPUT, iri));
         }
     }
@@ -736,6 +734,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
     // in Phase 3 before this skip. The ordinary arm is pinned by
     // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
     let mut boundaries: Vec<PlannedBoundary<'_>> = Vec::new();
+    let mut boundary_nodes = boundary_lookups::BoundaryNodes::default();
     // Survivor `external_inputs` connectors already seen, for the duplicate-entry rejection below.
     // Scoped to survivors on purpose: the `deferred.contains` skip runs first, so a duplicate on a
     // deferred block never reaches the check and never aborts an export whose document omits it.
@@ -820,7 +819,10 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
             };
             target.clone()
         };
-        match boundaries.iter_mut().find(|pb| pb.iri == boundary_iri) {
+        match boundary_nodes
+            .find(boundary_iri)
+            .and_then(|at| boundaries.get_mut(at))
+        {
             Some(pb) if pb.datatype != datatype => {
                 diags.raise(|| reject(MSG_BOUNDARY_TYPE_MISMATCH, &subject));
             }
@@ -840,6 +842,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> 
                     }
                     None => PortAttrs::None,
                 };
+                boundary_nodes.add(boundary_iri, boundaries.len());
                 boundaries.push(PlannedBoundary {
                     iri: boundary_iri,
                     datatype,

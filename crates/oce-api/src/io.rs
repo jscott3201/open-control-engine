@@ -7,9 +7,10 @@
 //! `oce-semantics` (physical sensor/actuator, network-vs-field classification, point-list
 //! membership, trend config) use documented defaults until semantic projection is wired.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
-use oce_model::{Attrs, ConnectorId, Dir, ModelGraph, ValueType};
+use oce_model::{Attrs, Connector, ConnectorId, Dir, ModelGraph, ValueType};
 
 use crate::engine::Engine;
 use crate::error::OcError;
@@ -206,67 +207,98 @@ pub(crate) fn connector_path(iri: Option<&str>, id: ConnectorId) -> String {
         .unwrap_or_else(|| format!("conn#{}", id.0))
 }
 
-/// The shared load-time point walk. It is the single source of truth for both host-visible
+/// The load-time point walk, every connector's row in arena order. The inventory and the
+/// projection walk the connectors themselves and ask [`point_row`] only for the rows they keep,
+/// so a connector either of them skips first costs no copy of its path.
+#[cfg(test)]
+pub(crate) fn point_rows_at_load(model: &ModelGraph) -> impl Iterator<Item = PointInventoryRow> {
+    model.connectors.iter().filter_map(point_row)
+}
+
+/// The point row of one connector, or `None` for a `String` connector, which is metadata-only
+/// (CDL §7.8) and not a control point. It is the single source of truth for both host-visible
 /// [`IoInventory`] rows and the plain-data [`oce_model::resolved_model::PointDto`] projection.
-pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
-    let mut rows = Vec::with_capacity(model.connectors.len());
-    for c in &model.connectors {
-        let value_type = match c.value_type {
-            ValueType::Real => PointValueType::Real,
-            ValueType::Integer | ValueType::Enum(_) => PointValueType::Int,
-            ValueType::Boolean => PointValueType::Bool,
-            // A String connector is metadata-only (CDL §7.8) — not a control point.
-            ValueType::String => continue,
-        };
-        let direction = match c.dir {
-            Dir::In => PointDirection::In,
-            Dir::Out => PointDirection::Out,
-        };
-        // Current IO-class mapping from direction + signal type. Bool ⇒ digital; else analog.
-        // Network/physical classification belongs to the semantic projection (R-IO-1).
-        let io_class = match (direction, value_type) {
-            (PointDirection::In, PointValueType::Bool) => IoClass::DigitalInput,
-            (PointDirection::In, _) => IoClass::AnalogInput,
-            (PointDirection::Out, PointValueType::Bool) => IoClass::DigitalOutput,
-            (PointDirection::Out, _) => IoClass::AnalogOutput,
-        };
-        let (quantity, unit, display_unit, min, max) = match &c.attrs {
-            Attrs::Real(a) => (
-                a.quantity.as_deref().map(str::to_owned),
-                a.unit.as_deref().map(str::to_owned),
-                a.display_unit.as_deref().map(str::to_owned),
-                a.min,
-                a.max,
-            ),
-            Attrs::Integer(a) => (
-                None,
-                None,
-                None,
-                a.min.map(|v| v as f64),
-                a.max.map(|v| v as f64),
-            ),
-            Attrs::Boolean(_) | Attrs::String(_) | Attrs::Enum(_) => (None, None, None, None, None),
-        };
-        rows.push(PointInventoryRow {
-            info: PointInfo {
-                path: connector_path(c.iri.as_deref(), c.id),
-                direction,
-                value_type,
-                io_class,
-                physical: PhysicalKind::SoftwarePoint,
-                quantity,
-                unit,
-                display_unit,
-                min,
-                max,
-                in_pointlist: true,
-                hardwired: false,
-                trend: None,
-            },
-            connector_id: c.id,
-        });
-    }
-    rows
+pub(crate) fn point_row(c: &Connector) -> Option<PointInventoryRow> {
+    point_row_with_path(c, || connector_path(c.iri.as_deref(), c.id))
+}
+
+/// [`point_row`] with the path `path` makes, called only for a connector that is a point: a
+/// caller that already holds the path passes an empty one and copies nothing.
+pub(crate) fn point_row_with_path(
+    c: &Connector,
+    path: impl FnOnce() -> String,
+) -> Option<PointInventoryRow> {
+    let value_type = match c.value_type {
+        ValueType::Real => PointValueType::Real,
+        ValueType::Integer | ValueType::Enum(_) => PointValueType::Int,
+        ValueType::Boolean => PointValueType::Bool,
+        ValueType::String => return None,
+    };
+    let direction = match c.dir {
+        Dir::In => PointDirection::In,
+        Dir::Out => PointDirection::Out,
+    };
+    // Current IO-class mapping from direction + signal type. Bool ⇒ digital; else analog.
+    // Network/physical classification belongs to the semantic projection (R-IO-1).
+    let io_class = match (direction, value_type) {
+        (PointDirection::In, PointValueType::Bool) => IoClass::DigitalInput,
+        (PointDirection::In, _) => IoClass::AnalogInput,
+        (PointDirection::Out, PointValueType::Bool) => IoClass::DigitalOutput,
+        (PointDirection::Out, _) => IoClass::AnalogOutput,
+    };
+    let (quantity, unit, display_unit, min, max) = match &c.attrs {
+        Attrs::Real(a) => (
+            a.quantity.as_deref().map(str::to_owned),
+            a.unit.as_deref().map(str::to_owned),
+            a.display_unit.as_deref().map(str::to_owned),
+            a.min,
+            a.max,
+        ),
+        Attrs::Integer(a) => (
+            None,
+            None,
+            None,
+            a.min.map(|v| v as f64),
+            a.max.map(|v| v as f64),
+        ),
+        Attrs::Boolean(_) | Attrs::String(_) | Attrs::Enum(_) => (None, None, None, None, None),
+    };
+    Some(PointInventoryRow {
+        info: PointInfo {
+            path: path(),
+            direction,
+            value_type,
+            io_class,
+            physical: PhysicalKind::SoftwarePoint,
+            quantity,
+            unit,
+            display_unit,
+            min,
+            max,
+            in_pointlist: true,
+            hardwired: false,
+            trend: None,
+        },
+        connector_id: c.id,
+    })
+}
+
+/// The boundary-driven input connectors of `model`, as a set: one pass over `external_inputs`, so
+/// a walk over the connectors asks membership at a fixed cost rather than searching the list for
+/// each connector, which was quadratic in a boundary's fan-out (issue #811).
+pub(crate) fn external_input_set(model: &ModelGraph) -> HashSet<ConnectorId> {
+    model.external_inputs.iter().copied().collect()
+}
+
+/// The address of a connector's shared path allocation, if it has one.
+///
+/// Every input a boundary input drives holds that boundary's IRI as one shared allocation, so two
+/// connectors with the same address spell the same path. A walk that has handled one of them can
+/// recognise the others by address alone, without copying or hashing the path again: a boundary
+/// fanned out to `n` inputs then costs its path once, not `n` times (issue #811). Equal addresses
+/// imply equal paths; unequal addresses imply nothing, and such a walk compares the text.
+pub(crate) fn shared_path_address(c: &Connector) -> Option<*const u8> {
+    c.iri.as_ref().map(|iri| Arc::as_ptr(iri).cast::<u8>())
 }
 
 impl IoInventory {
@@ -284,14 +316,32 @@ impl IoInventory {
     pub(crate) fn build_at_load(model: &ModelGraph) -> IoInventory {
         let mut points = Vec::with_capacity(model.connectors.len());
         let (input_by_path, frame_definitions) = build_inputs(model);
-        let mut seen_inputs = std::collections::HashSet::new();
+        let external_inputs = external_input_set(model);
+        let mut seen_inputs = HashSet::new();
+        // The shared path allocations of inputs already walked: a boundary-driven input whose
+        // allocation is here repeats a path `seen_inputs` holds, and is skipped as the text
+        // comparison below would skip it, without building its row.
+        let mut seen_shared_inputs = HashSet::new();
         let mut output_by_path = HashMap::with_capacity(model.connectors.len());
-        for row in point_rows_at_load(model) {
+        for connector in &model.connectors {
+            let is_external = external_inputs.contains(&connector.id);
+            if connector.dir == Dir::In
+                && is_external
+                && shared_path_address(connector)
+                    .is_some_and(|address| seen_shared_inputs.contains(&address))
+            {
+                continue;
+            }
+            let Some(row) = point_row(connector) else {
+                continue;
+            };
             let path = row.info.path.clone();
             if row.info.direction == PointDirection::In {
-                if !seen_inputs.insert(path.clone())
-                    && model.external_inputs.contains(&row.connector_id)
-                {
+                let first = seen_inputs.insert(path.clone());
+                if let Some(address) = shared_path_address(connector) {
+                    seen_shared_inputs.insert(address);
+                }
+                if !first && is_external {
                     continue;
                 }
             } else {
@@ -309,14 +359,19 @@ impl IoInventory {
         // connector paths first so the lookup stays defined against a malformed hand-built
         // store.
         let mut output_alias_by_path = HashMap::with_capacity(model.boundary_outputs.len());
+        // Whether each driving connector's path is an inventory output, asked once a driver: one
+        // driver may serve many declared outputs, and its path is looked up once, not once each.
+        let mut driver_is_output: HashMap<ConnectorId, bool> = HashMap::new();
         for boundary in &model.boundary_outputs {
             // `get` (not indexing) keeps this total for a malformed hand-built graph (R-ERR-1);
             // an out-of-range source simply mints no alias.
             let Some(source) = model.connectors.get(boundary.source.0 as usize) else {
                 continue;
             };
-            let driver_path = connector_path(source.iri.as_deref(), source.id);
-            if output_by_path.contains_key(&driver_path) {
+            let is_output = *driver_is_output.entry(boundary.source).or_insert_with(|| {
+                output_by_path.contains_key(&connector_path(source.iri.as_deref(), source.id))
+            });
+            if is_output {
                 output_alias_by_path
                     .entry(boundary.iri.to_string())
                     .or_insert(boundary.source);

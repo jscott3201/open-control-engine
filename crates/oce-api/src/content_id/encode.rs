@@ -4,6 +4,7 @@
 //! section frames or padding. The bytes are hashed, never parsed.
 
 use oce_model::{Value, ValueType, enum_descriptor};
+use sha2::{Digest, Sha256};
 
 use super::ContentIdError;
 use super::graph::{CanonicalGraph, Driver, Labels, Name};
@@ -28,7 +29,19 @@ pub(super) fn encode(graph: &CanonicalGraph<'_>) -> Result<Vec<u8>, ContentIdErr
     Ok(bytes.0)
 }
 
-/// Where encoded bytes go: appended to a vector, or only counted.
+/// The SHA-256 of `graph`'s `OCECANON` v1 encoding, written straight into the hash: the bytes
+/// [`encode`] would return, never held. So the id of a model costs the records alone, whatever
+/// the length of the names they repeat (issue #811).
+///
+/// # Errors
+/// As [`encode`]: the same refusals, for the same graph.
+pub(super) fn digest(graph: &CanonicalGraph<'_>) -> Result<[u8; 32], ContentIdError> {
+    let mut hash = Writer(Sha256::new());
+    write(&mut hash, graph)?;
+    Ok(hash.0.finalize().into())
+}
+
+/// Where encoded bytes go: appended to a vector, hashed, or only counted.
 trait Sink {
     fn raw(&mut self, bytes: &[u8]);
 }
@@ -36,6 +49,12 @@ trait Sink {
 impl Sink for Vec<u8> {
     fn raw(&mut self, bytes: &[u8]) {
         self.extend_from_slice(bytes);
+    }
+}
+
+impl Sink for Sha256 {
+    fn raw(&mut self, bytes: &[u8]) {
+        self.update(bytes);
     }
 }
 
@@ -149,9 +168,9 @@ impl<S: Sink> Writer<S> {
         Ok(())
     }
 
-    fn name(&mut self, name: &Name) -> Result<(), ContentIdError> {
+    fn name(&mut self, name: &Name<'_>) -> Result<(), ContentIdError> {
         self.u8(name.form);
-        self.str(&name.text)
+        self.str(name.text)
     }
 
     fn labels(&mut self, labels: &Labels<'_>) -> Result<(), ContentIdError> {

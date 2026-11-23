@@ -20,13 +20,10 @@ use crate::{Engine, Topology};
 
 /// The name the id gives an IRI when no two IRIs of its kind collide: what follows the last
 /// `#`, `/` or `:`. Written here a second time, so the test does not borrow the encoder's rule.
-fn name(iri: &str) -> Name {
+fn name(iri: &str) -> Name<'_> {
     let text = iri.rsplit(['#', '/', ':']).next().unwrap_or(iri);
     assert!(!text.is_empty(), "{iri}");
-    Name {
-        form: 0,
-        text: text.to_owned(),
-    }
+    Name { form: 0, text }
 }
 
 fn same_bound(recorded: Option<&Value>, shown: Option<&Value>) -> bool {

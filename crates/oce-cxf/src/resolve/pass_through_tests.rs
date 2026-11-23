@@ -6,6 +6,20 @@ use std::sync::Arc;
 use serde_json::json;
 
 use super::derive_boundary_types;
+use crate::resolve::connections::SharedIri;
+
+/// `pairs` as Step 9 hands them on.
+fn shared(pairs: &[(String, String)]) -> Vec<(SharedIri, SharedIri)> {
+    pairs
+        .iter()
+        .map(|(input, output)| {
+            (
+                SharedIri::from(input.as_str()),
+                SharedIri::from(output.as_str()),
+            )
+        })
+        .collect()
+}
 use crate::dto::CxfDocument;
 use oce_diag::DiagnosticList;
 
@@ -113,7 +127,7 @@ fn an_output_read_under_two_types_gives_each_pair_the_attributes_of_its_own_type
     let (mut blocks, mut connectors, mut external) = (Vec::new(), Vec::new(), Vec::new());
     let mut diags = DiagnosticList::new();
     materialize(
-        pairs,
+        shared(&pairs),
         &types,
         &by_id,
         &mut blocks,
@@ -182,7 +196,7 @@ fn reference_case(id_bytes: usize) -> (usize, u64) {
     let (mut blocks, mut connectors, mut external) = (Vec::new(), Vec::new(), Vec::new());
     let mut diags = DiagnosticList::new();
     materialize(
-        pairs.clone(),
+        shared(&pairs),
         &types,
         &by_id,
         &mut blocks,

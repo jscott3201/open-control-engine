@@ -45,6 +45,9 @@ pub(crate) struct Writer {
 }
 
 impl Writer {
+    /// A writer that grows as it writes; the codec sizes its buffers instead, and the tests use
+    /// this one.
+    #[cfg(test)]
     pub(crate) fn new() -> Self {
         Self {
             bytes: Vec::new(),

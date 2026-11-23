@@ -70,7 +70,7 @@ fn io_schema_keeps_enum_projection_string_omission_and_available_attributes() {
         }
         model.connectors.push(connector);
     }
-    let rows = crate::io::point_rows_at_load(&model);
+    let rows: Vec<_> = crate::io::point_rows_at_load(&model).collect();
     assert_eq!(rows.len(), 4);
     assert_eq!(
         rows.iter()

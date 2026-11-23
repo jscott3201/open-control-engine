@@ -23,11 +23,11 @@
 //!   carry the boundary's path), so a declaration `min` above a target's `max` also empties the
 //!   domain. That is reported once, on the boundary path, when no single member is crossed itself.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic, DiagnosticList};
-use oce_model::{Attrs, Dir, ModelGraph};
+use oce_model::{Attrs, ConnectorId, Dir, ModelGraph};
 
 use super::subject_of;
 
@@ -192,21 +192,39 @@ fn report(attrs: &Attrs, owner: &str, subject: &Arc<str>, diags: &mut Diagnostic
 /// input among the members), fold in the matching boundary declaration, and refuse an empty
 /// intersection. Grouping is by `BTreeMap`, so the emission order is the path order.
 fn check_combined_input_domains(model: &ModelGraph, diags: &mut DiagnosticList) {
-    let mut groups: BTreeMap<&str, (bool, Vec<&Attrs>)> = BTreeMap::new();
+    // Each group's position in `members_of`, by path. A group is found by the address and length
+    // of the path's allocation first, which name the same text: every input a boundary input
+    // drives shares the boundary's IRI, so each but the first joins its group without the path
+    // being compared again, where a lookup by text cost the path's length for each (issue #811).
+    let mut position_of: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut position_of_allocation: HashMap<(*const u8, usize), usize> = HashMap::new();
+    let mut members_of: Vec<(bool, Vec<&Attrs>)> = Vec::new();
+    // A set, so each input asks at a fixed cost: searching the list for every input was quadratic
+    // in a boundary's fan-out (issue #811).
+    let external_inputs: BTreeSet<ConnectorId> = model.external_inputs.iter().copied().collect();
     for connector in &model.connectors {
         let (Dir::In, Some(iri)) = (connector.dir, connector.iri.as_deref()) else {
             continue;
         };
-        let entry = groups.entry(iri).or_default();
-        entry.0 |= model.external_inputs.contains(&connector.id);
+        let at = *position_of_allocation
+            .entry((iri.as_ptr(), iri.len()))
+            .or_insert_with(|| {
+                *position_of.entry(iri).or_insert_with(|| {
+                    members_of.push((false, Vec::new()));
+                    members_of.len() - 1
+                })
+            });
+        let entry = &mut members_of[at];
+        entry.0 |= external_inputs.contains(&connector.id);
         entry.1.push(&connector.attrs);
     }
     for input in &model.boundary_inputs {
-        if let Some(entry) = groups.get_mut(input.iri.as_ref()) {
-            entry.1.push(&input.attrs);
+        if let Some(&at) = position_of.get(input.iri.as_ref()) {
+            members_of[at].1.push(&input.attrs);
         }
     }
-    for (path, (external, members)) in groups {
+    for (path, at) in position_of {
+        let (external, members) = std::mem::take(&mut members_of[at]);
         if !external || members.len() < 2 {
             continue;
         }

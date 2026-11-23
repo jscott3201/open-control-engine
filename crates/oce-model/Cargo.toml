@@ -15,7 +15,8 @@ workspace = true
 [dependencies]
 # For the resolved-model DTOs' serde derives; no codec is linked here. `alloc` is the floor (the
 # DTOs hold `String`/`Vec`); `std` re-enables `serde/std` through this crate's `std` feature.
-serde = { workspace = true, features = ["alloc"] }
+# `rc` serializes `DomainKey`'s shared `Arc<str>` as the string it holds (issue #811).
+serde = { workspace = true, features = ["alloc", "rc"] }
 
 [features]
 # `std` is the default; `--no-default-features --features alloc` builds the crate `no_std + alloc`
