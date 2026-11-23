@@ -163,6 +163,11 @@ impl Engine {
         capture: &mut DiagnosticCapture,
     ) -> Result<LoadedModel, OcError> {
         let result: Result<LoadedModel, OcError> = (|| {
+            // The canonical-encoding budget closes the load gate (issue #815): counted from the
+            // records, before any block is constructed, so a model refused for it costs its
+            // records and its inventory, never its blocks.
+            let io = IoInventory::build_at_load(&model);
+            crate::content_id::check_canonical_budget(&model, &io)?;
             // Resolve every block instance to its native impl up front — an unknown class is a typed
             // load error, never a panic (R-IMPL-2 / R-ERR-1).
             capture.enter(DiagnosticStage::Instantiation);
@@ -175,7 +180,6 @@ impl Engine {
             let schedule = compile(&model, &blocks).map_err(|err| capture.build_refusal(err))?;
             let state =
                 allocate_state(&model, &blocks).map_err(|err| capture.build_refusal(err))?;
-            let io = IoInventory::build_at_load(&model);
             let params = ParamTable::build_at_load(&model);
             capture.enter(DiagnosticStage::Semantics);
             let semantics = oce_semantics::resolve(&model).map_err(|err| OcError::Load {
@@ -185,6 +189,19 @@ impl Engine {
             diagnostics.extend(semantics.diagnostics.iter().cloned());
             capture.enter(DiagnosticStage::Projection);
             let resolved_model = project_resolved_model(&model, &semantics, model_iri)?;
+            // The last refusal before the commit (issue #815): the snapshot this model would
+            // write, counted and not built, must fit `MAX_SNAPSHOT_BYTES`, so a model that loads
+            // can be snapshotted.
+            crate::snapshot_fit::check_snapshot_fits(
+                &crate::state_manifest::ManifestSource {
+                    model: &model,
+                    blocks: &blocks,
+                    schedule: &schedule,
+                    state: &state,
+                    frame_definitions: &io.frame_definitions,
+                },
+                resolved_model.model_id.as_str(),
+            )?;
             let semantic_warnings = semantics.diagnostics;
             // Commit boundary: every ordinary fallible stage is complete and nothing outside this
             // engine has been touched, so a refusal above leaves no external effect to compensate.

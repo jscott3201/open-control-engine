@@ -92,7 +92,8 @@ impl Engine {
     /// or promised; the bytes are hashed, never parsed. Allocates one
     /// `Vec<u8>` for the bytes (plus the sorted records it writes them from), and the bytes spell a
     /// block's name in every record that names it: about one copy of a long name per reference to
-    /// it, which no budget bounds yet (issue #815 adds one); no engine state changes.
+    /// it, which the load holds to 4 MiB (`MAX_CANONICAL_ENCODING_BYTES`, issue #815); no
+    /// engine state changes.
     ///
     /// # Errors
     /// As [`Self::content_id`].
@@ -101,6 +102,55 @@ impl Engine {
         let graph = graph::canonical_graph(&self.model, &self.io)?;
         Ok(encode::encode(&graph)?)
     }
+}
+
+/// The most bytes a loaded model's canonical encoding may take: 4 MiB (4,194,304), ruled by the
+/// owner on 2026-11-23 (issue #815).
+///
+/// The encoding spells a block's name in every record that names it, so a long name a document
+/// writes once under a `@context` prefix can make it far larger than the document. A content id
+/// and a blob's id hash it, and `canonical_content_bytes` returns it. The largest tracked or
+/// `open-control-library` model encodes 64,458 bytes.
+pub(crate) const MAX_CANONICAL_ENCODING_BYTES: usize = 4 * 1024 * 1024;
+
+/// Refuse a model whose canonical encoding would take more than
+/// [`MAX_CANONICAL_ENCODING_BYTES`], as a `resource-limit-exceeded` load diagnostic naming the
+/// length.
+///
+/// The length is counted from the model's records in the order it lists them, never encoded,
+/// sorted or hashed: the check costs the records (one for each block, wire, boundary target and
+/// boundary output, each a fixed size) and a walk of each name where the model spells it. A
+/// hand-built model that has no content id (an unnamed block, an unregistered class, an
+/// inconsistent reference) has no encoding to bound and is not refused here; its id is refused
+/// when asked for, as before.
+pub(crate) fn check_canonical_budget(
+    model: &oce_model::ModelGraph,
+    io: &crate::io::IoInventory,
+) -> Result<(), oce_validate::ValidationError> {
+    let length = match graph::unsorted_graph(model, io).and_then(|graph| encode::length(&graph)) {
+        Ok(length) => length,
+        // Past `u32` is past the budget too; the other refusals have no encoding to count.
+        Err(ContentIdError::TooLarge) => usize::MAX,
+        Err(_) => return Ok(()),
+    };
+    if length <= MAX_CANONICAL_ENCODING_BYTES {
+        return Ok(());
+    }
+    let length = if length == usize::MAX {
+        "more than 4 GiB".to_owned()
+    } else {
+        format!("{length} bytes")
+    };
+    Err(oce_validate::ValidationError {
+        diagnostics: vec![oce_diag::Diagnostic::error(
+            oce_diag::DiagCode::ResourceLimitExceeded,
+            format!(
+                "the model's canonical encoding, which its content id hashes, would take \
+                 {length}, more than the {MAX_CANONICAL_ENCODING_BYTES} bytes a model may take \
+                 (it spells a block's name in every record that names it)"
+            ),
+        )],
+    })
 }
 
 #[cfg(test)]

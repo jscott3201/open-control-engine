@@ -228,12 +228,14 @@ pub(super) fn materialize(
     boundary_types: &HashMap<&str, Option<ValueType>>,
     diags: &mut DiagnosticList,
 ) -> Vec<BoundaryInput> {
-    let represented = graph
-        .external_inputs
-        .iter()
-        .filter_map(|id| graph.connectors.get(id.0 as usize))
-        .filter_map(|connector| connector.iri.as_deref())
-        .collect::<HashSet<_>>();
+    // Each boundary's IRI hashed once per allocation, not once per input it drives (issue #815).
+    let (represented, _) = super::shared_iris::distinct_texts(
+        graph
+            .external_inputs
+            .iter()
+            .filter_map(|id| graph.connectors.get(id.0 as usize))
+            .filter_map(|connector| connector.iri.as_deref()),
+    );
     // Only the set is read here; its warnings belong to an export and are dropped, held to the
     // list's budget while they are built.
     let deferred = deferral_set(graph, &mut DiagnosticList::new());
@@ -271,13 +273,14 @@ fn refuse_minted_aliases<'a>(
     let mints = |position: usize, class_iri: &str| {
         !deferred.contains(&position) && !is_pass_through_class(class_iri)
     };
-    let emitted_boundaries = graph
-        .external_inputs
-        .iter()
-        .filter_map(|id| graph.connectors.get(id.0 as usize))
-        .filter(|connector| !deferred.contains(&(connector.block.0 as usize)))
-        .filter_map(|connector| connector.iri.as_deref())
-        .collect::<HashSet<_>>();
+    let (emitted_boundaries, _) = super::shared_iris::distinct_texts(
+        graph
+            .external_inputs
+            .iter()
+            .filter_map(|id| graph.connectors.get(id.0 as usize))
+            .filter(|connector| !deferred.contains(&(connector.block.0 as usize)))
+            .filter_map(|connector| connector.iri.as_deref()),
+    );
     let candidates = doc
         .graph
         .iter()
@@ -301,6 +304,23 @@ fn refuse_minted_aliases<'a>(
             blocks_of.entry(instance).or_default().push(position);
         }
     }
+    // Each input's position among its owner's inputs (its first listing there), found in one pass
+    // over the blocks rather than by searching the owner's list for every boundary-driven input,
+    // which was quadratic in the width of a block every input of which a boundary drives.
+    let mut input_position: Vec<Option<usize>> = vec![None; graph.connectors.len()];
+    for (owner, block) in graph.blocks.iter().enumerate() {
+        for (position, input) in block.inputs.iter().enumerate() {
+            if let Some(slot) = input_position.get_mut(input.0 as usize)
+                && slot.is_none()
+                && graph
+                    .connectors
+                    .get(input.0 as usize)
+                    .is_some_and(|connector| connector.block.0 as usize == owner)
+            {
+                *slot = Some(position);
+            }
+        }
+    }
     // Each boundary-driven input the export mints, as its block and its position there.
     let mut minted_inputs: HashSet<(usize, usize)> = HashSet::new();
     for connector_id in &graph.external_inputs {
@@ -314,7 +334,11 @@ fn refuse_minted_aliases<'a>(
         if block.instance_iri.is_none() || !mints(owner, &block.class_iri) {
             continue;
         }
-        if let Some(position) = block.inputs.iter().position(|input| input == connector_id) {
+        if let Some(position) = input_position
+            .get(connector_id.0 as usize)
+            .copied()
+            .flatten()
+        {
             minted_inputs.insert((owner, position));
         }
     }

@@ -42,6 +42,48 @@ so far, and no tag is cut by the bump.
 
 ### Facade
 
+- **Breaking, in place: a model whose canonical encoding would pass 4 MiB is refused at load**
+  (GitHub #816, issue #815, owner ruling of 2026-11-23). The canonical encoding, which every
+  content id and blob id hashes and `canonical_content_bytes` returns, spells a block's relative
+  name in every record that names it. So a long name a document writes once under a `@context`
+  prefix made it about one copy per wire. 4,000 wires to a 256 KiB name took 1.84 s per content id,
+  and the expansion budget admitted about 50 GB (computed, not run).
+  - **The budget.** The load gate refuses a model whose encoding would take more than 4,194,304
+    bytes, with `OcError::Validate` carrying one `resource-limit-exceeded` error that names the
+    length. The check runs after the validator's rules and before any block is constructed.
+  - **How it is counted.** From the records in the order the model lists them, with the encoder's
+    counting pass. Nothing is encoded, sorted or hashed, and no name's bytes are read, so the check
+    costs the records whatever the names' length.
+  - **Where it applies.** Every CXF load. `Engine::resume` does not re-check: an edited string
+    parameter is the host's own bytes, entered once.
+  - **Corpus.** The largest tracked or `open-control-library` model encodes 64,458 bytes, and no
+    model in the corpus is refused.
+  - **Purpose.** It bounds what a content id, a blob's id and `canonical_content_bytes` hash or
+    return, and the time they take. The snapshot has a check of its own (next entry).
+  - **Lookups.** A record's block name is now found by the block's index, and a pass-through's
+    boundary input by its shared allocation, rather than by comparing the name.
+
+- **Breaking, in place: a model whose durable snapshot would pass 64 MiB is refused at load**
+  (GitHub #816, issue #815, owner ruling of 2026-11-23). A snapshot spells a block's IRI in every
+  connector key that names the block, and a boundary input's IRI in every input it drives. So a
+  long identity a document writes once could make a loaded model's snapshot pass
+  `MAX_SNAPSHOT_BYTES`, and every `Engine::state_snapshot` of it was refused (`SnapshotTooLarge`).
+  The canonical encoding does not count all of these terms: a boundary input's targets and an
+  unwired port cost it nothing.
+  - **The check.** The load counts the snapshot the model would write, plus the 8 bytes the previous
+    frame's time adds once a frame has run, with the codec's counting writer and against the
+    existing cap. No new number. It refuses past the cap with `OcError::Validate` carrying one
+    `resource-limit-exceeded` error that names the length. It is the last refusal before the engine
+    commits.
+  - **What it guarantees.** A model that loads can be snapshotted, at load and after any frame. The
+    one exception: a host's later `set_param` and `resume` that lengthen a `String` parameter can
+    still have their snapshot refused, because those are the host's own bytes.
+  - **What it costs.** It counts, never writes. The manifest's keys share the model's allocations,
+    and two keys naming one block now compare by pointer, never by reading its IRI; that also speeds
+    every snapshot's sort. The check's cost is pinned flat in the path's length.
+  - **Corpus.** The largest tracked or `open-control-library` snapshot is 543,073 bytes, and nothing
+    is refused.
+
 - **A load holds each long identity once, however many wires, ports or boundary targets name it**
   (GitHub #812, issue #811). A document can spell a long IRI once, under a `@context` prefix,
   and name its node from any number of short nodes. The facade then held a copy of that IRI for
@@ -255,6 +297,28 @@ so far, and no tag is cut by the bump.
     [inspecting a blob](docs/compiled-schedule-blob.md#inspecting-a-blob).
 
 ### Execution core
+
+- **Breaking, in place: labels past 8 MiB after unification are refused at load** (GitHub #816,
+  issue #815, owner ruling of 2026-11-23). §7.10 unification gives an output's `unit` and
+  `quantity` to every input it drives. The inventory, the projection, the point list, the state
+  manifest and the export then hold or write a copy per input. A long label spelled once on an
+  output driving many inputs was therefore copied for each of them: about 94 GB of export and
+  380 GB held at the admission limits (computed, not run).
+  - **The budget.** `unify_attributes` now refuses a document whose connectors and declared boundary
+    outputs carry more than 8,388,608 bytes of `unit`, `quantity` and `displayUnit` once propagation
+    is done. Each connector counts for itself, so a propagated label counts exactly as the same
+    label written on each connector.
+  - **The refusal.** One `resource-limit-exceeded` error naming the total, with no subject, and the
+    propagation is rolled back. It comes after the non-finite, crossed-bound, conflict and
+    propagated-crossing refusals, any of which refuses the document alone.
+  - **What is not counted.** No other attribute set carries text, and the semantic layer's
+    `description` and `controlledDevice` are never set from a document.
+  - **It pre-empts later refusals.** Because it runs during attribute unification, a document past the
+    label budget that also has, for example, an unknown parameter or an algebraic loop now reports
+    `resource-limit-exceeded` where it reported its own defect before. Moving the check after
+    validation is issue #817.
+  - **Corpus.** The largest tracked or `open-control-library` model carries 274 bytes of labels, and
+    no model is refused.
 
 - **The validator handles a boundary input's path once, not once for every input it drives**
   (GitHub #812, issue #811). Two `oce-validate` steps repeated work for every input a boundary
@@ -817,6 +881,21 @@ so far, and no tag is cut by the bump.
     diagnostic for each missing cell, up to 2^20 (#649).
 
 ### CXF import and export
+
+- **The reader looks a boundary input's IRI up once, not once for every input it drives**
+  (GitHub #816, issue #815). Three reader steps repeated work for every input a boundary input
+  drives:
+  - Step 9 sorted the boundary-driven inputs, and the pass-through pairs, with a key that hashed
+    the IRI on every comparison.
+  - The declarations hashed the IRI into two sets for every input.
+  - The minted-alias check searched the owner's input list for every input.
+  
+  Each key is now computed once per element and each position looked up once per shared
+  allocation. The sets read each allocation's text once, and the positions come from a table built
+  in one pass. Order, diagnostics and outcomes are unchanged.
+  - Measured (release): 16 boundary inputs with 64 KiB IRIs over 2,000 / 4,000 / 8,000 targets read
+    in 44 / 56 / 96 ms and load in 51 / 69 / 115 ms. Before, they read in 140 / 261 / 506 ms
+    with GitHub #812, and loaded in 340 / 639 / 1,288 ms on `c60c02ad`, before either change.
 
 - **A boundary input passed through to many outputs is held once** (GitHub #812, issue #811).
   The reader copied the input's IRI twice for each pass-through pair it collected, and the

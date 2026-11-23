@@ -3,7 +3,7 @@
 //! "The canonical graph").
 
 use oce_model::{Attrs, BlockInstance, ModelGraph, Value, ValueType};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use super::ContentIdError;
 use crate::io::IoInventory;
@@ -171,7 +171,8 @@ fn is_reserved(class_path: &str) -> bool {
         .any(|entry| entry.reserved && entry.class_path == class_path)
 }
 
-/// Build the canonical graph of a loaded model and its boundary I/O table.
+/// Build the canonical graph of a loaded model and its boundary I/O table, every list in its
+/// canonical order.
 ///
 /// # Errors
 /// [`ContentIdError`] for a hand-built model no public load path produces: an unnamed
@@ -181,6 +182,41 @@ pub(super) fn canonical_graph<'a>(
     model: &'a ModelGraph,
     io: &'a IoInventory,
 ) -> Result<CanonicalGraph<'a>, ContentIdError> {
+    records(model, io, Order::Canonical)
+}
+
+/// The same records as [`canonical_graph`], in the order the model lists them: what the
+/// encoding's length needs, which does not depend on order, without the sorts' comparisons.
+///
+/// # Errors
+/// As [`canonical_graph`].
+pub(super) fn unsorted_graph<'a>(
+    model: &'a ModelGraph,
+    io: &'a IoInventory,
+) -> Result<CanonicalGraph<'a>, ContentIdError> {
+    records(model, io, Order::AsListed)
+}
+
+/// Whether [`records`] puts its lists in canonical order.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Order {
+    Canonical,
+    AsListed,
+}
+
+/// Every record of the canonical graph, sorted when `order` asks.
+///
+/// Each lookup a record makes costs a fixed amount, whatever the length of the names it carries:
+/// a block's name is found by its index, and a pass-through's boundary input by the address of
+/// its one shared path allocation before its text (issue #815). So building the records walks
+/// each name only where the model spells it, and a canonical length counted from them costs the
+/// records, not the bytes they encode.
+fn records<'a>(
+    model: &'a ModelGraph,
+    io: &'a IoInventory,
+    order: Order,
+) -> Result<CanonicalGraph<'a>, ContentIdError> {
+    let sorted = order == Order::Canonical;
     let reserved: Vec<bool> = model
         .blocks
         .iter()
@@ -200,13 +236,16 @@ pub(super) fn canonical_graph<'a>(
         }
     }
     let block_names = name_all(block_iris.iter().flatten().copied());
+    // Each block's name by its index, looked up once a block.
+    let names_by_block: Vec<Option<Name<'a>>> = block_iris
+        .iter()
+        .map(|iri| iri.and_then(|iri| block_names.get(iri).copied()))
+        .collect();
     let block_name = |index: usize| -> Result<Name<'a>, ContentIdError> {
-        block_iris
+        names_by_block
             .get(index)
             .copied()
             .flatten()
-            .and_then(|iri| block_names.get(iri))
-            .copied()
             .ok_or(ContentIdError::MalformedModel)
     };
     let ports = PortIndex::new(model);
@@ -242,7 +281,9 @@ pub(super) fn canonical_graph<'a>(
             let port = ports.input(*target).ok_or(ContentIdError::MalformedModel)?;
             targets.push((block_name(block)?, port));
         }
-        targets.sort_unstable();
+        if sorted {
+            targets.sort_unstable();
+        }
         inputs.push(InputRecord {
             name: input_names[path],
             value_type: definition.value_type,
@@ -254,7 +295,9 @@ pub(super) fn canonical_graph<'a>(
             targets,
         });
     }
-    inputs.sort_unstable_by(|left, right| left.name.cmp(&right.name));
+    if sorted {
+        inputs.sort_unstable_by(|left, right| left.name.cmp(&right.name));
+    }
 
     let output_names = name_all(io.frame_outputs.iter().map(|(path, _)| path.as_str()));
     let declared_outputs: BTreeMap<&str, &Attrs> = model
@@ -263,6 +306,9 @@ pub(super) fn canonical_graph<'a>(
         .map(|declaration| (declaration.iri.as_ref(), &declaration.attrs))
         .collect();
     let mut outputs = Vec::with_capacity(io.frame_outputs.len());
+    // A pass-through's boundary input by the address and length of its path allocation, which
+    // every pass-through of one input shares: equal views are equal text.
+    let mut input_by_view: HashMap<(*const u8, usize), Name<'a>> = HashMap::new();
     for (path, source) in &io.frame_outputs {
         let source_connector = connector(*source)?;
         let block_index = source_connector.block.0 as usize;
@@ -279,10 +325,18 @@ pub(super) fn canonical_graph<'a>(
                 .iri
                 .as_deref()
                 .ok_or(ContentIdError::MalformedModel)?;
-            let input = input_names
-                .get(feed_path)
-                .ok_or(ContentIdError::MalformedModel)?;
-            (&source_connector.attrs, Driver::Input(*input))
+            let view = (feed_path.as_ptr(), feed_path.len());
+            let input = match input_by_view.get(&view) {
+                Some(input) => *input,
+                None => {
+                    let input = *input_names
+                        .get(feed_path)
+                        .ok_or(ContentIdError::MalformedModel)?;
+                    input_by_view.insert(view, input);
+                    input
+                }
+            };
+            (&source_connector.attrs, Driver::Input(input))
         } else {
             let port = ports
                 .output(*source)
@@ -300,7 +354,9 @@ pub(super) fn canonical_graph<'a>(
             driver,
         });
     }
-    outputs.sort_unstable_by(|left, right| left.name.cmp(&right.name));
+    if sorted {
+        outputs.sort_unstable_by(|left, right| left.name.cmp(&right.name));
+    }
 
     let mut signatures: BTreeMap<&str, u64> = BTreeMap::new();
     let mut blocks = Vec::with_capacity(model.blocks.len());
@@ -335,7 +391,9 @@ pub(super) fn canonical_graph<'a>(
             params,
         });
     }
-    blocks.sort_unstable_by(|left, right| left.name.cmp(&right.name));
+    if sorted {
+        blocks.sort_unstable_by(|left, right| left.name.cmp(&right.name));
+    }
 
     let mut connections = Vec::with_capacity(model.connections.len());
     for edge in &model.connections {
@@ -357,7 +415,9 @@ pub(super) fn canonical_graph<'a>(
             output_port,
         });
     }
-    connections.sort_unstable();
+    if sorted {
+        connections.sort_unstable();
+    }
 
     Ok(CanonicalGraph {
         inputs,

@@ -231,6 +231,12 @@ pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut DiagnosticList)
             super::check_propagated_cluster(model, root, connectors, boundary_outputs, diags);
         }
     }
+    if !diags.iter().any(Diagnostic::is_error) {
+        // The labels each connector now carries, counted while propagation has only shared one
+        // allocation: a refusal here rolls it back below, before anything copies a label for each
+        // connector that holds it (issue #815).
+        super::check_label_budget(model, diags);
+    }
     if diags.iter().any(Diagnostic::is_error) {
         for (connector, attrs) in model.connectors.iter_mut().zip(connector_attrs) {
             connector.attrs = attrs;

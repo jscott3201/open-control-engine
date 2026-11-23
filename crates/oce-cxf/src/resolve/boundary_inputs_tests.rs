@@ -181,3 +181,61 @@ fn every_block_under_one_instance_iri_mints_its_own_identities() {
     assert!(diags.iter().all(|d| d.code == DiagCode::MalformedDocument
         && d.message == "boundary input collides with a canonical export node identity"));
 }
+
+#[test]
+fn a_boundary_driven_input_listed_twice_mints_at_its_first_position_only() {
+    // `urn:a` lists its boundary-driven input 0 at positions 0 and 2, so the export mints
+    // `urn:a.in0` for it, where its owner first lists it, as searching the owner's list found it.
+    // Input 0's own boundary is `urn:a.in2` and input 1's (on `urn:other`) is `urn:a.in0`: only
+    // the second collides with an identity the export mints.
+    use std::collections::{BTreeSet, HashSet};
+    use std::sync::Arc;
+
+    use oce_model::{BlockInstance, ModelGraph, ParamTable};
+
+    let block = |id: u32, iri: &str, inputs: Vec<ConnectorId>| BlockInstance {
+        id: BlockId(id),
+        class_iri: Arc::from("CDL.Reals.MultiSum"),
+        inputs,
+        outputs: vec![],
+        params: ParamTable::default(),
+        decl_order: id,
+        instance_iri: Some(Arc::from(iri)),
+    };
+    let mut graph = ModelGraph::new();
+    graph.blocks = vec![
+        block(0, "urn:other", vec![ConnectorId(1)]),
+        block(
+            1,
+            "urn:a",
+            vec![ConnectorId(0), ConnectorId(2), ConnectorId(0)],
+        ),
+    ];
+    graph.connectors = vec![
+        Connector::new(ConnectorId(0), BlockId(1), Dir::In, ValueType::Real, 0)
+            .with_iri("urn:a.in2"),
+        Connector::new(ConnectorId(1), BlockId(0), Dir::In, ValueType::Real, 1)
+            .with_iri("urn:a.in0"),
+        Connector::new(ConnectorId(2), BlockId(1), Dir::In, ValueType::Real, 2).with_iri("urn:c"),
+    ];
+    graph.external_inputs = vec![ConnectorId(0), ConnectorId(1)];
+    let doc = crate::parse_document(
+        br#"{"@context":{},"@graph":[{"@id":"urn:a.in2"},{"@id":"urn:a.in0"}]}"#,
+    )
+    .expect("parses");
+    let represented: HashSet<&str> = ["urn:a.in2", "urn:a.in0"].into_iter().collect();
+    let mut diags = DiagnosticList::new();
+    super::refuse_minted_aliases(
+        &doc,
+        &represented,
+        &graph,
+        &HashSet::new(),
+        &BTreeSet::new(),
+        &mut diags,
+    );
+    let subjects: Vec<&str> = diags
+        .iter()
+        .map(|d| d.subject.as_deref().expect("a declaration"))
+        .collect();
+    assert_eq!(subjects, ["urn:a.in0"]);
+}

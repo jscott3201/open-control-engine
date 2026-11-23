@@ -30,11 +30,21 @@ fn assert_model(message: Arc<str>) -> ModelGraph {
     model
 }
 
+/// A snapshot of the assert model whose message is `message`. The message is set by a parameter
+/// edit after the load: a model loaded with a message this long would be refused for its
+/// canonical encoding and for its snapshot (issue #815). A `String` edit is the host's own bytes
+/// and the one way a loaded model's snapshot can grow past what the load counted, so this is
+/// the one path on which `state_snapshot` itself still refuses for size.
 fn snapshot_with_message(message: Arc<str>) -> Result<crate::EngineStateSnapshot, OcError> {
     let mut engine = Engine::new();
     engine
-        .build_model_in_memory(assert_model(message), Some("urn:test:resource-model"))
+        .build_model_in_memory(assert_model(Arc::from("")), Some("urn:test:resource-model"))
         .unwrap();
+    engine.halt().unwrap();
+    engine
+        .set_param("urn:test:assert.message", Value::String(message))
+        .unwrap();
+    engine.resume().unwrap();
     engine.state_snapshot()
 }
 

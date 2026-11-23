@@ -17,6 +17,7 @@ use oce_model::{BlockInstance, Connector, ConnectorId, ModelGraph};
 
 mod crossed_bounds;
 mod finite_bounds;
+mod label_budget;
 mod params;
 mod params_absent;
 mod params_arrays;
@@ -30,6 +31,9 @@ mod unify;
 
 pub(crate) use crossed_bounds::{check_crossed_bounds, check_propagated_cluster};
 pub(crate) use finite_bounds::check_finite_bounds;
+pub(crate) use label_budget::check_label_budget;
+#[cfg(test)]
+pub(crate) use label_budget::{MAX_DOCUMENT_LABEL_BYTES, document_label_bytes};
 pub(crate) use params::check_block_params;
 pub(crate) use structural::{
     check_arena_ids, check_boundary_outputs, check_connections, check_port_types,

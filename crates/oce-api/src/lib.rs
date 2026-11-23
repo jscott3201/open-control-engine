@@ -73,6 +73,7 @@ mod replay;
 mod replay_codec;
 mod replay_descriptor;
 mod replay_wire;
+mod snapshot_fit;
 mod stable_hash;
 mod state;
 mod state_codec;

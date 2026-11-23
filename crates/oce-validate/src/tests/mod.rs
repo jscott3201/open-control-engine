@@ -15,6 +15,7 @@ mod determinism;
 mod diagnostic_budget;
 mod extent_agreement;
 mod finite_bounds;
+mod label_budget;
 mod matrix_gain_shape;
 mod params;
 mod params_finite;
