@@ -447,7 +447,9 @@ them. The implementation PR follows all fourteen.
    and `Change(Change(u))` come out right, but row 21 invents an event at every change (6 against
    OpenModelica's 0), because a first-iteration and a second-iteration pulse are true on the same
    frame; and `Pre` cones still need the fallback, since the engine shows `Pre`'s settled value a
-   frame late. Only option (d) does better.
+   frame late. Only option (d) does better. *As landed* (the second review of GitHub #805): a block
+   with two event inputs keeps today's rule on both when either input's cone falls back, so a
+   fallback shape keeps today's rule wherever it is.
 6. **`TimerAccumulating.reset`** (owner ruling, 2026-11-22: **(i)**). (i) **In**: it is a
    `when reset` event input, and OpenModelica resets on each of consecutive `Change` pulses where
    the engine resets on the first only. Not chosen: (ii) out: keep it on the rising edge and
@@ -535,7 +537,7 @@ the implementation ran them (two rows, marked; see [As landed](#as-landed)).
 | Corpus | Pulse into a consumer | Moves under (g) |
 | --- | --- | --- |
 | Building 33 (`crates/leverage/oce-verify/tests/fixtures/commissioning/building33/`) | `Change(enable)` → `PIDWithReset.trigger`, direct | Yes: `valve_oracle.txt` at 387 and 392 s (382 s reads 0 under both rules), `derive_valve.py`, and the two OpenModelica tests' claims ("eight of nine" resets becomes nine of nine); `yCooVal_reenable_probe.engine.csv` stays as the resolved divergence's evidence (corrected) |
-| G36 `cooling_only_controller`, `generic_time_suppression` (and `oce-author`'s emitted `generic_time_suppression.cxf.json`) | `Edge` → two `TriggeredSampler.trigger`, direct; `Edge` → `Latch.clr` | No: an `Edge` is never true on consecutive frames, so `w ≡ s ≡ false` and today's edge give the same bits; `clr` is unchanged (C4) |
+| G36 `cooling_only_controller`, `generic_time_suppression` (and `oce-author`'s emitted `generic_time_suppression.cxf.json`) | `Edge` → two `TriggeredSampler.trigger`, direct; `Edge` → `Latch.clr` | No: every one of these cones falls back (corrected in the second review of GitHub #805: the `Edge`'s input is `lat.y`, a `Latch` whose `clr` is behind a `Pre`, so the `Edge` is fed by a tainted net, a fallback leaf), and the four consumers in each document keep the rising edge, as before |
 | G36 `multizone_vav_freeze_protection` | `Or(tim.passed, Edge(endStaTwo))` → `lat.u`; `Edge` → `lat.clr`, `lat2.clr` | No: the probe ran the 111 trace frames and `endStaTwo` never pulses |
 | G36 `multizone_vav_supply_fan`, `multizone_vav_supply_temperature`, `trim_and_respond_have_hol_false` | `SampleTrigger(120 s)` → `Latch.u`, direct; `And(Not(false), SampleTrigger)` → `Latch.clr` | No output: `have_hol = false`, frame steps of 1, 1 and 60 s, and runs that start at t = 0 on the grid. Their blob run digests move (next row) |
 | The other 40 G36 fixtures, the CDL fixtures, `tools/golden-gen` goldens | none | No |
@@ -545,8 +547,17 @@ the implementation ran them (two rows, marked; see [As landed](#as-landed)).
 | `open-control-library` at fe7060a: 140 documents | 11 fault rules (AHU-0004, CHW-0009, FCU-0001, HP-0002, HW-0001, HW-0011 ×2, PMP-0004, RTU-0001, TOWER-0003, VAV-0005, VFD-0004 ×2): `Change`, `Integers.Change` or `Edge` → `BooleanToInteger` → `IntegerToReal` → `MovingAverage` → `MultiplyByParameter` → `GreaterThreshold` | No: no event input; they count one-frame pulses, which their cards document, and a consecutive change counts twice, as Modelica counts events |
 | Engine tests that pin today's merging | `open_modelica_event_pulses.rs`, `sample_trigger_event_inputs.rs`, `building_33_openmodelica_reenable.rs`, `building_33_openmodelica_frames.rs` | Rewritten to the new rule; `DVG-000001` and `DVG-000002` move to `resolved` |
 
-No tracked or library document has a cone that falls back, so decision 5 moves nothing in the
-corpus. The 46 fixture goldens, 422 provenance goldens, every G36 trace and every blob output are
+Decision 5 moves nothing in the corpus: the cones that fall back (the twelve consumers of the
+row above) gave today's values before and give them now. **As landed** (corrected in the second
+review of GitHub #805, which found the first sentence of this paragraph wrong), the census per
+consumer block of every loadable document under `crates/` is: 9 settled (Building 33's
+`PIDWithReset`; `oce-api`'s `pulse_snapshot` `OnCounter`, `Latch` and `TriggeredSampler`; two
+`Latch`es in `multizone_vav_freeze_protection`; the hold `Latch` of `multizone_vav_supply_fan`,
+`multizone_vav_supply_temperature` and `trim_and_respond_have_hol_false`), 12 cone fallbacks
+(the row above) and 25 on the rising edge with no pulse or sample upstream, one of them
+(`multizone_vav_supply_fan`'s `PIDWithReset`) with a tainted data input. `crates/oce-api/tests/
+settled_rule_census.rs` pins it per document (`fixtures/settled_rule_census.txt`); the
+`open-control-library` documents (d90f63b) have no consumer on the rule or a fallback. The 46 fixture goldens, 422 provenance goldens, every G36 trace and every blob output are
 byte-identical; the implementation PR ran them. Docs that change with it:
 the execution profile's "Events on a Boolean input" and "Conformance boundary",
 `docs/cdl-coverage.md`, `docs/verification-evidence.md`, `TESTING.md`'s line on
@@ -745,7 +756,11 @@ found two problems and one unmeasured premise. What changed:
   while `clr` was already true before the frame; that needs `clr`'s cone true between instants
   and false at one, a negated sample. With `u = SampleTrigger(2 s)` and `clr =
   Not(SampleTrigger(2 s))` OpenModelica keeps the latch set and the engine clears it at the next
-  frame: `DVG-000008`, registered; the engine before this change gave the same values. G36
+  frame: `DVG-000008`, registered. For that pilot the engine before this change gave the same
+  values; not in general: the second review found `Toggle` graphs (`u = SampleTrigger(1.5 s)`,
+  `clr = Nor` of samples, say) where single frames matched OpenModelica before this change and do
+  not now, though never a whole column and never for `Latch`; the orchestrator accepted those
+  single frames as part of `DVG-000008` and reported it to the owner. G36
   `TrimAndRespond`'s hold latch (`clr = And(Not(hold), sample)`) is not that sub-case: its `clr`
   is false between instants, so `w(clr)` is always false; the hold-latch pilot agrees and the
   three G36 fixtures' traces are unchanged.
@@ -785,3 +800,43 @@ found two problems and one unmeasured premise. What changed:
   `Pre(SampleTrigger(1 s))` after an off-grid start (`DVG-000006`) counted at frame 1 today, as
   OpenModelica does, because today's `SampleTrigger` was true at frame 0 off the grid (decision 3's
   grid test removes that; the rest of that column differs on both).
+
+### The second review of GitHub #805
+
+A delta review (24,000 random graphs against its own model of the revised rule, and against a
+model of Modelica derived from the specification) confirmed the first round's fixes and found one
+problem that failed the acceptance bar:
+
+- **A fallback cone on one event input puts every event input of the block on the rising edge.**
+  A two-input consumer (`OnCounter` trigger and reset, `Latch` and `Toggle` u and clr) with one
+  input on a fallback cone and the other on the rule met the two in one sequence neither rule
+  describes: the fallback input is as wrong under the frame model as it always was, and the old
+  merging on the other input had cancelled it. `MixedFallbackPilot` on the pinned classes, frames
+  0 to 9 (today is `development` 0700ee18; "PR before" is this PR before the fix):
+
+  | Shape | today | PR before | PR after | OpenModelica |
+  | --- | --- | --- | --- | --- |
+  | `Latch(u = Change(a), clr = Pre(Not(Change(a))))` | 0 0 0 0 0 0 0 0 0 0 | 0 0 1 1 1 1 1 1 1 1 | 0 0 0 0 0 0 0 0 0 0 | 0 0 0 0 0 0 0 0 0 0 |
+  | `OnCounter(trigger = Change(b), reset = Edge(Change(b)))` | 0 0 0 0 0 0 0 0 0 0 | 0 0 1 2 2 2 2 2 2 2 | 0 0 0 0 0 0 0 0 0 0 | 0 0 0 0 0 0 0 0 0 0 |
+  | `Toggle(u = Not(SampleTrigger(3 s, shift 0.5)), clr = Pre(b))` | 1 1 0 0 0 0 0 0 0 0 | 1 1 0 0 0 0 0 0 0 0 | 1 1 0 0 0 0 0 0 0 0 | 1 0 0 0 0 0 0 0 0 0 |
+  | `Toggle(u = SampleTrigger(1.5 s), clr = Nor(SampleTrigger(2 s), SampleTrigger(3 s)))` | 1 0 1 1 1 0 0 0 1 1 | 1 0 1 0 0 0 1 0 1 0 | 1 0 1 0 0 0 1 0 1 0 | 1 1 1 0 0 0 1 1 1 0 |
+
+  The fix (the orchestrator's call, consistent with decision 5): a consumer keeps the plain
+  rising edge on all its event inputs when any of its settled inputs' cones holds a fallback
+  leaf, mirroring the data-input fallback. Such a consumer takes today's frame 0 as well (no `i`,
+  no initial-frame event, `Latch` and `Toggle` reading the frame values). The third row differs
+  from OpenModelica at frame 1 on every engine, the `Pre` a frame late: `DVG-000012`. The fourth
+  is `DVG-000008`'s shape (frames 1 and 7). No tracked or library consumer moves: the census
+  (section 4) marks none that was on the rule and now falls back.
+- **The data fallback is wider than needed.** A tainted `IntegratorWithReset.u` (the integrand)
+  does not affect the reset value, yet puts the block on the rising edge; left as landed. The one
+  tracked consumer with a tainted data input, `multizone_vav_supply_fan`'s `PIDWithReset` (its
+  `u_s` from `TrimAndRespond` through `FirstOrderHold` and `Divide`), has no pulse or sample in its
+  `trigger` cone (an `Or` of `uOpeMod` comparisons), so it is on the rising edge with or without
+  the data fallback; the census says "rising, data tainted".
+- **The acceptance bar is mechanical.** `settled_rule_differential.rs` carries a second oracle, a
+  model of Modelica's snapped event iteration with the initial sequence of decision 3's revision,
+  independent of the rule, and asserts per generated column that wherever the plain rising edge
+  gives Modelica's whole column the engine does too, but in `DVG-000008`'s shape. The generator
+  now makes tainted data inputs, two-input consumers with one fallback input and negated samples
+  in `clr`.

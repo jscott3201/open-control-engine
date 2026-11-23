@@ -204,9 +204,11 @@ so far, and no tag is cut by the bump.
   (any `Pre`, and anything a chain of blocks connects to a pulse, a sample or a `Pre`), and each
   frame evaluates the cone twice more: `w` with pulses and samples false, `s` with pulses false.
   The input fires on `(v and not w(k-1)) or (not v and s)` and the block stores `w` where it stored
-  the previous trigger. A cone with a fallback leaf, every cone with no pulse or sample, and every
-  event input of a block whose data inputs a pulse, sample or `Pre` reaches (data cones are not
-  traced), keep the rising edge bit for bit (all 46 G36 traces, the goldens and the blob outputs
+  the previous trigger. A cone with a fallback leaf, every cone with no pulse or sample, every
+  event input of a block with any event input on a fallback cone (a consumer with any fallback
+  event input keeps today's rule on all of them, frame 0 included), and every event input of a
+  block whose data inputs a pulse, sample or `Pre` reaches (data cones are not traced), keep the
+  rising edge bit for bit (all 46 G36 traces, the goldens and the blob outputs
   are unchanged). The consumers are `OnCounter.trigger` and `.reset`, the `.trigger` of
   `TriggeredSampler`, `TriggeredMax`, `TriggeredMovingMean`, `IntegratorWithReset` and
   `PIDWithReset` (PI, PID), `Latch.u` and `.clr`, `Toggle.u` and `.clr`, and
@@ -2990,9 +2992,13 @@ so far, and no tag is cut by the bump.
   inputs carrying a converted pulse); every column agrees but five more registered, documented
   shapes: a fallback cone at frame 0 (`DVG-000007`), a negated sample on `clr` (`DVG-000008`), a
   data input carrying a converted pulse (`DVG-000009`), OpenModelica's reinit of a continuous
-  state when a negated sample falls (`DVG-000010`) and a reset between frames on an off-grid run
-  (`DVG-000011`). In each the engine gives what it gave before this change or differs at fewer
-  frames. A seeded differential test (`oce-api`'s `settled_rule_differential.rs`, 3,000 random
+  state when a negated sample falls (`DVG-000010`), a reset between frames on an off-grid run
+  (`DVG-000011`) and, from the second review, a `Pre` on one input of a two-input consumer
+  (`DVG-000012`, `MixedFallbackPilot`). In each the engine gives what it gave before this change
+  or differs at fewer frames, but single `Toggle` frames in `DVG-000008`'s shape and
+  `DVG-000006`'s frame 1. The differential test now also asserts the acceptance bar against a
+  model of Modelica's event iteration, and `settled_rule_census.rs` pins the path every consumer
+  of every loadable document in the crates takes. A seeded differential test (`oce-api`'s `settled_rule_differential.rs`, 3,000 random
   graphs of every cone class over pulses, samples, levels and fallback leaves into `OnCounter`,
   `TriggeredSampler`, `Latch` and `Toggle`, frame 0 included, against an independent model of the
   rule) and a test per cone class through the facade (`settled_rule_classes.rs`: composite

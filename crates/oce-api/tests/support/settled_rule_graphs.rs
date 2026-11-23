@@ -129,7 +129,9 @@ impl Op {
 pub(crate) enum Consumer {
     Counter(usize),
     CounterReset(usize, usize),
-    Sampler(usize),
+    /// The trigger, and whether the data input `u` reads `BooleanToReal(Change(a))` (a tainted
+    /// data input) rather than the host input `r`.
+    Sampler(usize, bool),
     Latch(usize, usize),
     Toggle(usize, usize),
 }
@@ -163,6 +165,12 @@ pub(crate) fn generate(rng: &mut Rng) -> Graph {
             ),
         });
     }
+    // A negated sample now and then, for a `clr` that is true between instants.
+    if let Some(j) = nets.iter().position(|n| matches!(n, Net::Sample(..)))
+        && rng.below(3) == 0
+    {
+        nets.push(Net::Logic(Op::Not, vec![j]));
+    }
     for _ in 0..1 + rng.below(5) {
         let op = Op::ALL[rng.below(Op::ALL.len())];
         let inputs = (0..op.arity()).map(|_| rng.below(nets.len())).collect();
@@ -175,10 +183,43 @@ pub(crate) fn generate(rng: &mut Rng) -> Graph {
         consumers.push(match rng.below(5) {
             0 => Consumer::Counter(x),
             1 => Consumer::CounterReset(x, y),
-            2 => Consumer::Sampler(x),
+            2 => Consumer::Sampler(x, rng.below(3) == 0),
             3 => Consumer::Latch(x, y),
             _ => Consumer::Toggle(x, y),
         });
     }
     Graph { nets, consumers }
+}
+
+/// One frame's host inputs.
+#[derive(Clone, Copy)]
+pub(crate) struct Inputs {
+    pub(crate) a: bool,
+    pub(crate) b: bool,
+    pub(crate) r: f64,
+}
+
+/// `SampleTrigger`'s index and grid test, as `Logical/Sources/SampleTrigger.mo` puts the instants
+/// at `phase + k * period` (`phase = mod(shift, period)`), with the engine's 1e-9 tolerance.
+pub(crate) fn sample_index(t: f64, period: f64, shift: f64) -> (i64, bool) {
+    let phase = shift - (shift / period).floor() * period;
+    let x = (t - phase) / period + 1e-9;
+    let k = x.floor() as i64;
+    (k, x - x.floor() < 2e-9 && k >= 0)
+}
+
+/// A sample's frame values: `true` at frame 0 only on an instant, then when a frame reaches a new
+/// instant (all instants of the frame interval shown at the frame).
+pub(crate) fn sample_frames(period: f64, shift: f64, times: &[f64]) -> Vec<bool> {
+    let mut last = -1i64;
+    times
+        .iter()
+        .enumerate()
+        .map(|(k, &t)| {
+            let (index, on_grid) = sample_index(t, period, shift);
+            let v = if k == 0 { on_grid } else { index > last };
+            last = last.max(index);
+            v
+        })
+        .collect()
 }

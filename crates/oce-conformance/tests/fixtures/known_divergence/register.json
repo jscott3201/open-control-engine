@@ -349,7 +349,7 @@
           "kind": "engine_run",
           "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_mixtures_off_grid.engine.csv",
           "sha256": "d45fc9c344a4e1fbb940e09d083a35fc0590eac37b8f1ed1537d345aa28f4c48",
-          "summary": "The same shape off the sample grid, the engine's cntNotPre: 0, 1, 1, 1, 1, 1, 1, 1, 1, 1."
+          "summary": "The engine's cntNotPre (init_mixtures_off_grid): 0, 1, 1, 1, 1, 1, 1, 1, 1, 1."
         },
         {
           "party": "open_modelica",
@@ -363,7 +363,7 @@
           "kind": "external_run",
           "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_mixtures_off_grid.canonical.csv",
           "sha256": "e4c03d64b3831697e5227f41bf087e239332e4ade6736e63efa1666dfc9562b8",
-          "summary": "OpenModelica 1.25.1, off the sample grid: 1, 1, 1, 1, 1, 1, 1, 1, 1, 1."
+          "summary": "OpenModelica 1.25.1, the same shape: 1, 1, 1, 1, 1, 1, 1, 1, 1, 1."
         }
       ],
       "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
@@ -411,11 +411,25 @@
           "summary": "The engine's latD: 1, 0, 1, 0, 1, 0, 1, 0, 1, 0."
         },
         {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/mixed_fallback.engine.csv",
+          "sha256": "163b060bcc8e9639a9a1d12f359404ec78e8d5c6d3b1ce26ff22d85c895b362d",
+          "summary": "The engine's togD (mixed_fallback): 1, 0, 1, 0, 0, 0, 1, 0, 1, 0."
+        },
+        {
           "party": "open_modelica",
           "kind": "external_run",
           "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/latch_clear.canonical.csv",
           "sha256": "dc8b5e366626cc1b27eb74fd1e93609eca247d40a20c115c39b01817e1b8156e",
           "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 1, 1, 1, 1, 1, 1, 1, 1, 1, 1."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/mixed_fallback.canonical.csv",
+          "sha256": "98aad7e848d17ad035addd576ce7f3150e8b21d101e6d78dc387216cb0de1f86",
+          "summary": "OpenModelica 1.25.1, the same shape: 1, 1, 1, 0, 0, 0, 1, 1, 1, 0."
         }
       ],
       "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
@@ -423,7 +437,7 @@
       "reviewed_on": "2026-11-22",
       "reviewed_commit": "7a11a240373c574b940068961bd2e998ca34b3f7",
       "state": "open",
-      "disposition": "Documented limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md), accepted by the orchestrator in the review of GitHub #805: the engine stores no previous value of clr (state_len and the state words unchanged); before this change the engine gave the same values (it read clr as a level). Toggle (togD) shows the same at the frames after each instant.",
+      "disposition": "Documented limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md), accepted by the orchestrator in the reviews of GitHub #805: the engine stores no previous value of clr (state_len and the state words unchanged). For this pilot's Latch and Toggle the engine before this change gave the same values; in general it does not: with a negated sample in clr the second review found Toggle graphs where single frames matched OpenModelica before this change and do not now (none across a whole column, none for Latch), accepted by the orchestrator as part of this shape and reported to the owner. MixedFallbackPilot's togD (u = SampleTrigger(1.5 s), clr = Nor(SampleTrigger(2 s), SampleTrigger(3 s))) differs at frames 1 and 7.",
       "upstream_issue": {
         "status": "not_applicable",
         "url": null
@@ -519,7 +533,7 @@
           "kind": "engine_run",
           "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_negated_off_grid.engine.csv",
           "sha256": "d15c6542ccdf4bac95f3014d9295967d069549786bba49b527673d2343e64602",
-          "summary": "The same shape off the sample grid, the engine's integS: 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5."
+          "summary": "The engine's integS (init_negated_off_grid): 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5."
         },
         {
           "party": "open_modelica",
@@ -533,7 +547,7 @@
           "kind": "external_run",
           "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_negated_off_grid.canonical.csv",
           "sha256": "d540b5ff69100d10035cc3eabb4b7abc634ee32c88d499475a1140c3e64298a2",
-          "summary": "OpenModelica 1.25.1, off the sample grid: 0.5, 2.5, -3.5, 4.25, -5.5, 6.75, -7.25, 8.5, -9.75, 10.5."
+          "summary": "OpenModelica 1.25.1, the same shape: 0.5, 2.5, -3.5, 4.25, -5.5, 6.75, -7.25, 8.5, -9.75, 10.5."
         }
       ],
       "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
@@ -594,6 +608,58 @@
       "reviewed_commit": "7a11a240373c574b940068961bd2e998ca34b3f7",
       "state": "open",
       "disposition": "Documented HostTick v1 limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md): every event of the frame interval is snapped to the frame's time (section 6, snapping), as DVG-000005; timC0 shows the same.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000012",
+      "summary": "A Pre on one event input of a two-input consumer: Toggle(u = Not(SampleTrigger(3 s, shift 0.5)), clr = Pre(b)) with b rising at 1 s; OpenModelica's pre(b) settles inside the instant and clears the toggle at 1 s, HostTick v1's Pre a frame later. The consumer keeps the rising edge on both inputs (decision 5, the per-consumer fallback of the second review of GitHub #805).",
+      "subject": {
+        "class": "CDL.Logical.Toggle",
+        "scenario": "MixedFallbackPilot",
+        "signal": "togC",
+        "observation": "u = Not(SampleTrigger(3 s, shift 0.5)), clr = Pre(b), b = F,T,F,T,T,..., 1 s frames from t = 0"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:mixed_fallback:togC:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:MixedFallbackPilot:togC"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/mixed_fallback.engine.csv",
+          "sha256": "163b060bcc8e9639a9a1d12f359404ec78e8d5c6d3b1ce26ff22d85c895b362d",
+          "summary": "The engine's togC: 1, 1, 0, 0, 0, 0, 0, 0, 0, 0."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/mixed_fallback.canonical.csv",
+          "sha256": "98aad7e848d17ad035addd576ce7f3150e8b21d101e6d78dc387216cb0de1f86",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "7a11a240373c574b940068961bd2e998ca34b3f7",
+      "state": "open",
+      "disposition": "Documented limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md), decision 5: a cone with a Pre keeps the rising edge, here on one input, which puts every event input of the block on the rising edge; the engine before this change gave the same values, and so did this change before the per-consumer fallback.",
       "upstream_issue": {
         "status": "not_applicable",
         "url": null

@@ -90,7 +90,7 @@ macro_rules! init_pilot {
     };
 }
 
-fn pilots() -> [Pilot; 8] {
+fn pilots() -> [Pilot; 9] {
     use Expect::{Exact, Registered, Within};
     [
         Pilot {
@@ -242,6 +242,15 @@ fn pilots() -> [Pilot; 8] {
                 ("samD", Registered("DVG-000009", &[2])),
                 ("integD", Registered("DVG-000009", &[2])),
                 ("pidD", Registered("DVG-000009", &[2, 5])),
+            ]
+        ),
+        init_pilot!(
+            "mixed_fallback",
+            pulse_event_init_documents::mixed_fallback,
+            "MixedFallbackPilot",
+            &[
+                ("togC", Registered("DVG-000012", &[1])),
+                ("togD", Registered("DVG-000008", &[1, 7])),
             ]
         ),
     ]
@@ -432,6 +441,7 @@ fn vendored(path: &str) -> &'static [u8] {
         "Logical/Edge.mo",
         "Logical/Xor.mo",
         "Conversions/BooleanToReal.mo",
+        "Logical/Nor.mo",
     )
 }
 

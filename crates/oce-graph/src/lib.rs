@@ -58,7 +58,7 @@ mod topo;
 
 pub use build::{FeedthroughDag, build_driver_of, build_feedthrough_dag};
 pub use constructed::charge_instance;
-pub use events::{EventPlan, ShadowSource, needs_plan};
+pub use events::{ConsumerCensus, EventPlan, ShadowSource, needs_plan};
 pub use oce_blocks::{ConstructedBudget, MAX_CONSTRUCTED_WORDS};
 pub use tick::{EvalContext, allocate_state, eval_tick, run_tick};
 pub use topo::topo_sort;

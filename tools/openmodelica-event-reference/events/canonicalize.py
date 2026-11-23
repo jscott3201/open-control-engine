@@ -130,6 +130,10 @@ PULSE_PILOTS = {
         ("togThree", "togThree.y"), ("cntXorNot", "cntXorNot.y"), ("latXorNot", "latXorNot.y"),
         ("togXorNot", "togXorNot.y"),
     ]),
+    "MixedFallbackPilot": ("pulse_events", "mixed_fallback", 0.0, [
+        ("a", "aB.y"), ("b", "bB.y"), ("latA", "latA.y"), ("togC", "togC.y"), ("togD", "togD.y"),
+        ("cntB", "cntB.y"),
+    ]),
     "LatchClearPilot": ("pulse_events", "latch_clear", 0.0, [
         ("a", "aB.y"), ("b", "bB.y"), ("latA", "latA.y"), ("togA", "togA.y"), ("latB", "latB.y"),
         ("togB", "togB.y"), ("latC", "latC.y"), ("togC", "togC.y"), ("latD", "latD.y"),

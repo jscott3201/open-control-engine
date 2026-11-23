@@ -59,6 +59,23 @@ pub enum ShadowSource {
     Node(ConnectorId),
 }
 
+/// What the event plan decided for one block that declares settled event inputs
+/// ([`EventPlan::census`]).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ConsumerCensus {
+    /// The block (`BlockId.0`).
+    pub block: usize,
+    /// Some settled input's cone holds a pulse or a sample and no fallback leaf.
+    pub active: bool,
+    /// Some settled input's cone holds a fallback leaf (a `Pre`, a tainted edge block or level).
+    pub cone_fallback: bool,
+    /// Some data input (a declared input that is not a settled event input) reads a tainted net.
+    pub tainted_data: bool,
+    /// The block receives settled values: active, with no fallback cone and no tainted data
+    /// input. Otherwise every event input of the block keeps the rising edge.
+    pub settled: bool,
+}
+
 /// The frozen event plan of a schedule: which logic blocks the shadow pass evaluates and which
 /// blocks receive settled values. Empty when no declared event input has an active cone.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -110,7 +127,40 @@ impl EventPlan {
     /// model BUILD (or the blob decoder) accepted.
     #[must_use]
     pub fn derive(model: &Model, blocks: &[Box<dyn Block>], schedule: &Schedule) -> Self {
+        Self::derive_with(model, blocks, schedule, None)
+    }
+
+    /// What the plan decides for every block that declares settled event inputs, in block order:
+    /// a census for tests and documentation, which allocates its result (the plan itself is
+    /// derived exactly as [`Self::derive`] derives it).
+    #[must_use]
+    pub fn census(
+        model: &Model,
+        blocks: &[Box<dyn Block>],
+        schedule: &Schedule,
+    ) -> Vec<ConsumerCensus> {
+        let mut out = Vec::new();
+        let _ = Self::derive_with(model, blocks, schedule, Some(&mut out));
+        out
+    }
+
+    fn derive_with(
+        model: &Model,
+        blocks: &[Box<dyn Block>],
+        schedule: &Schedule,
+        mut census: Option<&mut Vec<ConsumerCensus>>,
+    ) -> Self {
         if !needs_plan(blocks) {
+            if let Some(out) = census {
+                for (b, block) in blocks.iter().enumerate() {
+                    if !block.settled_event_inputs().is_empty() {
+                        out.push(ConsumerCensus {
+                            block: b,
+                            ..ConsumerCensus::default()
+                        });
+                    }
+                }
+            }
             return Self::default();
         }
         let nb = model.blocks.len();
@@ -240,10 +290,33 @@ impl EventPlan {
                         .get(driver(i))
                         .is_some_and(|&o| o != NONE && tainted[o as usize])
             });
-            if tainted_data
-                || settled.iter().any(|&p| drive(p).is_none())
-                || !settled.iter().any(|&p| drive(p).is_some_and(&active))
+            // A settled input whose cone holds a fallback leaf keeps the rising edge, and so does
+            // every other event input of the block: two inputs' `when` runs on one sequence of
+            // iterations, and a co-input taken by the rising edge would otherwise meet the
+            // other's settled events in a sequence neither rule describes (the second review of
+            // GitHub #805; decision 5, "fallback shapes keep today's rule").
+            let cone_fallback = settled.iter().any(|&p| {
+                drive(p).is_some_and(|d| match leaf_of(d) {
+                    Leaf::Fallback => true,
+                    Leaf::Logic => summary[owner[d] as usize] & 2 != 0,
+                    Leaf::Level | Leaf::Pulse | Leaf::Sample => false,
+                })
+            });
+            let any_active = settled.iter().any(|&p| drive(p).is_some_and(&active));
+            let undriven = settled.iter().any(|&p| drive(p).is_none());
+            let takes_rule = !(tainted_data || cone_fallback || undriven) && any_active;
+            if let Some(out) = census.as_deref_mut()
+                && !settled.is_empty()
             {
+                out.push(ConsumerCensus {
+                    block: b,
+                    active: any_active,
+                    cone_fallback,
+                    tainted_data,
+                    settled: takes_rule,
+                });
+            }
+            if !takes_rule {
                 continue;
             }
             let start = plan.sources.len() as u32;

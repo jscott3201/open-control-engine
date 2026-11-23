@@ -363,3 +363,68 @@ fn a_consumer_whose_data_input_a_pulse_reaches_keeps_the_rising_edge() {
         );
     }
 }
+
+#[test]
+fn a_fallback_cone_on_one_event_input_keeps_every_event_input_of_the_block_on_the_rising_edge() {
+    // The second review of GitHub #805: a two-input consumer with one input on a fallback cone and
+    // the other on the rule met the two in one sequence neither describes. Each shape below gets
+    // no settled values, so both inputs (frame 0 included) take the plain rising edge.
+    let sample = |b: &mut ModelBuilder, period: f64, shift: f64| {
+        b.block_real(make(
+            "CDL.Logical.Sources.SampleTrigger",
+            &[
+                ("period", Value::Real(period)),
+                ("shift", Value::Real(shift)),
+            ],
+        ))
+        .2[0]
+    };
+    // Latch(u = Change(a), clr = Pre(Not(Change(a)))).
+    let mut b = ModelBuilder::default();
+    let (_, _, cha) = real_block(&mut b, "CDL.Logical.Change");
+    let (_, not_in, not_out) = real_block(&mut b, "CDL.Logical.Not");
+    let (_, pre_in, pre_out) = real_block(&mut b, "CDL.Logical.Pre");
+    let (latch, lat_in, _) = real_block(&mut b, "CDL.Logical.Latch");
+    b.connect(cha[0], not_in[0]);
+    b.connect(not_out[0], pre_in[0]);
+    b.connect(cha[0], lat_in[0]);
+    b.connect(pre_out[0], lat_in[1]);
+    assert!(plan(&b).1.hidden(latch.0 as usize).is_none(), "Latch");
+    // OnCounter(trigger = Change(b), reset = Edge(Change(b))).
+    let mut b = ModelBuilder::default();
+    let (_, _, cha) = real_block(&mut b, "CDL.Logical.Change");
+    let (_, edg_in, edg_out) = real_block(&mut b, "CDL.Logical.Edge");
+    let (cnt, cnt_in, _) = b.block_real(make(
+        "CDL.Integers.OnCounter",
+        &[("y_start", Value::Integer(0))],
+    ));
+    b.connect(cha[0], edg_in[0]);
+    b.connect(cha[0], cnt_in[0]);
+    b.connect(edg_out[0], cnt_in[1]);
+    assert!(plan(&b).1.hidden(cnt.0 as usize).is_none(), "OnCounter");
+    // Toggle(u = Not(SampleTrigger(3 s, shift 0.5)), clr = Pre(b)).
+    let mut b = ModelBuilder::default();
+    let s3 = sample(&mut b, 3.0, 0.5);
+    let (_, not_in, not_out) = real_block(&mut b, "CDL.Logical.Not");
+    let (_, _, pre_out) = real_block(&mut b, "CDL.Logical.Pre");
+    let (toggle, tog_in, _) = real_block(&mut b, "CDL.Logical.Toggle");
+    b.connect(s3, not_in[0]);
+    b.connect(not_out[0], tog_in[0]);
+    b.connect(pre_out[0], tog_in[1]);
+    assert!(plan(&b).1.hidden(toggle.0 as usize).is_none(), "Toggle");
+    // Not too wide: the same Toggle with a plain level on `clr` keeps the rule.
+    let mut b = ModelBuilder::default();
+    let s3 = sample(&mut b, 3.0, 0.5);
+    let (_, not_in, not_out) = real_block(&mut b, "CDL.Logical.Not");
+    let (_, level_in, level_out) = real_block(&mut b, "CDL.Logical.Not");
+    let (toggle, tog_in, _) = real_block(&mut b, "CDL.Logical.Toggle");
+    b.connect(s3, not_in[0]);
+    b.connect(not_out[0], tog_in[0]);
+    b.connect(level_out[0], tog_in[1]);
+    let _ = level_in;
+    let (_, p) = plan(&b);
+    let hidden = p
+        .hidden(toggle.0 as usize)
+        .expect("a level co-input keeps the rule");
+    assert!(matches!(hidden[1], ShadowSource::Level(_)));
+}

@@ -192,15 +192,17 @@ Detected disagreements may be recorded in
 `crates/oce-conformance/tests/fixtures/known_divergence/register.json` after human adjudication.
 The register is evidence only: membership does not change discrepancies, comparison settings,
 tier status, goldens, or test results. Its initial revision was empty because no clean-room Nand
-discrepancy reproduces; it now holds eleven entries. `DVG-000001` and `DVG-000002`, the engine and
+discrepancy reproduces; it now holds twelve entries. `DVG-000001` and `DVG-000002`, the engine and
 OpenModelica apart where a pulse was true on two consecutive frames (GitHub #796), are resolved by
-the settled-value rule of issue #800 and keep their evidence; `DVG-000003` to `DVG-000011` are the
+the settled-value rule of issue #800 and keep their evidence; `DVG-000003` to `DVG-000012` are the
 limits that rule leaves (a cone with a `Pre`, at frame 0 too; several sample instants in one
 frame; an event between frames shown at the next; a negated sample on a `Latch`'s `clr`; a data
 input carrying a converted pulse; OpenModelica's reinit on a negated sample's fall), open by the
 owner's ruling and each pinned by a test that holds the engine to its registered evidence. The
 settled-value rule itself is also checked per PR by `oce-api`'s `settled_rule_differential.rs`
-(3,000 seeded random graphs against an independent model of the rule) and
+(3,000 seeded random graphs against an independent model of the rule and a model of Modelica's
+event iteration, asserting the acceptance bar), `settled_rule_census.rs` (the path every
+consumer in the crates takes) and
 `settled_rule_classes.rs` (every cone class through the facade). A
 private test reader validates the closed schema and local evidence
 digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.

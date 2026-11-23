@@ -77,10 +77,13 @@ impl Build {
         );
     }
     fn sample_trigger(&mut self, name: &str, period: &str) {
+        self.sample_trigger_shifted(name, period, "0.0");
+    }
+    fn sample_trigger_shifted(&mut self, name: &str, period: &str, shift: &str) {
         self.block(
             name,
             "CDL.Logical.Sources.SampleTrigger",
-            vec![("period", double(period)), ("shift", double("0.0"))],
+            vec![("period", double(period)), ("shift", double(shift))],
             &[],
             &[("y", B)],
         );
@@ -330,4 +333,43 @@ pub(crate) fn latch_clear() -> Doc {
     b.sampler("samD", "pulR.y", "notChaA.y");
     b.data_consumers("D", "pulR.y", "notChaA.y");
     b.doc("pulse_latch_clear", vec![("a", B), ("b", B)])
+}
+
+/// `MixedFallbackPilot`: two-input consumers with one input on a fallback cone and the other on
+/// the rule (the second review of GitHub #805), and a `Toggle` whose `clr` holds negated samples.
+pub(crate) fn mixed_fallback() -> Doc {
+    let mut b = Build::default();
+    b.logic1("chaA", "CDL.Logical.Change", "a");
+    b.logic1("notChaA", "CDL.Logical.Not", "chaA.y");
+    b.logic1("preNotChaA", "CDL.Logical.Pre", "notChaA.y");
+    b.logic1("chaB", "CDL.Logical.Change", "b");
+    b.logic1("edgChaB", "CDL.Logical.Edge", "chaB.y");
+    b.sample_trigger_shifted("s3", "3.0", "0.5");
+    b.logic1("notS3", "CDL.Logical.Not", "s3.y");
+    b.logic1("preB", "CDL.Logical.Pre", "b");
+    b.sample_trigger("s15", "1.5");
+    b.sample_trigger("s2", "2.0");
+    b.sample_trigger("s3b", "3.0");
+    b.logic2("norS", "CDL.Logical.Nor", "s2.y", "s3b.y");
+    for (name, class, u, clr) in [
+        ("latA", "CDL.Logical.Latch", "chaA.y", "preNotChaA.y"),
+        ("togC", "CDL.Logical.Toggle", "notS3.y", "preB.y"),
+        ("togD", "CDL.Logical.Toggle", "s15.y", "norS.y"),
+    ] {
+        b.block(name, class, vec![], &[("u", B), ("clr", B)], &[("y", B)]);
+        b.wire(u, &format!("{name}.u"));
+        b.wire(clr, &format!("{name}.clr"));
+        b.output(name, B);
+    }
+    b.block(
+        "cntB",
+        "CDL.Integers.OnCounter",
+        vec![("y_start", integer("0"))],
+        &[("trigger", B), ("reset", B)],
+        &[("y", I)],
+    );
+    b.wire("chaB.y", "cntB.trigger");
+    b.wire("edgChaB.y", "cntB.reset");
+    b.output("cntB", I);
+    b.doc("pulse_mixed_fallback", vec![("a", B), ("b", B)])
 }
