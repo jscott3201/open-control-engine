@@ -5,8 +5,8 @@
 
 use super::{
     ArrayElementBudget, ElementNames, MAX_DOCUMENT_ARRAY_ELEMENTS, MAX_DOCUMENT_ARRAY_PATH_BYTES,
-    MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS, array_element_count, array_element_path_bytes,
-    index_digits, minted_elements,
+    MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS, MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES, array_element_count,
+    array_element_path_bytes, index_digits, minted_elements,
 };
 use crate::dto::CxfValue;
 
@@ -296,9 +296,9 @@ fn a_byte_count_past_usize_is_refused_and_stated_whole() {
 /// hand.
 fn minted_refusal(minted: usize, used: usize) -> String {
     format!(
-        "array parameter mints {minted} element(s) from a value it writes once (a broadcast or \
-         an array expression) but the document's array parameters already mint {used} of the \
-         65536 minted elements a document may hold"
+        "array parameter mints {minted} element(s) the document does not write out (a broadcast, \
+         an array expression, or a further listing of an array node) but the document's array \
+         parameters already mint {used} of the 65536 minted elements a document may hold"
     )
 }
 
@@ -334,10 +334,13 @@ fn a_minted_refusal_reserves_nothing_and_comes_after_the_other_budgets() {
     );
     // Nothing of the refused parameter was reserved: the rest of each budget is still there.
     budget
+        .take(65_436, 0, 65_436)
+        .expect("the refused parameter minted nothing");
+    budget
         .take(
-            MAX_DOCUMENT_ARRAY_ELEMENTS - 100,
+            MAX_DOCUMENT_ARRAY_ELEMENTS - 100 - 65_436,
             PATH_BUDGET as u128 - 10,
-            65_436,
+            0,
         )
         .expect("the refused parameter drew nothing");
     // Over the element budget and the minted one: the element budget is named, as before.
@@ -399,4 +402,147 @@ fn a_broadcast_and_an_array_expression_mint_every_element_and_a_written_list_non
     // Any other value is refused before an element is made, and mints none.
     assert_eq!(minted_elements(&CxfValue::Float(1.5), 7), 0);
     assert_eq!(minted_elements(&CxfValue::List(Vec::new()), 0), 0);
+}
+
+/// An array node `id` (its value is passed to the budget separately).
+fn node(id: &str) -> crate::dto::Node {
+    serde_json::from_value(serde_json::json!({ "@id": id })).expect("a node")
+}
+
+#[test]
+fn a_node_listed_again_mints_every_element_whatever_its_spelling() {
+    // A written list: its first listing writes its elements, each further listing mints them.
+    let written = CxfValue::List(vec![CxfValue::Float(1.5); 3]);
+    let q = node("urn:q");
+    let mut budget = ArrayElementBudget::per_document();
+    budget
+        .take_listing(&q, 3, 0, &written)
+        .expect("the first listing writes");
+    assert_eq!(budget.remaining_minted, MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS);
+    budget
+        .take_listing(&q, 3, 0, &written)
+        .expect("a further listing mints");
+    assert_eq!(
+        budget.remaining_minted,
+        MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS - 3
+    );
+    // A broadcast mints on every listing, the first included.
+    let broadcast = CxfValue::List(vec![CxfValue::Float(1.5)]);
+    let b = node("urn:b");
+    budget.take_listing(&b, 4, 0, &broadcast).expect("within");
+    budget.take_listing(&b, 4, 0, &broadcast).expect("within");
+    assert_eq!(
+        budget.remaining_minted,
+        MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS - 3 - 8
+    );
+}
+
+#[test]
+fn separate_identical_nodes_are_each_written_once() {
+    // Two nodes with the same value and shape are two nodes: each first listing writes.
+    let written = CxfValue::List(vec![CxfValue::Float(1.5); 3]);
+    let (a, b) = (node("urn:a"), node("urn:b"));
+    let mut budget = ArrayElementBudget::per_document();
+    budget.take_listing(&a, 3, 0, &written).expect("within");
+    budget.take_listing(&b, 3, 0, &written).expect("within");
+    assert_eq!(budget.remaining_minted, MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS);
+    assert_eq!(budget.remaining, MAX_DOCUMENT_ARRAY_ELEMENTS - 6);
+}
+
+#[test]
+fn a_listing_refused_by_a_budget_leaves_the_next_listing_the_first() {
+    // The first listing of `q` is refused for its paths and reserves nothing, so the next listing
+    // is the one that writes; the one after it mints.
+    let written = CxfValue::List(vec![CxfValue::Float(1.5); 3]);
+    let q = node("urn:q");
+    let mut budget = ArrayElementBudget::per_document();
+    assert!(
+        budget
+            .take_listing(&q, 3, PATH_BUDGET as u128 + 1, &written)
+            .is_err()
+    );
+    budget
+        .take_listing(&q, 3, 0, &written)
+        .expect("now the first");
+    assert_eq!(budget.remaining_minted, MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS);
+    budget
+        .take_listing(&q, 3, 0, &written)
+        .expect("a further listing");
+    assert_eq!(
+        budget.remaining_minted,
+        MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS - 3
+    );
+}
+
+#[test]
+fn further_listings_of_a_written_node_fill_the_minted_budget_exactly() {
+    // A written `q[1024]` listed 65 times: the 64 further listings mint exactly 65,536, and a
+    // 66th listing is refused, reserving nothing.
+    let written = CxfValue::List(vec![CxfValue::Float(1.5); 1_024]);
+    let q = node("urn:q");
+    let mut budget = ArrayElementBudget::per_document();
+    for _ in 0..65 {
+        budget.take_listing(&q, 1_024, 0, &written).expect("within");
+    }
+    assert_eq!(budget.remaining_minted, 0);
+    assert_eq!(
+        budget.take_listing(&q, 1_024, 0, &written),
+        Err(minted_refusal(1_024, 65_536))
+    );
+    assert_eq!(budget.remaining, MAX_DOCUMENT_ARRAY_ELEMENTS - 65 * 1_024);
+}
+
+/// The minted-path refusal of `minted` elements whose paths need `bytes` when `used` bytes of
+/// minted paths are already taken, stated by hand.
+fn minted_path_refusal(minted: usize, bytes: usize, used: usize) -> String {
+    format!(
+        "array parameter's {minted} minted element path(s) (instance IRI, `.`, element name) \
+         need {bytes} byte(s) but the paths of the elements the document's array parameters \
+         mint already use {used} of the 8388608 bytes a document may mint"
+    )
+}
+
+#[test]
+fn the_minted_path_budget_is_eight_mebibytes_and_admits_exactly_its_limit() {
+    assert_eq!(MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES, 8 * 1024 * 1024);
+    let cap = MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES;
+    let mut budget = ArrayElementBudget::per_document();
+    budget.take(2, cap as u128 - 1, 2).expect("within");
+    budget.take(2, 1, 2).expect("the last byte fits");
+    assert_eq!(budget.take(2, 1, 2), Err(minted_path_refusal(2, 1, cap)));
+    // Paths of elements written out draw nothing from it.
+    budget
+        .take(2, 1_000, 0)
+        .expect("written paths fit an exhausted minted path budget");
+    // Minted paths count against the path budget too.
+    assert_eq!(budget.remaining_path_bytes, PATH_BUDGET - cap - 1_000);
+    let mut fresh = ArrayElementBudget::per_document();
+    assert_eq!(
+        fresh.take(3, cap as u128 + 1, 3),
+        Err(minted_path_refusal(3, cap + 1, 0))
+    );
+}
+
+#[test]
+fn a_minted_path_refusal_reserves_nothing_and_comes_after_every_other_budget() {
+    let cap = MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES;
+    let mut budget = ArrayElementBudget::per_document();
+    budget.take(10, 100, 10).expect("within");
+    assert_eq!(
+        budget.take(10, cap as u128, 10),
+        Err(minted_path_refusal(10, cap, 100))
+    );
+    // Nothing of the refused parameter was reserved.
+    budget
+        .take(65_526, cap as u128 - 100, 65_526)
+        .expect("the refused parameter drew nothing");
+    // Over the minted element budget and the minted path one: the elements are named.
+    let mut fresh = ArrayElementBudget::per_document();
+    let refusal = fresh
+        .take(70_000, cap as u128 + 1, 70_000)
+        .expect_err("refused");
+    assert!(
+        refusal.starts_with("array parameter mints 70000"),
+        "{refusal}"
+    );
 }

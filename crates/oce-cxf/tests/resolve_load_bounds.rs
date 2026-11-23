@@ -146,66 +146,108 @@ fn broadcast(owner: &str, name: &str, len: usize) -> Json {
             "S231:sizeOfDimensions": format!("({len})"), "S231:value": [ 1.0 ] })
 }
 
-/// The array `name[len]` on `owner` written out element by element: a positional list mints no
-/// element, so only the element budget holds it, where a broadcast of more than 65,536 is
-/// refused by the minted-element budget first (issue #756). Reading a million written elements
-/// holds about as much as the broadcast these cases used before.
+/// The array `name[len]` on `owner` whose value lists two elements: it mints none, so only the
+/// element budget holds it, and the reader reserves its `len` elements from that budget before
+/// it reads the value, which it then refuses for its length (`grounding-failed`). So it takes
+/// `len` elements of the budget without building one. These cases pinned the element budget with
+/// broadcasts of up to 2^20 elements read whole (about 355 MB at the reader); a broadcast that
+/// large is now refused by the minted-element budget first (issue #756), and the same elements
+/// written out would cost about 640 MB, so the budget's accounting is pinned at its edge this way.
+fn reserving(owner: &str, name: &str, len: usize) -> Json {
+    assert!(
+        len > 2,
+        "a list of two on two elements is written, not refused"
+    );
+    let mut node = broadcast(owner, name, len);
+    node["S231:value"] = json!([1.0, 1.0]);
+    node
+}
+
+/// The array `name[len]` on `owner` written out, `len` values of 1.0: its first listing mints
+/// nothing, so its paths count against the path budget alone and not the 8 MiB of minted paths
+/// (issue #756).
 fn written(owner: &str, name: &str, len: usize) -> Json {
     let mut node = broadcast(owner, name, len);
     node["S231:value"] = Json::Array(vec![json!(1.0); len]);
     node
 }
 
+/// Whether `errors` refuse `subject` for its length and nothing else.
+fn refused_for_length(errors: &[(DiagCode, Option<String>)], subject: &str) -> bool {
+    errors
+        .iter()
+        .filter(|(_, s)| s.as_deref() == Some(subject))
+        .all(|(code, _)| *code == DiagCode::GroundingFailed)
+        && errors
+            .iter()
+            .any(|(code, s)| *code == DiagCode::GroundingFailed && s.as_deref() == Some(subject))
+}
+
 #[test]
 fn the_array_budget_spans_every_instance_of_the_document() {
     // Two leaves, 2^19 elements each, exactly fill the 2^20 document budget; one element more
-    // on the second leaf refuses on that leaf's parameter only.
+    // on the second leaf refuses on that leaf's parameter only. Each array reserves its elements
+    // and is then refused for its length ([`reserving`]): this pins the budget's accounting
+    // across instances at its exact edge, and no 2^20-element table is built.
     let half = 1usize << 19;
     let build = |second: usize| {
         let mut nodes = vec![composite("M", &["M.a", "M.b"])];
-        nodes.extend(constant("M.a", &[written("M.a", "p", half)]));
-        nodes.extend(constant("M.b", &[written("M.b", "p", second)]));
+        nodes.extend(constant("M.a", &[reserving("M.a", "p", half)]));
+        nodes.extend(constant("M.b", &[reserving("M.b", "p", second)]));
         doc(nodes)
     };
-    let graph = import(&build(half)).expect("exactly the budget loads");
-    let elements: usize = graph
-        .blocks
-        .iter()
-        .map(|b| {
-            b.params
-                .values
-                .iter()
-                .filter(|(n, _)| n.starts_with("p_"))
-                .count()
-        })
-        .sum();
-    assert_eq!(elements, 1 << 20);
-    assert_eq!(
-        errors(&build(half + 1)),
-        [(DiagCode::ResourceLimitExceeded, Some(id("M.b.p")))]
+    let at_budget = errors(&build(half));
+    assert!(
+        at_budget
+            .iter()
+            .all(|(code, _)| *code == DiagCode::GroundingFailed),
+        "exactly the budget is reserved: {at_budget:?}"
     );
+    assert!(refused_for_length(&at_budget, &id("M.a.p")));
+    assert!(refused_for_length(&at_budget, &id("M.b.p")));
+    let over = errors(&build(half + 1));
+    let budget: Vec<_> = over
+        .iter()
+        .filter(|(code, _)| *code == DiagCode::ResourceLimitExceeded)
+        .collect();
+    assert_eq!(
+        budget,
+        [&(DiagCode::ResourceLimitExceeded, Some(id("M.b.p")))]
+    );
+    assert!(refused_for_length(&over, &id("M.a.p")));
 }
 
 #[test]
 fn an_exhausted_budget_refuses_the_next_element_but_admits_an_empty_array() {
-    // `big` consumes the whole budget; `over` (one element) is refused before minting; an
-    // empty array after it still fits (it needs nothing), so it raises no diagnostic.
+    // `big` reserves the whole budget (and is refused for its length); `over` (one element) is
+    // refused before minting; an empty array after it still fits (it needs nothing), so it
+    // raises no diagnostic. No 2^20-element table is built.
     let mut zero = broadcast("M.a", "zero", 0);
     zero["S231:value"] = json!([]);
     let mut nodes = vec![composite("M", &["M.a"])];
     nodes.extend(constant(
         "M.a",
         &[
-            written("M.a", "big", 1 << 20),
+            reserving("M.a", "big", 1 << 20),
             broadcast("M.a", "over", 1),
             zero,
         ],
     ));
-    let diags = import(&doc(nodes)).expect_err("the budget is exhausted");
-    let refused: Vec<_> = diags.iter().filter(|d| d.is_error()).collect();
-    assert_eq!(refused.len(), 1, "{refused:?}");
-    assert_eq!(refused[0].code, DiagCode::ResourceLimitExceeded);
-    assert_eq!(refused[0].subject.as_deref(), Some(id("M.a.over").as_str()));
+    let refused = errors(&doc(nodes));
+    let budget: Vec<_> = refused
+        .iter()
+        .filter(|(code, _)| *code == DiagCode::ResourceLimitExceeded)
+        .collect();
+    assert_eq!(
+        budget,
+        [&(DiagCode::ResourceLimitExceeded, Some(id("M.a.over")))]
+    );
+    assert!(refused_for_length(&refused, &id("M.a.big")));
+    assert!(
+        refused
+            .iter()
+            .all(|(_, s)| s.as_deref() != Some(id("M.a.zero").as_str()))
+    );
 }
 
 /// The per-document budget of element-path bytes (`oce-cxf`'s `MAX_DOCUMENT_ARRAY_PATH_BYTES`),
@@ -241,7 +283,8 @@ fn the_path_budget_spans_every_instance_and_admits_exactly_its_limit() {
     // instance IRI, and a one-element array on it whose path takes what is left of the budget to
     // the byte. The second leaf's IRI and names are multibyte, so a count of characters instead
     // of bytes would admit the document one byte past the budget. One byte more refuses the last
-    // array, and only it, naming the bytes it needs and the bytes already used.
+    // array, and only it, naming the bytes it needs and the bytes already used. The two large
+    // arrays are written out, so their 64 MiB of paths are not minted (issue #756).
     let leaf = format!("M.{}", "é".repeat(2_000));
     let (a, b) = ("a".repeat(32_000), "β".repeat(14_737));
     let used = path_bytes("M.a", &a, 1_024) + path_bytes(&leaf, &b, 1_024);
@@ -251,10 +294,10 @@ fn the_path_budget_spans_every_instance_and_admits_exactly_its_limit() {
     let build = |ascii: usize| {
         let c = format!("{}{}", "γ".repeat(1_339), "c".repeat(ascii));
         let mut nodes = vec![composite("M", &["M.a", &leaf])];
-        nodes.extend(constant("M.a", &[broadcast("M.a", &a, 1_024)]));
+        nodes.extend(constant("M.a", &[written("M.a", &a, 1_024)]));
         nodes.extend(constant(
             &leaf,
-            &[broadcast(&leaf, &b, 1_024), broadcast(&leaf, &c, 1)],
+            &[written(&leaf, &b, 1_024), broadcast(&leaf, &c, 1)],
         ));
         (doc(nodes), c)
     };
@@ -308,7 +351,8 @@ fn the_path_budget_spans_every_instance_and_admits_exactly_its_limit() {
 #[test]
 fn a_parameter_refused_for_its_paths_draws_no_element() {
     // A 1 KiB name over 65,536 elements needs 68,998,302 bytes of paths, past the path budget on
-    // its own. The array after it takes every element the document has left with that one's
+    // its own (no 2^20-element table is built: `p` reserves the rest and is refused for its
+    // length). The array after it takes every element the document has left with that one's
     // 65,536 included, so it fits only if the refused one drew none: the one refusal is the long
     // name's.
     let long = "k".repeat(1_024);
@@ -317,13 +361,17 @@ fn a_parameter_refused_for_its_paths_draws_no_element() {
     let mut nodes = vec![composite("M", &["M.a"])];
     nodes.extend(constant(
         "M.a",
-        &[broadcast("M.a", &long, 65_536), written("M.a", "p", rest)],
+        &[broadcast("M.a", &long, 65_536), reserving("M.a", "p", rest)],
     ));
     let subject = id(&format!("M.a.{long}"));
-    assert_eq!(
-        errors(&doc(nodes)),
-        [(DiagCode::ResourceLimitExceeded, Some(subject))]
-    );
+    let refused = errors(&doc(nodes));
+    let budget: Vec<_> = refused
+        .iter()
+        .filter(|(code, _)| *code == DiagCode::ResourceLimitExceeded)
+        .collect();
+    assert_eq!(budget, [&(DiagCode::ResourceLimitExceeded, Some(subject))]);
+    // `p` reserved every element the document had left and was refused for its length only.
+    assert!(refused_for_length(&refused, &id("M.a.p")));
 }
 
 #[test]

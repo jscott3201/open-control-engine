@@ -155,16 +155,22 @@ fn broadcast_array(owner: &str, index: usize, len: usize) -> (String, String) {
     (id, node)
 }
 
-/// A preserved array parameter `p<index>[len]` on leaf `owner`, its `len` elements written out
-/// one by one (each `1`), so it mints none: only the element budget holds it, where a broadcast of
-/// more than 65,536 is refused first by the minted-element budget (issue #756).
-fn written_array(owner: &str, index: usize, len: usize) -> (String, String) {
+/// A preserved array parameter `p<index>[len]` on leaf `owner` whose value lists two elements
+/// (`len` above 2): it mints none, so only the element budget holds it, and the reader reserves
+/// its `len` elements from that budget before it reads the value, which it then refuses for its
+/// length (`grounding-failed`). So it takes `len` elements of the budget without building one.
+/// The broadcasts this case used are now refused first by the minted-element budget (issue
+/// #756), and a million elements written out would hold about 640 MB at the reader.
+fn reserving_array(owner: &str, index: usize, len: usize) -> (String, String) {
+    assert!(
+        len > 2,
+        "a list of two on two elements is written, not refused"
+    );
     let id = format!("{owner}.p{index}");
-    let elements = vec!["1"; len].join(",");
     let node = format!(
         r#"{{ "@id": "{id}", "S231:label": "p{index}[{len}]", "S231:isArray": true,
              "S231:numberDimensions": 1, "S231:sizeOfDimensions": "({len})",
-             "S231:value": [ {elements} ] }}"#
+             "S231:value": [ 1, 1 ] }}"#
     );
     (id, node)
 }
@@ -173,9 +179,24 @@ fn array_document(lengths: &[usize]) -> Vec<u8> {
     arrays_document(lengths, broadcast_array)
 }
 
-/// [`array_document`] with every array written out ([`written_array`]).
-fn written_array_document(lengths: &[usize]) -> Vec<u8> {
-    arrays_document(lengths, written_array)
+/// [`array_document`] with every array [`reserving_array`], but for the first when
+/// `first_broadcast` is set.
+fn reserving_array_document(lengths: &[usize], first_broadcast: bool) -> Vec<u8> {
+    let owner = "http://example.org#M.con";
+    let extras: Vec<(String, String)> = lengths
+        .iter()
+        .enumerate()
+        .map(|(i, &len)| {
+            if i == 0 && first_broadcast {
+                broadcast_array(owner, i, len)
+            } else {
+                reserving_array(owner, i, len)
+            }
+        })
+        .collect();
+    let mut nodes = vec![head(&[owner.to_owned()])];
+    nodes.extend(constant(owner, &extras));
+    document(&nodes)
 }
 
 fn arrays_document(
@@ -302,9 +323,10 @@ fn four_maximal_broadcast_arrays_refuse_on_the_document_budget_with_bounded_memo
         );
         assert_eq!(
             diagnostic.message,
-            "array parameter mints 1048576 element(s) from a value it writes once (a broadcast \
-             or an array expression) but the document's array parameters already mint 0 of the \
-             65536 minted elements a document may hold"
+            "array parameter mints 1048576 element(s) the document does not write out (a \
+             broadcast, an array expression, or a further listing of an array node) but the \
+             document's array parameters already mint 0 of the 65536 minted elements a document \
+             may hold"
         );
     }
     // No array is ever materialized, so the load costs what reading the document costs (512 MiB
@@ -315,26 +337,21 @@ fn four_maximal_broadcast_arrays_refuse_on_the_document_budget_with_bounded_memo
 #[test]
 fn document_array_budget_admits_exactly_its_limit_and_refuses_one_element_more() {
     let half = MAX_DOCUMENT_ARRAY_ELEMENTS / 2;
-    // The budget is the reader's. The arrays are names the constant's class does not declare,
-    // which the facade's load gate refuses after the reader admits them (issue #748), so the
-    // admission is the reader's and the facade's refusal is for the names, not the budget.
-    // Written out, so the minted-element budget (issue #756) draws nothing from them.
-    let at_budget = written_array_document(&[half, half]);
-    oce_cxf::import_cxf(&at_budget, &oce_cxf::ResolveOptions::default())
-        .expect("arrays totalling exactly the budget are read");
+    // The budget is the reader's, and the facade refuses with the reader's diagnostics. Each
+    // array reserves its elements and is refused for its length ([`reserving_array`]): this pins
+    // the budget's accounting at its exact edge (2^19 + 2^19 admitted, one more refused on the
+    // second array, an over-cap parameter drawing nothing), and no 2^20-element table is built.
+    let at_budget = reserving_array_document(&[half, half], false);
     let (accepted, _) = load(&at_budget);
-    let codes = error_codes(&accepted.expect_err("the undeclared names are refused"));
-    assert!(
-        codes.contains(&DiagCode::UnknownParameter),
-        "{:?}",
-        codes.first()
-    );
+    let error = accepted.expect_err("refused for the lists' lengths");
+    let codes = error_codes(&error);
+    assert!(codes.contains(&DiagCode::GroundingFailed), "{codes:?}");
     assert!(
         accepted_by_the_budget(&at_budget),
         "the reader's array budget refused it"
     );
 
-    let (refused, _) = load(&written_array_document(&[half, half + 1]));
+    let (refused, info) = load(&reserving_array_document(&[half, half + 1], false));
     let error = refused.expect_err("one element past the budget refuses");
     let over: Vec<_> = error
         .all_diagnostics()
@@ -345,9 +362,12 @@ fn document_array_budget_admits_exactly_its_limit_and_refuses_one_element_more()
         over[0].subject.as_deref(),
         Some("http://example.org#M.con.p1")
     );
+    assert!(info.bytes_max < 4 * MIB, "nothing is built: {info:?}");
 
-    // A parameter refused by the per-parameter cap draws nothing from the document budget.
-    let (cap_then_fit, _) = load(&written_array_document(&[(1 << 20) + 1, 1 << 20]));
+    // A parameter refused by the per-parameter cap draws nothing from the document budget: a
+    // broadcast past it is refused as `MalformedDocument` before any budget is charged, and the
+    // array after it then reserves the whole budget.
+    let (cap_then_fit, _) = load(&reserving_array_document(&[(1 << 20) + 1, 1 << 20], true));
     let codes = error_codes(&cap_then_fit.expect_err("the over-cap parameter refuses"));
     assert!(codes.contains(&DiagCode::MalformedDocument), "{codes:?}");
     assert!(

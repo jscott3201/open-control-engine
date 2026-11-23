@@ -6,6 +6,7 @@
 //! array subset. Split out of `resolve.rs` to keep that file under the 700-LOC cap; the only entry
 //! point the resolver calls is [`expand_array_param`].
 
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::sync::Arc;
 
@@ -139,56 +140,120 @@ pub(crate) const MAX_DOCUMENT_ARRAY_ELEMENTS: usize = 1 << 20;
 pub(crate) const MAX_DOCUMENT_ARRAY_PATH_BYTES: usize = 64 * MAX_DOCUMENT_ARRAY_ELEMENTS;
 
 /// Maximum number of elements ALL preserved array parameters of one document may **mint**
-/// together: elements made from one value the document writes once, rather than written out one
-/// by one (issue #756; owner ruling of 2026-11-22). 65,536.
+/// together: elements made from values the document writes once, rather than written out one by
+/// one for each element the tables hold (issue #756; owner ruling of 2026-11-22). 65,536.
 ///
-/// A preserved array's elements are minted when its value is a broadcast (`k[n]` with the value
-/// `[v]`, `n` of at least 2: every element is a copy of the one written value) or an array
-/// expression (`fill(v, n)`, `1:n`, `{a, b}`: every element is the expression's). Neither costs
-/// the document a byte per element: `q[1048576]` broadcasting `1.5` is a 5.6 KB document, and
-/// each element it mints is held at about 339 bytes at the reader's peak (11.2 / 22.3 / 44.4 MB at
-/// 32,768 / 65,536 / 131,072 elements) and about 1 KB requested over a whole load, so the element
-/// budget alone admitted a 5.6 KB document that read at a 355 MB peak and once loaded at 786 MB.
-/// A positional list writes each element out, so it pays for its elements in document bytes and
-/// keeps the element budget alone. An array expression that writes its elements out (`{a, b}`) is
-/// counted as minted too: it can hold at most 4,096 of them (`oce_expr::MAX_EXPR_NODES`), far
-/// inside this budget, so the rule needs no reading of the expression.
+/// An array's elements are minted when its value is a broadcast (`k[n]` with the value `[v]`,
+/// `n` of at least 2: every element is a copy of the one written value) or an array expression
+/// (`fill(v, n)`, `1:n`, `{a, b}`: every element is the expression's), and when an array node
+/// already listed is listed again, by the same instance or another, whatever its value's
+/// spelling: each listing makes all its elements again from values written once. None of these
+/// costs the document a byte per element: `q[1048576]` broadcasting `1.5` is a 5.6 KB document,
+/// and a written `q[1024]` listed 1,024 times about 26 KB, while each element is held at about
+/// 339 bytes (a broadcast) to 611 bytes (a written list) at the reader's peak with a short
+/// instance IRI, more with a long one ([`MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES`] holds what a
+/// long one adds). A positional JSON list's first listing writes each element out, so it pays for
+/// its elements in document bytes and keeps the element budget alone. Every array expression is
+/// counted as minted, a brace literal that spells its elements out (`{a, b}`) included, before it
+/// is parsed (owner ruling of 2026-11-22): a document may hold at most 65,536 elements written as
+/// array expressions of any kind or made by listing an array node again, so 17 brace literals of
+/// 4,000 elements are refused, and the same 68,000 values written as JSON lists read. Large
+/// arrays belong in JSON lists. (One brace literal holds at most 4,095 elements:
+/// `oce_expr::MAX_EXPR_NODES` counts the literal itself.)
 ///
 /// A minted element is counted against [`MAX_DOCUMENT_ARRAY_ELEMENTS`] too, as every element is,
-/// so the element budget keeps meaning every element of the document. Every element of the
-/// array is counted, the one written value included, once per listing: an array node many
-/// instances list mints its elements for each of them, as separate nodes would, whether or not
-/// they share its grounding (issue #749). No tracked or `open-control-library` model mints more
-/// than 12 elements (the vendored `ReliefFanGroup` translation, refused for other reasons), and
-/// none that loads mints one. Crossing it is [`DiagCode::ResourceLimitExceeded`] on the
-/// parameter node, checked with the other array budgets, before the crossing parameter's value is
-/// read or any of its names is built, and after them, so a document either of them refuses is
-/// refused as before.
+/// so the element budget keeps meaning every element of the document. Each listing of a node is
+/// charged as separate listings of separate nodes would be, whether or not the listings share its
+/// grounding (issue #749), except that a node's first listing writes, and each further listing
+/// mints. No tracked or `open-control-library` model mints more than 12 elements (the vendored
+/// `ReliefFanGroup` translation, refused for other reasons), and none that loads mints one.
+///
+/// Crossing it is [`DiagCode::ResourceLimitExceeded`] on the parameter node, checked with the
+/// other array budgets, before the crossing parameter's value is read or any of its names is
+/// built, and after them: a parameter they refuse is refused by them, as before. A parameter
+/// this budget refuses reserves nothing from any budget, so a later parameter the element budget
+/// used to refuse may now fit it; a document refused before is still refused, but its
+/// diagnostics can differ.
 pub(crate) const MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS: usize = 1 << 16;
 
-/// The running per-document budgets every preserved array parameter draws on: elements, and the
-/// bytes of their paths.
+/// Maximum number of bytes the element paths of the elements ALL preserved array parameters of
+/// one document **mint** ([`MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS`]) may take together: 8 MiB
+/// (issue #756; owner ruling of 2026-11-22).
+///
+/// A minted element's path is counted as the element budget counts it
+/// ([`MAX_DOCUMENT_ARRAY_PATH_BYTES`]): the instance IRI, a `.`, the element's name. Each element
+/// is held at about 339 bytes at the reader's peak with a short instance IRI, and about 1.9 bytes
+/// more for each byte of its path, which the document writes once whatever the number of
+/// elements: a broadcast of 65,536 under a 1,005-byte IRI is a 12 KB document whose paths take
+/// 66 MB, and which would read at about 142 MB (projected from 9.0 MB measured at 4,096). Held to
+/// 8 MiB, the paths a document mints add at most about 16 MB: a document at both minted budgets
+/// (65,536 elements whose paths take 8,377,502 bytes) reads at a peak of 25.9 MB, and a
+/// `MatrixGain` of 256 by 256 whose `K` is broadcast under a 116-byte root loads at 49.7 MB.
+/// Minted path bytes are counted against [`MAX_DOCUMENT_ARRAY_PATH_BYTES`] too, as every element
+/// path is. No tracked or `open-control-library` model mints more than about 1.1 KB of paths (the
+/// vendored `ReliefFanGroup` translation, refused for other reasons). Crossing it is
+/// [`DiagCode::ResourceLimitExceeded`] on the parameter node, checked after the other array
+/// budgets and before any name or element is built; a refusal reserves nothing.
+pub(crate) const MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES: usize = 8 * 1024 * 1024;
+
+/// The running per-document budgets every preserved array parameter draws on: elements, the
+/// bytes of their paths, and the elements minted; and the array nodes already listed, whose later
+/// listings mint every element (issue #756).
 #[derive(Debug)]
 pub(crate) struct ArrayElementBudget {
     remaining: usize,
     remaining_path_bytes: usize,
     remaining_minted: usize,
+    remaining_minted_path_bytes: usize,
+    /// The array nodes a listing has reserved elements for, by address: a later listing of one
+    /// of them makes its elements again from values the document wrote once. Looked up, never
+    /// iterated.
+    listed: BTreeSet<*const Node>,
 }
 
 impl ArrayElementBudget {
-    /// Full budgets of [`MAX_DOCUMENT_ARRAY_ELEMENTS`], [`MAX_DOCUMENT_ARRAY_PATH_BYTES`] and
-    /// [`MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS`] for one document.
+    /// Full budgets of [`MAX_DOCUMENT_ARRAY_ELEMENTS`], [`MAX_DOCUMENT_ARRAY_PATH_BYTES`],
+    /// [`MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS`] and [`MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES`] for one
+    /// document.
     pub(crate) fn per_document() -> Self {
         Self {
             remaining: MAX_DOCUMENT_ARRAY_ELEMENTS,
             remaining_path_bytes: MAX_DOCUMENT_ARRAY_PATH_BYTES,
             remaining_minted: MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS,
+            remaining_minted_path_bytes: MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES,
+            listed: BTreeSet::new(),
         }
     }
 
+    /// Reserve the elements of one listing of the array node `node`, `count` of them whose paths
+    /// take `path_bytes` bytes and whose value is `value` ([`Self::take`]). The first listing of
+    /// a node mints what its value mints ([`minted_elements`]); every later listing of the same
+    /// node mints all its elements, whatever the value's spelling, since the document wrote them
+    /// once. A listing counts as the node's first when its elements are reserved: one refused
+    /// by a budget reserves nothing and leaves the next listing the first, and one refused later
+    /// (for its value's shape, say) has reserved them and is the first.
+    fn take_listing(
+        &mut self,
+        node: &Node,
+        count: usize,
+        path_bytes: u128,
+        value: &CxfValue,
+    ) -> Result<(), String> {
+        let key = std::ptr::from_ref(node);
+        let minted = if self.listed.contains(&key) {
+            count
+        } else {
+            minted_elements(value, count)
+        };
+        self.take(count, path_bytes, minted)?;
+        self.listed.insert(key);
+        Ok(())
+    }
+
     /// Reserve `count` elements whose paths take `path_bytes` bytes, `minted` of them minted
-    /// (0 or `count`), or explain the refusal without reserving any. The element budget is checked
-    /// first, then the path budget, then the minted budget.
+    /// (0 or `count`; when `count`, their paths are minted too), or explain the refusal without
+    /// reserving any. The element budget is checked first, then the path budget, then the minted
+    /// element budget, then the minted path budget.
     fn take(&mut self, count: usize, path_bytes: u128, minted: usize) -> Result<(), String> {
         if count > self.remaining {
             let used = MAX_DOCUMENT_ARRAY_ELEMENTS - self.remaining;
@@ -213,15 +278,26 @@ impl ArrayElementBudget {
         if minted > self.remaining_minted {
             let used = MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS - self.remaining_minted;
             return Err(format!(
-                "array parameter mints {minted} element(s) from a value it writes once (a \
-                 broadcast or an array expression) but the document's array parameters already \
-                 mint {used} of the {MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS} minted elements a \
-                 document may hold"
+                "array parameter mints {minted} element(s) the document does not write out (a \
+                 broadcast, an array expression, or a further listing of an array node) but the \
+                 document's array parameters already mint {used} of the \
+                 {MAX_DOCUMENT_MINTED_ARRAY_ELEMENTS} minted elements a document may hold"
+            ));
+        }
+        let minted_bytes = if minted > 0 { bytes } else { 0 };
+        if minted_bytes > self.remaining_minted_path_bytes {
+            let used = MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES - self.remaining_minted_path_bytes;
+            return Err(format!(
+                "array parameter's {minted} minted element path(s) (instance IRI, `.`, element \
+                 name) need {minted_bytes} byte(s) but the paths of the elements the document's \
+                 array parameters mint already use {used} of the \
+                 {MAX_DOCUMENT_MINTED_ARRAY_PATH_BYTES} bytes a document may mint"
             ));
         }
         self.remaining -= count;
         self.remaining_path_bytes -= bytes;
         self.remaining_minted -= minted;
+        self.remaining_minted_path_bytes -= minted_bytes;
         Ok(())
     }
 }
@@ -555,7 +631,7 @@ pub(crate) fn expand_array_param(
         Err(msg) => return refuse(diags, DiagCode::MalformedDocument, msg),
     };
     let path_bytes = array_element_path_bytes(owner.len(), base.len(), &dims, count);
-    if let Err(msg) = budget.take(count, path_bytes, minted_elements(cxf_val, count)) {
+    if let Err(msg) = budget.take_listing(pnode, count, path_bytes, cxf_val) {
         return refuse(diags, DiagCode::ResourceLimitExceeded, msg);
     }
     let n = count;
