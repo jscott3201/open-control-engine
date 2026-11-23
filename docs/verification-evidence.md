@@ -23,8 +23,9 @@ none of these ([below](#commissioning-on-recorded-data-the-building-33-day)). Si
 repeated, check the event timing of five event-triggered classes exactly
 ([below](#event-timing-against-openmodelica)) and upstream's Building 33 valve sequence on its 78
 synthetic frames, exact at every engine reset. Two of those runs found the engine and OpenModelica
-apart where a pulse is true on two consecutive frames; both are registered known divergences,
-pending the owner's decision in issue #800.
+apart where a pulse is true on two consecutive frames; the settled-value rule of issue #800
+resolved both, and seven more pilots in nine runs, against the pinned Buildings classes, check that
+rule ([below](#pulses-on-event-inputs-against-openmodelica)), with ten registered differences.
 
 `CDL.Logical.Pre` is outside those executed-reference claims. The engine's fixed
 [HostTick v1 profile](execution-profile.md) delays `Pre` by one HostTick transition rather than one
@@ -411,20 +412,58 @@ does not show the convention is the only right one. At uneven steps the differen
 over the frames after `r`, not one frame of a single input.
 
 A seventh pilot counts, with `OnCounter`, the `Change` pulses of a signal that changes on
-consecutive frames (`open_modelica_event_pulses.rs`). **The engine and OpenModelica disagree**:
-OpenModelica counts each change (the count reaches 9), the engine one per run of consecutive
-changes, because `Change` holds `true` for a frame and two consecutive pulses are one rising edge
-(the count reaches 6); they part at the second of two consecutive changes. This is `DVG-000002` in
-the known-divergence register
-(`crates/oce-conformance/tests/fixtures/known_divergence/register.json`) and the projection limit
-the [execution profile](execution-profile.md#conformance-boundary) states; issue #800 waits on the
-owner. **Its test runs nightly, not per PR:** it is in `oce-conformance`'s `conformance` binary,
-which no per-PR job runs, so a change to `OnCounter` or `Change` that closes the divergence would
-merge on `CI OK` and fail first in the nightly run (the Building 33 divergence, `DVG-000001`, is
-tested in `oce-verify`, per PR). The same limit is widest for `Logical.Sources.SampleTrigger` at a
-period at or below the frame step, which is `true` on every frame, so an event input it feeds never
-fires after frame 0; an engine-only test pins that (`sample_trigger_event_inputs.rs`), with no tool
-run behind it and no register entry.
+consecutive frames (`open_modelica_event_pulses.rs`). OpenModelica counts each change (the count
+reaches 9); so does the engine since the settled-value rule of issue #800. Before it the engine
+counted one per run of consecutive changes (to 6): `DVG-000002`, now resolved, keeps that count as
+its evidence. **The test runs nightly, not per PR:** it is in `oce-conformance`'s `conformance`
+binary, which no per-PR job runs.
+
+### Pulses on event inputs against OpenModelica
+
+Seven pilots in nine runs (`tools/openmodelica-event-reference/events/PulseConsumersPilot.mo`,
+`SampleTriggerPilot.mo`, `SampleTriggerOffGridPilot.mo`, and from the review of GitHub #805
+`InitNegatedPilot.mo` and `InitMixturesPilot.mo`, each with an off-grid copy, and
+`LatchClearPilot.mo`, and from its second review `MixedFallbackPilot.mo`; `regenerate.sh ...
+pulses`) run the
+**pinned Buildings classes**, not transcriptions, in the same container, at 1 s frames with each
+input held, and `crates/oce-conformance/tests/open_modelica_pulse_events.rs` drives the engine with
+the same blocks wired the same way (issue #800, design note
+[Event inputs fed by one-frame pulses](design/pulse-event-inputs.md)). Every compared signal equals
+OpenModelica at every frame, bit for bit, except a timer within 1e-6 (OpenModelica's table changes
+land about 1e-10 s after each frame) and a mean within 1e-12 (OpenModelica prints 16 significant
+digits), and ten registered known divergences:
+
+| Shape | Frame 0 | Agreement |
+| --- | --- | --- |
+| `Change(u)`, changes at 2, 3, 5, 7, 8, 9 s, into `TriggeredSampler`, `TriggeredMax`, `TriggeredMovingMean`, `IntegratorWithReset`, `PIDWithReset`, `Latch.u`, `Toggle.u`, `TimerAccumulating.reset` | no event | every frame; each consecutive change is an event |
+| `Not(Change(u))`, `Or(Change(u), level)` into `OnCounter` | no event | every frame (OpenModelica 9 and 7 counts) |
+| `Latch`, `Toggle` behind `Change(x)`, `x` true from the start | `y = 1` (the initial equation reads the initialisation pulse) | every frame |
+| `SampleTrigger` at 1 and 2 s from an instant at t = 0 into `OnCounter`, `TriggeredSampler`, `TriggeredMax` (negative `u`), `IntegratorWithReset`, `PIDWithReset`, `TimerAccumulating.reset`, `Toggle`, `Latch` | the instant fires: a sample, `max(u, abs(u))`, a reset, a toggle | every frame |
+| `TriggeredMovingMean(n = 3)` behind `SampleTrigger(1 s)` | samples twice: `initial()` and the instant | every frame (2.8333 at 1 s) |
+| G36 `TrimAndRespond`'s hold latch: `Latch(u = SampleTrigger(1 s), clr = And(Not(hold), SampleTrigger(1 s)))`, hold true at 3 and 4 s | `y = 0` | every frame: latched at 3 and 4 s, where the rising edge never fired |
+| `Not(SampleTrigger(1 s))` into `TriggeredSampler` | no event | never samples, as in OpenModelica |
+| `SampleTrigger(1 s, shift 0.5 s)` into `OnCounter`; `SampleTrigger(1.4 s)` into `OnCounter` | — | every frame |
+| `SampleTrigger(1 s)` from an off-grid start (frames at 0.25 + k s) into `OnCounter`, `TriggeredSampler`, `Latch` | no instant, no event, `Latch` false | every frame |
+| `Or(Change(u), Pre(b))` into `OnCounter` (a fallback cone) | — | `DVG-000003`: 4 against 6 counts from 8 s |
+| `SampleTrigger(0.5 s)` into `OnCounter` (two instants a frame) | — | `DVG-000004`: 10 against 19 |
+| `SampleTrigger(1.4 s)` into `TriggeredSampler` | — | `DVG-000005`: the frame's `u`, not the instant's, at 2, 5 and 9 s |
+| `Pre(SampleTrigger(1 s))` into `OnCounter`, off-grid start | — | `DVG-000006`: 1 against 9 |
+| `Not(Change(x))`, `Not(Edge(x))` with `x(0)` true and false, `Not(SampleTrigger(1 s))`, on and off the grid, into every consumer | `x(0) = true`: fires (count 1, a sample, a reset, `Latch` and `Toggle` true); `x(0) = false` and `Not(SampleTrigger)`: nothing | every frame, but `IntegratorWithReset` and `PIDWithReset` behind `Not(SampleTrigger)` (`DVG-000010`: OpenModelica reinitialises when `sample()` falls after each instant) and two timers off the grid (`DVG-000011`: a reset between frames) |
+| `Or`, `Xor` of `Change(x1)` (an initialisation pulse) and `SampleTrigger(1 s)`; `And(Not(Change(x1)), SampleTrigger)`; `And(Not(Change(x1)), Not(SampleTrigger))`; a three-leaf mixture; `Or(Not(Change(x1)), level)`; on and off the grid, into `OnCounter`, `Latch`, `Toggle` | `i -> w -> s` | every frame |
+| `Or(Not(Change(x1)), Pre(false))` at frame 0 (a fallback cone) | OpenModelica fires | `DVG-000007`: the engine does not (frame 0 only) |
+| `Latch`, `Toggle` with `u = Not(Change(a))` and `clr = Change(a)` or `Change(b)`, and `u = Change(a)`, `clr = Not(Edge(a))` | — | every frame |
+| `Latch`, `Toggle` with `u = SampleTrigger(2 s)`, `clr = Not(SampleTrigger(2 s))` | — | `DVG-000008`: OpenModelica keeps the latch set, the engine clears it a frame after each instant |
+| Two-input consumers with one input on a fallback cone (`Latch(u = Change(a), clr = Pre(Not(Change(a))))`, `OnCounter(trigger = Change(b), reset = Edge(Change(b)))`, `Toggle(u = Not(SampleTrigger(3 s, shift 0.5)), clr = Pre(b))`) | — | every frame for the first two (the block keeps the rising edge on both inputs); the `Toggle` `DVG-000012` at frame 1, the `Pre` a frame late, as on every engine |
+| `BooleanToReal(Change(a))` as the data input of `TriggeredSampler`, `TriggeredMax`, `TriggeredMovingMean`, `IntegratorWithReset`, `PIDWithReset`, trigger `Not(Change(a))` | — | `TriggeredMax`, `TriggeredMovingMean` every frame; the others `DVG-000009` (the block keeps the rising edge, one frame after OpenModelica's second iteration) |
+
+They are the limits the owner ruled on (decision 2): a cone with a `Pre` keeps the rising edge,
+several instants in one frame fire once (with a once-only warning), every event inside a frame
+interval is shown at the frame with the frame's values, and, from the review of GitHub #805, a
+negated sample on a `Latch`'s `clr`, a data input carrying a converted pulse, and OpenModelica's
+reinit on a negated sample's fall. Every pilot column was also run on the engine before this
+change: none agrees with OpenModelica there and not here. They are documented in the
+[execution profile](execution-profile.md#conformance-boundary). These are single runs on
+`linux/arm64`; the engine side is checked bit for bit, the OpenModelica side by digest.
 
 **What these runs do not show:** `PIDWithReset`'s integration (the Building 33 frames below
 compare it), `PIDWithReset` with a derivative, other parameters, another tool or tool version, and
@@ -471,8 +510,8 @@ the spec writes it; only its `content_id` identifies the transcription that ran.
 - *Behaviour*: over 78 synthetic frames that take every branch the valve signal can show (PI
   active, its upper saturation under the supply-air high limit and its lower saturation with the
   anti-windup acting, the line clamped below, the outdoor-air and fan-feedback hysteresis, the
-  fan status, each reset, and a one-frame disable where `Change` is still true at the
-  re-enable), the engine's valve signal equals a derivation written from the `.mo`
+  fan status, each reset, and a one-frame disable whose re-enable, on the next frame, is a second
+  `Change` event and a second reset), the engine's valve signal equals a derivation written from the `.mo`
   and the vendored CDL block sources, bit for bit, under the engine's discrete-time convention.
   One modifier cannot show in the valve signal for any input, the line's upper clamp
   (`limitAbove`), because the PI's output never exceeds `yMax = 1`, the line's `f2`; only the
@@ -489,14 +528,14 @@ the spec writes it; only its `content_id` identifies the transcription that ran.
   cases above is claimed for it.
 - *The continuous model at the resets* (issue #787): the same container ran upstream's
   `CoolingCoilValve` on the 78 synthetic frames, each frame's inputs held. It reinitialises the
-  integrator at all nine changes of the enable; **eight are engine resets**, and at those the
-  engine equals it to 1e-12, as it does wherever the enable is off or the line cuts the PI (31
-  frames). The engine before issue #768 was 0.09, 0.045, 0.018 and 0.018 away at the four
-  re-enables. The ninth, 382 s, is a re-enable one frame after a disable: `Change` is true at
-  both frames under HostTick v1, one rising edge, and the engine does not reset where
-  OpenModelica does. The 78 frames hide it (the inputs at the two frames are the same); rerun
-  with the supply air at 290 K from 382 s, the engine reads 0.036, 0.051 and 0.066 at 382, 387
-  and 392 s against OpenModelica's 0, 0.015 and 0.030 (`DVG-000001`, issue #800). After each
+  integrator at all nine changes of the enable, **and so does the engine**; at those the engine
+  equals it to 1e-12, as it does wherever the enable is off or the line cuts the PI (32 frames).
+  The engine before issue #768 was 0.09, 0.045, 0.018 and 0.018 away at the four re-enables. The
+  ninth, 382 s, is a re-enable one frame after a disable: `Change` is true at both frames, and
+  under the settled-value rule of issue #800 each is an event. Rerun with the supply air at 290 K
+  from 382 s, the engine reads 0, 0 and 0.015 at 382, 387 and 392 s against OpenModelica's 0,
+  0.015 and 0.030: the reset, then the one frame of integral action every engine reset trails by.
+  Before the rule it read 0.036, 0.051 and 0.066 (`DVG-000001`, resolved). After each
   re-enable OpenModelica leads by one frame of integral action, 0.009, as after the start: the
   reset frame's skipped Euler step. At the frames that carry the integral the difference reaches
   0.0277 (187 s), above the day's 0.01 band; that figure is a pin, not a bound, and at those
@@ -534,8 +573,7 @@ funnel's reference instead, the day fails too (worst 0.0210 at 65,965 s).
   OpenModelica runs it within 0.0034 over this day, and takes every branch its valve signal can
   show as the `.mo` and the CDL sources say, under the engine's discrete-time convention: each
   engine reset shows at the frame of its event, where OpenModelica's run of upstream's model on
-  the same frames agrees to 1e-12, except that a re-enable one frame after a disable is no engine
-  reset and is one in OpenModelica (issue #800);
+  the same frames agrees to 1e-12, a re-enable one frame after a disable included (issue #800);
 - under OBC §12.6's own tolerances, LBNL Building 33's recorded valve signal on 2018-06-07 leaves
   the funnel for about 68 minutes of the late afternoon, by at most 0.021, and is inside it the
   rest of the day, which is what OBC's Fig. 12.12 shows as we read the published SVG.

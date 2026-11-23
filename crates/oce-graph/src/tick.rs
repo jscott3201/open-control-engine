@@ -23,7 +23,7 @@ use oce_blocks::{Block, BlockKind, Ctx, NoopDiagnostics};
 use oce_model::{BlockId, BlockInstance, Model, Value};
 
 use crate::topo::block_path;
-use crate::{BuildError, MAX_STATE_WORDS, RunState, Schedule, StateSlot};
+use crate::{BuildError, MAX_STATE_WORDS, RunState, Schedule, ShadowSource, StateSlot};
 
 /// The per-tick evaluation bundle (`01` §9): the frozen artifacts (`model`, `schedule`, immutable
 /// block impls) plus the sole mutable [`RunState`]. The block impls are `&` (not `&mut`): the arena
@@ -39,6 +39,10 @@ pub struct EvalContext<'a> {
     pub diagnostics: &'a dyn oce_blocks::Diagnostics,
     /// The sole mutable per-tick structure.
     pub state: &'a mut RunState,
+    /// Whether this is the initial frame: the first since every state region was seeded (the
+    /// frame driver's previous accepted time is unset). Blocks read it through
+    /// [`Ctx::is_initial`]; issue #800, decision 3.
+    pub initial: bool,
 }
 
 /// BUILD step 4 (`01` §7): allocate the mutable [`RunState`] for a model. Lays out one fixed-size
@@ -78,8 +82,10 @@ pub fn allocate_state(model: &Model, blocks: &[Box<dyn Block>]) -> Result<RunSta
     let mut max_arity = 0usize;
 
     for blk in &model.blocks {
-        max_arity = max_arity.max(blk.inputs.len());
         let blk_impl = blocks[blk.id.0 as usize].as_ref();
+        // Declared inputs plus the `w`, `s` pair the event plan may append per settled input.
+        let settled = blk_impl.settled_event_inputs().len();
+        max_arity = max_arity.max(blk.inputs.len().saturating_add(settled.saturating_mul(2)));
         if blk_impl.kind() == BlockKind::Stateful {
             let len = blk_impl.state_len();
             let offset = words.len();
@@ -98,12 +104,27 @@ pub fn allocate_state(model: &Model, blocks: &[Box<dyn Block>]) -> Result<RunSta
 
     let values = init_values(model, blocks);
     let scratch = vec![Value::Real(0.0); max_arity];
+    // The settled-value shadow buffers (issue #800), only for a model that can need them.
+    let (shadow_w, shadow_s, shadow_i, shadow_scratch) = if crate::needs_plan(blocks) {
+        (
+            vec![false; model.connectors.len()],
+            vec![false; model.connectors.len()],
+            vec![false; model.connectors.len()],
+            vec![Value::Real(0.0); max_arity],
+        )
+    } else {
+        (Vec::new(), Vec::new(), Vec::new(), Vec::new())
+    };
     Ok(RunState {
         values,
         words,
         slots,
         slot_of,
         scratch,
+        shadow_w,
+        shadow_s,
+        shadow_i,
+        shadow_scratch,
         t: 0.0,
     })
 }
@@ -161,11 +182,127 @@ fn init_values(model: &Model, blocks: &[Box<dyn Block>]) -> Vec<Value> {
     values
 }
 
-/// Gather a block's inputs into `scratch[..arity]` via the alias map: `scratch[i]` is the current
-/// value of the output driving input `i` (or the input's own seeded slot if undriven).
-fn gather(blk: &BlockInstance, schedule: &Schedule, values: &[Value], scratch: &mut [Value]) {
+/// The shadow arrays of the settled-value rule: `w`, `s`, and `i` at the initial frame only.
+#[derive(Clone, Copy)]
+struct ShadowView<'a> {
+    w: &'a [bool],
+    s: &'a [bool],
+    i: Option<&'a [bool]>,
+}
+
+/// Gather a block's inputs into `scratch` via the alias map: `scratch[i]` is the current value of
+/// the output driving input `i` (or the input's own seeded slot if undriven). When the event plan
+/// gives the block settled inputs, their `w`, `s` pairs follow the declared inputs, and at the
+/// initial frame each settled declared input reads its cone at initialisation `i` in place of its
+/// frame value (`settled` lists the block's settled ports, in the plan's order). Returns the
+/// number of values gathered.
+fn gather(
+    blk: &BlockInstance,
+    settled: &[usize],
+    schedule: &Schedule,
+    values: &[Value],
+    shadow: ShadowView<'_>,
+    scratch: &mut [Value],
+) -> usize {
     for (i, &input) in blk.inputs.iter().enumerate() {
         scratch[i] = values[schedule.driver_of[input.0 as usize].0 as usize].clone();
+    }
+    let mut n = blk.inputs.len();
+    if let Some(hidden) = schedule.events.hidden(blk.id.0 as usize) {
+        for (slot, source) in hidden.iter().enumerate() {
+            let (w, s, i) = shadow_values(*source, values, shadow);
+            scratch[n] = w;
+            scratch[n + 1] = s;
+            n += 2;
+            if shadow.i.is_some()
+                && let Some(&port) = settled.get(slot)
+                && port < blk.inputs.len()
+            {
+                scratch[port] = i;
+            }
+        }
+    }
+    n
+}
+
+/// The `(w, s, i)` values of one shadow source at this tick (`i` is meaningful at the initial
+/// frame only; at a later frame it is the frame value or `false`, and nothing reads it).
+fn shadow_values(
+    source: ShadowSource,
+    values: &[Value],
+    shadow: ShadowView<'_>,
+) -> (Value, Value, Value) {
+    match source {
+        ShadowSource::Level(c) => {
+            let v = values[c.0 as usize].clone();
+            (v.clone(), v.clone(), v)
+        }
+        ShadowSource::Pulse(c) => (
+            Value::Boolean(false),
+            Value::Boolean(false),
+            values[c.0 as usize].clone(),
+        ),
+        ShadowSource::Sample(c) => (
+            Value::Boolean(false),
+            values[c.0 as usize].clone(),
+            Value::Boolean(false),
+        ),
+        ShadowSource::Node(c) => (
+            Value::Boolean(shadow.w[c.0 as usize]),
+            Value::Boolean(shadow.s[c.0 as usize]),
+            Value::Boolean(shadow.i.is_some_and(|i| i[c.0 as usize])),
+        ),
+    }
+}
+
+/// The shadow arrays of the settled-value rule and the scratch their evaluation gathers into.
+struct Shadow<'a> {
+    w: &'a mut [bool],
+    s: &'a mut [bool],
+    i: &'a mut [bool],
+    scratch: &'a mut [Value],
+}
+
+/// Evaluate a marked logic block of the event plan twice more, on its inputs' `w` and `s`
+/// values, into the shadow arrays at its output connectors, and at the initial frame a third
+/// time on its inputs' `i` values. The diagnostics of these evaluations are dropped: the block's
+/// own evaluation already reported them.
+fn shadow_step(
+    blk: &BlockInstance,
+    blk_impl: &dyn Block,
+    sources: &[ShadowSource],
+    values: &[Value],
+    shadow: &mut Shadow<'_>,
+    initial: bool,
+    t_now: f64,
+) {
+    let noop = NoopDiagnostics;
+    let cx = Ctx::new(t_now, &noop);
+    let passes = if initial { 3 } else { 2 };
+    for pass in 0..passes {
+        for (k, source) in sources.iter().enumerate() {
+            let view = ShadowView {
+                w: shadow.w,
+                s: shadow.s,
+                i: Some(&*shadow.i),
+            };
+            let (w, s, i) = shadow_values(*source, values, view);
+            shadow.scratch[k] = match pass {
+                0 => w,
+                1 => s,
+                _ => i,
+            };
+        }
+        let target: &mut [bool] = match pass {
+            0 => shadow.w,
+            1 => shadow.s,
+            _ => shadow.i,
+        };
+        blk_impl.step_algebraic(&cx, &shadow.scratch[..sources.len()], &mut |o, v| {
+            if let (Some(out), Value::Boolean(b)) = (blk.outputs.get(o), v) {
+                target[out.0 as usize] = b;
+            }
+        });
     }
 }
 
@@ -180,16 +317,21 @@ pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
     let schedule = ctx.schedule;
     let blocks = ctx.blocks;
     let diag = ctx.diagnostics;
+    let initial = ctx.initial;
     let RunState {
         values,
         words,
         slots,
         slot_of,
         scratch,
+        shadow_w,
+        shadow_s,
+        shadow_i,
+        shadow_scratch,
         t,
     } = &mut *ctx.state;
     *t = t_now;
-    let cx = Ctx::new(t_now, diag);
+    let cx = Ctx::new(t_now, diag).with_initial(initial);
     // The schedule must be tick-ready: `compile` fills `driver_of` (a bare `topo_sort` result does
     // not). Caught in debug so a direct `topo_sort` → `eval_tick` misuse fails loudly, not via an
     // out-of-range gather.
@@ -202,9 +344,21 @@ pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
     // PASS 1 — emit (atomic block firing: all of a block's outputs are produced in one call).
     for &bid in &schedule.order {
         let blk = &model.blocks[bid.0 as usize];
-        gather(blk, schedule, values, scratch);
-        let inputs = &scratch[..blk.inputs.len()];
         let blk_impl = blocks[bid.0 as usize].as_ref();
+        let view = ShadowView {
+            w: shadow_w,
+            s: shadow_s,
+            i: initial.then_some(&shadow_i[..]),
+        };
+        let n = gather(
+            blk,
+            blk_impl.settled_event_inputs(),
+            schedule,
+            values,
+            view,
+            scratch,
+        );
+        let inputs = &scratch[..n];
         match blk_impl.kind() {
             BlockKind::Algebraic => {
                 blk_impl.step_algebraic(&cx, inputs, &mut |o, v| {
@@ -227,6 +381,17 @@ pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
                 });
             }
         }
+        // The event plan's shadow pass: a marked logic block's `w` and `s`, right after it emits
+        // (its inputs' producers come earlier in the order).
+        if let Some(sources) = schedule.events.step(bid.0 as usize) {
+            let mut shadow = Shadow {
+                w: shadow_w,
+                s: shadow_s,
+                i: shadow_i,
+                scratch: shadow_scratch,
+            };
+            shadow_step(blk, blk_impl, sources, values, &mut shadow, initial, t_now);
+        }
     }
 
     // PASS 2 — update [S] state, after every emit, so updates read current-tick inputs.
@@ -236,8 +401,20 @@ pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
             continue;
         }
         let blk = &model.blocks[bid.0 as usize];
-        gather(blk, schedule, values, scratch);
-        let inputs = &scratch[..blk.inputs.len()];
+        let view = ShadowView {
+            w: shadow_w,
+            s: shadow_s,
+            i: initial.then_some(&shadow_i[..]),
+        };
+        let n = gather(
+            blk,
+            blk_impl.settled_event_inputs(),
+            schedule,
+            values,
+            view,
+            scratch,
+        );
+        let inputs = &scratch[..n];
         let slot = slots[slot_of[bid.0 as usize]];
         let region = &mut words[slot.offset..slot.offset + slot.len];
         blk_impl.update_state(&cx, inputs, region);

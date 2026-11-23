@@ -551,7 +551,7 @@ fn in_every_loading_fixture_the_first_reference_of_each_property_is_refused_with
         });
         assert_eq!(refusal(&doc), expected, "{}", path.display());
     }
-    // The census pins 127 loading fixtures; every property is exercised by at least one.
-    assert_eq!(loading, 127, "loading fixtures");
+    // The census pins 128 loading fixtures; every property is exercised by at least one.
+    assert_eq!(loading, 128, "loading fixtures");
     assert_eq!(covered.len(), REFERENCE_SLOTS.len(), "{covered:?}");
 }

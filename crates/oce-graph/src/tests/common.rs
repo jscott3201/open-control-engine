@@ -244,6 +244,7 @@ pub(super) fn tick_once(
         blocks,
         diagnostics: &diag,
         state,
+        initial: false,
     };
     eval_tick(&mut ctx, t);
 }
@@ -262,6 +263,7 @@ pub(super) fn tick_with_diag(
         blocks,
         diagnostics,
         state,
+        initial: false,
     };
     eval_tick(&mut ctx, t);
 }

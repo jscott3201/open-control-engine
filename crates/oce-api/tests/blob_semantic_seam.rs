@@ -67,6 +67,8 @@ fn trace(decoded: &mut Decoded<'_>) -> Vec<Vec<Value>> {
             blocks: &decoded.blocks,
             diagnostics: &oce_blocks::NoopDiagnostics,
             state: &mut decoded.state,
+            // The frame driver's first frame is the initial one (issue #800).
+            initial: rows.is_empty(),
         };
         eval_tick(&mut ctx, f64::from(k));
         rows.push(decoded.state.values.clone());

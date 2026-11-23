@@ -11,8 +11,8 @@ use oce_model::{ParamTable, Value};
 use crate::constructed::buffer_words;
 use crate::math;
 use crate::{
-    Block, BlockKind, BlockSignature, Ctx, PortKind, PortShape, ResolvedBlockSignature, Time,
-    read_bool,
+    Block, BlockKind, BlockSignature, Ctx, EventSignal, PortKind, PortShape,
+    ResolvedBlockSignature, Time, read_bool,
 };
 
 /// `CDL.Logical.Sources.Constant` — `y = k`. Stateless `[A]` source, no feedthrough edges.
@@ -64,6 +64,10 @@ impl Block for And {
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
+    }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
@@ -91,6 +95,10 @@ impl Block for Or {
     }
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
     }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
@@ -142,6 +150,10 @@ impl Block for MultiAnd {
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
+    }
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
         out_idx == 0 && in_idx < self.inputs.len()
     }
@@ -190,6 +202,10 @@ impl Block for MultiOr {
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
+    }
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
         out_idx == 0 && in_idx < self.inputs.len()
     }
@@ -216,6 +232,10 @@ impl Block for Not {
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
+    }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
@@ -240,6 +260,10 @@ impl Block for Nand {
     }
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
     }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
@@ -269,6 +293,10 @@ impl Block for Nor {
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
+    }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
@@ -296,6 +324,10 @@ impl Block for Xor {
     }
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
     }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
@@ -326,6 +358,10 @@ impl Block for LogicalSwitch {
     fn kind(&self) -> BlockKind {
         BlockKind::Algebraic
     }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Logic
+    }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
@@ -343,7 +379,9 @@ impl Block for LogicalSwitch {
 /// The first transition emits `pre_u_start`; later transitions emit the input latched by the
 /// preceding successful transition. It is stateful and reports `feeds_through == false`, so it cuts
 /// the direct-feedthrough DAG. The scheduler performs no Modelica same-time event iteration or
-/// convergence check.
+/// convergence check. To an event input's cone it is a delay (issue #800,
+/// [`crate::EventSignal::Delay`]): Modelica's `pre` settles in the second event iteration and this
+/// block a frame later, so a cone that reads one keeps the rising edge.
 ///
 /// The memory lives in one `[S]` state word (`0`/`1`), not in the struct. Methods do not panic when
 /// the scheduler supplies the signature-defined input and state slices.
@@ -364,6 +402,10 @@ impl Block for Pre {
     }
     fn kind(&self) -> BlockKind {
         BlockKind::Stateful
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Delay
     }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         false // HostTick output is call-entry state, independent of the current input.
@@ -394,7 +436,8 @@ impl Block for Pre {
 /// the *current* input versus the prior `prev`, so unlike `Pre`/`UnitDelay` it is **NOT** a loop cut
 /// (`feeds_through == true`, `01` §11.2 req 3). The prior bit lives in one `[S]` state word, seeded
 /// from `pre_u_start` (CDL has no `start`; default `false` per the reference's `pre = false`
-/// convention, so a `u` already `true` on tick 0 emits an edge on tick 0).
+/// convention, so a `u` already `true` on tick 0 emits an edge on tick 0). Its output is a pulse to
+/// an event input's cone (issue #800, [`crate::EventSignal::Pulse`]).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Edge {
     pub(crate) pre_u_start: bool,
@@ -412,6 +455,10 @@ impl Block for Edge {
     }
     fn kind(&self) -> BlockKind {
         BlockKind::Stateful
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Pulse
     }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true // the edge is a function of the CURRENT u vs the prior bit — feeds through, NOT a cut
@@ -453,6 +500,38 @@ impl Block for Edge {
 /// on the `EventAligned` grid, which lands a tick exactly on every instant (`01` §11.1 req 2).
 const SAMPLE_INDEX_EPS: f64 = 1e-9;
 
+/// The warning a `SampleTrigger` emits, once, the first time one frame spans more than one of its
+/// sample instants (issue #800, decision 2): the frame fires once for all of them.
+const SAMPLE_SPAN_WARNING: &str = "SampleTrigger: one frame spanned more than one sample instant; \
+     the frame fires once for all of them (host frame step above the sample period)";
+
+/// Decode the state word: the last fired sample index (`-1` before the first) and whether the
+/// span warning was emitted. A warned word stores `-(index + 2)`, which no unwarned word (`>= -1`)
+/// can hold, so the one word keeps the whole index range.
+pub(crate) fn sample_trigger_word(word: u64) -> (i64, bool) {
+    let w = word.cast_signed();
+    if w >= -1 {
+        (w, false)
+    } else {
+        (-(w + 2), true)
+    }
+}
+
+/// Encode a last fired index and the warned mark (see [`sample_trigger_word`]). A warned index
+/// that cannot be encoded (beyond `i64::MAX - 1`, which no representable time reaches) is stored
+/// unwarned.
+pub(crate) fn sample_trigger_encode(index: i64, warned: bool) -> u64 {
+    let word = if warned && index >= 0 {
+        index
+            .checked_neg()
+            .and_then(|n| n.checked_sub(2))
+            .unwrap_or(index)
+    } else {
+        index
+    };
+    word.cast_unsigned()
+}
+
 /// `CDL.Logical.Sources.SampleTrigger` — a parameter-clocked Boolean pulse that is `true` on exactly
 /// the tick that first reaches each periodic sample instant `phase + k·period` (`k ≥ 0`), where
 /// `phase = mod(shift, period)` is the floored Modelica modulo in `[0, period)` at CDL start time
@@ -468,13 +547,20 @@ const SAMPLE_INDEX_EPS: f64 = 1e-9;
 /// behavior OUT of the conformance guarantee, `01` §11.1 req 2 / `07` §13, since the `EventAligned`
 /// driver pins a tick on every instant).
 ///
-/// **What that means for an event input it feeds.** At a `period` at or below the frame step every
-/// frame reaches a new sample instant, so the output is `true` on every frame. A `when` input it
-/// feeds (`Discrete.TriggeredSampler.trigger`, a reset `trigger`, ...) then sees no false-to-true
-/// transition after frame 0 and never fires, where Modelica's `sample` is true only at each
-/// instant and fires the `when` at every one. Only a `period` above the frame step lets the output
-/// fall between samples. This is the HostTick v1 projection limit of issue #800 (open; pinned by
-/// `oce-conformance`'s `sample_trigger_event_inputs.rs`).
+/// **The initial frame** (the frame driver's first frame after the state was seeded) emits `true`
+/// only when its time is itself a sample instant, within the same `1e-9 · period` as the index;
+/// an off-grid start emits `false` and records the instant it passed, so the next frame fires on
+/// the next instant (issue #800, decision 3: Modelica's `sample` fires at the start only when the
+/// start is an instant). A direct call outside the frame driver is never the initial frame.
+///
+/// **What an event input sees** (issue #800, design note `docs/design/pulse-event-inputs.md`).
+/// The output is a *sample* to an event input's cone: in Modelica `sample()` stays true through
+/// every event iteration of its instant and falls in continuous time, where no `when` sees it.
+/// An event input fed by it (directly or through stateless logic) fires on every frame it is
+/// true, `Not` of it never fires, and at a `period` at or below the frame step every frame fires.
+/// A frame that spans several instants still fires once: the first time that happens the block
+/// warns, once (a host cadence above `period`; the warned mark lives in the state word, so a
+/// snapshot carries it).
 #[derive(Clone, Copy, Debug)]
 pub struct SampleTrigger {
     pub(crate) period: f64,
@@ -503,11 +589,28 @@ impl SampleTrigger {
         // The `> 0.0` test (not a negated `<=`) is deliberate: the else-branch also catches a NaN
         // `period`, since `NaN > 0.0` is false. `f64 → i64` saturates (no UB) at extreme horizons.
         if self.period > 0.0 {
-            let phase = self.shift - math::floor(self.shift / self.period) * self.period;
-            math::floor((t_now - phase) / self.period + SAMPLE_INDEX_EPS) as i64
+            math::floor(self.position(t_now)) as i64
         } else {
             // Keep direct block construction panic-free even though loaded models reject this case.
             if t_now >= self.shift { 0 } else { -1 }
+        }
+    }
+
+    /// The period-normalized sample position `(t - phase) / period + ε` (positive `period`).
+    fn position(&self, t_now: Time) -> f64 {
+        let phase = self.shift - math::floor(self.shift / self.period) * self.period;
+        (t_now - phase) / self.period + SAMPLE_INDEX_EPS
+    }
+
+    /// Whether `t_now` is itself a sample instant `phase + k·period` (`k ≥ 0`), within
+    /// `ε · period` on either side: the position lies in `[k, k + 2ε)` for its floor `k`. The
+    /// degenerate non-positive `period` of a direct construction counts `t_now >= shift`.
+    fn on_grid(&self, t_now: Time) -> bool {
+        if self.period > 0.0 {
+            let x = self.position(t_now);
+            x - math::floor(x) < 2.0 * SAMPLE_INDEX_EPS && self.sample_index(t_now) >= 0
+        } else {
+            t_now >= self.shift
         }
     }
 }
@@ -524,6 +627,10 @@ impl Block for SampleTrigger {
     }
     fn kind(&self) -> BlockKind {
         BlockKind::Stateful
+    }
+
+    fn event_signal(&self) -> EventSignal {
+        EventSignal::Sample
     }
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         false // a source: no inputs, nothing to feed through (the `Constant` convention)
@@ -555,14 +662,22 @@ impl Block for SampleTrigger {
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        let last_k = region[0].cast_signed();
-        emit(0, Value::Boolean(self.sample_index(ctx.t()) > last_k)); // true iff a new boundary reached
+        let (last_k, _) = sample_trigger_word(region[0]);
+        let fires = if ctx.is_initial() {
+            self.on_grid(ctx.t())
+        } else {
+            self.sample_index(ctx.t()) > last_k // true iff a new boundary reached
+        };
+        emit(0, Value::Boolean(fires));
     }
     fn update_state(&self, ctx: &Ctx<'_>, _inputs: &[Value], region: &mut [u64]) {
-        let last_k = region[0].cast_signed();
+        let (last_k, mut warned) = sample_trigger_word(region[0]);
         let k = self.sample_index(ctx.t());
-        if k > last_k {
-            region[0] = k.cast_unsigned(); // snap to the latest crossed boundary (fire-once)
+        if !ctx.is_initial() && !warned && k > last_k && k - last_k > 1 {
+            ctx.warn("CDL.Logical.Sources.SampleTrigger", SAMPLE_SPAN_WARNING);
+            warned = true;
         }
+        // Snap to the latest crossed boundary (fire-once).
+        region[0] = sample_trigger_encode(k.max(last_k), warned);
     }
 }

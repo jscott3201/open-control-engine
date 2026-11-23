@@ -1,23 +1,18 @@
-//! A known divergence from OpenModelica (issue #800): the Building 33 re-enable that follows a
-//! one-frame disable.
+//! The Building 33 re-enable that follows a one-frame disable, against OpenModelica (issue #800;
+//! the resolved known divergence `DVG-000001`).
 //!
 //! The enable falls at 377 s and rises at 382 s, consecutive frames. Modelica's `Change` is true
 //! at each instant, so the PI's `when trigger` fires at both and OpenModelica reinitialises the
-//! integrator at 382 s: the valve is `lim(y_reset) = 0` there. Under the engine's HostTick v1
-//! profile `Change` holds its output for a frame, so it is true at 377 s and at 382 s, one rising
-//! edge: the engine resets at 377 s only and emits at 382 s from the integrator 377 s left. In
-//! the 78-frame scenario the inputs at 377 s and 382 s are the same and the two coincide (both 0);
-//! `CoolingCoilValveReenableProbe.mo` runs the same frames with the supply air at 290 K instead of
-//! 288 K from 382 s, so the PI's error at the re-enable (5 K) differs from the error at the disable
-//! (3 K). The engine then stays `k * (5 - 3) = 0.036` above OpenModelica from 382 s on: 0.036
-//! against 0 at 382 s, a frame where OpenModelica's value is algebraic, so no integration
-//! difference can account for it.
+//! integrator at 382 s: the valve is `lim(y_reset) = 0` there. Under HostTick v1 `Change` holds
+//! its output for a frame, true at 377 s and at 382 s; under the settled-value rule (design note
+//! `docs/design/pulse-event-inputs.md`) it is a primitive pulse, so `trigger` fires on both frames
+//! and the engine resets at 382 s too. `CoolingCoilValveReenableProbe.mo` runs the same frames with
+//! the supply air at 290 K from 382 s, so that the PI's error at the re-enable (5 K) differs from
+//! the error at the disable (3 K) and a missing reset would show.
 //!
-//! The test pins both signals, the engine's against `yCooVal_reenable_probe.engine.csv` (the
-//! engine evidence of `DVG-000001` in `oce-conformance`'s known-divergence register) and
-//! OpenModelica's against its run, so an engine change that removes or moves the divergence
-//! fails here and must update the register, the execution profile and the verification-evidence
-//! page. It is not settled design: issue #800 waits on an owner decision.
+//! Before the rule the engine did not reset at 382 s and stayed `k * (5 - 3) = 0.036` above
+//! OpenModelica from 382 s on: `yCooVal_reenable_probe.engine.csv` keeps that signal as the
+//! evidence of the resolved register entry.
 
 use super::building_33_day::example_file;
 use super::building_33_openmodelica_frames::{
@@ -95,13 +90,16 @@ fn probe() -> Vec<Frame> {
 }
 
 #[test]
-fn at_the_re_enable_after_a_one_frame_disable_openmodelica_resets_and_the_engine_does_not() {
+fn at_the_re_enable_after_a_one_frame_disable_the_engine_resets_as_openmodelica_does() {
     let rows = probe_rows();
     let openmodelica = probe();
     let engine = engine_signal(&rows);
     let (modelica, hosttick) = resets(&rows);
     assert_eq!(modelica.last(), Some(&382.0));
-    assert_eq!(hosttick.last(), Some(&377.0), "the engine's last reset");
+    assert_eq!(
+        hosttick, modelica,
+        "the engine resets at every change, 382 s included"
+    );
     // Identical to the unprobed run before the probe: the same frames, the same signal.
     let frames = openmodelica_signal("yCooVal_frames.csv");
     for (a, b) in openmodelica.iter().zip(&frames) {
@@ -125,18 +123,21 @@ fn at_the_re_enable_after_a_one_frame_disable_openmodelica_resets_and_the_engine
     for ((t, y, _), want) in tail.iter().zip([0.0, 0.015, 0.030]) {
         assert!((y - want).abs() < 1e-9, "OpenModelica at {t} s: {y}");
     }
-    // The engine, from 382 s: no reset, so `k * (e(382) - e(377)) = 0.018 * 2` above OpenModelica.
-    let offset = 0.018 * (5.0 - 3.0);
-    for ((t, y, _), e) in tail.iter().zip(engine.iter().skip(rows.len() - tail.len())) {
+    // The engine, from 382 s: the reset, then the one frame of integral action every engine
+    // reset trails by (the reset frame takes no Euler step): 0, 0, 0.015.
+    let from = rows.len() - tail.len();
+    assert!(
+        (engine[from] - tail[0].1).abs() <= EXACT,
+        "the reset at 382 s"
+    );
+    let lead = 0.018 / 30.0 * 5.0 * 5.0;
+    for (k, (t, y, _)) in tail.iter().enumerate().skip(1) {
+        let e = engine[from + k];
         assert!(
-            (e - y - offset).abs() < 1e-9,
+            (y - e - lead).abs() < 1e-9,
             "t {t} s: engine {e}, OpenModelica {y}"
         );
     }
-    assert!((engine[rows.len() - 3] - 0.036).abs() < 1e-12);
-    // At 382 s OpenModelica's value is algebraic (a reset), so the difference is not integration:
-    // it is 3.6e10 times the bound the comparison holds every engine reset to.
-    assert!((engine[rows.len() - 3] - tail[0].1) / EXACT > 3.5e10);
     // Before 382 s the probe changes nothing for the engine either.
     let unprobed = engine_signal(&oracle_rows());
     for ((row, a), b) in rows.iter().zip(&engine).zip(&unprobed) {
@@ -144,21 +145,24 @@ fn at_the_re_enable_after_a_one_frame_disable_openmodelica_resets_and_the_engine
             assert_eq!(a.to_bits(), b.to_bits(), "t {} s", row.t);
         }
     }
-    // The pinned engine evidence: if this fails, the divergence moved or closed (DVG-000001,
-    // issue #800); update register.json, docs/execution-profile.md and
-    // docs/verification-evidence.md.
+    // The engine before the rule (the resolved divergence's evidence) stayed 0.036 above
+    // OpenModelica from 382 s on; it equals this run before 382 s.
     let recorded = recorded_engine();
     assert_eq!(recorded.len(), rows.len());
+    assert!((recorded[from].1 - 0.036).abs() < 1e-12);
     for ((t, y), (row, e)) in recorded.iter().zip(rows.iter().zip(&engine)) {
-        assert_eq!((t.to_bits(), y.to_bits()), (row.t.to_bits(), e.to_bits()));
+        assert_eq!(t.to_bits(), row.t.to_bits());
+        if row.t < 377.0 {
+            assert_eq!(y.to_bits(), e.to_bits(), "t {t} s");
+        }
     }
 }
 
 #[test]
 fn on_finer_frames_the_engine_resets_at_382_s_too_and_meets_openmodelica_there() {
-    // At 1/64 s frames the disable and the re-enable are 320 frames apart, two rising edges of
-    // `Change`, so the engine resets at both: the divergence is the projection of two events on
-    // consecutive frames, not the reset rule.
+    // At 1/64 s frames the disable and the re-enable are 320 frames apart, so the engine resets
+    // at both under any rule: the divergence the settled-value rule resolved was the projection
+    // of two events onto consecutive frames.
     let rows = probe_rows();
     let openmodelica = probe();
     let engine = refined(&rows, 1.0 / 64.0);
@@ -173,7 +177,7 @@ fn on_finer_frames_the_engine_resets_at_382_s_too_and_meets_openmodelica_there()
 }
 
 #[test]
-fn the_probe_run_is_recorded_and_the_divergence_registered() {
+fn the_probe_run_is_recorded_and_the_resolved_divergence_keeps_its_evidence() {
     let record: serde_json::Value =
         serde_json::from_slice(&example_file("openmodelica/provenance_frames.json"))
             .expect("provenance JSON");
@@ -201,6 +205,12 @@ fn the_probe_run_is_recorded_and_the_divergence_registered() {
     }
     let engine = example_file("openmodelica/yCooVal_reenable_probe.engine.csv");
     assert!(REGISTER.contains(r#""id": "DVG-000001""#));
+    let entry = &REGISTER[REGISTER.find(r#""id": "DVG-000001""#).expect("entry")..];
+    let entry = &entry[..entry.find(r#""conformance_effect""#).expect("end")];
+    assert!(
+        entry.contains(r#""state": "resolved""#),
+        "DVG-000001 is resolved"
+    );
     for digest in [sha256(&engine), sha256(&signal)] {
         assert!(REGISTER.contains(&format!(r#""sha256": "{digest}""#)));
     }

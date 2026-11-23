@@ -13,15 +13,15 @@
 //!
 //! What the comparison can and cannot see:
 //!
-//! - **OpenModelica resets at all nine changes of the enable; the engine at eight of them.**
-//!   `Change` is true only at each change's instant in Modelica, so each fires the PI's
-//!   `when trigger`. Under HostTick v1 `Change` holds for a frame, and the disable at 377 s and the
-//!   re-enable at 382 s are consecutive frames: one `true` lasting two frames, one rising edge, one
-//!   reset (at 377 s). At 382 s OpenModelica resets and the engine does not (issue #800, an open
-//!   question for the owner). Here the inputs at 377 s and 382 s are the same, so both give 0 and
-//!   this scenario cannot show the difference; `building_33_openmodelica_reenable.rs` runs the
-//!   same frames with the supply air changed at 382 s and pins it.
-//! - **At the engine's eight resets, and wherever the enable is off or the line cuts the PI, the
+//! - **OpenModelica and the engine reset at all nine changes of the enable.** `Change` is true
+//!   only at each change's instant in Modelica, so each fires the PI's `when trigger`. Under
+//!   HostTick v1 `Change` holds for a frame, and the disable at 377 s and the re-enable at 382 s
+//!   are consecutive frames; under the settled-value rule (issue #800) `Change` is a primitive
+//!   pulse, so `trigger` fires on both frames and the engine resets at 382 s too. Before that rule
+//!   it reset at eight (one rising edge for 377 and 382 s); here the inputs at 377 s and 382 s are
+//!   the same, so that could not show, and `building_33_openmodelica_reenable.rs` runs the same
+//!   frames with the supply air changed at 382 s.
+//! - **At the engine's nine resets, and wherever the enable is off or the line cuts the PI, the
 //!   engine equals OpenModelica to rounding (1e-12).** No integration enters there: `reinit` with
 //!   `y_reset - (P + D)` makes the controller's output `lim(y_reset)` at the instant, and so does
 //!   the engine's rule. The engine before issue #768 showed the four re-enables (25, 237, 272 and
@@ -97,22 +97,23 @@ pub(super) fn sha256(bytes: &[u8]) -> String {
 }
 
 /// The reset instants of the oracle's frames under each reading of `Change -> when trigger`:
-/// Modelica's (every change of the enable) and HostTick v1's (a rising edge of `Change`'s
-/// frame-long output). The enable is off exactly at the frames labelled `off:`.
+/// Modelica's (every change of the enable) and HostTick v1's under the settled-value rule of
+/// issue #800 (every frame where `Change`, a primitive pulse, is true: the same instants). The
+/// enable is off exactly at the frames labelled `off:`.
 pub(super) fn resets(rows: &[OracleRow]) -> (Vec<f64>, Vec<f64>) {
     let mut modelica = Vec::new();
     let mut hosttick = Vec::new();
-    let (mut enable_before, mut change_before) = (false, false);
+    let mut enable_before = false;
     for (k, row) in rows.iter().enumerate() {
         let enable = !row.branch.starts_with("off:");
         let change = enable != enable_before;
         if k > 0 && change {
             modelica.push(row.t);
-            if !change_before {
-                hosttick.push(row.t);
-            }
+            // `trigger`'s cone is the primitive pulse `Change(enable)`: `w = s = false`, so it
+            // fires on every frame `Change` is true, a frame right after another change included.
+            hosttick.push(row.t);
         }
-        (enable_before, change_before) = (enable, change);
+        enable_before = enable;
     }
     (modelica, hosttick)
 }
@@ -207,7 +208,7 @@ fn the_run_saw_the_oracle_s_frames_held_and_its_record_binds_them() {
 }
 
 #[test]
-fn openmodelica_resets_at_all_nine_changes_of_the_enable_and_the_engine_at_eight() {
+fn openmodelica_and_the_engine_reset_at_all_nine_changes_of_the_enable() {
     let (modelica, hosttick) = resets(&oracle_rows());
     let openmodelica: Vec<f64> = openmodelica()
         .iter()
@@ -222,11 +223,9 @@ fn openmodelica_resets_at_all_nine_changes_of_the_enable_and_the_engine_at_eight
         modelica,
         [25.0, 207.0, 237.0, 257.0, 272.0, 292.0, 307.0, 377.0, 382.0]
     );
-    // The engine (HostTick v1): `Change` true at 377 s and at 382 s is one rising edge.
-    assert_eq!(
-        hosttick,
-        [25.0, 207.0, 237.0, 257.0, 272.0, 292.0, 307.0, 377.0]
-    );
+    // The engine (HostTick v1, settled-value rule): `Change` true at 377 s and at 382 s is two
+    // events, as in Modelica.
+    assert_eq!(hosttick, modelica);
 }
 
 /// Frames where the engine's signal `engine` leaves OpenModelica's by more than [`EXACT`] where
@@ -252,7 +251,10 @@ fn the_engine_equals_openmodelica_at_its_resets_and_wherever_no_integral_reaches
     let rows = oracle_rows();
     let (_, hosttick) = resets(&rows);
     let counted = rows.iter().filter(|row| algebraic(row, &hosttick)).count();
-    assert_eq!(counted, 31, "frames compared to rounding");
+    assert_eq!(
+        counted, 32,
+        "frames compared to rounding, the re-enable at 382 s among them"
+    );
     for t in [25.0, 237.0, 272.0, 307.0] {
         let at = frames.iter().position(|f| f.t == t).expect("a frame");
         assert_eq!(

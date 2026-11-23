@@ -102,11 +102,15 @@ pub(super) fn build<'a>(layout: &Layout<'a>, counts: &Counts) -> Result<Decoded<
 
     let order = build_order(layout, &model, &blocks, &owners)?;
     drop(owners);
-    let schedule = Schedule {
+    let mut schedule = Schedule {
         order,
         connector_order: Vec::new(),
         driver_of,
+        events: crate::EventPlan::default(),
     };
+    // The event plan is derived from the wiring just validated, as BUILD derives it: the blob
+    // carries no byte of it (issue #800, design note decision C6).
+    schedule.events = crate::EventPlan::derive(&model, &blocks, &schedule);
 
     let state = build_state(layout, &model, &blocks)?;
     let content_id = recorded_content_id(layout.content_id);

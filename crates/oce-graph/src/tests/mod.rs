@@ -4,6 +4,7 @@ mod build_schedule;
 mod common;
 mod constructed_budget;
 mod edge_counter_feedthrough;
+mod event_plan;
 mod feedthrough_stateful;
 mod frame_driver;
 mod integrator_loop_cut;

@@ -11,7 +11,7 @@
 
 use oce_model::Value;
 
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind};
+use crate::{Block, BlockKind, BlockSignature, Ctx, EventSignal, PortKind};
 
 macro_rules! pass_through {
     ($name:ident, $class:literal, $kind:ident, $variant:ident) => {
@@ -43,6 +43,14 @@ macro_rules! pass_through {
 
             fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
                 true
+            }
+
+            fn event_signal(&self) -> EventSignal {
+                if matches!(PortKind::$kind, PortKind::Boolean) {
+                    EventSignal::Logic
+                } else {
+                    EventSignal::Level
+                }
             }
 
             fn step_algebraic(

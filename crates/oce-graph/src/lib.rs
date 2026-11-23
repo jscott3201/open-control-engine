@@ -51,12 +51,14 @@ use oce_model::{BlockId, ConnectorId, Model, Value};
 pub mod blob;
 mod build;
 mod constructed;
+mod events;
 pub mod frame;
 mod tick;
 mod topo;
 
 pub use build::{FeedthroughDag, build_driver_of, build_feedthrough_dag};
 pub use constructed::charge_instance;
+pub use events::{ConsumerCensus, EventPlan, ShadowSource, needs_plan};
 pub use oce_blocks::{ConstructedBudget, MAX_CONSTRUCTED_WORDS};
 pub use tick::{EvalContext, allocate_state, eval_tick, run_tick};
 pub use topo::topo_sort;
@@ -111,6 +113,10 @@ pub struct Schedule {
     /// `driver_of[c] = c` otherwise. `gather_inputs` reads `values[driver_of[input]]`, so no per-tick
     /// connection copies are needed. Built in BUILD; indexed by `ConnectorId.0`.
     pub driver_of: Vec<ConnectorId>,
+    /// The event plan (issue #800): which logic blocks the shadow pass evaluates and which blocks
+    /// receive settled values. Derived from the wiring by [`EventPlan::derive`] in [`compile`] and
+    /// in the blob decoder; empty when no event input has a pulse or sample upstream.
+    pub events: EventPlan,
 }
 
 /// Public alias for [`Schedule`] used by `06`/`08` (`01` §6.2: the same type).
@@ -145,6 +151,18 @@ pub struct RunState {
     /// Preallocated per-tick input-gather scratch, sized at BUILD to the maximum block input arity.
     /// Reused every tick so the hot path performs zero heap allocation (`01` §9 req 4).
     pub scratch: Vec<Value>,
+    /// Per-tick shadow values `w` of the settled-value rule (issue #800), indexed by
+    /// `ConnectorId.0`: the cone with pulses and samples false. Transient: rewritten each tick
+    /// before it is read, never part of a snapshot.
+    pub shadow_w: Vec<bool>,
+    /// Per-tick shadow values `s`: the cone with pulses false. Transient, as `shadow_w`.
+    pub shadow_s: Vec<bool>,
+    /// Shadow values `i` at the initial frame only: the cone at initialisation, with pulses at
+    /// their frame value (the initialisation pulse) and samples false (issue #800, decision 3 as
+    /// revised). Transient, as `shadow_w`; never read at a later frame.
+    pub shadow_i: Vec<bool>,
+    /// Preallocated scratch for the shadow pass's logic-block inputs, sized as `scratch`.
+    pub shadow_scratch: Vec<Value>,
     /// Current model time `t` (seconds); advanced by the host, read by elementary blocks (`01` §8).
     pub t: f64,
 }
@@ -318,6 +336,7 @@ pub fn compile(model: &Model, blocks: &[Box<dyn Block>]) -> Result<Schedule, Bui
     let dag = build_feedthrough_dag(model, blocks);
     let mut schedule = topo_sort(&dag, model, blocks)?;
     schedule.driver_of = build_driver_of(model);
+    schedule.events = EventPlan::derive(model, blocks, &schedule);
     Ok(schedule)
 }
 

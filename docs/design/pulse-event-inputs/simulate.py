@@ -40,8 +40,28 @@ RULES (each fires at most once per frame):
               with primitive pulses false and samples at their frame value, and
               fire = (not w(k-1) and v(k)) or (not v(k) and s(k))
 Every host and sample sequence of a few frames is enumerated from a settled frame 0 (no pulse,
-no sample, pre(x) = x), so frame-0 behaviour is outside this script; the Tally class says how a
-fire is matched to a Modelica event (on time, one frame late, or invented).
+no sample, pre(x) = x); the Tally class says how a fire is matched to a Modelica event (on time,
+one frame late, or invented).
+
+FRAME 0 (added in the review of GitHub #805, after the pinned-class probes InitNegatedPilot and
+InitMixturesPilot). THIS MODEL IS FITTED TO THOSE PROBES, NOT DERIVED INDEPENDENTLY: it is the
+sequence the probes' observations fit, written so the rules can be compared over every cone. At
+the initial time the leaves take, in order:
+  initialisation  hosts x(0); change(x) = x(0) <> pre_u_start, edge(x) = x(0) and not
+                  pre_u_start (pre_u_start = false, CDL/Logical/Change.mo, Edge.mo); pre(x) =
+                  pre_u_start; samples false ("The start value of the special functions initial,
+                  terminal, and sample is false", MLS 3.6 section 8.3.5.1)
+  event iteration pre(v) := v until nothing changes, samples still false ("pre(vi) := vi must be
+                  set and an event iteration at the initial time must follow", section 8.6)
+  sample event    the samples due at the initial time true ("Returns true and triggers time events
+                  at time instants", operator 3.23), then pre(v) := v until nothing changes with
+                  the samples held true (what OpenModelica 1.25.1 does through an instant's
+                  iterations, om/results.txt; the specification has sample true "only during the
+                  first event iteration", which no cone of these leaves can tell apart)
+A `when c` that is not active at initialisation (section 8.6: "The equations of a when-clause are
+active during initialization ... if and only if they are explicitly enabled with initial()")
+fires once per false-to-true step of c after initialisation. For primitive pulses and samples
+these three states are the engine's i, w and s.
 """
 
 import itertools
@@ -516,6 +536,87 @@ def trace(shape, hs, frames):
     return counts, fallback
 
 
+def modelica_initial(leaves, x0, samp):
+    """Leaf-value tuples at the initial time: [initialisation, ..., settled] (the fitted model)."""
+    allnodes = []
+    for l in leaves:
+        nodes(l, allnodes)
+    prev = {}
+    for x in allnodes:  # initialisation, children first
+        if x.kind == "host":
+            prev[x] = x0[x.name]
+        elif x.kind == "sample":
+            prev[x] = False
+        elif x.kind in LOGIC:
+            prev[x] = logic(x.kind, [prev[a] for a in x.args])
+        elif x.kind == "change":
+            prev[x] = prev[x.args[0]] != False  # noqa: E712 (pre_u_start)
+        elif x.kind == "edge":
+            prev[x] = prev[x.args[0]] and not False
+        else:
+            prev[x] = False
+    seq = [tuple(prev[l] for l in leaves)]
+    for sampling in (False, True):
+        for _ in range(32):
+            cur = {}
+            for x in allnodes:
+                if x.kind == "host":
+                    cur[x] = x0[x.name]
+                elif x.kind == "sample":
+                    cur[x] = sampling and samp.get(x.name, False)
+                elif x.kind in LOGIC:
+                    cur[x] = logic(x.kind, [cur[a] for a in x.args])
+                elif x.kind == "change":
+                    cur[x] = cur[x.args[0]] != prev[x.args[0]]
+                elif x.kind == "edge":
+                    cur[x] = cur[x.args[0]] and not prev[x.args[0]]
+                else:
+                    cur[x] = prev[x.args[0]]
+            if cur == prev:
+                break
+            seq.append(tuple(cur[l] for l in leaves))
+            prev = cur
+        else:
+            raise RuntimeError("initial event iteration did not settle")
+    return seq
+
+
+def initial_frame(leaves, hosts, samples):
+    """Every cone of `leaves` at the initial frame, every host value and sample on or off the
+    grid: how many (cone, start) pairs each rule fires exactly as the fitted Modelica model."""
+    n = len(leaves)
+    pulse = [l.kind in ("change", "edge") for l in leaves]
+    samp = [l.kind == "sample" for l in leaves]
+    counts = {"none (#768)": 0, "not i and s": 0, "i -> w -> s": 0}
+    differ = {"not i and s": [], "i -> w -> s": []}
+    starts = 0
+    for hv in itertools.product([False, True], repeat=len(hosts)):
+        for sv in itertools.product([False, True], repeat=len(samples)):
+            x0, sd = dict(zip(hosts, hv)), dict(zip(samples, sv))
+            seq = modelica_initial(leaves, x0, sd)
+            v = seq[0]  # the leaves at initialisation are the engine's i
+            i = idx(v)
+            w = idx(tuple(False if (p or q) else b for b, p, q in zip(v, pulse, samp)))
+            s = idx(tuple(False if p else (sd[l.name] if q else b)
+                          for b, p, q, l in zip(v, pulse, samp, leaves)))
+            states = [idx(t) for t in seq]
+            starts += 1
+            for c in range(1 << (1 << n)):
+                bit = lambda t: (c >> t) & 1 == 1  # noqa: E731
+                om = sum(1 for a, b in zip(states, states[1:]) if bit(b) and not bit(a))
+                fires = {
+                    "none (#768)": 0,
+                    "not i and s": int(bit(s) and not bit(i)),
+                    "i -> w -> s": int(bit(w) and not bit(i)) + int(bit(s) and not bit(w)),
+                }
+                for rule, f in fires.items():
+                    if f == om:
+                        counts[rule] += 1
+                    elif rule in differ and len(differ[rule]) < 3:
+                        differ[rule].append((c, hv, sv))
+    return counts, differ, starts * (1 << (1 << n))
+
+
 def main():
     a, b, S = host("a"), host("b"), sample("S")
     print("# Issue #800: brute force over every cone (Boolean function) of each leaf set")
@@ -557,6 +658,17 @@ def main():
     print(f"cones where both invent:                    {both}")
     print(f"cones where g invents on a sequence where today does not: {g_only}")
     print(f"invented (cone, sequence) pairs: today {pairs['today']}, g {pairs['g']}")
+    print()
+    print("# The initial frame (review of GitHub #805): every cone of Change(a), S, a, b, every a(0),")
+    print("# b(0), with S's instant at the start or not, against the FITTED Modelica model of the")
+    print("# initial time (initialisation -> event iteration -> sample event; see the docstring).")
+    print("# Exact (cone, start) pairs per rule, out of the total:")
+    counts, differ, total = initial_frame([Change(a), S, a, b], ["a", "b"], ["S"])
+    for rule, n in counts.items():
+        print(f"  {rule:14} {n:>7} / {total}")
+    for rule, ex in differ.items():
+        print(f"  first differences, {rule}: "
+              + ("none" if not ex else "; ".join(f"cone {c:#06x} a,b={hv} S={sv}" for c, hv, sv in ex)))
     print()
     print("# The shapes of the note's section 1.3: u changes at 2, 3, 5, 7, 8, 9 s; lvl on [4, 8);")
     print("# lvl2 from 4 s (3.5 s in OpenModelica, shown at the 4 s frame); b on [2, 7); 1 s frames;")

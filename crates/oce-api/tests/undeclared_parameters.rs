@@ -375,6 +375,8 @@ fn the_blob_of_a_document_spelt_right_round_trips_and_ticks_as_the_engine_does()
             blocks: &decoded.blocks,
             diagnostics: &oce_blocks::NoopDiagnostics,
             state: &mut decoded.state,
+            // The frame driver's first frame is the initial one (issue #800).
+            initial: from_blob.is_empty(),
         };
         eval_tick(&mut ctx, time);
         from_blob.push(decoded.state.values[0].clone());

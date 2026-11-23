@@ -39,6 +39,7 @@ refused	unresolved-reference	-	-	crates/oce-api/tests/fixtures/frame_pre.jsonld
 refused	unresolved-reference	-	-	crates/oce-api/tests/fixtures/legacy_frame_add.jsonld
 same-id	-	0	0	crates/oce-api/tests/fixtures/library_rules/AHU-0004/rule.cxf.jsonld
 same-id	-	0	0	crates/oce-api/tests/fixtures/library_rules/AHU-0016/rule.cxf.jsonld
+same-id	-	2	0	crates/oce-api/tests/fixtures/pulse_snapshot.jsonld
 refused	datatype-mismatch	-	-	crates/oce-conformance/tests/fixtures/analog_warning_algebraic_loop.jsonld
 same-id	-	0	0	crates/oce-conformance/tests/fixtures/driver/free_add.jsonld
 same-id	-	0	0	crates/oce-conformance/tests/fixtures/driver/free_divide.jsonld

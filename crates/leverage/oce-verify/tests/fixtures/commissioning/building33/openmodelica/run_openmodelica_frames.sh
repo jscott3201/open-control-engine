@@ -3,8 +3,8 @@
 # pinned OpenModelica container and write its valve signal at the frame instants (issue #787),
 # twice: as the oracle holds the frames (CoolingCoilValveFrames.mo -> yCooVal_frames.csv), and
 # with the supply air at 290 K from the re-enable at 382 s (CoolingCoilValveReenableProbe.mo ->
-# yCooVal_reenable_probe.csv), where OpenModelica resets the integrator and the engine does not
-# (issue #800).
+# yCooVal_reenable_probe.csv), where OpenModelica resets the integrator, as the engine does since
+# the settled-value rule of issue #800.
 #
 #   docker pull "$IMAGE"                              # once, by digest, with network
 #   sh run_openmodelica_frames.sh <buildings checkout> <msl checkout>

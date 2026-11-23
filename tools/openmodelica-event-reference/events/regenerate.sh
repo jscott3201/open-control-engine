@@ -19,7 +19,12 @@
 # For each pilot the script writes, beside the class's other files: the result as OpenModelica
 # wrote it (<name>.raw.csv), the canonical tables canonicalize.py projects from it, omc's output
 # (run.log) and provenance.json; the two extra pilots of a class (OnCounterChangePilot,
-# IntegratorWithResetRampPilot) prefix their log and record with their scenario's name. No test runs this script; the tests read those files.
+# IntegratorWithResetRampPilot) prefix their log and record with their scenario's name. With a
+# third argument `pulses` it runs only the pulse-event pilots of issue #800 (PulseConsumersPilot,
+# SampleTriggerPilot, SampleTriggerOffGridPilot, and from the review of GitHub #805
+# InitNegatedPilot, InitMixturesPilot, their off-grid copies, LatchClearPilot and
+# MixedFallbackPilot) into
+# pulse_events/, with simulate_pulses.mos. No test runs this script; the tests read those files.
 # Docker images and libraries are left as they are.
 set -eu
 
@@ -32,10 +37,11 @@ SETTINGS='cvode, tolerance 1e-6, 0 to 10 s, output every 1 s'
 PROJECTION='at each frame instant 0 to 9 s, the last row within 1e-6 s of it'
 COMMAND='docker run --rm --pull=never --network none --memory 4g --cpus 4 --user <host-uid>:<host-gid> -e HOME=/work -v <buildings>:/libs/buildings:ro -v <msl>:/libs/msl:ro -v tools/openmodelica-event-reference/events:/scripts:ro -v <run directory>:/work -w /work <image> omc /work/run.mos'
 
-if [ "$#" -ne 2 ]; then
-  echo 'usage: sh regenerate.sh BUILDINGS_CHECKOUT MSL_CHECKOUT' >&2
+if [ "$#" -ne 2 ] && { [ "$#" -ne 3 ] || [ "$3" != pulses ]; }; then
+  echo 'usage: sh regenerate.sh BUILDINGS_CHECKOUT MSL_CHECKOUT [pulses]' >&2
   exit 2
 fi
+ONLY="${3:-}"
 BUILDINGS=$(CDPATH= cd -- "$1" && pwd)
 MODELICA=$(CDPATH= cd -- "$2" && pwd)
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -111,7 +117,104 @@ JSON
   echo "wrote $slug/${prefix}provenance.json"
 }
 
+# run_pulse_pilot PILOT START STEM SOURCE...: run one pulse-event pilot (issue #800) from START s
+# to START + 10 s with simulate_pulses.mos, write its result, log and record under
+# integers_on_counter's sibling directory pulse_events/, and the canonical table STEM.
+run_pulse_pilot() {
+  pilot=$1; start=$2; stem=$3
+  shift 3
+  out="$FIXTURES/pulse_events"
+  mkdir -p "$out"
+  work=$(mktemp -d)
+  stop=$(python3 -I -c "import sys; print(float(sys.argv[1]) + 10)" "$start")
+  sed -e "s/@PILOT@/$pilot/g" -e "s/@START@/$start/g" -e "s/@STOP@/$stop/g" \
+    "$HERE/simulate_pulses.mos" > "$work/run.mos"
+  docker run --rm --pull=never --network none --memory 4g --cpus 4 \
+    --user "$(id -u):$(id -g)" -e HOME=/work \
+    -v "$BUILDINGS":/libs/buildings:ro -v "$MODELICA":/libs/msl:ro -v "$HERE":/scripts:ro \
+    -v "$work":/work -w /work "$IMAGE" omc /work/run.mos > "$work/omc.log" 2>&1
+  grep -v '^    time[A-Za-z]* = ' "$work/omc.log" > "$out/$stem.run.log"
+  grep -q 'The simulation finished successfully' "$out/$stem.run.log" \
+    || { cat "$out/$stem.run.log" >&2; exit 1; }
+  cp "$work/${pilot}_res.csv" "$out/$stem.raw.csv"
+  rm -rf "$work"
+  python3 -I "$HERE/canonicalize.py" "$pilot" "$out/$stem.raw.csv" "$out"
+  sources=''
+  for source in "$@"; do
+    sources="$sources
+    \"$source\": \"$(sha "$BUILDINGS/$source")\","
+  done
+  sources="${sources%,}"
+  cat > "$out/$stem.provenance.json" <<JSON
+{
+  "pilot": "tools/openmodelica-event-reference/events/$pilot.mo",
+  "pilot_sha256": "$(sha "$HERE/$pilot.mo")",
+  "simulate_template_sha256": "$(sha "$HERE/simulate_pulses.mos")",
+  "image": "$IMAGE",
+  "omc": "$OMC_VERSION",
+  "architecture": "$ARCHITECTURE",
+  "buildings_commit": "$BUILDINGS_COMMIT",
+  "buildings_tree": "$BUILDINGS_TREE",
+  "msl_commit": "$MODELICA_COMMIT",
+  "msl_tree": "$MODELICA_TREE",
+  "class_sources": {$sources
+  },
+  "settings": "cvode, tolerance 1e-6, $start to $stop s, output every 1 s",
+  "projection": "at each frame instant $start + k s (k = 0 to 9), the last row within 1e-6 s of it",
+  "command": "$COMMAND",
+  "raw": "$stem.raw.csv",
+  "canonical_sha256": "$(sha "$out/$stem.canonical.csv")",
+  "raw_sha256": "$(sha "$out/$stem.raw.csv")"
+}
+JSON
+  echo "wrote pulse_events/$stem.provenance.json"
+}
+
 CDL='Buildings/Controls/OBC/CDL'
+L="$CDL/Logical"
+CONSUMERS="$L/Change.mo $CDL/Discrete/TriggeredSampler.mo $CDL/Discrete/TriggeredMax.mo \
+  $CDL/Discrete/TriggeredMovingMean.mo $CDL/Reals/IntegratorWithReset.mo $CDL/Reals/PIDWithReset.mo \
+  $L/Latch.mo $L/Toggle.mo $L/TimerAccumulating.mo $CDL/Integers/OnCounter.mo $L/Not.mo $L/Or.mo \
+  $L/Pre.mo"
+SAMPLES="$L/Sources/SampleTrigger.mo $CDL/Integers/OnCounter.mo $CDL/Discrete/TriggeredSampler.mo \
+  $L/Not.mo $L/Latch.mo $CDL/Discrete/TriggeredMovingMean.mo $L/Pre.mo $CDL/Discrete/TriggeredMax.mo \
+  $CDL/Reals/IntegratorWithReset.mo $CDL/Reals/PIDWithReset.mo $L/TimerAccumulating.mo $L/Toggle.mo \
+  $L/And.mo"
+INIT="$L/Change.mo $L/Edge.mo $L/Not.mo $L/Sources/SampleTrigger.mo $CDL/Integers/OnCounter.mo \
+  $CDL/Discrete/TriggeredSampler.mo $L/Latch.mo $L/Toggle.mo $CDL/Discrete/TriggeredMax.mo \
+  $CDL/Discrete/TriggeredMovingMean.mo $CDL/Reals/IntegratorWithReset.mo $CDL/Reals/PIDWithReset.mo \
+  $L/TimerAccumulating.mo"
+MIXTURES="$L/Change.mo $L/Not.mo $L/Sources/SampleTrigger.mo $L/Or.mo $L/And.mo $L/Xor.mo $L/Pre.mo \
+  $CDL/Integers/OnCounter.mo $L/Latch.mo $L/Toggle.mo"
+CLEAR="$L/Change.mo $L/Not.mo $L/Edge.mo $L/Sources/SampleTrigger.mo $L/Latch.mo $L/Toggle.mo \
+  $CDL/Conversions/BooleanToReal.mo $CDL/Discrete/TriggeredSampler.mo $CDL/Discrete/TriggeredMax.mo \
+  $CDL/Discrete/TriggeredMovingMean.mo $CDL/Reals/IntegratorWithReset.mo $CDL/Reals/PIDWithReset.mo"
+MIXED="$L/Change.mo $L/Not.mo $L/Pre.mo $L/Latch.mo $L/Edge.mo $CDL/Integers/OnCounter.mo \
+  $L/Sources/SampleTrigger.mo $L/Toggle.mo $L/Nor.mo"
+if [ "$ONLY" = pulses ]; then
+  # shellcheck disable=SC2086
+  run_pulse_pilot PulseConsumersPilot 0.0 consumers $CONSUMERS
+  # shellcheck disable=SC2086
+  run_pulse_pilot SampleTriggerPilot 0.0 sample_triggers $SAMPLES
+  # shellcheck disable=SC2086
+  run_pulse_pilot SampleTriggerOffGridPilot 0.25 sample_trigger_off_grid $SAMPLES
+  # The review round of GitHub #805: negated initialisation pulses and mixed cones at t = 0, on
+  # and off the sample grid, and Latch/Toggle whose clr carries a pulse or a sample.
+  # shellcheck disable=SC2086
+  run_pulse_pilot InitNegatedPilot 0.0 init_negated $INIT
+  # shellcheck disable=SC2086
+  run_pulse_pilot InitNegatedOffGridPilot 0.25 init_negated_off_grid $INIT
+  # shellcheck disable=SC2086
+  run_pulse_pilot InitMixturesPilot 0.0 init_mixtures $MIXTURES
+  # shellcheck disable=SC2086
+  run_pulse_pilot InitMixturesOffGridPilot 0.25 init_mixtures_off_grid $MIXTURES
+  # shellcheck disable=SC2086
+  run_pulse_pilot LatchClearPilot 0.0 latch_clear $CLEAR
+  # The second review of GitHub #805: a fallback cone on one input of a two-input consumer.
+  # shellcheck disable=SC2086
+  run_pulse_pilot MixedFallbackPilot 0.0 mixed_fallback $MIXED
+  exit 0
+fi
 TWO='initially_true rising_after_start'
 # shellcheck disable=SC2086
 run_pilot OnCounterPilot integers_on_counter on_counter CDL.Integers.OnCounter "$CDL/Integers/OnCounter.mo" '' $TWO
