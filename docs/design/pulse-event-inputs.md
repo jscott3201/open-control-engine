@@ -1,14 +1,15 @@
 # Event inputs fed by one-frame pulses
 
-**Design note, written before any code (issue #800), revised after its first review.** The owner
-ruled on 2026-11-22: write a design note first for an engine fix, "the pulse/level rule, or better
-if the note finds one"; nothing is built before the note is reviewed, and the two divergences stay
-pinned in the register meanwhile. This note states what Modelica does with a pulse on an event
-input and what the engine does, for every registered pulse producer and event consumer; measures
-the shapes against OpenModelica, the engine and a brute-force simulator; evaluates the options;
-recommends one; lists the [decisions](#decisions) the owner is asked to rule on and the calls this
-note proposes to make itself; and measures the blast radius. The
-[execution profile](../execution-profile.md) stays the authority for shipped behaviour until an
+**Design note, written before any code (issue #800), revised after its first review, and ruled
+on.** The owner ruled on 2026-11-22: write a design note first for an engine fix, "the pulse/level
+rule, or better if the note finds one"; nothing is built before the note is reviewed, and the two
+divergences stay pinned in the register meanwhile. This note states what Modelica does with a pulse
+on an event input and what the engine does, for every registered pulse producer and event
+consumer; measures the shapes against OpenModelica, the engine and a brute-force simulator;
+evaluates the options; and measures the blast radius. The owner ruled on all six of its
+[decisions](#decisions) on 2026-11-22, each for the option this note recommended: **build option
+(g), the corrected rule**. Calls C1 to C8 are this note's own. The
+[execution profile](../execution-profile.md) stays the authority for shipped behaviour until the
 implementation PR changes it.
 
 **What the review changed.** The first draft recommended a "settled value" rule, kept below as
@@ -16,8 +17,8 @@ option (f). An independent review showed that it invents events in three familie
 that two statements it rested on were false: a `sample()` pulse is not "true only in the first
 event iteration", and a `Pre` or an edge block of a pulse does not merely show a real event late.
 This revision reran every counterexample (section 1.3 and
-[Evidence that can be rerun](#evidence-that-can-be-rerun)) and now recommends option (g), the
-corrected rule.
+[Evidence that can be rerun](#evidence-that-can-be-rerun)) and recommended option (g), the corrected
+rule, which the owner chose.
 
 Paths below are repository-relative. `CDL/` abbreviates the vendored
 `third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/`; `blocks/` abbreviates
@@ -183,7 +184,7 @@ the corrected one (section 2). Notes:
   OpenModelica gives 10, 11, 12, … at `period = 1` s and 10, 10, 12, 12, 14, … at `period = 2` s.
   The engine gives 7 at every frame at `period = 1` s, and 7, 7, 12, 12, 14, … at `period = 2` s
   (`crates/oce-conformance/tests/sample_trigger_event_inputs.rs`). Under (g) the first becomes 7,
-  11, 12, …; with decision 3's recommended option both equal OpenModelica.
+  11, 12, …; with decision 3's frame-0 ruling both equal OpenModelica.
 
 ### 1.4 What a pulse is on a frame
 
@@ -233,7 +234,7 @@ frame before accounts for, in the snapped model.
 | (d) | Modelica's event iteration inside the frame | 1 to 11 and 13 to 21, by argument | none, by construction | a new profile |
 | (e) | no engine change | as today | as today | ships both divergences |
 | (f) | the first draft's settled value | 1 to 5, 7, 11, 13 to 15, 21 | **44,800** of 65,536 with a sample; **156** of 256 with a `Pre` of a level, where today invents in none; **180** of 256 with a `Pre` or an edge block of a pulse | **unsound**: rows 16 to 20 |
-| (g) | the corrected rule: section 1.4's formula where every leaf is a level, a primitive pulse or a sample; today's rule for every other cone | 1 to 5, 7, 11, 13 to 16, 20, 21 | **none** on {Change(a), S, a, b}, {Change(a), S, a}, {Change(a), Change(b), a, b}, {Edge(a), FallingEdge(b), a, b}, where it is exact in every cone; as today in fallback cones | recommended |
+| (g) | the corrected rule: section 1.4's formula where every leaf is a level, a primitive pulse or a sample; today's rule for every other cone | 1 to 5, 7, 11, 13 to 16, 20, 21 | **none** on {Change(a), S, a, b}, {Change(a), S, a}, {Change(a), Change(b), a, b}, {Edge(a), FallingEdge(b), a, b}, where it is exact in every cone; as today in fallback cones | **chosen** (decision 1) |
 
 **(a) Pulse/level labels** (the reviewer's rule, issue #800 comment of 2026-11-22). Load labels
 each Boolean net; a pulse-labelled input fires when true, any other on the rising edge. It fixes
@@ -244,6 +245,17 @@ treats an edge block's output as a pulse whatever feeds it, which counts one eve
 `Not(Change)` and `Or(Change, level)` (rows 2, 4, 11) and keeps today's negated-sample errors.
 (Without that fallback it invents beyond today too: 158 against 155 cones of {Change(a),
 Change(Edge(a)), b}, where a cone that is a pulse by its primitive leaf also reads the stale one.)
+
+**Where these counts differ from the review's.** The review counted invented events for today and
+(a) on its two non-primitive leaf sets as 80 and 108 (`Pre(Change(a))`) and 40 and 71
+(`Change(Edge(a))`); this note's are 170 and 198, and 155 and 186. The counts for (f) agree (180),
+as do every count on the primitive leaf sets. The definitions behind this note's numbers, all in
+`simulate.py`: the leaf sets are exactly {Change(a), Pre(Change(a)), b} and {Change(a),
+Change(Edge(a)), b}; every host sequence of six frames is enumerated from a settled frame 0; and a
+fire is *invented* only if no Modelica event of its own frame or of the frame before is left to
+match it, matching each fire first to the previous frame's unmatched event (so a fire one frame
+late is late, not invented). The review's leaf sets or matching may differ; the conclusions do
+not: (a) as written invents beyond today on both, and (f) invents on both.
 
 **(b) Event count on the port.** A `Change` would emit "how many changes in the frame", a
 `SampleTrigger` how many instants. Only `OnCounter` can use a count; a `TriggeredSampler` asked to
@@ -324,55 +336,59 @@ by section 1.4's formula and stores `w(k)`. A cone of levels alone is today's ru
   untouched. The workspace is 0.6.0 after the v0.5.0 tag, so rule 10's bump is done unless v0.6.0
   is tagged before the implementation lands.
 
-## 3. Recommendation
+## 3. The rule to build
 
-**Build (g).** It closes `DVG-000001`, `DVG-000002` and the `SampleTrigger` freeze; it fixes `Not`
-of a pulse, `Or` of a pulse and a level, negated samples and the other mixtures of primitive
-pulses, samples and levels (rows 2, 4, 5, 11, 16); in the snapped model it is exact where it
-applies and nowhere invents an event today's rule does not.
+**Build (g)** (decision 1, owner ruling of 2026-11-22). It closes `DVG-000001`, `DVG-000002` and the
+`SampleTrigger` freeze; it fixes `Not` of a pulse, `Or` of a pulse and a level, negated samples and
+the other mixtures of primitive pulses, samples and levels (rows 2, 4, 5, 11, 16); in the snapped
+model it is exact where it applies and nowhere invents an event today's rule does not.
 
-**These shapes fall back to today's rule**, with today's errors (rows 6 to 10 and 17 to 21):
+**These shapes fall back to today's rule** (decision 5), with today's errors (rows 6 to 10 and 17 to
+21):
 
 - any cone with a `Pre` in it, including the `Pre` that breaks feedback into an event input;
 - `Xor(u, Pre(u))` and every other pulse built by hand from `Pre`;
-- any cone with an edge block (`Change`, `Integers.Change`, `Edge`, `FallingEdge`) fed by a pulse,
-  a sample or a `Pre`.
+- any cone with an edge block (`Change`, `Integers.Change`, `Edge`, `FallingEdge`) fed by a pulse, a
+  sample or a `Pre`.
 
-None of them occurs in the tracked or library documents (section 4). (a′) is the fallback if the
-owner wants static labels and no shadow evaluation: the same soundness relative to today, but
-rows 2, 4 and 11 and negated samples stay as today. (a) as first written and (f) invent events and
-are not options.
+None of them occurs in the tracked or library documents (section 4). (a′), considered and not
+chosen, would have given static labels and no shadow evaluation at the same soundness relative to
+today, leaving rows 2, 4 and 11 and negated samples as today. (a) as first written and (f) invent
+events.
 
 ## Decisions
 
-Decisions 1 to 6 are **owner rulings asked for**, each with its options, the recommended one
-first. Decisions C1 to C8 are **calls this note proposes to make itself**; none of them decides
-what fires, and the owner can overrule any of them.
+Decisions 1 to 6 are **owner rulings of 2026-11-22**, each for the option this note recommended,
+marked (i); the options not chosen stay below as the record of what was considered. Decisions C1 to
+C8 are **this note's own calls**; none of them decides what fires, and the owner can overrule any of
+them. The implementation PR follows all fourteen.
 
-1. **Which rule** (owner). (i) **(g), the corrected rule**: the gains above; every cone it cannot
-   handle keeps today's behaviour. (ii) (a′), primitive pulse labels: closes both register entries
-   and the freeze with a static label and no shadow evaluation; `Not`, `Or`-with-a-level and
-   negated samples stay as today. (iii) (c), direct wiring only: closes both register entries and
-   the freeze, nothing combined. (iv) (e), no engine change: document the cadence obligation and
-   keep both divergences open.
-2. **The shapes no rule matches** (owner): several events in one frame (row 12); the fallback cones
-   of decision 5; duration consumers fed by a pulse (`Timer`, `TrueDelay`, `TrueFalseHold`,
-   `TrueHoldWithReset`, `MovingAverage` of a converted pulse); and snapping (section 6).
-   (i) **Document them in the execution profile, and warn once per `SampleTrigger` instance, the
-   first time a frame spans more than one of its instants**: a host-cadence violation the engine
-   can see, reported once, not every frame. (ii) Document only. (iii) Also warn at load for each
-   fallback cone and each pulse into a duration consumer: every `Pre` remedy would warn, and so
-   would the 11 library fault rules that count one-frame pulses with a moving average.
-   (iv) Refuse them at load: the `Pre` remedy and those 11 rules would stop loading.
-3. **Frame 0, per class** (owner). (i) **Fire only a sample's instant at frame 0:**
+1. **Which rule** (owner ruling, 2026-11-22: **(i)**). (i) **(g), the corrected rule**: the gains
+   above; every cone it cannot handle keeps today's behaviour. Not chosen: (ii) (a′), primitive
+   pulse labels: closes both register entries and the freeze with a static label and no shadow
+   evaluation; `Not`, `Or`-with-a-level and negated samples stay as today. (iii) (c), direct wiring
+   only: closes both register entries and the freeze, nothing combined. (iv) (e), no engine change:
+   document the cadence obligation and keep both divergences open.
+2. **The shapes no rule matches** (owner ruling, 2026-11-22: **(i)**; nothing is refused): several
+   events in one frame (row 12); the fallback cones of decision 5; duration consumers fed by a pulse
+   (`Timer`, `TrueDelay`, `TrueFalseHold`, `TrueHoldWithReset`, `MovingAverage` of a converted
+   pulse); and snapping (section 6). (i) **Document them in the execution profile, and warn once per
+   `SampleTrigger` instance, the first time a frame spans more than one of its instants**: a
+   host-cadence violation the engine can see, reported once, not every frame. Not chosen: (ii)
+   document only. (iii) Also warn at load for each fallback cone and each pulse into a duration
+   consumer: every `Pre` remedy would warn, and so would the 11 library fault rules that count
+   one-frame pulses with a moving average. (iv) Refuse them at load: the `Pre` remedy and those 11
+   rules would stop loading.
+3. **Frame 0, per class** (owner ruling, 2026-11-22: **(i)**). (i) **Fire only a sample's instant at
+   frame 0:**
    - `OnCounter`, `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset`, `PIDWithReset` and
      `TimerAccumulating.reset` evaluate the formula at frame 0 with *before* = `w(0)` (pulses and
      samples false, frame-0 levels), every `Change`, `Integers.Change`, `Edge` and `FallingEdge`
      leaf false in *during* and *settled* (their frame-0 value is initialisation, which fires
-     nothing in OpenModelica), and each sample leaf true only if `t(0)` is one of its instants.
-     Only a sample fires at frame 0; `Not(SampleTrigger)` does not, and neither does
-     `Not(Change(u))` with `u(0) ≠ pre_u_start`, which a gate on the first term alone would let fire
-     through its second. A fallback cone keeps today's "no event at frame 0".
+     nothing in OpenModelica), and each sample leaf true only if `t(0)` is one of its instants. Only
+     a sample fires at frame 0; `Not(SampleTrigger)` does not, and neither does `Not(Change(u))`
+     with `u(0) ≠ pre_u_start`, which a gate on the first term alone would let fire through its
+     second. A fallback cone keeps today's "no event at frame 0".
    - `TriggeredMovingMean` samples at frame 0 as today (`when {initial(), trigger}`).
    - `Latch` and `Toggle` keep their frame 0 as today: their initial equations read `u`'s frame-0
      value, the initialisation pulse of a `Change` included, as OpenModelica confirms.
@@ -381,60 +397,102 @@ what fires, and the owner can overrule any of them.
      off-grid start, where Modelica has no instant.
    - Every class stores `w(0)` after frame 0.
 
-   (ii) Keep #768's "no event at frame 0" for every class and `SampleTrigger`'s frame-0 output as
-   it is. A sampler behind a `SampleTrigger` then shows `y_start` until the second instant, and the
-   off-grid `Pre(SampleTrigger)` event at frame 1 stays; both are documented.
-4. **`Latch.u` and `Toggle.u`, so G36 `TrimAndRespond`, in M3** (owner), with decision 3's
-   per-class frame 0. (i) **Include them with the other event inputs.** No tracked trace moves: all
-   three fixtures that hold the block run `have_hol = false`, where `clr` equals `u` and the latch
-   is false whatever the rule, at frame steps of 1 s and 60 s against a 120 s `samplePeriod`,
-   starting on the sample grid. With `have_hol = true` at a frame step above 60 s, the latch
-   re-latches at each sample as OpenModelica does (`lat.y` in `om/results.txt`). (ii) Leave them on
-   the rising edge until a G36 run with `have_hol = true` exists as evidence.
-5. **Cones with a `Pre` or an edge block of a pulse** (owner). (i) **Fall back to today's rule**:
-   no new error, and rows 6 to 10 and 17 to 21 stay as today. (ii) Compute edge blocks from the
-   three values (`Edge` of a cone as `(v ∧ ¬w(k−1)) ∨ (s ∧ ¬v)`, and likewise `Change` and
-   `FallingEdge`): rows 8, 9 and 20 and `Change(Change(u))` come out right, but row 21 invents an
-   event at every change (6 against OpenModelica's 0), because a first-iteration and a
-   second-iteration pulse are true on the same frame; and `Pre` cones still need the fallback,
-   since the engine shows `Pre`'s settled value a frame late. Only option (d) does better.
-6. **`TimerAccumulating.reset`** (owner). (i) **In**: it is a `when reset` event input, and
-   OpenModelica resets on each of consecutive `Change` pulses where the engine resets on the first
-   only. (ii) Out: keep it on the rising edge and document it beside the duration consumers.
+   Not chosen: (ii) keep #768's "no event at frame 0" for every class and `SampleTrigger`'s
+   frame-0 output as it is. A sampler behind a `SampleTrigger` then shows `y_start` until the
+   second instant, and the off-grid `Pre(SampleTrigger)` event at frame 1 stays; both are
+   documented.
+4. **`Latch.u` and `Toggle.u`, so G36 `TrimAndRespond`, in M3** (owner ruling, 2026-11-22: **(i)**),
+   with decision 3's per-class frame 0. (i) **Include them with the other event inputs.** No tracked
+   trace moves: all three fixtures that hold the block run `have_hol = false`, where `clr` equals
+   `u` and the latch is false whatever the rule, at frame steps of 1 s and 60 s against a 120 s
+   `samplePeriod`, starting on the sample grid. With `have_hol = true` at a frame step above 60 s,
+   the latch re-latches at each sample as OpenModelica does (`lat.y` in `om/results.txt`). Not
+   chosen: (ii) leave them on the rising edge until a G36 run with `have_hol = true` exists as
+   evidence.
+5. **Cones with a `Pre`, or an edge block fed by a pulse, a sample or a `Pre`** (owner ruling,
+   2026-11-22: **(i)**). (i) **Fall back to today's rising edge**: no new error, and rows 6 to 10
+   and 17 to 21 stay as today. Not chosen: (ii) compute edge blocks from the three values (`Edge` of
+   a cone as `(v ∧ ¬w(k−1)) ∨ (s ∧ ¬v)`, and likewise `Change` and `FallingEdge`): rows 8, 9 and 20
+   and `Change(Change(u))` come out right, but row 21 invents an event at every change (6 against
+   OpenModelica's 0), because a first-iteration and a second-iteration pulse are true on the same
+   frame; and `Pre` cones still need the fallback, since the engine shows `Pre`'s settled value a
+   frame late. Only option (d) does better.
+6. **`TimerAccumulating.reset`** (owner ruling, 2026-11-22: **(i)**). (i) **In**: it is a
+   `when reset` event input, and OpenModelica resets on each of consecutive `Change` pulses where
+   the engine resets on the first only. Not chosen: (ii) out: keep it on the rising edge and
+   document it beside the duration consumers.
 
-- **C1. The cone and its leaves** are as listed under (g), classified by a linear syntactic walk
-  with an explicit stack. "No pulse behind it" is a structural property of the graph, never a
-  satisfiability question; a constant is an opaque level leaf.
-- **C2. Event inputs are declared per class.** Today `Block::event_input_role` is declared only
-  on `OnCounter`, `PIDWithReset` and `IntegratorWithReset`, for the algebraic-loop diagnostic. The
-  consumers of C4 need their own declaration of which inputs take the formula and which frame-0
-  rule of decision 3 they follow.
-- **C3. The grid test.** "`t(0)` is an instant" uses the block's existing index function, which
-  rounds within `1e-9 · period`, early only; Modelica rounds `t0` itself to 1e-6 s. The two agree
-  at `t(0) = 0` with `shift` a multiple of 1e-6 s, the case every test and fixture uses; the
-  execution profile says so.
-- **C4. Consumers that take the formula:** `OnCounter.trigger` and `.reset`, `TriggeredSampler`,
-  `TriggeredMax` and `TriggeredMovingMean` `.trigger`, `IntegratorWithReset.trigger`,
-  `PIDWithReset.trigger` (PI and PID), and, per decisions 4 and 6, `Latch.u`, `Toggle.u` and
-  `TimerAccumulating.reset`. Unchanged: `Latch.clr`, `Toggle.clr` (level-equivalent, section 1.2),
-  `TrueHoldWithReset` (engine-local) and the duration consumers.
-- **C5. The stored word holds `w(k)`**, the cone with pulses and samples false: one word, as today.
-- **C6. No blob bytes change.** The classification is derived from the wiring by one `oce-graph`
-  function that both the loader and the blob decoder run, as the decoder already re-derives and
-  checks emit-before order. Blobs and snapshots written by a 0.6.0 build before the change load
-  under the new rule; the implementation PR says so, as GitHub #789 did. A restored pre-change
-  snapshot holds `v(k)` where `w(k)` is now expected. The two differ only when a pulse or sample
-  was true at the snapshot's frame, and then the first frame after restore shows at most one event
-  merged, or one shown a frame late as the old rule would have shown it; none is counted twice. If
-  v0.6.0 is tagged first, the PR bumps the version and adds the refusal test rule 10 asks for.
-- **C7. The warning of decision 2 (i)** is a `Warning` diagnostic in the frame's receipt, once per
-  `SampleTrigger` instance per load.
-- **C8. One PR**, closing #800, with the register entries resolved in it.
+- **C1 (this note's call). The cone and its leaves** are as listed under (g), classified by a linear
+  syntactic walk with an explicit stack. "No pulse behind it" is a structural property of the graph,
+  never a satisfiability question; a constant is an opaque level leaf.
+- **C2 (this note's call). Event inputs are declared per class.** Today `Block::event_input_role` is
+  declared only on `OnCounter`, `PIDWithReset` and `IntegratorWithReset`, for the algebraic-loop
+  diagnostic. The consumers of C4 need their own declaration of which inputs take the formula and
+  which frame-0 rule of decision 3 they follow.
+- **C3 (this note's call). The grid test.** "`t(0)` is an instant" uses the block's existing index
+  function, which rounds within `1e-9 · period`, early only; Modelica rounds `t0` itself to 1e-6 s.
+  The two agree at `t(0) = 0` with `shift` a multiple of 1e-6 s, the case every test and fixture
+  uses; the execution profile says so.
+- **C4 (this note's call, following decisions 1, 4 and 6). Consumers that take the formula:**
+  `OnCounter.trigger` and `.reset`, `TriggeredSampler`, `TriggeredMax` and `TriggeredMovingMean`
+  `.trigger`, `IntegratorWithReset.trigger`, `PIDWithReset.trigger` (PI and PID), and, by decisions
+  4 and 6, `Latch.u`, `Toggle.u` and `TimerAccumulating.reset`. Unchanged: `Latch.clr`, `Toggle.clr`
+  (level-equivalent, section 1.2), `TrueHoldWithReset` (engine-local) and the duration consumers.
+- **C5 (this note's call). The stored word holds `w(k)`**, the cone with pulses and samples false:
+  one word, as today.
+- **C6 (this note's call). No blob bytes change.** The classification is derived from the wiring by
+  one `oce-graph` function that both the loader and the blob decoder run, as the decoder already
+  re-derives and checks emit-before order. Blobs and snapshots written by a 0.6.0 build before the
+  change load under the new rule; the implementation PR says so, as GitHub #789 did. A restored
+  pre-change snapshot holds `v(k)` where `w(k)` is now expected. The two differ only when a pulse or
+  sample was true at the snapshot's frame, and then the first frame after restore shows at most one
+  event merged, or one shown a frame late as the old rule would have shown it; none is counted
+  twice. If v0.6.0 is tagged first, the PR bumps the version and adds the refusal test rule 10 asks
+  for.
+- **C7 (this note's call). The warning of decision 2** is a `Warning` diagnostic in the frame's
+  receipt, once per `SampleTrigger` instance per load.
+- **C8 (this note's call). One PR**, closing #800, with the register entries resolved in it.
+
+### Implementation acceptance
+
+What the implementation PR owes, derived from the rulings; section 5 has the full test plan.
+
+- **The rule, per class.** Each consumer of C4 fires by section 1.4's formula on the cones (g)
+  applies to and by today's rising edge on every fallback cone (decision 5), with all eight
+  `(w(k−1), v(k), s(k))` combinations tested by hand-derived vectors.
+- **Frame 0, per class** (decision 3), with a mutant per class that must die: the when-only classes
+  fire at frame 0 only on a sample instant (`Not(SampleTrigger)` and `Not(Change(u))` with
+  `u(0) ≠ pre_u_start` do not; the mutant that gates only the first term fires on the second);
+  `TriggeredMovingMean` samples as today; `Latch` and `Toggle` read the initialisation pulse;
+  `SampleTrigger`'s own frame-0 output is true only on its grid (the mutant that drops the grid test
+  lets `Pre(SampleTrigger)` fire at frame 1 after an off-grid start).
+- **The warning** (decision 2): a test that a frame spanning more than one instant of a
+  `SampleTrigger` emits one `Warning`, that later such frames emit none for that instance (C7), and
+  that a frame spanning one instant emits none. The execution profile documents every shape of
+  decision 2; nothing is refused at load.
+- **OpenModelica pilots against the pinned Buildings classes**, not transcriptions, run by
+  `tools/openmodelica-event-reference/events/regenerate.sh` with provenance: the shapes of section
+  1.3, `SampleTrigger` into `OnCounter` and `TriggeredSampler` (at frame 0 too),
+  `Not(SampleTrigger)` into `TriggeredSampler`, `Latch` and `Toggle` at frame 0, `TimerAccumulating`
+  reset by consecutive pulses, and `TrimAndRespond`'s latch with a hold. The engine equals
+  OpenModelica at every frame on the rows (g) claims; every other row is registered as a known
+  divergence.
+- **The register.** `DVG-000001` and `DVG-000002` move to `resolved`, kept with their evidence
+  files, with a disposition naming the PR and the passing comparison; the tests that pin today's
+  merging (`open_modelica_event_pulses.rs`, `sample_trigger_event_inputs.rs`,
+  `building_33_openmodelica_reenable.rs`, `building_33_openmodelica_frames.rs`) are rewritten.
+- **Corpus byte identity.** The 46 fixture goldens, 422 provenance goldens, 46 G36 traces, the blobs
+  and their run digests and the replay traces are byte-identical (section 4); Building 33's oracle
+  moves from 382 s on and nothing else.
+- **Firmware size.** The growth of the firmware image from the classification and the shadow pass is
+  measured and stated against its budget.
+- **Snapshot restore.** The PR states what C6 says a pre-change snapshot does at the first frame
+  after restore, and tests it between two consecutive pulses.
 
 ## 4. Blast radius
 
 Measured by the static scan and the second probe; no implementation was run. The rows hold under
-(g) with any choice of decisions 3 to 6.
+(g) with the rulings of 2026-11-22, and would have held with any choice of decisions 3 to 6.
 
 | Corpus | Pulse into a consumer | Moves under (g) |
 | --- | --- | --- |
@@ -514,7 +572,13 @@ Per [TESTING.md](../../TESTING.md):
   order of two changes inside a frame and 5-frame sequences, today and (g) each invent an event on
   some sequence in the same 12,474 cones, and (g) invents on a sequence where today does not in
   11,786 of them (`results.txt`). No host cadence removes this; only frames short enough that no
-  two sources change inside one frame do.
+  two sources change inside one frame do. The review counted the second figure as 8,635 cones and
+  the invented (cone, sequence) pairs as 798,720 for (f) against 563,200 for today; this note's
+  counts are 11,786 cones and 11,222,912 against 6,340,928 pairs. Both count the same 12,474
+  cones in which both rules invent, and both find (g) inventing more than today. This note's
+  enumeration: every sequence of five frames of `a` and `b` from a settled frame 0; in each frame
+  where both change, three orders (`a` first, `b` first, together), each frame's choice
+  independent; and the matching above, which counts a late fire as late, not invented.
 - **Several events in one frame** count once: a `SampleTrigger` at half the frame step counts 9 of
   OpenModelica's 18 instants (row 12), and a source that changes twice between frames is not seen.
   The host obligation is one instant per frame interval.
