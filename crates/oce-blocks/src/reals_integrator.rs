@@ -29,7 +29,7 @@ const DECLARED_INPUTS: usize = 3;
 
 /// Whether this frame is a reset event by the settled-value rule (issue #800): at a later frame
 /// `trigger` rose from its stored `w` or rises to its settled value; at the initial frame
-/// (initialisation leaves the `when` inactive) only a sample instant fires.
+/// (initialisation leaves the `when` inactive) it fires on `i -> w -> s`.
 fn reset_event(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
     let initial = ctx.is_initial() || is_first_tick(region[PREV_T_WORD]);
     let trigger = settled_input(inputs, TRIGGER_PORT, DECLARED_INPUTS, 0);

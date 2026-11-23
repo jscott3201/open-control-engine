@@ -610,7 +610,7 @@ timing of `OnCounter`, `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset`
 (issue #670); runs of upstream's `CoolingCoilValve` check its resets on the 78 synthetic Building 33
 frames (issue #787). Two of them showed the engine and OpenModelica apart where a pulse such as
 `Change` is true on two consecutive frames; the settled-value rule of issue #800 resolved both, and
-three pilots against the pinned Buildings classes check it, with four registered differences that
+six pilots against the pinned Buildings classes check it, with nine registered differences that
 are documented limits ([execution profile](execution-profile.md#pulses-on-an-event-input)). The Line and Reliefs results do not cover arbitrary Real
 inputs, general tolerances, solver behavior, or broader G36 behavior. `CDL.Logical.Pre` is
 explicitly excluded from an expected-green OpenModelica differential under HostTick v1. The global

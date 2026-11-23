@@ -150,7 +150,7 @@ pub struct TimerAccumulating {
 
 impl TimerAccumulating {
     /// Whether `when reset` fires at this frame, by the settled-value rule (issue #800): at the
-    /// initial frame (initialisation leaves the `when` inactive) only a sample instant fires.
+    /// initial frame (initialisation leaves the `when` inactive) it fires on `i -> w -> s`.
     fn reset_event(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
         let initial = ctx.is_initial() || is_first_tick(region[PREV_T_WORD]);
         let reset = settled_input(inputs, 1, 2, 0);

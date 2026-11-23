@@ -157,6 +157,10 @@ pub struct RunState {
     pub shadow_w: Vec<bool>,
     /// Per-tick shadow values `s`: the cone with pulses false. Transient, as `shadow_w`.
     pub shadow_s: Vec<bool>,
+    /// Shadow values `i` at the initial frame only: the cone at initialisation, with pulses at
+    /// their frame value (the initialisation pulse) and samples false (issue #800, decision 3 as
+    /// revised). Transient, as `shadow_w`; never read at a later frame.
+    pub shadow_i: Vec<bool>,
     /// Preallocated scratch for the shadow pass's logic-block inputs, sized as `scratch`.
     pub shadow_scratch: Vec<Value>,
     /// Current model time `t` (seconds); advanced by the host, read by elementary blocks (`01` §8).

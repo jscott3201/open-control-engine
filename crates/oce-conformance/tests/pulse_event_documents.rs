@@ -24,13 +24,13 @@ pub(crate) struct Doc {
     pub(crate) outputs: Vec<(&'static str, &'static str, &'static str)>,
 }
 
-fn double(v: &str) -> String {
+pub(crate) fn double(v: &str) -> String {
     format!(r#"{{ "@value": "{v}", "@type": "http://www.w3.org/2001/XMLSchema#double" }}"#)
 }
-fn integer(v: &str) -> String {
+pub(crate) fn integer(v: &str) -> String {
     format!(r#"{{ "@value": "{v}", "@type": "http://www.w3.org/2001/XMLSchema#integer" }}"#)
 }
-fn boolean(v: &str) -> String {
+pub(crate) fn boolean(v: &str) -> String {
     format!(r#"{{ "@value": "{v}", "@type": "http://www.w3.org/2001/XMLSchema#boolean" }}"#)
 }
 

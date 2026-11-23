@@ -132,6 +132,7 @@ mod per_block_routing_typed;
 mod per_block_source_timetable;
 mod per_block_utilities_assert;
 mod pulse_event_documents;
+mod pulse_event_init_documents;
 mod sample_trigger_event_inputs;
 mod tiers;
 

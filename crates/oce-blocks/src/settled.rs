@@ -11,7 +11,10 @@
 //! false at this frame's levels (`w`) and the cone with pulses false (`s`), and appends them after
 //! the block's declared inputs: `w` then `s` for each declared event input, in declaration order.
 //! The block stores `w` where it stored the previous trigger and fires on
-//! `(not w(k-1) and v(k)) or (not v(k) and s(k))`. Where no pulse or sample is upstream (or the
+//! `(not w(k-1) and v(k)) or (not v(k) and s(k))`. At the initial frame the graph also evaluates
+//! the cone at initialisation `i` (pulses at their frame value, samples false) and passes it in
+//! place of the declared input's frame value; the input then goes `i -> w -> s` and fires on
+//! `(not i and w) or (not w and s)`. Where no pulse or sample is upstream (or the
 //! cone falls back, design note decision 5) the graph appends nothing, the block reads `w = s = v`
 //! and the rule is exactly the rising edge it applied before.
 
@@ -88,15 +91,17 @@ impl Fire {
 }
 
 /// The rule for a block whose `when` is inactive at initialisation (the when-only classes of
-/// decision 3). At a later frame: `first = v and not prev_w`, `second = not v and s`. At the
-/// initial frame only a sample instant fires: the cone is taken with every pulse false (their
-/// frame-0 value is initialisation), so `first = s and not w` and `second = false`; a cone with
-/// no pulse or sample upstream has `s = w` and never fires there.
+/// decision 3). At a later frame the input goes `w(k-1) -> v -> s`: `first = v and not prev_w`,
+/// `second = not v and s`. At the initial frame (decision 3 as revised on 2026-11-22 after the
+/// pinned-class probes `InitNegatedPilot` and `InitMixturesPilot`) the graph passes the cone at
+/// initialisation `i` (pulses at their frame value, samples false) in place of `v`, and the input
+/// goes `i -> w -> s`: `first = w and not i`, `second = not w and s`. A level (no pulse or sample
+/// upstream, or a fallback cone) has `i = w = s` and never fires there, as before (issue #768).
 pub(crate) fn fire(initial: bool, prev_w: bool, x: Settled) -> Fire {
     if initial {
         Fire {
-            first: x.s && !x.w,
-            second: false,
+            first: x.w && !x.v,
+            second: !x.w && x.s,
         }
     } else {
         Fire {

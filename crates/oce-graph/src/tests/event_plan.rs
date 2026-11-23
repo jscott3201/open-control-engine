@@ -39,7 +39,7 @@ fn a_change_wired_straight_in_is_a_primitive_pulse() {
         .hidden(cnt.0 as usize)
         .expect("the counter receives settled values");
     assert_eq!(hidden.len(), 2);
-    assert_eq!(hidden[0], ShadowSource::Pulse);
+    assert_eq!(hidden[0], ShadowSource::Pulse(cha_out[0]));
     assert!(
         matches!(hidden[1], ShadowSource::Level(_)),
         "reset: a constant, a level"
@@ -115,7 +115,7 @@ fn not_of_a_pulse_is_an_active_cone_with_one_step() {
     );
     assert_eq!(
         plan.step(not_id.0 as usize),
-        Some(&[ShadowSource::Pulse][..])
+        Some(&[ShadowSource::Pulse(cha_out[0])][..])
     );
 }
 
@@ -175,6 +175,48 @@ fn a_cone_with_a_pre_or_an_edge_block_of_a_pulse_falls_back_to_the_rising_edge()
     );
     // The control: a plain level (a model input) keeps the cone active.
     assert!(!or_with(|b| real_block(b, "CDL.Logical.Not").2[0]).is_empty());
+}
+
+/// `Or(Change(u), x)` into a counter where `x` is an edge block fed by a `Pre`: decision 5 sends
+/// the cone to the rising edge, so no block gets settled values and the counter merges.
+#[test]
+fn an_edge_block_fed_by_a_pre_falls_back_to_the_rising_edge() {
+    fn edge_of_pre(edge: &'static str, pre_input: Option<&'static str>) -> EventPlan {
+        or_with(|b| {
+            let (_, pre_in, pre_out) = real_block(b, "CDL.Logical.Pre");
+            if let Some(class) = pre_input {
+                let (_, _, src) = b.block_real(make(
+                    class,
+                    &[("period", Value::Real(1.0)), ("shift", Value::Real(0.0))],
+                ));
+                b.connect(src[0], pre_in[0]);
+            }
+            let (_, e_in, e_out) = real_block(b, edge);
+            b.connect(pre_out[0], e_in[0]);
+            e_out[0]
+        })
+    }
+    // Edge(Pre(x)), Change(Pre(b)), Change(Pre(SampleTrigger)).
+    assert!(edge_of_pre("CDL.Logical.Edge", None).is_empty());
+    assert!(edge_of_pre("CDL.Logical.Change", None).is_empty());
+    assert!(
+        edge_of_pre(
+            "CDL.Logical.Change",
+            Some("CDL.Logical.Sources.SampleTrigger")
+        )
+        .is_empty()
+    );
+    // Alone in the cone (no other pulse): `Change(Pre(b))` into the counter directly, too.
+    let mut b = ModelBuilder::default();
+    let (_, _, pre_out) = real_block(&mut b, "CDL.Logical.Pre");
+    let (_, cha_in, cha_out) = real_block(&mut b, "CDL.Logical.Change");
+    b.connect(pre_out[0], cha_in[0]);
+    let (_, cnt_in) = counter(&mut b);
+    b.connect(cha_out[0], cnt_in[0]);
+    assert!(
+        plan(&b).1.is_empty(),
+        "Change(Pre(b)) is not a primitive pulse"
+    );
 }
 
 #[test]
@@ -270,4 +312,54 @@ fn the_shadow_pass_adds_no_scheduling_edge() {
     let again = topo_sort(&dag, &b.model, &b.blocks).unwrap();
     assert_eq!(schedule.order, again.order);
     assert!(again.events.is_empty(), "topo_sort alone derives no plan");
+}
+
+#[test]
+fn the_initialisation_values_are_evaluated_at_the_initial_frame_only() {
+    // Change(u) -> Not -> counter. At the initial frame the shadow pass fills `i` (the cone at
+    // initialisation); at a later frame it must leave it alone (nothing reads it there).
+    let mut b = ModelBuilder::default();
+    let (_, cha_in, cha_out) = real_block(&mut b, "CDL.Logical.Change");
+    let (_, not_in, not_out) = real_block(&mut b, "CDL.Logical.Not");
+    let (_, cnt_in) = counter(&mut b);
+    b.connect(cha_out[0], not_in[0]);
+    b.connect(not_out[0], cnt_in[0]);
+    let schedule = compile(&b.model, &b.blocks).unwrap();
+    let mut state = allocate_state(&b.model, &b.blocks).unwrap();
+    // u true from the start: Change's initialisation pulse, so `i` of Not is false.
+    state.values[cha_in[0].0 as usize] = Value::Boolean(true);
+    tick_initial(&b, &schedule, &mut state, 0.0, true);
+    assert!(!state.shadow_i[not_out[0].0 as usize], "i = Not(true)");
+    // A later frame with no change: Not's frame value is true, so a third pass would write true.
+    tick_initial(&b, &schedule, &mut state, 1.0, false);
+    assert!(
+        !state.shadow_i[not_out[0].0 as usize],
+        "no evaluation of `i` after the initial frame"
+    );
+}
+
+#[test]
+fn a_consumer_whose_data_input_a_pulse_reaches_keeps_the_rising_edge() {
+    // `TriggeredSampler(u = BooleanToReal(Change(a)), trigger = Not(Change(a)))`: the data input
+    // reads a converted pulse, which Modelica's second iteration sees false. The block gets no
+    // settled values (the rising edge, as before the rule); with `u` a plain input it does.
+    for tainted in [true, false] {
+        let mut b = ModelBuilder::default();
+        let (_, _, cha_out) = real_block(&mut b, "CDL.Logical.Change");
+        let (_, not_in, not_out) = real_block(&mut b, "CDL.Logical.Not");
+        let (sampler, sampler_in, _) = b.block_real(make("CDL.Discrete.TriggeredSampler", &[]));
+        b.connect(cha_out[0], not_in[0]);
+        b.connect(not_out[0], sampler_in[1]);
+        if tainted {
+            let (_, conv_in, conv_out) = real_block(&mut b, "CDL.Conversions.BooleanToReal");
+            b.connect(cha_out[0], conv_in[0]);
+            b.connect(conv_out[0], sampler_in[0]);
+        }
+        let (_, plan) = plan(&b);
+        assert_eq!(
+            plan.hidden(sampler.0 as usize).is_none(),
+            tainted,
+            "tainted data input: {tainted}"
+        );
+    }
 }

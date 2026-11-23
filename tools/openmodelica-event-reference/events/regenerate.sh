@@ -20,9 +20,10 @@
 # wrote it (<name>.raw.csv), the canonical tables canonicalize.py projects from it, omc's output
 # (run.log) and provenance.json; the two extra pilots of a class (OnCounterChangePilot,
 # IntegratorWithResetRampPilot) prefix their log and record with their scenario's name. With a
-# third argument `pulses` it runs only the three pulse-event pilots of issue #800
-# (PulseConsumersPilot, SampleTriggerPilot, SampleTriggerOffGridPilot) into pulse_events/, with
-# simulate_pulses.mos. No test runs this script; the tests read those files.
+# third argument `pulses` it runs only the pulse-event pilots of issue #800 (PulseConsumersPilot,
+# SampleTriggerPilot, SampleTriggerOffGridPilot, and from the review of GitHub #805
+# InitNegatedPilot, InitMixturesPilot, their off-grid copies and LatchClearPilot) into
+# pulse_events/, with simulate_pulses.mos. No test runs this script; the tests read those files.
 # Docker images and libraries are left as they are.
 set -eu
 
@@ -178,6 +179,15 @@ SAMPLES="$L/Sources/SampleTrigger.mo $CDL/Integers/OnCounter.mo $CDL/Discrete/Tr
   $L/Not.mo $L/Latch.mo $CDL/Discrete/TriggeredMovingMean.mo $L/Pre.mo $CDL/Discrete/TriggeredMax.mo \
   $CDL/Reals/IntegratorWithReset.mo $CDL/Reals/PIDWithReset.mo $L/TimerAccumulating.mo $L/Toggle.mo \
   $L/And.mo"
+INIT="$L/Change.mo $L/Edge.mo $L/Not.mo $L/Sources/SampleTrigger.mo $CDL/Integers/OnCounter.mo \
+  $CDL/Discrete/TriggeredSampler.mo $L/Latch.mo $L/Toggle.mo $CDL/Discrete/TriggeredMax.mo \
+  $CDL/Discrete/TriggeredMovingMean.mo $CDL/Reals/IntegratorWithReset.mo $CDL/Reals/PIDWithReset.mo \
+  $L/TimerAccumulating.mo"
+MIXTURES="$L/Change.mo $L/Not.mo $L/Sources/SampleTrigger.mo $L/Or.mo $L/And.mo $L/Xor.mo $L/Pre.mo \
+  $CDL/Integers/OnCounter.mo $L/Latch.mo $L/Toggle.mo"
+CLEAR="$L/Change.mo $L/Not.mo $L/Edge.mo $L/Sources/SampleTrigger.mo $L/Latch.mo $L/Toggle.mo \
+  $CDL/Conversions/BooleanToReal.mo $CDL/Discrete/TriggeredSampler.mo $CDL/Discrete/TriggeredMax.mo \
+  $CDL/Discrete/TriggeredMovingMean.mo $CDL/Reals/IntegratorWithReset.mo $CDL/Reals/PIDWithReset.mo"
 if [ "$ONLY" = pulses ]; then
   # shellcheck disable=SC2086
   run_pulse_pilot PulseConsumersPilot 0.0 consumers $CONSUMERS
@@ -185,6 +195,18 @@ if [ "$ONLY" = pulses ]; then
   run_pulse_pilot SampleTriggerPilot 0.0 sample_triggers $SAMPLES
   # shellcheck disable=SC2086
   run_pulse_pilot SampleTriggerOffGridPilot 0.25 sample_trigger_off_grid $SAMPLES
+  # The review round of GitHub #805: negated initialisation pulses and mixed cones at t = 0, on
+  # and off the sample grid, and Latch/Toggle whose clr carries a pulse or a sample.
+  # shellcheck disable=SC2086
+  run_pulse_pilot InitNegatedPilot 0.0 init_negated $INIT
+  # shellcheck disable=SC2086
+  run_pulse_pilot InitNegatedOffGridPilot 0.25 init_negated_off_grid $INIT
+  # shellcheck disable=SC2086
+  run_pulse_pilot InitMixturesPilot 0.0 init_mixtures $MIXTURES
+  # shellcheck disable=SC2086
+  run_pulse_pilot InitMixturesOffGridPilot 0.25 init_mixtures_off_grid $MIXTURES
+  # shellcheck disable=SC2086
+  run_pulse_pilot LatchClearPilot 0.0 latch_clear $CLEAR
   exit 0
 fi
 TWO='initially_true rising_after_start'

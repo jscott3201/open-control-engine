@@ -44,8 +44,9 @@
 //!   allocates (as on the host, and at most
 //!   [`MAX_CONSTRUCTED_WORDS`](crate::MAX_CONSTRUCTED_WORDS) words across the model);
 //!   `Schedule::order` and `driver_of`; the [`RunState`] arrays that
-//!   [`allocate_state`](crate::allocate_state) builds (with the three shadow buffers of the
-//!   settled-value rule when [`needs_plan`](crate::needs_plan)); the input and output tables and
+//!   [`allocate_state`](crate::allocate_state) builds (with the four shadow buffers of the
+//!   settled-value rule, `w`, `s`, the initial frame's `i` and their scratch, when
+//!   [`needs_plan`](crate::needs_plan)); the input and output tables and
 //!   one target vector per input (a bound is never a String: those are refused);
 //! * the event plan of issue #800, only when [`needs_plan`](crate::needs_plan): thirteen buffers
 //!   [`EventPlan::derive`](crate::EventPlan::derive) sizes once each (a connector-owner table,

@@ -140,6 +140,10 @@ mod real_parameter_literals;
 mod release_fallback;
 mod replay_matrix;
 mod settled_event_state;
+mod settled_rule_classes;
+mod settled_rule_differential;
+#[path = "support/settled_rule_graphs.rs"]
+mod settled_rule_graphs;
 mod state_contract;
 mod state_old_layout;
 mod topology;

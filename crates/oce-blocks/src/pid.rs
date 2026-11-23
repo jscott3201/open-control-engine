@@ -233,7 +233,7 @@ fn is_first_tick(region: &[u64], state: StateLayout) -> bool {
 /// Whether this frame is a reset event of `PIDWithReset`: the layout has a trigger word (a mode
 /// with an integrator) and `trigger` fires by the settled-value rule (issue #800): at a later
 /// frame, `trigger` rose from its stored `w` or rises to its settled value; at the initial frame
-/// (initialisation leaves the upstream `when` inactive) only a sample instant fires.
+/// (initialisation leaves the upstream `when` inactive) it fires on `i -> w -> s`.
 fn reset_event(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64], state: StateLayout) -> bool {
     state.prev_trigger.is_some_and(|prev_trigger| {
         let initial = ctx.is_initial() || is_first_tick(region, state);
@@ -449,7 +449,9 @@ impl Block for Pid {
 /// Building 33 valve sequence (`oce-verify`, issue #787). `trigger` takes the settled-value rule
 /// (issue #800, `docs/design/pulse-event-inputs.md`): fed by a pulse true on consecutive frames
 /// (`Change` of an enable that falls and rises on consecutive frames) it resets at each, as
-/// OpenModelica does; at the initial frame only a sample instant resets.
+/// OpenModelica does; at the initial frame it resets on `i -> w -> s` (a sample instant at the
+/// start, a negated initialisation pulse; never a level). A tainted `u_s` or `u_m` keeps the
+/// rising edge.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PidWithReset {
     pub(crate) config: ControllerConfig,

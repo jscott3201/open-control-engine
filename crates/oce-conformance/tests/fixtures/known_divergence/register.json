@@ -312,6 +312,294 @@
       },
       "superseded_by": null,
       "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000007",
+      "summary": "A fallback cone at the initial frame: Or(Not(Change(x1)), Pre(false)) with x1 true from the start fires in OpenModelica at t = 0 and keeps the engine's rising edge, which never fires at frame 0 (decision 5).",
+      "subject": {
+        "class": "CDL.Integers.OnCounter",
+        "scenario": "InitMixturesPilot",
+        "signal": "cntNotPre",
+        "observation": "Or(Not(Change(x1)), Pre(false)) into OnCounter, Latch and Toggle; x1 true throughout, pre_u_start = false; 1 s frames from t = 0 (and InitMixturesOffGridPilot from t = 0.25)"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:init_mixtures:cntNotPre:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:InitMixturesPilot:cntNotPre"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_mixtures.engine.csv",
+          "sha256": "d198bab62c3a9bee6004931ce74cf48b6f540d47c74ea3d1b577e415e8a355fd",
+          "summary": "The engine's cntNotPre: 0, 1, 1, 1, 1, 1, 1, 1, 1, 1."
+        },
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_mixtures_off_grid.engine.csv",
+          "sha256": "d45fc9c344a4e1fbb940e09d083a35fc0590eac37b8f1ed1537d345aa28f4c48",
+          "summary": "The same shape off the sample grid, the engine's cntNotPre: 0, 1, 1, 1, 1, 1, 1, 1, 1, 1."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_mixtures.canonical.csv",
+          "sha256": "c70dea9f3e5d31fd30770f69d5c40246d5196299a44cd6f1d84f60c9d2b3669a",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 1, 1, 1, 1, 1, 1, 1, 1, 1, 1."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_mixtures_off_grid.canonical.csv",
+          "sha256": "e4c03d64b3831697e5227f41bf087e239332e4ade6736e63efa1666dfc9562b8",
+          "summary": "OpenModelica 1.25.1, off the sample grid: 1, 1, 1, 1, 1, 1, 1, 1, 1, 1."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "7a11a240373c574b940068961bd2e998ca34b3f7",
+      "state": "open",
+      "disposition": "Documented limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md), decision 5: a cone with a Pre keeps the rising edge, frame 0 included, where no event fires; OpenModelica's initialisation pulse fires there. The latch and toggle columns (latNotPre, togNotPre) and the off-grid run show the same frame.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000008",
+      "summary": "Latch and Toggle whose clr cone holds a negated sample: OpenModelica does not fire `when clr` when the sample falls after its instant, so a latch set at the instant stays set while clr is true; the engine does not store clr's previous value and reads clr true at the next frame as a rise, clearing it.",
+      "subject": {
+        "class": "CDL.Logical.Latch",
+        "scenario": "LatchClearPilot",
+        "signal": "latD",
+        "observation": "u = SampleTrigger(2 s), clr = Not(SampleTrigger(2 s)), 1 s frames from t = 0"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:latch_clear:latD:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:LatchClearPilot:latD"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/latch_clear.engine.csv",
+          "sha256": "18a6bfbc263f3415e22b607bd94b9e5a92bb9ce73ef46ec40f3e7ccade48beba",
+          "summary": "The engine's latD: 1, 0, 1, 0, 1, 0, 1, 0, 1, 0."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/latch_clear.canonical.csv",
+          "sha256": "dc8b5e366626cc1b27eb74fd1e93609eca247d40a20c115c39b01817e1b8156e",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 1, 1, 1, 1, 1, 1, 1, 1, 1, 1."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "7a11a240373c574b940068961bd2e998ca34b3f7",
+      "state": "open",
+      "disposition": "Documented limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md), accepted by the orchestrator in the review of GitHub #805: the engine stores no previous value of clr (state_len and the state words unchanged); before this change the engine gave the same values (it read clr as a level). Toggle (togD) shows the same at the frames after each instant.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000009",
+      "summary": "A data input that carries a converted pulse: TriggeredSampler, IntegratorWithReset and PIDWithReset whose data input reads BooleanToReal(Change(a)) and whose trigger is Not(Change(a)) keep the rising edge (their data input is tainted), so they act a frame after OpenModelica's second event iteration, which reads the pulse already false.",
+      "subject": {
+        "class": "CDL.Discrete.TriggeredSampler",
+        "scenario": "LatchClearPilot",
+        "signal": "samD",
+        "observation": "u = BooleanToReal(Change(a)), trigger = Not(Change(a)), a changing at 2 and 5 s, 1 s frames"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:latch_clear:samD:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:LatchClearPilot:samD"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/latch_clear.engine.csv",
+          "sha256": "18a6bfbc263f3415e22b607bd94b9e5a92bb9ce73ef46ec40f3e7ccade48beba",
+          "summary": "The engine's samD: 7, 7, 7, 0, 0, 0, 0, 0, 0, 0."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/latch_clear.canonical.csv",
+          "sha256": "dc8b5e366626cc1b27eb74fd1e93609eca247d40a20c115c39b01817e1b8156e",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 7, 7, 0, 0, 0, 0, 0, 0, 0, 0."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "7a11a240373c574b940068961bd2e998ca34b3f7",
+      "state": "open",
+      "disposition": "Documented limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md), the review of GitHub #805: data cones are not traced; a block whose data input a pulse, sample or Pre reaches keeps the rising edge, exactly as before this change, so TriggeredMax and TriggeredMovingMean agree (they apply max(pre(y), 0) and a sample of 0 a frame later) and integD and pidD show the same frame as samD.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000010",
+      "summary": "OpenModelica reinitialises IntegratorWithReset and PIDWithReset just after each instant of a negated sample (Not(SampleTrigger(1 s))), when sample() falls in continuous time, though OnCounter, TriggeredSampler and TimerAccumulating behind the same signal never fire; the engine fires none of them.",
+      "subject": {
+        "class": "CDL.Reals.IntegratorWithReset",
+        "scenario": "InitNegatedPilot",
+        "signal": "integS",
+        "observation": "trigger = Not(SampleTrigger(1 s)), 1 s frames from t = 0 (and InitNegatedOffGridPilot from t = 0.25)"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:init_negated:integS:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:InitNegatedPilot:integS"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_negated.engine.csv",
+          "sha256": "bdd320caa2a72c027b2f3b90f216e1c9b202f9ff16b6a71f2bf67a6e9024b46a",
+          "summary": "The engine's integS: 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5."
+        },
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_negated_off_grid.engine.csv",
+          "sha256": "d15c6542ccdf4bac95f3014d9295967d069549786bba49b527673d2343e64602",
+          "summary": "The same shape off the sample grid, the engine's integS: 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_negated.canonical.csv",
+          "sha256": "81b0535dd5287211c3a051dfc32ccefc6c2b5a0ef1681b816eaaacc1cb19e863",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 0.5, 2.5, -3.5, 4.25, -5.5, 6.75, -7.25, 8.5, -9.75, 10.5."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_negated_off_grid.canonical.csv",
+          "sha256": "d540b5ff69100d10035cc3eabb4b7abc634ee32c88d499475a1140c3e64298a2",
+          "summary": "OpenModelica 1.25.1, off the sample grid: 0.5, 2.5, -3.5, 4.25, -5.5, 6.75, -7.25, 8.5, -9.75, 10.5."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "7a11a240373c574b940068961bd2e998ca34b3f7",
+      "state": "open",
+      "disposition": "Documented limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md): the settled-value rule takes a sample to fall without an event, as OpenModelica does for every when-only class it ran here; its reinit of a continuous state on that fall is not modelled. The engine gave the same values before this change. pidS shows the same.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    },
+    {
+      "id": "DVG-000011",
+      "summary": "An event between frames shown at the next frame: TimerAccumulating reset by Not(Change(x)) with x changing at 3 and 6 s, on frames at 0.25 + k s, restarts at the frame, OpenModelica at the change, 0.25 s earlier.",
+      "subject": {
+        "class": "CDL.Logical.TimerAccumulating",
+        "scenario": "InitNegatedOffGridPilot",
+        "signal": "timC1",
+        "observation": "reset = Not(Change(x1)), x1 falling at 3 s and rising at 6 s, frames at 0.25 + k s"
+      },
+      "producer_cases": [
+        {
+          "producer": "engine",
+          "case_id": "oce-conformance:open_modelica_pulse_events:init_negated_off_grid:timC1:engine"
+        },
+        {
+          "producer": "open_modelica",
+          "case_id": "openmodelica-1.25.1:InitNegatedOffGridPilot:timC1"
+        }
+      ],
+      "parties": [
+        "engine",
+        "open_modelica"
+      ],
+      "evidence": [
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_negated_off_grid.engine.csv",
+          "sha256": "d15c6542ccdf4bac95f3014d9295967d069549786bba49b527673d2343e64602",
+          "summary": "The engine's timC1: 0, 1, 2, 0, 1, 2, 0, 1, 2, 3."
+        },
+        {
+          "party": "open_modelica",
+          "kind": "external_run",
+          "path": "crates/oce-conformance/tests/fixtures/open_modelica/pulse_events/init_negated_off_grid.canonical.csv",
+          "sha256": "d540b5ff69100d10035cc3eabb4b7abc634ee32c88d499475a1140c3e64298a2",
+          "summary": "OpenModelica 1.25.1 running the pinned Buildings classes: 0, 1, 2, 0.25, 1.25, 2.25, 0.25, 1.25, 2.25, 3.25."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/tests/open_modelica_pulse_events.rs",
+      "opened_on": "2026-11-22",
+      "reviewed_on": "2026-11-22",
+      "reviewed_commit": "7a11a240373c574b940068961bd2e998ca34b3f7",
+      "state": "open",
+      "disposition": "Documented HostTick v1 limit, owner ruling 2 of 2026-11-22 on issue #800 (https://github.com/jscott3201/open-control-engine/issues/800; docs/design/pulse-event-inputs.md): every event of the frame interval is snapped to the frame's time (section 6, snapping), as DVG-000005; timC0 shows the same.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
     }
   ]
 }

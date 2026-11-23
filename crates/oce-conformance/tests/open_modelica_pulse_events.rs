@@ -30,6 +30,7 @@ use oce_conformance::CombiTimeTable;
 
 use crate::open_modelica_event_triggers::{IMAGE, columns, sha256};
 use crate::pulse_event_documents::{self, Doc};
+use crate::pulse_event_init_documents;
 
 const DIR: &str = "fixtures/open_modelica/pulse_events";
 const REGISTER: &str = include_str!("fixtures/known_divergence/register.json");
@@ -65,7 +66,31 @@ macro_rules! fixture {
     };
 }
 
-fn pilots() -> [Pilot; 3] {
+/// A pilot of the review round of GitHub #805, its files named by `stem` and its `.mo` by `mo`.
+macro_rules! init_pilot {
+    ($stem:literal, $doc:expr, $mo:literal, $expect:expr) => {
+        Pilot {
+            stem: $stem,
+            doc: $doc,
+            canonical: fixture!($stem, ".canonical.csv"),
+            engine: fixture!($stem, ".engine.csv"),
+            raw: include_bytes!(concat!(
+                "fixtures/open_modelica/pulse_events/",
+                $stem,
+                ".raw.csv"
+            )),
+            provenance: fixture!($stem, ".provenance.json"),
+            source: include_bytes!(concat!(
+                "../../../tools/openmodelica-event-reference/events/",
+                $mo,
+                ".mo"
+            )),
+            expect: $expect,
+        }
+    };
+}
+
+fn pilots() -> [Pilot; 8] {
     use Expect::{Exact, Registered, Within};
     [
         Pilot {
@@ -150,6 +175,75 @@ fn pilots() -> [Pilot; 3] {
                 ),
             ],
         },
+        init_pilot!(
+            "init_negated",
+            pulse_event_init_documents::init_negated,
+            "InitNegatedPilot",
+            &[
+                ("timC1", Within(1e-6)),
+                ("timC0", Within(1e-6)),
+                ("timS", Within(1e-6)),
+                ("meanC1", Within(1e-12)),
+                ("meanC0", Within(1e-12)),
+                ("meanS", Within(1e-12)),
+                (
+                    "integS",
+                    Registered("DVG-000010", &[1, 2, 3, 4, 5, 6, 7, 8, 9])
+                ),
+                ("pidS", Registered("DVG-000010", &[1, 2, 3, 4, 5, 6, 8])),
+            ]
+        ),
+        init_pilot!(
+            "init_negated_off_grid",
+            pulse_event_init_documents::init_negated,
+            "InitNegatedOffGridPilot",
+            &[
+                ("timC1", Registered("DVG-000011", &[3, 4, 5, 6, 7, 8, 9])),
+                ("timC0", Registered("DVG-000011", &[3, 4, 5, 6, 7, 8, 9])),
+                ("timS", Within(1e-6)),
+                ("meanC1", Within(1e-12)),
+                ("meanC0", Within(1e-12)),
+                ("meanS", Within(1e-12)),
+                (
+                    "integS",
+                    Registered("DVG-000010", &[1, 2, 3, 4, 5, 6, 7, 8, 9])
+                ),
+                ("pidS", Registered("DVG-000010", &[1, 2, 3, 4, 5, 6, 8])),
+            ]
+        ),
+        init_pilot!(
+            "init_mixtures",
+            pulse_event_init_documents::init_mixtures,
+            "InitMixturesPilot",
+            &[
+                ("cntNotPre", Registered("DVG-000007", &[0])),
+                ("latNotPre", Registered("DVG-000007", &[0])),
+                ("togNotPre", Registered("DVG-000007", &[0])),
+            ]
+        ),
+        init_pilot!(
+            "init_mixtures_off_grid",
+            pulse_event_init_documents::init_mixtures,
+            "InitMixturesOffGridPilot",
+            &[
+                ("cntNotPre", Registered("DVG-000007", &[0])),
+                ("latNotPre", Registered("DVG-000007", &[0])),
+                ("togNotPre", Registered("DVG-000007", &[0])),
+            ]
+        ),
+        init_pilot!(
+            "latch_clear",
+            pulse_event_init_documents::latch_clear,
+            "LatchClearPilot",
+            &[
+                ("meanD", Within(1e-12)),
+                ("latD", Registered("DVG-000008", &[1, 3, 5, 7, 9])),
+                ("togD", Registered("DVG-000008", &[1, 2, 5, 6, 9])),
+                ("samD", Registered("DVG-000009", &[2])),
+                ("integD", Registered("DVG-000009", &[2])),
+                ("pidD", Registered("DVG-000009", &[2, 5])),
+            ]
+        ),
     ]
 }
 
@@ -240,7 +334,20 @@ fn the_engine_equals_openmodelica_on_every_shape_the_settled_value_rule_claims()
                 pilot.stem
             );
         }
-        for (column, expect) in pilot.expect {
+        // Every compared output: `Exact` unless the pilot lists it.
+        for (listed, _) in pilot.expect {
+            assert!(
+                doc.outputs.iter().any(|(n, _, _)| n == listed),
+                "{}: {listed} is no output",
+                pilot.stem
+            );
+        }
+        for (column, _, _) in &doc.outputs {
+            let expect = pilot
+                .expect
+                .iter()
+                .find(|(n, _)| n == column)
+                .map_or(&Expect::Exact, |(_, e)| e);
             let om = names.iter().position(|n| n == column).expect(column);
             let differ: Vec<usize> = (0..rows.len())
                 .filter(|&k| {
@@ -322,6 +429,9 @@ fn vendored(path: &str) -> &'static [u8] {
         "Logical/Pre.mo",
         "Logical/Sources/SampleTrigger.mo",
         "Logical/And.mo",
+        "Logical/Edge.mo",
+        "Logical/Xor.mo",
+        "Conversions/BooleanToReal.mo",
     )
 }
 

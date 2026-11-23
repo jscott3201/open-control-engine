@@ -192,9 +192,11 @@ impl Block for UnitDelay {
 /// `trigger` takes the settled-value rule of issue #800 (`docs/design/pulse-event-inputs.md`): with
 /// a pulse or a sample upstream the event plan appends `w` and `s`, the block fires on
 /// `(v and not w(k-1)) or (not v and s)` and stores `w` in its previous-trigger word, which nothing
-/// but that test reads. At the initial frame
-/// only a sample instant samples (the frame driver's initial flag; the seeded word answers a
-/// direct call).
+/// but that test reads. At the initial frame (the frame driver's initial flag; the seeded word
+/// answers a direct call) the input goes `i -> w -> s` from initialisation (decision 3 as
+/// revised): a sample instant at the start samples, and so does a negated initialisation pulse;
+/// a level never does. A tainted data input `u` (a pulse, sample or `Pre` upstream) keeps the
+/// rising edge.
 /// OpenModelica 1.25.1 agrees exactly at every frame, with the trigger true from frame 0 and with
 /// it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`, issue #670), and
 /// behind `Change` and `SampleTrigger` pulses (`open_modelica_pulse_events.rs`, issue #800).
@@ -281,7 +283,8 @@ impl Block for TriggeredSampler {
 /// a pulse or a sample upstream the event plan appends `w` and `s`, the block fires on
 /// `(v and not w(k-1)) or (not v and s)` and stores `w` in its previous-trigger word, which nothing
 /// but that test reads. At the initial frame
-/// a sample instant applies `max(u, abs(u))` to the initial `y = u`, as OpenModelica does.
+/// an event (`i -> w -> s`: a sample instant at the start, a negated initialisation pulse)
+/// applies `max(u, abs(u))` to the initial `y = u`, as OpenModelica does.
 /// OpenModelica 1.25.1 agrees exactly at every frame, with the trigger true from frame 0 and with
 /// it rising at frame 1 (`oce-conformance`'s `open_modelica_event_triggers.rs`, issue #670), and
 /// behind `Change` and `SampleTrigger` pulses (`open_modelica_pulse_events.rs`, issue #800).
@@ -364,9 +367,9 @@ impl Block for TriggeredMax {
 ///
 /// The source parameter is `Integer n(min=1)` with no default; validation requires it, while the
 /// registry's direct-construction fallback uses `n = 1`. The source samples on
-/// `when {initial(), trigger}`: the first tick samples once for `initial()` and once more when a
-/// sample instant fires there (`s and not w`; the `when` fires again in the start's event
-/// iteration, as OpenModelica 1.25.1 shows), then later ticks sample on `trigger` events by the
+/// `when {initial(), trigger}`: the first tick samples once for `initial()` and once more when
+/// `trigger` fires in the start's event iteration (`i -> w -> s`, decision 3 as revised; a
+/// sample instant at the start, as OpenModelica 1.25.1 shows), then later ticks sample on `trigger` events by the
 /// settled-value rule of issue #800 (`docs/design/pulse-event-inputs.md`). The block owns `4 + n` `[S]` words: held output, previous
 /// trigger bit, populated-sample counter, next zero-based ring slot, and the `n` sampled `Real`
 /// words. `n` is input-derived and has no class-level upper bound; the window is bounded by
@@ -401,15 +404,16 @@ impl TriggeredMovingMean {
     }
 
     /// How many samples of the current `u` this frame takes, by `when {initial(), trigger}`. The
-    /// initial frame (no sample yet) takes one for `initial()`, and a second when a sample instant
-    /// fires there (`s and not w`): the `when` fires at initialisation and again in the start's
-    /// event iteration, as OpenModelica does (`Discrete/TriggeredMovingMean.mo:36`; issue #800,
-    /// a refinement of decision 3). A later frame takes one when the settled-value rule fires.
+    /// initial frame (no sample yet) takes one for `initial()`, and a second when `trigger` fires
+    /// in the start's event iteration by the rule every other consumer follows there
+    /// (`i -> w -> s`, decision 3 as revised): the `when` fires at initialisation and again, as
+    /// OpenModelica does (`Discrete/TriggeredMovingMean.mo:36`; issue #800). A later frame takes
+    /// one when the settled-value rule fires.
     fn samples(self, ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> usize {
         let trigger = settled_input(inputs, 1, 2, 0);
         let prev_trigger = word_bool(region[TRIGGERED_MOVING_MEAN_PREV_TRIGGER_WORD]);
         if self.sample_count(region) == 0 {
-            1 + usize::from(fire(true, prev_trigger, trigger).first)
+            1 + usize::from(fire(true, prev_trigger, trigger).any())
         } else {
             usize::from(fire(ctx.is_initial(), prev_trigger, trigger).any())
         }

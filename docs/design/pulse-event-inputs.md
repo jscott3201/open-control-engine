@@ -379,8 +379,9 @@ them. The implementation PR follows all fourteen.
    consumer: every `Pre` remedy would warn, and so would the 11 library fault rules that count
    one-frame pulses with a moving average. (iv) Refuse them at load: the `Pre` remedy and those 11
    rules would stop loading.
-3. **Frame 0, per class** (owner ruling, 2026-11-22: **(i)**). (i) **Fire only a sample's instant at
-   frame 0:**
+3. **Frame 0, per class** (owner ruling, 2026-11-22: **(i)**; **revised the same day**, see
+   *Revision* at the end of this item: the wording below is superseded and kept as ruled). (i)
+   **Fire only a sample's instant at frame 0:**
    - `OnCounter`, `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset`, `PIDWithReset` and
      `TimerAccumulating.reset` evaluate the formula at frame 0 with *before* = `w(0)` (pulses and
      samples false, frame-0 levels), every `Change`, `Integers.Change`, `Edge` and `FallingEdge`
@@ -401,6 +402,36 @@ them. The implementation PR follows all fourteen.
    frame-0 output as it is. A sampler behind a `SampleTrigger` then shows `y_start` until the
    second instant, and the off-grid `Pre(SampleTrigger)` event at frame 1 stays; both are
    documented.
+
+   **Revision** (owner ruling, 2026-11-22, revised the same day after the pinned-class probe
+   `InitNegatedPilot`; refined to the two-step sequence by the mixtures probe `InitMixturesPilot`,
+   the orchestrator's call, reported to the owner as overrulable). **Superseded, and why:** the
+   wording above says `Not(Change(u))` with `u(0) ≠ pre_u_start` does not fire at frame 0 and that
+   `Latch` and `Toggle` read `u`'s frame value. Its only evidence (`om/InitPulse.mo`) tested
+   `when change(...)`, never a negated pulse; the review of GitHub #805 asked, and OpenModelica
+   1.25.1 on the pinned classes fires every when-only consumer at t = 0 behind `Not(Change(x))` and
+   `Not(Edge(x))` with `x(0) = true` (and none with `x(0) = false`), and its `Latch` and `Toggle`
+   behind those, and behind `Not(SampleTrigger)` on the grid, are true at t = 0 where the wording
+   above gives false. The mixtures probe then showed that `Or(Change(x1), SampleTrigger)` and
+   `Xor(Change(x1), SampleTrigger)` on the grid fire although the cone is true both at
+   initialisation and settled. **The rule now:** a fourth value `i`, the cone at initialisation,
+   every pulse at its frame value (the initialisation pulse) and every sample false. At frame 0
+   the input goes `i -> w -> s` and a when-only class fires on `(w and not i) or (s and not w)`, at
+   most once, the body reading that step's values; `TriggeredMovingMean` samples for `initial()`
+   and once more when that fires (no special case); `Latch` and `Toggle` run their initial
+   equations on `i`, then their `when` on both steps; a fallback cone keeps today's "no event at
+   frame 0". It is the specification's sequence, as far as the probes show it: initialisation
+   with `sample` false ("The start value of the special functions initial, terminal, and sample is
+   false", MLS 3.6 section 8.3.5.1), then "pre(vi) := vi must be set and an event iteration at the
+   initial time must follow" (section 8.6), then the time event of a sample due at the start
+   (`sample` "Returns true and triggers time events at time instants", operator 3.23); a `when`
+   not enabled with `initial()` is inactive during initialisation (section 8.6) and fires when its
+   condition "becomes true" (section 8.3.5). A level has `i = w = s` and never fires: #768's "no
+   event at frame 0 for a trigger already true" still holds for every level, and every frame-0
+   test of GitHub #789 passes untouched. `simulate.py` brute-forces every cone of `Change(a)`,
+   `S`, `a`, `b` at frame 0 against a Modelica model of the initial time that is **fitted to these
+   probes, not derived independently**: `i -> w -> s` matches it on every cone and start, `not i
+   and s` on 491,520 of 524,288 (`results.txt`).
 4. **`Latch.u` and `Toggle.u`, so G36 `TrimAndRespond`, in M3** (owner ruling, 2026-11-22: **(i)**),
    with decision 3's per-class frame 0. (i) **Include them with the other event inputs.** No tracked
    trace moves: all three fixtures that hold the block run `have_hol = false`, where `clr` equals
@@ -436,8 +467,13 @@ them. The implementation PR follows all fourteen.
 - **C4 (this note's call, following decisions 1, 4 and 6). Consumers that take the formula:**
   `OnCounter.trigger` and `.reset`, `TriggeredSampler`, `TriggeredMax` and `TriggeredMovingMean`
   `.trigger`, `IntegratorWithReset.trigger`, `PIDWithReset.trigger` (PI and PID), and, by decisions
-  4 and 6, `Latch.u`, `Toggle.u` and `TimerAccumulating.reset`. Unchanged: `Latch.clr`, `Toggle.clr`
-  (level-equivalent, section 1.2), `TrueHoldWithReset` (engine-local) and the duration consumers.
+  4 and 6, `Latch.u`, `Toggle.u` and `TimerAccumulating.reset`. Unchanged: `TrueHoldWithReset`
+  (engine-local) and the duration consumers. **Corrected in the review of GitHub #805:** this item
+  first left `Latch.clr` and `Toggle.clr` unchanged as level-equivalent (section 1.2). They are
+  not once `u` can fire in the second iteration: behind `Latch(u = Not(Change(a)), clr =
+  Change(a))` Modelica clears in the first iteration and sets in the second, and `clr` read at its
+  frame value cleared and never set. `clr` takes the formula too, and both blocks run their `when`
+  per iteration (see As landed).
 - **C5 (this note's call). The stored word holds `w(k)`**, the cone with pulses and samples false:
   one word, as today.
 - **C6 (this note's call). No blob bytes change.** The classification is derived from the wiring by
@@ -450,7 +486,9 @@ them. The implementation PR follows all fourteen.
   twice. If v0.6.0 is tagged first, the PR bumps the version and adds the refusal test rule 10 asks
   for.
 - **C7 (this note's call). The warning of decision 2** is a `Warning` diagnostic in the frame's
-  receipt, once per `SampleTrigger` instance per load.
+  receipt, once per `SampleTrigger` instance until its state is seeded again: the mark is in its
+  state word, so a snapshot carries it, and a load or a `resume` after `set_param` (which re-seed
+  state) re-arm it (corrected in the review of GitHub #805; it said "per load").
 - **C8 (this note's call). One PR**, closing #800, with the register entries resolved in it.
 
 ### Implementation acceptance
@@ -604,7 +642,8 @@ Per [TESTING.md](../../TESTING.md):
 GitHub #805 implements option (g) with the six rulings of 2026-11-22 in one PR (C8). Where the
 implementation found the note wrong, read it more narrowly or had to decide something it left
 open, the record is here; the decided text above is unchanged, except section 4's two corrected
-rows.
+rows, C4 and C7 (corrected in the review of GitHub #805) and decision 3 (revised the same day,
+its superseded wording kept).
 
 - **Taint is any chain of inputs: a conservative reading of decision 5.** Section 3 sends to the
   rising edge "any cone with an edge block fed by a pulse, a sample or a `Pre`". The plan marks
@@ -613,13 +652,20 @@ rows.
   that is so marked is a fallback leaf, so `Integers.Change(BooleanToInteger(Change(u)))`, and a
   level such as `GreaterThreshold(BooleanToReal(Change(u)))`, send their cone to the rising edge
   instead of being read as a primitive pulse or a level. A primitive pulse is an edge block whose
-  own input is untainted. No tracked or library cone is affected (section 4).
+  own input is untainted. No tracked or library cone is affected (section 4). **Accepted as
+  landed** in the review of GitHub #805: the reviewer found the "any chain" taint necessary for
+  soundness, not only conservative (an untainted reading of `Latch(Not(Change(u)))`'s output
+  would change in the second iteration, as a `Pre` does). Conversions of pulses are not traced:
+  a converted pulse is a fallback leaf in a cone, and a tainted data input puts its block on the
+  rising edge (below).
 - **`TriggeredMovingMean` samples twice at a sample instant at the start: a refinement of decision
   3 found by the pinned-class pilots.** Decision 3 says it "samples as today", once, for
   `initial()`. `CDL/Discrete/TriggeredMovingMean.mo:36` is `when {initial(),trigger} then`; with
   `trigger = sample(...)` true at the start, OpenModelica fires the `when` for `initial()` and again
   in the start's event iteration (the second sample is taken when `trigger` becomes true after
-  initialisation: `s and not w` at the initial frame). The engine now does the same, and the
+  initialisation). Since the revision of decision 3 this falls out of the frame-0 rule
+  `i -> w -> s` with no special case: the second sample is taken when the input fires there. The
+  engine does the same, and the
   sample-trigger pilot agrees (2.8333 at 1 s, which one sample at the start does not give); it is
   not registered as a divergence. A `Change` or `Edge` leaf true from the start, whose pulse is
   initialisation's, adds no second sample, and an off-grid start adds none. The other classes,
@@ -632,7 +678,8 @@ rows.
 - **The stored word is read only by the event test.** Each consumer stores `w` in the word that
   held the previous input: `OnCounter` words 1 and 2 (trigger, reset), `TriggeredSampler`,
   `TriggeredMax` and `TriggeredMovingMean` word 1, `IntegratorWithReset` word 2, `PIDWithReset`'s
-  trigger word (PI and PID only), `Latch` and `Toggle` word 1, `TimerAccumulating` word 3. In
+  trigger word (PI and PID only), `Latch` and `Toggle` word 1 (`u`'s; `clr`'s is not stored),
+  `TimerAccumulating` word 3. In
   every class that word is read only by `fire(...)`, the event test, never by an output, by
   `event_input_role` or by another state word's update; each validator still requires `0` or `1`
   there, which `w` satisfies.
@@ -675,3 +722,65 @@ rows.
 - **Firmware.** The `blob-frames` image grows by 5,736 octets of `.text` on `thumbv7em-none-eabihf`
   (146,396 to 152,132, budget 161,760) and 6,976 on `riscv32imac-unknown-none-elf` (171,820 to
   178,796, budget 189,664), with about 2.1 KB of `.rodata`; no budget changes.
+
+### The review of GitHub #805
+
+An independent review ran 12,000 random graphs through the facade against its own model of the
+rule and found the cone plan, the taint and every consumer but `Latch` and `Toggle` exact; it
+found two problems and one unmeasured premise. What changed:
+
+- **`Latch.clr` and `Toggle.clr` take the formula; both blocks run their `.mo` per iteration.**
+  `Latch` runs `when {clr, u} then y = not clr and u` on each step that a rise of either input
+  fires, with that step's values; `Toggle` runs its `when`/`elsewhen` chain the same way (`u`
+  rising with `clr` false toggles, else `clr` rising clears, a falling `u` keeps `pre(y)`). A
+  128-row truth table over `u`'s and `clr`'s three values and `pre(y)`, written from the two
+  `.mo` texts, holds every row but the ones below (`settled_tests.rs`), and `LatchClearPilot`
+  agrees with OpenModelica at every frame for `clr = Change(a)` with `u = Not(Change(a))`, for
+  `clr = Change(b)` (with `a` and apart), and for the milder `u = Change(a)`, `clr = Not(Edge(a))`,
+  where the old reading showed `y` true for a frame and Modelica's settled value is false: the fix
+  clears in the second step and shows false. `clr`'s previous value is **not stored**: storing it
+  would change the meaning of word 1 or add a word, and the orchestrator ruled against either in
+  this PR. `clr` true at a frame is read as rising, which is exact unless the output can be set
+  while `clr` was already true before the frame; that needs `clr`'s cone true between instants
+  and false at one, a negated sample. With `u = SampleTrigger(2 s)` and `clr =
+  Not(SampleTrigger(2 s))` OpenModelica keeps the latch set and the engine clears it at the next
+  frame: `DVG-000008`, registered; the engine before this change gave the same values. G36
+  `TrimAndRespond`'s hold latch (`clr = And(Not(hold), sample)`) is not that sub-case: its `clr`
+  is false between instants, so `w(clr)` is always false; the hold-latch pilot agrees and the
+  three G36 fixtures' traces are unchanged.
+- **Data inputs read at the frame.** When an event fires in the second iteration, Modelica's
+  `when` body reads every input at that iteration: `TriggeredSampler.mo` `y = u`,
+  `TriggeredMax.mo` `max(pre(y), abs(u))`, `TriggeredMovingMean.mo` `u` into the window,
+  `IntegratorWithReset.mo` `reinit(y, y_reset_in)`, `PIDWithReset.mo` the reset of the
+  integrator from `y_reset` and the controller's terms (`u_s`, `u_m`), `TimerAccumulating.mo` `u`.
+  The engine reads them at the frame. The two differ only when the input depends on a pulse (false
+  in the second iteration) or on another block's second-iteration event. Data cones are not
+  traced: a block whose data input a pulse, sample or `Pre` reaches through any chain keeps the
+  rising edge for all its event inputs, exactly as before this change. `LatchClearPilot`
+  (`BooleanToReal(Change(a))` as the data input, `Not(Change(a))` as the trigger) shows it:
+  `TriggeredMax` and `TriggeredMovingMean` agree with OpenModelica at every frame as they did
+  before (they apply `max(pre(y), 0)` and a sample of 0 a frame later), and `TriggeredSampler`,
+  `IntegratorWithReset` and `PIDWithReset` differ at the event's frame only, as before:
+  `DVG-000009`. Without the fallback the engine had read the frame's 1 there and `TriggeredMax` and
+  `TriggeredMovingMean` had moved away from OpenModelica, a regression the review's acceptance bar
+  rules out.
+- **Frame 0, revised.** Decision 3's revision above: `i -> w -> s`. `i` is a third shadow value,
+  evaluated by the shadow pass at the initial frame only and passed to a consumer in the
+  declared input's place (one more connector-sized buffer in the run state; the plan's thirteen
+  are unchanged). `InitNegatedPilot` and `InitMixturesPilot`, each on and off the grid, agree with
+  OpenModelica on every compared signal but three registered shapes: a fallback cone at frame 0
+  (`DVG-000007`, as ruled for fallback cones), OpenModelica's reinit of a continuous state on a
+  negated sample's fall (`DVG-000010`), and a reset between frames on an off-grid run
+  (`DVG-000011`, the snapping of `DVG-000005`). A restore to before the first frame runs the same
+  initial frame: the stored words are `init_state`'s and the frame driver's initial flag is set
+  again (`settled_event_state.rs`).
+- **`Latch` and `Toggle` at frame 1.** Before this change both stored `u`'s frame value at frame 0
+  and rose at frame 1 on `v(1) and not v(0)`. Now they store `w(0)`, false for a direct pulse, so a
+  `Change` true at frame 0 (initialisation) and true again at frame 1 (a change at 1 s) fires at
+  frame 1: Modelica's `change` is true at both instants and its `when u` fires at the second.
+  Before, the two merged and `Toggle` missed a toggle.
+- **The acceptance bar.** Every pilot column was run on today's engine (`development` 7a11a240)
+  as well: no column matches OpenModelica on today's engine and not on this one. One frame does:
+  `Pre(SampleTrigger(1 s))` after an off-grid start (`DVG-000006`) counted at frame 1 today, as
+  OpenModelica does, because today's `SampleTrigger` was true at frame 0 off the grid (decision 3's
+  grid test removes that; the rest of that column differs on both).

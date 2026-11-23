@@ -18,8 +18,15 @@
 //! pulse; decision 5 of the note sends such a cone to the rising edge). An input whose cone holds a
 //! pulse or a sample and no fallback leaf is *active*: each frame the shadow pass evaluates the
 //! cone twice more, with pulses and samples false (`w`) and with pulses false (`s`), and the block
-//! receives both after its declared inputs (see `oce_blocks`' `settled` module). Every other
-//! declared input receives nothing and keeps the rising edge, bit for bit.
+//! receives both after its declared inputs (see `oce_blocks`' `settled` module). At the initial
+//! frame the pass evaluates it a third time, with pulses at their frame value and samples false
+//! (`i`, the cone at initialisation), and the block receives `i` in place of the declared input's
+//! frame value: its `when` fires on the rise from `i` to `s` (decision 3 as revised). Every other
+//! declared input receives nothing and keeps the rising edge, bit for bit, and so does every
+//! event input of a block whose *data* inputs (its declared inputs that are not settled event
+//! inputs) read a tainted net: such an input can carry a pulse whose value the second iteration
+//! changes, or the output of another block whose event fires there, neither of which the frame
+//! shows.
 //!
 //! **Cost.** Classification is linear in blocks plus connections: one breadth-first taint pass
 //! with an explicit queue, one summary per logic block in schedule order, and one marking pass
@@ -38,14 +45,15 @@ use crate::Schedule;
 
 const NONE: u32 = u32::MAX;
 
-/// Where one shadow value pair `(w, s)` comes from.
+/// Where one shadow value triple `(w, s, i)` comes from (`i` at the initial frame only).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ShadowSource {
-    /// A level (or an inactive input): `w = s =` the current value of this connector.
+    /// A level (or an inactive input): `w = s = i =` the current value of this connector.
     Level(ConnectorId),
-    /// A primitive pulse: `w = s = false`.
-    Pulse,
-    /// A sample: `w = false`, `s =` the current value of this connector.
+    /// A primitive pulse: `w = s = false`; `i =` the current value of this connector (the
+    /// initialisation pulse).
+    Pulse(ConnectorId),
+    /// A sample: `w = i = false`, `s =` the current value of this connector.
     Sample(ConnectorId),
     /// The output of a marked logic block: its shadow values.
     Node(ConnectorId),
@@ -190,7 +198,7 @@ impl EventPlan {
                 return ShadowSource::Level(c);
             }
             match leaf_of(d) {
-                Leaf::Pulse => ShadowSource::Pulse,
+                Leaf::Pulse => ShadowSource::Pulse(c),
                 Leaf::Sample => ShadowSource::Sample(c),
                 Leaf::Logic => ShadowSource::Node(c),
                 Leaf::Level | Leaf::Fallback => ShadowSource::Level(c),
@@ -222,7 +230,18 @@ impl EventPlan {
             let settled = block.settled_event_inputs();
             let inputs = &model.blocks[b].inputs;
             let drive = |p: usize| inputs.get(p).map(|&i| driver(i));
-            if settled.iter().any(|&p| drive(p).is_none())
+            // A data input (any declared input that is not a settled event input) that a pulse,
+            // sample or delay reaches can read another value in the second iteration than at
+            // the frame (a converted pulse), or another consumer's second-iteration event: the
+            // block keeps the rising edge (the review of GitHub #805).
+            let tainted_data = inputs.iter().enumerate().any(|(p, &i)| {
+                !settled.contains(&p)
+                    && owner
+                        .get(driver(i))
+                        .is_some_and(|&o| o != NONE && tainted[o as usize])
+            });
+            if tainted_data
+                || settled.iter().any(|&p| drive(p).is_none())
                 || !settled.iter().any(|&p| drive(p).is_some_and(&active))
             {
                 continue;

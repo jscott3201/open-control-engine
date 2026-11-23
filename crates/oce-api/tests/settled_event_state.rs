@@ -208,3 +208,23 @@ fn the_blob_entry_derives_the_same_plan_and_runs_the_same_frames() {
     }
     assert_eq!(engine.state_words(), executable.state_words());
 }
+
+#[test]
+fn a_restore_to_before_the_first_frame_runs_the_same_initial_frame() {
+    // Captured right after load: the stored words are `init_state`'s, and the next frame is the
+    // initial one, where the sample instant at t = 0 samples and `Latch` reads `Change`'s
+    // initialisation pulse (decision 3 as revised).
+    let fresh = loaded();
+    let before = fresh.state_snapshot().expect("captures before any frame");
+    let mut restored = loaded();
+    restored.restore_state(&before).expect("restores");
+    assert_eq!(restored.state_words(), loaded().state_words());
+    let mut fresh = fresh;
+    for (t, u) in [(0.0, true), (1.0, true), (2.0, false), (3.0, true)] {
+        assert_eq!(frame(&mut restored, t, u), frame(&mut fresh, t, u), "t {t}");
+    }
+    let mut again = loaded();
+    again.restore_state(&before).expect("restores");
+    let first = frame(&mut again, 0.0, true);
+    assert_eq!((first.0, first.1, first.2), (0, true, 10.0));
+}

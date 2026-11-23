@@ -6,19 +6,55 @@
 
 use oce_model::{ParamTable, Value};
 
-use crate::settled::{fire, settled_input};
+use crate::settled::{Settled, settled_input};
 use crate::{Block, BlockKind, BlockSignature, Ctx, EventSignal, PortKind, read_bool};
 
-/// `Latch.u` and `Toggle.u`: the `when` event on `u` by the settled-value rule (issue #800). At the
-/// initial frame the initial equation reads `u`'s frame value (decision 3), so a `Change` of a
-/// signal that starts different from its `pre_u_start` sets or toggles there, as in OpenModelica.
-fn u_event(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
-    let u = settled_input(inputs, 0, 2, 0);
-    if ctx.is_initial() {
-        u.v
+/// One iteration of `Latch` or `Toggle`'s `when` within a frame's event iteration: whether `u`
+/// rose, whether `clr` rose, and the two inputs' values in that iteration.
+#[derive(Clone, Copy)]
+struct Iteration {
+    u_rose: bool,
+    clr_rose: bool,
+    u: bool,
+    clr: bool,
+}
+
+/// The two iterations of a frame (issue #800, design note `docs/design/pulse-event-inputs.md`).
+///
+/// At a later frame the inputs go `before -> v -> s`: `u`'s before is its stored `w(k-1)`;
+/// `clr`'s is not stored and is taken as false, so `clr` true at the frame rises in the first
+/// iteration. That is exact unless the output can be true while `clr` was already true before
+/// the frame, which needs `clr`'s cone true between instants and false at one (a negated
+/// sample): a registered limit. At the initial frame `v` is the cone at initialisation `i` and
+/// the inputs go `i -> w -> s` (decision 3 as revised), with `clr`'s `i` known.
+fn iterations(u: Settled, clr: Settled, prev_u: bool, initial: bool) -> [Iteration; 2] {
+    let (u0, u1, clr0, clr1) = if initial {
+        (u.v, u.w, clr.v, clr.w)
     } else {
-        fire(false, word_bool(region[1]), u).any()
-    }
+        (prev_u, u.v, false, clr.v)
+    };
+    [
+        Iteration {
+            u_rose: u1 && !u0,
+            clr_rose: clr1 && !clr0,
+            u: u1,
+            clr: clr1,
+        },
+        Iteration {
+            u_rose: u.s && !u1,
+            clr_rose: clr.s && !clr1,
+            u: u.s,
+            clr: clr.s,
+        },
+    ]
+}
+
+/// `u` and `clr` with their settled values, when the graph appended them.
+fn latch_inputs(inputs: &[Value]) -> (Settled, Settled) {
+    (
+        settled_input(inputs, 0, 2, 0),
+        settled_input(inputs, 1, 2, 1),
+    )
 }
 
 fn bool_word(b: bool) -> u64 {
@@ -143,18 +179,41 @@ impl Block for LogicalChange {
 }
 
 /// `CDL.Logical.Latch` — clear-dominant set/reset latch.
-/// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut. `u` takes the settled-value rule of issue
-/// #800 (`docs/design/pulse-event-inputs.md`): the second state word holds `u`'s `w`, which only
-/// the event test reads; at the initial frame the initial equation reads `u`'s frame value. `clr`
-/// is read as a level, which gives Modelica's output whether it is a pulse or a level.
+/// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut. Both inputs take the settled-value rule of
+/// issue #800 (`docs/design/pulse-event-inputs.md`), and `when {clr, u} then y = not clr and u`
+/// is evaluated per iteration of the frame's event iteration: in the first (before -> during) if
+/// `u` rose from its stored `w(k-1)` or `clr` is true, with the frame values; in the second
+/// (during -> settled) if either rose, with the settled values. The second state word holds `u`'s
+/// `w`, which only the event test reads; `clr`'s previous value is not stored, which is exact
+/// unless `clr`'s cone holds a negated sample (true between instants and false at one), where a
+/// `clr` already true before the frame is read as rising. At the initial frame (decision 3 as
+/// revised) the initial equation reads the cones at initialisation `i` (pulses at their frame
+/// value, samples false), then the `when` runs on the two steps `i -> w -> s`.
+/// Where no pulse or sample is upstream (`i = v = s`) this is the clear-dominant rising-edge
+/// latch, bit for bit.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Latch;
 
 impl Latch {
     fn output(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
-        let clr = read_bool(inputs, 1);
+        let (u, clr) = latch_inputs(inputs);
         let held = word_bool(region[0]);
-        !clr && (u_event(ctx, inputs, region) || held)
+        let initial = ctx.is_initial();
+        // At the initial frame `v` is the cone at initialisation `i`: the initial equation first.
+        let start = if initial {
+            !clr.v && (u.v || held)
+        } else {
+            held
+        };
+        iterations(u, clr, word_bool(region[1]), initial)
+            .iter()
+            .fold(start, |y, it| {
+                if it.u_rose || it.clr_rose {
+                    !it.clr && it.u
+                } else {
+                    y
+                }
+            })
     }
 }
 
@@ -178,7 +237,7 @@ impl Block for Latch {
     }
 
     fn settled_event_inputs(&self) -> &[usize] {
-        &[0]
+        &[0, 1]
     }
 
     fn state_len(&self) -> usize {
@@ -207,21 +266,38 @@ impl Block for Latch {
 }
 
 /// `CDL.Logical.Toggle` — clear-dominant toggle on each event of `u`.
-/// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut. `u` takes the settled-value rule of issue
-/// #800 as `Latch.u` does (the second word holds its `w`; the initial frame reads its frame value);
-/// `clr` is read as a level.
+/// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut. Both inputs take the settled-value rule of
+/// issue #800 as `Latch`'s do, and `Toggle.mo`'s `when`/`elsewhen` chain is evaluated per
+/// iteration: `u` rising with `clr` false toggles, otherwise `clr` rising clears, otherwise the
+/// output holds (a falling `u` keeps `pre(y)`). The second word holds `u`'s `w`; `clr`'s previous
+/// value is read as `Latch` reads it. The initial frame applies `when initial() then y = if clr
+/// then false else u` to the cones at initialisation `i`, then the chain on the two steps
+/// `i -> w -> s` (decision 3 as revised).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Toggle;
 
 impl Toggle {
     fn output(ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> bool {
-        let clr = read_bool(inputs, 1);
+        let (u, clr) = latch_inputs(inputs);
         let held = word_bool(region[0]);
-        !clr && if u_event(ctx, inputs, region) {
-            !held
+        let initial = ctx.is_initial();
+        // At the initial frame `v` is the cone at initialisation `i`: `when initial()` first.
+        let start = if initial {
+            !clr.v && if u.v { !held } else { held }
         } else {
             held
-        }
+        };
+        iterations(u, clr, word_bool(region[1]), initial)
+            .iter()
+            .fold(start, |y, it| {
+                if !it.clr && it.u_rose {
+                    !y
+                } else if it.clr_rose {
+                    false
+                } else {
+                    y
+                }
+            })
     }
 }
 
@@ -245,7 +321,7 @@ impl Block for Toggle {
     }
 
     fn settled_event_inputs(&self) -> &[usize] {
-        &[0]
+        &[0, 1]
     }
 
     fn state_len(&self) -> usize {

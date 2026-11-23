@@ -100,7 +100,7 @@ event at the frame of the event (issue #768; design note
 | Event instant | Frame `k > 0` is the event instant of every Boolean event condition true at frame `k` and false at frame `k - 1`. |
 | Event frame's outputs | The values after the event, computed from frame `k`'s inputs: the frame emits from the reinitialised or re-assigned state. |
 | Integrators | The reset frame's update stores the reset value with no Euler step (that step covers `[t(k-1), t(k)]`, before the event); from frame `k + 1` on, the state is what the engine stored before this rule. |
-| Frame 0 | Initialisation: no `when` fires unless its condition holds `initial()`. An event input true at frame 0 becomes its `pre` value for frame 1, so the first event is its next false-to-true transition. |
+| Frame 0 | Initialisation: no `when` fires unless its condition holds `initial()`. An event input true at frame 0 becomes its `pre` value for frame 1, so the first event is its next false-to-true transition. This holds for every level, and for every input with no pulse or sample upstream; an input fed by a pulse or a sample follows the initial-frame rule of [Pulses on an event input](#pulses-on-an-event-input), under which a level still never fires at frame 0 (issue #800, decision 3 as revised). |
 | Feedthrough graph | An input the event reads at emission feeds through to the output, so the block waits for its producer, and feedback from the output into it is an `algebraic-loop`. |
 
 The blocks this concerns are `Reals.PIDWithReset` (PI and PID modes: `trigger` feeds through; the
@@ -174,14 +174,20 @@ ruled by the owner on 2026-11-22) decides when an event input fires on such a si
 | Cone | The stateless Boolean logic upstream of an event input (`And`, `Or`, `Not`, `Nand`, `Nor`, `Xor`, `MultiAnd`, `MultiOr`, `Logical.Switch`, the Boolean routing classes), classified at load, from the wiring, down to its leaves: a *sample* (a `SampleTrigger` output), a *primitive pulse* (a `Change`, `Integers.Change`, `Edge` or `FallingEdge` that nothing upstream of it, through any chain of blocks, connects to a pulse, a sample or a `Pre`), a *fallback leaf* (a `Pre`, any other edge block, or any other block such a chain reaches) and a *level* (everything else). |
 | Three values | `v`, the frame value; `w`, the cone with every pulse and sample false; `s`, the cone with every pulse false and every sample at its frame value. They are what Modelica's event iteration at the frame's instant takes: before, during, settled. |
 | Event | At a frame after the first, the input fires iff `(v(k) and not w(k-1)) or (not v(k) and s(k))`; the block stores `w(k)` where it stored the previous trigger. A direct pulse or sample fires on every frame it is true, `Not` of a pulse fires at the pulse's frame, and `Not` of a sample never fires, as in Modelica. Where no pulse or sample is upstream, `w = s = v` and the rule is the rising edge above, bit for bit. |
-| Fallback | A cone with a fallback leaf keeps the rising edge: a `Pre` settles in Modelica's second event iteration and a frame later here, and an edge block of a pulse can change more than once in one instant. The `Pre` remedy for feedback into an event input is such a cone. |
-| Frame 0 | `OnCounter`, `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset`, `PIDWithReset` and `TimerAccumulating.reset` fire only on a sample instant at the start: `s(0) and not w(0)` (pulses are initialisation values there and fire nothing). `TriggeredMovingMean` samples once for `initial()` and once more on such an instant, as OpenModelica does. `Latch` and `Toggle` read `u`'s frame-0 value, the initialisation pulse of a `Change` included. |
+| Fallback | A cone with a fallback leaf keeps the rising edge: a `Pre` settles in Modelica's second event iteration and a frame later here, and an edge block of a pulse can change more than once in one instant. The `Pre` remedy for feedback into an event input is such a cone. So does every event input of a block whose *data* inputs (`TriggeredSampler.u`, `TriggeredMax.u`, `TriggeredMovingMean.u`, `IntegratorWithReset.u` and `.y_reset_in`, `PIDWithReset.u_s` and `.u_m`, `TimerAccumulating.u`) a pulse, a sample or a `Pre` reaches through any chain of blocks: data cones are not traced, and such an input can read another value in Modelica's second iteration (a converted pulse, already false) or another block's second-iteration event. |
+| Frame 0 | A fourth value, `i`: the cone at initialisation, every pulse at its frame value (the initialisation pulse of a `Change` whose input starts different from `pre_u_start`) and every sample false. At the initial frame the input goes `i -> w -> s` and fires on `(w and not i) or (s and not w)`, at most once: a sample instant at the start fires, and so does a negated initialisation pulse (`Not(Change(x))` with `x(0) = true`); a pulse, a level and a fallback cone never do (issue #768's "no event at frame 0 for a trigger already true" holds for every level). The body of the step reads that step's values (`OnCounter`'s `reset`). `TriggeredMovingMean` samples once for `initial()` and once more when the input fires there. `Latch` and `Toggle` run their initial equations on `i`, then their `when` on each step. This is decision 3 as revised by the owner on 2026-11-22 after two pinned-class probes (`InitNegatedPilot`, `InitMixturesPilot`). |
 
 The consumers are `OnCounter.trigger` and `.reset`, `TriggeredSampler`, `TriggeredMax` and
 `TriggeredMovingMean` `.trigger`, `IntegratorWithReset.trigger`, `PIDWithReset.trigger` (PI and
-PID), `Latch.u`, `Toggle.u` and `TimerAccumulating.reset`. `OnCounter` takes `reset`'s value in the
-iteration that fired, so a trigger in the first iteration and a reset rising in the second count
-once and then reset. `Latch.clr` and `Toggle.clr` give the same output read as a level and keep it.
+PID), `Latch.u` and `.clr`, `Toggle.u` and `.clr`, and `TimerAccumulating.reset`. A block with two
+of them runs its `when` once per step that fires, with that step's values: `OnCounter` takes
+`reset`'s value in the iteration that fired, so a trigger in the first iteration and a reset rising
+in the second count once and then reset; `Latch` (`when {clr, u} then y = not clr and u`) and
+`Toggle` (its `when`/`elsewhen` chain) clear in the first step and set in the second when `clr`
+is a pulse and `u` rises after it, as Modelica does. `clr`'s value before a frame is not stored
+(the state layout is unchanged): `clr` true at a frame is read as rising, which is exact unless
+`clr`'s cone holds a negated sample (true between instants, false at one), where a latch set at an
+instant is cleared at the next frame and Modelica keeps it (`DVG-000008`).
 
 `SampleTrigger` emits `true` at frame 0 only when the start is one of its instants (within
 `1e-9 · period`, the tolerance of its index; Modelica rounds its first instant to 1e-6 s). A frame
@@ -245,25 +251,41 @@ authorize actuation.
 
 **Pulses on an event input follow the settled-value rule above**, checked against OpenModelica
 1.25.1 running the pinned Buildings classes
-(`crates/oce-conformance/tests/open_modelica_pulse_events.rs`, three pilots): every consumer class
+(`crates/oce-conformance/tests/open_modelica_pulse_events.rs`, eight pilot runs): every consumer class
 behind `Change` of a signal that changes on consecutive frames, `Not(Change)`, `Or(Change, level)`,
 `SampleTrigger` at 0.5, 1, 1.4 and 2 s from an instant at the start and from an off-grid start,
 `Not(SampleTrigger)`, G36 `TrimAndRespond`'s hold latch (`Latch` with `u` a sample and `clr`
-`And(Not(hold), sample)`), and `Latch` and `Toggle` reading the initialisation pulse, equal OpenModelica
+`And(Not(hold), sample)`), `Latch` and `Toggle` whose `clr` is `Change` of the same or another
+signal or `Not(Edge)`, every consumer at frame 0 behind a negated initialisation pulse
+(`Not(Change(x))`, `Not(Edge(x))`) and behind `Not(SampleTrigger)` on and off the grid, mixed cones
+at frame 0 (`Or`, `And`, `Xor` of an initialisation pulse and a sample, a three-leaf mixture, a
+level), and `Latch` and `Toggle` reading the initialisation pulse, equal OpenModelica
 at every frame (bit for bit; a timer within 1e-6 s and a mean within 1e-12, OpenModelica's printed
 precision). Building 33's re-enable one frame after a disable resets as OpenModelica does
 (`building_33_openmodelica_reenable.rs`). The two divergences registered before the rule,
-`DVG-000001` and `DVG-000002`, are resolved. Four remain, registered
+`DVG-000001` and `DVG-000002`, are resolved. Nine remain, registered
 (`crates/oce-conformance/tests/fixtures/known_divergence/register.json`) and documented here as
-the owner ruled (decision 2):
+the owner ruled (decision 2); in every one the engine gives what it gave before this rule, or
+differs from OpenModelica at fewer frames:
 
 - `DVG-000003`, `DVG-000006`: a cone with a `Pre` keeps the rising edge. `OnCounter` behind
   `Or(Change(u), Pre(b))` counts one event where OpenModelica counts three; behind
   `Pre(SampleTrigger)`, one where OpenModelica counts one per instant.
 - `DVG-000004`: several instants of a `SampleTrigger` in one frame fire once (0.5 s at 1 s frames:
   10 counts against 19), with the once-only warning above.
-- `DVG-000005`: an instant between frames is sampled at the next frame with that frame's value
-  (`SampleTrigger(1.4 s)` at 1 s frames samples `u(2 s)` for the instant at 1.4 s).
+- `DVG-000005`, `DVG-000011`: an event between frames is shown at the next frame with that
+  frame's values (`SampleTrigger(1.4 s)` at 1 s frames samples `u(2 s)` for the instant at
+  1.4 s; a `TimerAccumulating` reset by a change at 3 s on frames at 0.25 + k s restarts at 3.25 s).
+- `DVG-000007`: a fallback cone at frame 0 (`Or(Not(Change(x1)), Pre(false))`) never fires there;
+  OpenModelica's initialisation pulse does.
+- `DVG-000008`: `Latch` and `Toggle` whose `clr` holds a negated sample (above).
+- `DVG-000009`: a data input carrying a converted pulse (`BooleanToReal(Change(a))` into
+  `TriggeredSampler.u`, `IntegratorWithReset.y_reset_in` or `PIDWithReset.u_m`, the trigger
+  `Not(Change(a))`) puts the block on the rising edge, a frame after OpenModelica's second
+  iteration, which reads the pulse already false.
+- `DVG-000010`: OpenModelica reinitialises `IntegratorWithReset` and `PIDWithReset` when a negated
+  sample's `sample()` falls after its instant, in continuous time, though no when-only class
+  behind the same signal fires there; the engine fires none of them.
 
 Not compared, and not matched by any event rule: a pulse read for its duration (`TrueDelay`,
 `Timer`, `TrueFalseHold`, `TrueHoldWithReset`, a `MovingAverage` of a converted pulse) lasts a

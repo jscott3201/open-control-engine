@@ -54,7 +54,8 @@ fn word_i64(word: u64) -> i64 {
 /// `CDL.Logical.Change` true on consecutive frames counts each frame, as OpenModelica does
 /// (`open_modelica_event_pulses.rs`); each firing iteration takes `reset`'s value in that
 /// iteration. Without them `w = s = v` and the rule is the rising edge above. At the initial frame
-/// only a sample instant fires.
+/// the inputs go `i -> w -> s` from initialisation (decision 3 as revised): a sample instant at
+/// the start fires, and so does a negated initialisation pulse; a level never does.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OnCounter {
     pub(crate) y_start: i64,
@@ -66,8 +67,8 @@ impl OnCounter {
     /// Both inputs follow the settled-value rule (issue #800): the `when {trigger, reset}` fires
     /// once per iteration of the instant in which either input rises, and each firing assigns
     /// `if reset then y_start else pre(y) + 1` with `reset`'s value in that iteration. At the
-    /// initial frame (no history yet, or the frame driver's initial frame) only a sample instant
-    /// fires, with every pulse taken false.
+    /// initial frame (no history yet, or the frame driver's initial frame) the two steps are
+    /// `i -> w -> s` (decision 3 as revised), the first reading `reset`'s `w`.
     fn count_after_event(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &[u64]) -> i64 {
         let mut count = word_i64(region[COUNT_WORD]);
         let initial = ctx.is_initial() || !word_bool(region[HAS_HISTORY_WORD]);
@@ -76,8 +77,9 @@ impl OnCounter {
         let on_trigger = fire(initial, word_bool(region[PREV_TRIGGER_WORD]), trigger);
         let on_reset = fire(initial, word_bool(region[PREV_RESET_WORD]), reset);
         if on_trigger.first || on_reset.first {
-            let reset_now = if initial { reset.s } else { reset.v };
-            count = if reset_now {
+            // The first step's values: the frame values at a later frame, `w` at the initial one.
+            let reset_first = if initial { reset.w } else { reset.v };
+            count = if reset_first {
                 self.y_start
             } else {
                 count.wrapping_add(1)

@@ -204,9 +204,9 @@ Stating this plainly is more useful than a feature list.
   input regions. One composed G36 Reliefs leaf has a seven-state exact-bit case at its declared
   outputs. Beside them, single OpenModelica runs check the event timing of five event-triggered
   classes exactly (a trigger true at the start, and a later rising edge) and the resets of the
-  Building 33 valve sequence on synthetic frames, and three pilots check how an event input
-  treats a pulse (`Change`, `SampleTrigger`, logic over them; issue #800), with four registered,
-  documented differences. No complete G36
+  Building 33 valve sequence on synthetic frames, and six pilots check how an event input
+  treats a pulse (`Change`, `SampleTrigger`, logic over them, the first frame included; issue
+  #800), with nine registered, documented differences. No complete G36
   sequence or general numeric tolerance has been checked that way, and the global Tier-3 report
   remains skipped —
   [read the full accounting](docs/verification-evidence.md).

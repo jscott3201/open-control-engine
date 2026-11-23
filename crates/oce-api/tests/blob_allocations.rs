@@ -122,9 +122,10 @@ fn documented(decoded: &Decoded<'_>) -> u64 {
     })
     .count_total;
     count += some(blocks) + some(connectors) + some(max_arity);
-    // RunState: the shadow buffers, with the event plan.
+    // RunState: the shadow buffers `w`, `s` and the initial frame's `i`, and their scratch, with
+    // the event plan.
     if plans {
-        count += 2 * some(connectors) + some(max_arity);
+        count += 3 * some(connectors) + some(max_arity);
     }
     // I/O tables: the two lists, one target vector per input; bounds are never Strings.
     count += some(decoded.inputs.len()) + decoded.inputs.len() as u64 + some(decoded.outputs.len());

@@ -1,0 +1,30 @@
+{
+  "pilot": "tools/openmodelica-event-reference/events/InitMixturesPilot.mo",
+  "pilot_sha256": "8ee648776670a8b3fa3a95d11c4b48b43b38c2a5f79ce347449a1029538a90c0",
+  "simulate_template_sha256": "f58c4d91867f4d7af00c1c665acefe39a3fc002cb67935d0c74d2750c702ba0e",
+  "image": "openmodelica/openmodelica@sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
+  "omc": "OpenModelica 1.25.1",
+  "architecture": "arm64",
+  "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "buildings_tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
+  "msl_commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
+  "msl_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
+  "class_sources": {
+    "Buildings/Controls/OBC/CDL/Logical/Change.mo": "87ddbe1b35598b6aee12e0310fa204da12bd2ef4aa7a3d5185388d8165a520a4",
+    "Buildings/Controls/OBC/CDL/Logical/Not.mo": "483742cdd918012db84a06dca0236468c9454af83136cb727a83ef11094f6568",
+    "Buildings/Controls/OBC/CDL/Logical/Sources/SampleTrigger.mo": "867a3f130d4e6af3997ad5d2e9687af29a1e237f9c4e7596849f41bdc2188791",
+    "Buildings/Controls/OBC/CDL/Logical/Or.mo": "b2e4f2ee450e3105a6ca78b8f31d3ffce7d26226fa5ea4c0e7dc2915c243b513",
+    "Buildings/Controls/OBC/CDL/Logical/And.mo": "5169e635aefc83a0f65f689af3e9af7385f57e7dc156cebf0dc8108d74ea0fde",
+    "Buildings/Controls/OBC/CDL/Logical/Xor.mo": "a1b04bca344b0953439bbb82e7e242b292249f27273930ddea13fc7d1d3133d4",
+    "Buildings/Controls/OBC/CDL/Logical/Pre.mo": "4685e1ac5e55eef7732a5d9417227d68d347c4770dfdf413c972f2d1b1536f3b",
+    "Buildings/Controls/OBC/CDL/Integers/OnCounter.mo": "9a7bdbc0e6e915868d045b1c90aab336577dbe676dbef19d072a9fec1ca1bf45",
+    "Buildings/Controls/OBC/CDL/Logical/Latch.mo": "2ab7e15a0026d5a6c0089d7af88329869fc3e397398a7b86ad5ea49fd1d9b271",
+    "Buildings/Controls/OBC/CDL/Logical/Toggle.mo": "49d33a88242163def412dff83e3f49e23b187fe56859a01649edbf5fb2bab60c"
+  },
+  "settings": "cvode, tolerance 1e-6, 0.0 to 10.0 s, output every 1 s",
+  "projection": "at each frame instant 0.0 + k s (k = 0 to 9), the last row within 1e-6 s of it",
+  "command": "docker run --rm --pull=never --network none --memory 4g --cpus 4 --user <host-uid>:<host-gid> -e HOME=/work -v <buildings>:/libs/buildings:ro -v <msl>:/libs/msl:ro -v tools/openmodelica-event-reference/events:/scripts:ro -v <run directory>:/work -w /work <image> omc /work/run.mos",
+  "raw": "init_mixtures.raw.csv",
+  "canonical_sha256": "c70dea9f3e5d31fd30770f69d5c40246d5196299a44cd6f1d84f60c9d2b3669a",
+  "raw_sha256": "5d948c6e09c7f5a4c0723be1377d676282675ec004109b2d0f47c0b62b862733"
+}

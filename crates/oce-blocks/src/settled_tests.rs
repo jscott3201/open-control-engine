@@ -2,8 +2,10 @@
 //! the formula itself, and every consumer class with every `(w(k-1), v(k), s(k))` combination at
 //! a later frame and every `(v, w, s)` at the initial frame. Expectations are hand-derived from
 //! section 1.4 of the note: at a later frame an event input fires iff
-//! `(v(k) and not w(k-1)) or (not v(k) and s(k))`; at the initial frame a when-only class fires
-//! iff `s and not w`, and `Latch`/`Toggle` read `v` (their initial equations).
+//! `(v(k) and not w(k-1)) or (not v(k) and s(k))`. At the initial frame the graph passes the cone
+//! at initialisation `i` (pulses at their frame value, samples false) in the declared input's
+//! place (decision 3 as revised on 2026-11-22): a when-only class fires iff `s and not i`, and
+//! `Latch`/`Toggle` run their initial equations on `i`, then their `when` on that rise.
 
 use oce_model::{ParamTable, Value};
 
@@ -40,18 +42,20 @@ fn the_formula_rises_from_before_to_during_or_from_during_to_settled() {
 }
 
 #[test]
-fn at_the_initial_frame_only_a_rise_from_w_to_s_fires() {
-    for (v, w, s) in COMBOS {
+fn at_the_initial_frame_the_input_goes_from_initialisation_to_w_to_settled() {
+    // `v` here is the cone at initialisation `i`, which the graph passes at the initial frame.
+    for (i, w, s) in COMBOS {
         for prev_w in [false, true] {
-            let got = fire(true, prev_w, Settled { v, w, s });
+            let got = fire(true, prev_w, Settled { v: i, w, s });
             assert_eq!(
                 got,
                 Fire {
-                    first: s && !w,
-                    second: false
+                    first: w && !i,
+                    second: s && !w,
                 },
-                "v {v}, w {w}, s {s}"
+                "i {i}, w {w}, s {s}"
             );
+            assert!(!(got.first && got.second), "at most one step rises");
         }
     }
 }
@@ -198,7 +202,7 @@ fn consumers() -> Vec<Consumer> {
             params: vec![],
             inputs: |v, _k| vec![B(v), B(false)],
             fired: |o| real(&o[0]) == 1.0,
-            others: 0,
+            others: 1,
             slot: 0,
         },
         Consumer {
@@ -206,7 +210,7 @@ fn consumers() -> Vec<Consumer> {
             params: vec![],
             inputs: |v, _k| vec![B(v), B(false)],
             fired: |o| real(&o[0]) == 1.0,
-            others: 0,
+            others: 1,
             slot: 0,
         },
         Consumer {
@@ -249,12 +253,14 @@ fn every_consumer_fires_by_the_formula_at_a_later_frame_for_all_eight_combinatio
             let block = make(c.class, &c.params);
             let mut region = vec![0u64; block.state_len()];
             block.init_state(&mut region, &ParamTable::default());
-            // Frame 0: the input's frame value false, `w` and `s` both `prev_w`, so nothing fires
-            // and the stored word becomes `prev_w`.
-            let zero = with_hidden(&c, (c.inputs)(false, 0), prev_w, prev_w);
+            // Frame 0: everything false, nothing fires. Frame 1: `v = s = false`, `w = prev_w`,
+            // nothing fires and `prev_w` becomes the stored word. Frame 2 is the case.
+            let zero = with_hidden(&c, (c.inputs)(false, 0), false, false);
             frame(block.as_ref(), &mut region, 0.0, true, &zero);
-            let one = with_hidden(&c, (c.inputs)(v, 1), false, s);
-            let out = frame(block.as_ref(), &mut region, 1.0, false, &one);
+            let one = with_hidden(&c, (c.inputs)(false, 1), prev_w, false);
+            frame(block.as_ref(), &mut region, 1.0, false, &one);
+            let two = with_hidden(&c, (c.inputs)(v, 2), false, s);
+            let out = frame(block.as_ref(), &mut region, 2.0, false, &two);
             let want = (v && !prev_w) || (!v && s);
             assert_eq!(
                 (c.fired)(&out),
@@ -267,33 +273,39 @@ fn every_consumer_fires_by_the_formula_at_a_later_frame_for_all_eight_combinatio
 }
 
 #[test]
-fn at_the_initial_frame_when_only_classes_fire_on_a_sample_and_latch_and_toggle_read_v() {
+fn at_the_initial_frame_classes_fire_on_i_to_w_or_w_to_s() {
     for c in consumers() {
         if c.class == "CDL.Integers.OnCounter" && c.slot == 1 {
             continue;
         }
-        for (v, w, s) in COMBOS {
+        for (i, w, s) in COMBOS {
             let block = make(c.class, &c.params);
             let mut region = vec![0u64; block.state_len()];
             block.init_state(&mut region, &ParamTable::default());
-            let inputs = with_hidden(&c, (c.inputs)(v, 0), w, s);
+            let inputs = with_hidden(&c, (c.inputs)(i, 0), w, s);
             let out = frame(block.as_ref(), &mut region, 0.0, true, &inputs);
-            let reads_v = matches!(c.class, "CDL.Logical.Latch" | "CDL.Logical.Toggle");
             match c.class {
                 // `when {initial(), trigger}` samples at the initial frame whatever the trigger.
                 "CDL.Discrete.TriggeredMovingMean" => assert_eq!(real(&out[0]), 1.0),
                 // `initial equation y = u`, then `max(pre(y), abs(u))` on a sample instant.
                 "CDL.Discrete.TriggeredMax" => {
-                    let u: f64 = if v { 5.0 } else { -5.0 };
-                    let want = if s && !w { u.abs() } else { u };
-                    assert_eq!(real(&out[0]), want, "v {v}, w {w}, s {s}");
+                    let u: f64 = if i { 5.0 } else { -5.0 };
+                    let fires = (w && !i) || (s && !w);
+                    let want = if fires { u.abs() } else { u };
+                    assert_eq!(real(&out[0]), want, "i {i}, w {w}, s {s}");
                 }
                 // The reset's assignments equal the initial values (`y = 0`, `passed = t <= 0`):
                 // an event at the initial frame cannot show in the outputs, in Modelica either.
                 "CDL.Logical.TimerAccumulating" => assert_eq!(real(&out[0]), 0.0),
+                // `Latch` (clr false): `y = u_i`, then `y = u` at each rise: `i or w or s`.
+                // `Toggle`: `y = u_i`, then toggled at each rise.
                 _ => {
-                    let want = if reads_v { v } else { s && !w };
-                    assert_eq!((c.fired)(&out), want, "{}: v {v}, w {w}, s {s}", c.class);
+                    let want = match c.class {
+                        "CDL.Logical.Latch" => i || w || s,
+                        "CDL.Logical.Toggle" => i ^ (w && !i) ^ (s && !w),
+                        _ => (w && !i) || (s && !w),
+                    };
+                    assert_eq!((c.fired)(&out), want, "{}: i {i}, w {w}, s {s}", c.class);
                 }
             }
         }
@@ -378,7 +390,7 @@ fn on_counter_assigns_with_reset_s_value_in_the_iteration_that_fired() {
 fn moving_mean_samples_twice_at_the_initial_frame_on_a_sample_instant_only() {
     use Value::{Boolean as B, Integer as I, Real as R};
     let block = make("CDL.Discrete.TriggeredMovingMean", &[("n", I(3))]);
-    // A sample instant at the start (`w = false`, `s = true`): `initial()` and the instant, then
+    // A sample instant at the start (`i = w = false`, `s = true`): `initial()` and the rise, then
     // one sample of 3.5 at frame 1: (2.5 + 2.5 + 3.5) / 3, as OpenModelica gives.
     let mut region = vec![0u64; block.state_len()];
     block.init_state(&mut region, &ParamTable::default());
@@ -387,7 +399,7 @@ fn moving_mean_samples_twice_at_the_initial_frame_on_a_sample_instant_only() {
         &mut region,
         0.0,
         true,
-        &[R(2.5), B(true), B(false), B(true)],
+        &[R(2.5), B(false), B(false), B(true)],
     );
     let out = frame(
         block.as_ref(),
@@ -397,8 +409,8 @@ fn moving_mean_samples_twice_at_the_initial_frame_on_a_sample_instant_only() {
         &[R(3.5), B(true), B(false), B(true)],
     );
     assert_eq!(real(&out[0]), (2.5 + 2.5 + 3.5) / 3.0);
-    // A `Change` true from the start (its initialisation value, a pulse: `w = s = false`) and an
-    // off-grid start (the sample leaf false at frame 0) sample once: (2.5 + 3.5) / 2.
+    // A `Change` true from the start (its initialisation pulse: `i = true`, `w = s = false`) and
+    // an off-grid start (the sample leaf false at frame 0) sample once: (2.5 + 3.5) / 2.
     for frame0 in [
         [R(2.5), B(true), B(false), B(false)],
         [R(2.5), B(false), B(false), B(false)],
@@ -450,4 +462,67 @@ fn on_counter_stores_reset_s_w_and_a_second_consecutive_reset_pulse_fires() {
         &[B(true), B(true), B(true), B(true), B(false), B(false)],
     );
     assert_eq!(real(&out[0]), 5.0);
+}
+
+/// `Latch.mo` and `Toggle.mo` at a later frame, written from their text: the inputs go
+/// `before -> v -> s` (`u`'s before is `prev_u`, `clr`'s is `prev_clr`), and in each step the
+/// `when {clr, u}` of `Latch` (`y = not clr and u` when either rises) or the `when`/`elsewhen`
+/// chain of `Toggle` (`u` rising with `clr` false toggles; else `clr` rising clears; a falling
+/// `u` keeps `pre(y)`) runs on that step's values.
+fn modelica_latch_toggle(toggle: bool, u: [bool; 3], clr: [bool; 3], held: bool) -> bool {
+    let mut y = held;
+    for k in 1..3 {
+        let (u_rose, clr_rose) = (u[k] && !u[k - 1], clr[k] && !clr[k - 1]);
+        if toggle {
+            if !clr[k] && u_rose {
+                y = !y;
+            } else if clr_rose {
+                y = false;
+            }
+        } else if u_rose || clr_rose {
+            y = !clr[k] && u[k];
+        }
+    }
+    y
+}
+
+#[test]
+fn latch_and_toggle_follow_their_mo_in_every_row_but_the_registered_negated_sample_clear() {
+    use Value::Boolean as B;
+    let bits = |n: u32, i: u32| n >> i & 1 == 1;
+    for class in ["CDL.Logical.Latch", "CDL.Logical.Toggle"] {
+        let toggle = class.ends_with("Toggle");
+        let block = make(class, &[]);
+        let (mut differ, mut rows) = (0, 0);
+        // (u: prev, v, s) x (clr: prev, v, s) x held: 128 rows.
+        for n in 0..128u32 {
+            let (u, clr, held) = (
+                [bits(n, 0), bits(n, 1), bits(n, 2)],
+                [bits(n, 3), bits(n, 4), bits(n, 5)],
+                bits(n, 6),
+            );
+            let mut region = vec![u64::from(held), u64::from(u[0])];
+            let inputs = [B(u[1]), B(clr[1]), B(false), B(u[2]), B(false), B(clr[2])];
+            let out = frame(block.as_ref(), &mut region, 1.0, false, &inputs);
+            let got = real(&out[0]) == 1.0;
+            let want = modelica_latch_toggle(toggle, u, clr, held);
+            rows += 1;
+            // The engine stores no previous `clr`: it reads `clr` true at the frame as a rise.
+            // That differs only where the output is set while `clr` was already true before the
+            // frame, which needs a negated sample in `clr`'s cone (DVG-000008).
+            if clr[0] && held && clr[1] {
+                let approx = modelica_latch_toggle(toggle, u, [false, clr[1], clr[2]], held);
+                assert_eq!(got, approx, "{class} row {n}");
+                differ += usize::from(got != want);
+            } else {
+                assert_eq!(got, want, "{class}: u {u:?}, clr {clr:?}, held {held}");
+            }
+        }
+        assert_eq!(rows, 128);
+        // Of the 16 rows where the two can differ (the output set, `clr` already true before
+        // the frame and true at it), `Toggle` differs in all; `Latch` in the 8 where `u` does
+        // not rise in the first step and nothing rises in the second (any such rise evaluates
+        // `not clr and u` again, the same in both).
+        assert_eq!(differ, if toggle { 16 } else { 8 }, "{class}");
+    }
 }

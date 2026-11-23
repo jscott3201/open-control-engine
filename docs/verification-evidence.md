@@ -24,8 +24,8 @@ repeated, check the event timing of five event-triggered classes exactly
 ([below](#event-timing-against-openmodelica)) and upstream's Building 33 valve sequence on its 78
 synthetic frames, exact at every engine reset. Two of those runs found the engine and OpenModelica
 apart where a pulse is true on two consecutive frames; the settled-value rule of issue #800
-resolved both, and three more pilots, against the pinned Buildings classes, check that rule
-([below](#pulses-on-event-inputs-against-openmodelica)), with four registered differences.
+resolved both, and six more pilots in eight runs, against the pinned Buildings classes, check that
+rule ([below](#pulses-on-event-inputs-against-openmodelica)), with nine registered differences.
 
 `CDL.Logical.Pre` is outside those executed-reference claims. The engine's fixed
 [HostTick v1 profile](execution-profile.md) delays `Pre` by one HostTick transition rather than one
@@ -420,15 +420,17 @@ binary, which no per-PR job runs.
 
 ### Pulses on event inputs against OpenModelica
 
-Three pilots (`tools/openmodelica-event-reference/events/PulseConsumersPilot.mo`,
-`SampleTriggerPilot.mo`, `SampleTriggerOffGridPilot.mo`; `regenerate.sh ... pulses`) run the
+Six pilots in eight runs (`tools/openmodelica-event-reference/events/PulseConsumersPilot.mo`,
+`SampleTriggerPilot.mo`, `SampleTriggerOffGridPilot.mo`, and from the review of GitHub #805
+`InitNegatedPilot.mo` and `InitMixturesPilot.mo`, each with an off-grid copy, and
+`LatchClearPilot.mo`; `regenerate.sh ... pulses`) run the
 **pinned Buildings classes**, not transcriptions, in the same container, at 1 s frames with each
 input held, and `crates/oce-conformance/tests/open_modelica_pulse_events.rs` drives the engine with
 the same blocks wired the same way (issue #800, design note
 [Event inputs fed by one-frame pulses](design/pulse-event-inputs.md)). Every compared signal equals
 OpenModelica at every frame, bit for bit, except a timer within 1e-6 (OpenModelica's table changes
 land about 1e-10 s after each frame) and a mean within 1e-12 (OpenModelica prints 16 significant
-digits), and four registered known divergences:
+digits), and nine registered known divergences:
 
 | Shape | Frame 0 | Agreement |
 | --- | --- | --- |
@@ -445,10 +447,19 @@ digits), and four registered known divergences:
 | `SampleTrigger(0.5 s)` into `OnCounter` (two instants a frame) | — | `DVG-000004`: 10 against 19 |
 | `SampleTrigger(1.4 s)` into `TriggeredSampler` | — | `DVG-000005`: the frame's `u`, not the instant's, at 2, 5 and 9 s |
 | `Pre(SampleTrigger(1 s))` into `OnCounter`, off-grid start | — | `DVG-000006`: 1 against 9 |
+| `Not(Change(x))`, `Not(Edge(x))` with `x(0)` true and false, `Not(SampleTrigger(1 s))`, on and off the grid, into every consumer | `x(0) = true`: fires (count 1, a sample, a reset, `Latch` and `Toggle` true); `x(0) = false` and `Not(SampleTrigger)`: nothing | every frame, but `IntegratorWithReset` and `PIDWithReset` behind `Not(SampleTrigger)` (`DVG-000010`: OpenModelica reinitialises when `sample()` falls after each instant) and two timers off the grid (`DVG-000011`: a reset between frames) |
+| `Or`, `Xor` of `Change(x1)` (an initialisation pulse) and `SampleTrigger(1 s)`; `And(Not(Change(x1)), SampleTrigger)`; `And(Not(Change(x1)), Not(SampleTrigger))`; a three-leaf mixture; `Or(Not(Change(x1)), level)`; on and off the grid, into `OnCounter`, `Latch`, `Toggle` | `i -> w -> s` | every frame |
+| `Or(Not(Change(x1)), Pre(false))` at frame 0 (a fallback cone) | OpenModelica fires | `DVG-000007`: the engine does not (frame 0 only) |
+| `Latch`, `Toggle` with `u = Not(Change(a))` and `clr = Change(a)` or `Change(b)`, and `u = Change(a)`, `clr = Not(Edge(a))` | — | every frame |
+| `Latch`, `Toggle` with `u = SampleTrigger(2 s)`, `clr = Not(SampleTrigger(2 s))` | — | `DVG-000008`: OpenModelica keeps the latch set, the engine clears it a frame after each instant |
+| `BooleanToReal(Change(a))` as the data input of `TriggeredSampler`, `TriggeredMax`, `TriggeredMovingMean`, `IntegratorWithReset`, `PIDWithReset`, trigger `Not(Change(a))` | — | `TriggeredMax`, `TriggeredMovingMean` every frame; the others `DVG-000009` (the block keeps the rising edge, one frame after OpenModelica's second iteration) |
 
-The four are the limits the owner ruled on (decision 2): a cone with a `Pre` keeps the rising
-edge, several instants in one frame fire once (with a once-only warning), and every event inside a
-frame interval is shown at the frame with the frame's values. They are documented in the
+They are the limits the owner ruled on (decision 2): a cone with a `Pre` keeps the rising edge,
+several instants in one frame fire once (with a once-only warning), every event inside a frame
+interval is shown at the frame with the frame's values, and, from the review of GitHub #805, a
+negated sample on a `Latch`'s `clr`, a data input carrying a converted pulse, and OpenModelica's
+reinit on a negated sample's fall. Every pilot column was also run on the engine before this
+change: none agrees with OpenModelica there and not here. They are documented in the
 [execution profile](execution-profile.md#conformance-boundary). These are single runs on
 `linux/arm64`; the engine side is checked bit for bit, the OpenModelica side by digest.
 
