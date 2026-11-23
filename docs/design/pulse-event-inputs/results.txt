@@ -1,0 +1,52 @@
+# Issue #800: brute force over every cone (Boolean function) of each leaf set
+# Cones out of 2^(2^n), over every host and sample sequence of the given length (frame 0
+# a settled start). exact: the rule fires exactly when, and as often as, snapped Modelica
+# at every frame. invent: some fire matches no Modelica event of its frame or the frame
+# before. miss: some Modelica event is matched by no fire of its frame or the next. late:
+# some fire matches only the previous frame's event.
+leaf set                                    cones   seqs |                   today |                       a |                  a-prim |                       f |                       g
+                                                         |  exact/invent/miss/late |  exact/invent/miss/late |  exact/invent/miss/late |  exact/invent/miss/late |  exact/invent/miss/late
+item 1: Change(a), S, a, b                  65536  16384 |    46/44800/65128/58975 |  1311/44800/63863/58975 |  1311/44800/63863/58975 | 10000/44800/27120/27120 | 65536/    0/    0/    0
+item 2: Change(a), Pre(a), b                  256   4096 |    22/    0/  226/  175 |    31/    0/  217/  175 |    25/    0/  223/  175 |    64/  156/  160/  192 |    34/    0/  214/  168
+item 2: Change(a), a, Pre(b)                  256   4096 |    10/    0/  226/  231 |    19/    0/  217/  231 |    11/    0/  225/  231 |    64/  156/  156/  192 |    20/    0/  220/  224
+item 3: Change(a), Pre(Change(a)), b          256   4096 |     4/  170/  246/  216 |     7/  198/  231/  216 |     7/  170/  243/  216 |    16/  180/  186/  178 |    16/  170/  234/  209
+item 3: Change(a), Change(Edge(a)), b         256   4096 |     4/  155/  252/  213 |     7/  186/  228/  213 |     7/  155/  249/  213 |    16/  180/  156/  140 |    16/  155/  240/  206
+item 3: Pre(Change(a)), a, b                  256   4096 |    16/  207/  240/  237 |    16/  209/  239/  237 |    16/  207/  240/  237 |    16/  196/  238/  240 |    16/  207/  240/  237
+item 3: Change(Edge(a)), a, b                 256   4096 |    17/  196/  229/  164 |    16/  200/  220/  164 |    17/  196/  229/  164 |    26/  230/    0/    0 |    17/  196/  229/  164
+primitive: Change(a), Change(b), a, b       65536   4096 |   102/    0/65334/58975 |  4111/    0/61325/58975 |  4111/    0/61325/58975 | 65536/    0/    0/    0 | 65536/    0/    0/    0
+primitive: Edge(a), FallingEdge(b), a, b    65536   4096 |  3968/    0/59648/44800 |  6016/    0/57600/44800 |  6016/    0/57600/44800 | 65536/    0/    0/    0 | 65536/    0/    0/    0
+primitive: Change(a), S, a                    256   2048 |    10/  112/  220/  175 |    39/  112/  191/  175 |    39/  112/  191/  175 |   100/  112/   60/   60 |   256/    0/    0/    0
+
+# Snapping (item 7): leaves Change(a), Change(b), a, b, 5-frame sequences. Inside a frame
+# each changed level changes at its own sub-instant, in either order, or both together;
+# Modelica's events of the frame are summed over its sub-instants. 'invents' as above.
+cones where today invents on some sequence: 12474
+cones where g invents on some sequence:     12474
+cones where both invent:                    12474
+cones where g invents on a sequence where today does not: 11786
+invented (cone, sequence) pairs: today 6340928, g 11222912
+
+# The shapes of the note's section 1.3: u changes at 2, 3, 5, 7, 8, 9 s; lvl on [4, 8);
+# lvl2 from 4 s (3.5 s in OpenModelica, shown at the 4 s frame); b on [2, 7); 1 s frames;
+# events counted at frames 1 to 9 (frame 0 is outside this script)
+shape                                      Modelica   today       a  a-prim       f       g  g falls back
+1 Change(u)                                       6       3       6       6       6       6  no
+2 Not(Change(u))                                  6       2       2       2       6       6  no
+3 And(Change(u), lvl)                             2       2       2       2       2       2  no
+4 Or(Change(u), lvl)                              4       1       1       1       4       4  no
+5 Or(Change(u), Change(u2)), u2 = u               6       3       6       6       6       6  no
+6 Xor(u, Pre(u))                                  6       3       3       3       3       3  yes
+7 And(u, Not(Pre(u)))                             3       3       3       3       3       3  yes
+8 Edge(Not(Change(u)))                            6       2       2       2       2       2  yes
+9 Edge(Change(u))                                 6       3       3       3       3       3  yes
+10 Pre(Change(u))                                 6       3       5       3       5       3  yes
+11 Or(Change(u), lvl2)                            3       1       1       1       3       3  no
+13 SampleTrigger(1 s)                             9       0       9       9       9       9  no
+14 SampleTrigger(1.4 s)                           6       3       6       6       6       6  no
+15 SampleTrigger(2 s)                             4       4       4       4       4       4  no
+16 Not(SampleTrigger(1 s))                        0       0       0       0       9       0  no
+17 Or(Change(u), Pre(b))                          3       1       1       1       3       1  yes
+18 Not(Or(Change(u), Pre(u)))                     3       1       1       1       4       1  yes
+19 Or(Change(u), Pre(Change(u)))                  6       1       8       1       8       1  yes
+20 Change(Edge(u))                                3       3       6       3       6       3  yes
+21 And(Change(u), Edge(Not(Change(u))))           0       0       0       0       0       0  yes

@@ -1,0 +1,41 @@
+== PulseSemantics.Pilot_res.csv
+direct: 6 fires at 2, 3, 5, 7, 8, 9
+notRouted: 6 fires at 2, 3, 5, 7, 8, 9
+andLevel: 2 fires at 5, 7
+orLevel: 4 fires at 2, 3, 4, 9
+orSame: 6 fires at 2, 3, 5, 7, 8, 9
+xorPre: 6 fires at 2, 3, 5, 7, 8, 9
+andNotPre: 3 fires at 2, 5, 8
+edgeNotChange: 6 fires at 2, 3, 5, 7, 8, 9
+edgeChange: 6 fires at 2, 3, 5, 7, 8, 9
+prePulse: 6 fires at 2, 3, 5, 7, 8, 9
+orLevel2: 3 fires at 2, 3, 3.5
+s05: 21 fires at 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10
+s07: 15 fires at 0, 0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9, 5.6, 6.3, 7, 7.7, 8.4, 9.1, 9.8
+s14: 8 fires at 0, 1.4, 2.8, 4.2, 5.6, 7, 8.4, 9.8
+lat.y at 0, 1, 2, ... s (last row): 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1
+== SampleSemantics.Pilot_res.csv
+c1: 9 fires at 0, 1, 2, 3, 4, 5, 6, 7, 8
+c14: 6 fires at 0, 1.4, 2.8, 4.2, 5.6, 7
+c1s: 8 fires at 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5
+s05.y at 0, 1, 2, ... s (last row): 10, 11, 12, 13, 14, 15, 16, 17, 18
+s1.y at 0, 1, 2, ... s (last row): 10, 11, 12, 13, 14, 15, 16, 17, 18
+s2.y at 0, 1, 2, ... s (last row): 10, 10, 12, 12, 14, 14, 16, 16, 18
+s14.y at 0, 1, 2, ... s (last row): 10, 10, 11, 13, 13, 14, 16, 17, 17
+s1s.y at 0, 1, 2, ... s (last row): 7, 11, 12, 13, 14, 15, 16, 17, 18
+== InitPulse_res.csv
+nCha at 0, 1, 2, ... s (last row): 0, 0, 0
+nEdg at 0, 1, 2, ... s (last row): 0, 0, 0
+nSam at 0, 1, 2, ... s (last row): 1, 2, 3
+== PulseReview.Pilot_res.csv
+notSample: 1 fires at 10
+sampleOrLevel: 5 fires at 0, 1, 2, 3, 3.5
+orChangePreB: 3 fires at 2, 8, 9
+norChangePreU: 3 fires at 3, 7, 9
+orChangePreChange: 6 fires at 2, 3, 5, 7, 8, 9
+changeOfEdge: 3 fires at 2, 5, 8
+andChangeEdgeNotChange: 0 fires at -
+samplerNotSample.y at 0, 1, 2, ... s (last row): 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 20
+latX.y at 0, 1, 2, ... s (last row): 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+togX.y at 0, 1, 2, ... s (last row): 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+timAcc.y at 0, 1, 2, ... s (last row): 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1
