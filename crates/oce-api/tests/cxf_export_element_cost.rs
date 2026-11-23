@@ -309,7 +309,7 @@ const PID_PARAMETERS: &[(&str, &str)] = &[
 /// listing the shared parameter nodes `urn:p.<name>` and with both inputs driven by the root's
 /// one boundary input. With `prefixed`, each instance IRI is written as `x:<i>` under a
 /// `@context` prefix that expands to the long stem.
-fn pid_instances(count: usize, iri_bytes: usize, prefixed: bool) -> Vec<u8> {
+pub(crate) fn pid_instances(count: usize, iri_bytes: usize, prefixed: bool) -> Vec<u8> {
     let stem = format!("urn:{}", "i".repeat(iri_bytes - 8));
     let name = |i: usize| {
         if prefixed {
@@ -441,8 +441,10 @@ fn instances_sharing_short_parameter_nodes_write_their_iri_once_per_parameter_an
     // writes each instance's IRI 32 times: twice for each parameter (its `@id` in the block's
     // `S231:hasParameter` and on its node), three times for each minted input port
     // (`<IRI>.in<k>` in the block's `S231:hasInput`, on its node, as the boundary's target),
-    // twice for the output port, twice for the block. No loader budget counts these copies
-    // (issue #807). The bytes are linear in the instances and the peak is the bytes.
+    // twice for the output port, twice for the block. The reader's instance path budget counts
+    // the parameters' and the inputs' identities, about 13 × 32 KiB an instance, 6.8 MB of its
+    // 8 MiB at 16 instances (issue #807). The bytes are linear in the instances and the peak is
+    // the bytes.
     // [measured: 4,198,372 / 8,396,388 / 16,792,420 bytes, 1,049,504 an instance, at peaks of
     // 4,202,420 / 8,403,876 / 16,806,788 (1.001); before, peaks of 12,302,932 / 24,604,424 /
     // 49,207,408 (2.93), and 1.407 with the document written one node at a time but the plan

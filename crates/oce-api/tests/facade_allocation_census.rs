@@ -43,6 +43,7 @@ mod cxf_diagnostic_list_cost;
 mod cxf_export_diagnostic_list_cost;
 mod cxf_export_element_cost;
 mod cxf_g36_enumeration_check_cost;
+mod cxf_instance_path_cost;
 mod cxf_minted_array_cost;
 mod cxf_minted_array_path_cost;
 mod cxf_parameter_value_cost;

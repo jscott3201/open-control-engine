@@ -36,6 +36,7 @@ use oce_model::{BlockId, BlockInstance, ParamTable, Value};
 use crate::arrays::{ArrayElementBudget, expand_array_param};
 use crate::document_groundings::DocumentGroundings;
 use crate::dto::Node;
+use crate::instance_path_budget::{InstancePath::Parameter, InstancePathBudget};
 use crate::parameter_reads::{InstanceReads, StringParameterBudget};
 use crate::scope_chain::{IndexedEntries, ParamScope, ScopeFrame};
 use oce_diag::DiagnosticList;
@@ -72,6 +73,7 @@ pub(super) fn ground_instance_params(
     by_id: &HashMap<&str, &Node>,
     blocks: &mut [BlockInstance],
     checked: &mut CheckedParameters,
+    paths: &mut InstancePathBudget,
     diags: &mut DiagnosticList,
 ) {
     let mut array_budget = ArrayElementBudget::per_document();
@@ -87,7 +89,9 @@ pub(super) fn ground_instance_params(
         // Collected (not lazily iterated) so the array branch can build the sibling-name set
         // for its collision check. Order = hasParameter array order, then hasConstant array
         // order, then the derived member appendix in class-signature order.
-        let param_iris: Vec<&str> = inst
+        // Each listing that is not of an array node is charged its path, `<IRI>.<name>`, before
+        // it enters this list; one that does not fit is refused and reserves nothing (issue #807).
+        let listings = inst
             .node
             .has_parameter
             .iter()
@@ -98,8 +102,20 @@ pub(super) fn ground_instance_params(
                     .param_appendix(&inst.node.id)
                     .iter()
                     .map(String::as_str),
-            )
-            .collect();
+            );
+        let mut param_iris: Vec<&str> = Vec::new();
+        for piri in listings {
+            let array = by_id.get(piri).is_some_and(|n| n.is_array == Some(true));
+            if !array {
+                let owner = inst.node.id.as_str();
+                let charged = paths.take_path(Parameter, owner.len(), local_name(piri).len());
+                if let Err(refusal) = charged {
+                    diags.raise(|| refusal.diagnostic(piri, owner));
+                    continue;
+                }
+            }
+            param_iris.push(piri);
+        }
         let mut reads = InstanceReads::of(&param_iris, &mut document);
         for &piri in &param_iris {
             let Some(pnode) = by_id.get(piri).copied() else {

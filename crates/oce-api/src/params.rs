@@ -9,8 +9,6 @@
 //! never this table (perf §6). `resume` re-folds any edits back into the model and re-instantiates
 //! the affected blocks.
 
-use std::collections::HashMap;
-
 use oce_blocks::{ParamRule, lookup};
 use oce_graph::allocate_state;
 use oce_model::{BlockId, ModelGraph, Value, ValueType, enum_descriptor};
@@ -19,7 +17,10 @@ use crate::engine::{Engine, instantiate_blocks};
 use crate::error::OcError;
 
 mod class_rules;
+mod path_index;
 mod schedule_shape;
+
+use path_index::{PathBase, PathIndex};
 
 /// The engine's coarse lifecycle gate for tuning (`08` §4). `Running` is the post-load default;
 /// `set_param` is permitted only in `Halted` (CDL §7.4.2 — params never change while advancing).
@@ -56,7 +57,8 @@ pub struct ParamAttrs {
 /// kept internal and never yielded by `iter`).
 #[derive(Clone, Debug)]
 struct ParamEntry {
-    path: String,
+    /// What the row's path starts with; the path is this, `.` and `name`.
+    base: PathBase,
     block: BlockId,
     name: std::sync::Arc<str>,
     value: Value,
@@ -65,10 +67,15 @@ struct ParamEntry {
 
 /// Addressable, typed, store-free view of every `parameter` in the loaded model (`08` §4). Keyed by
 /// dotted instance path. A **mirror**: the at-rest source of truth is each `BlockInstance.params`.
+///
+/// Each row holds its block's instance IRI shared with the model and its name, never its path
+/// spelled: a path is spelled when [`Self::iter`] hands it out, and found by its hash
+/// (`path_index`), so the table holds a fixed size for each parameter whatever the IRI's length
+/// (issue #807).
 #[derive(Clone, Debug, Default)]
 pub struct ParamTable {
     entries: Vec<ParamEntry>,
-    index: HashMap<String, usize>,
+    index: PathIndex,
 }
 
 impl ParamTable {
@@ -77,15 +84,9 @@ impl ParamTable {
     /// block). First-wins on a duplicate path (a well-formed model has unique instance paths).
     pub(crate) fn build_at_load(model: &ModelGraph) -> ParamTable {
         let mut entries = Vec::new();
-        let mut index = HashMap::new();
         for blk in &model.blocks {
-            let base = blk
-                .instance_iri
-                .as_deref()
-                .map(str::to_owned)
-                .unwrap_or_else(|| format!("b{}", blk.id.0));
+            let base = PathBase::of(blk.instance_iri.as_ref(), blk.id);
             for (name, value) in &blk.params.values {
-                let path = format!("{base}.{name}");
                 let (min, max) = static_param_bounds(&blk.class_iri, name);
                 let declared = ParamAttrs {
                     value_type: value.value_type(),
@@ -94,10 +95,8 @@ impl ParamTable {
                     unit: None,
                     quantity: None,
                 };
-                let idx = entries.len();
-                index.entry(path.clone()).or_insert(idx);
                 entries.push(ParamEntry {
-                    path,
+                    base: base.clone(),
                     block: blk.id,
                     name: name.clone(),
                     value: value.clone(),
@@ -105,7 +104,16 @@ impl ParamTable {
                 });
             }
         }
+        let index = PathIndex::of(entries.iter().map(|e| (&e.base, &*e.name)));
         ParamTable { entries, index }
+    }
+
+    /// The row whose path is `path`, the first such row when two spell one path.
+    fn find(&self, path: &str) -> Option<usize> {
+        self.index.find(path, |row| {
+            let entry = &self.entries[row];
+            (&entry.base, &*entry.name)
+        })
     }
 
     /// Owned enumeration yielding `(path, value, declared attributes)` (R-PUB-6; satisfies `08`
@@ -114,7 +122,7 @@ impl ParamTable {
     pub fn iter(&self) -> impl Iterator<Item = (String, Value, ParamAttrs)> + '_ {
         self.entries
             .iter()
-            .map(|e| (e.path.clone(), e.value.clone(), e.declared.clone()))
+            .map(|e| (e.base.path(&e.name), e.value.clone(), e.declared.clone()))
     }
 
     /// Eager owned snapshot (R-PUB-6).
@@ -142,12 +150,11 @@ impl Engine {
     /// # Errors
     /// [`OcError::UnknownPoint`] if `path` is not a parameter in the loaded model. Never panics.
     pub fn get_param(&self, path: &str) -> Result<Value, OcError> {
-        let idx = *self
+        let idx = self
             .params
-            .index
-            .get(path)
+            .find(path)
             .ok_or_else(|| OcError::UnknownPoint(path.to_string()))?;
-        // `idx` came from our own `index` map, so it is in-bounds (R-ERR-1).
+        // `idx` came from our own index of `entries`, so it is in-bounds (R-ERR-1).
         Ok(self.params.entries[idx].value.clone())
     }
 
@@ -203,10 +210,9 @@ impl Engine {
                 path: path.to_string(),
             });
         }
-        let idx = *self
+        let idx = self
             .params
-            .index
-            .get(path)
+            .find(path)
             .ok_or_else(|| OcError::UnknownPoint(path.to_string()))?;
         let decl = &self.params.entries[idx].declared;
         if value.value_type() != decl.value_type {

@@ -49,6 +49,7 @@ mod g36_catalog_package_guard;
 #[cfg(test)]
 mod g36_catalog_tests;
 mod ground;
+mod instance_path_budget;
 mod namespace_near_miss;
 mod parameter_reads;
 mod resolve;
@@ -150,6 +151,15 @@ pub const MAX_DOCUMENT_EVAL_FUEL: u64 = 1 << 26;
 /// read, so the list holds that error and what was raised before it, sorted as every list is. A
 /// token written as an absolute IRI adds nothing.
 ///
+/// The identities the graph holds and an export writes under its blocks' instance IRIs take at
+/// most 8 MiB (8,388,608 bytes; GitHub issue #807): every listing of a scalar parameter, whether
+/// its class declares the name or not, every padded output of a `hasInstance` instance and every
+/// input a boundary drives, each counted as the instance IRI as expanded, `.`, and the name or
+/// `in` and the position. One that does not fit is refused with a
+/// [`oce_diag::DiagCode::ResourceLimitExceeded`] error on the listing, the instance or the
+/// boundary input, before anything is built for it, and reserves nothing; an instance whose padded
+/// outputs do not fit ends the read, before lowering.
+///
 /// # Errors
 /// - [`CxfError::Json`] if `bytes` is not valid JSON in the CXF document shape.
 /// - [`CxfError::Validation`] if resolution produced at least one error diagnostic.
@@ -250,18 +260,20 @@ pub fn import_cxf(
 /// - each authored port, boundary and boundary-output IRI two or three times, as the document
 ///   spells it.
 ///
-/// For a model the facade loads, computed from those terms, not run: the array elements' term is
-/// held by the reader's budgets to about 188 MiB (2^20 Real elements whose paths take 64 MiB), or
-/// 216 MiB with string elements at their budget. The scalar parameters' and minted ports' terms
-/// are counted by no loader budget (issue #807): an instance writes its IRI at most 37 times
-/// (`CDL.Reals.PIDWithReset`: twice for each of 12 scalar parameters, three times for each of 3
-/// boundary-driven inputs, twice for its output, whose `@id` the `hasInstance` dialect pads as
-/// `<IRI>.<name>` when the document lists no output, and twice for the block), and the instance
-/// IRIs of a document take at most 8 MiB (each is spelled at least twice, against the 8 MiB
-/// document or the 8 MiB `@context` expansion budget), so about 296 MiB; about 512 MiB with both. A hand-built graph, or one from
-/// [`import_cxf`] that never passed the facade's validation, is bounded only by these terms
-/// applied to the graph: one IRI shared by `N` parameters is written `2N` times, so bounding such
-/// a graph before exporting it is the host's responsibility (`docs/host-responsibilities.md`).
+/// For a model the facade loads, computed from those terms, not run: the identities the reader's
+/// instance path budget counts (8 MiB of parameter listings, padded outputs and boundary-driven
+/// inputs, each the instance IRI, `.` and its name or position; issue #807), written at most three
+/// times each, take at most 24 MiB; the blocks' `@id`s, at most 16 MiB (a document's instance
+/// IRIs take at most 8 MiB: each is spelled at least twice, against the 8 MiB document or the
+/// 8 MiB `@context` expansion budget); the array elements', held by the reader's array budgets,
+/// about 188 MiB (2^20 Real elements whose paths take 64 MiB), or 216 MiB with string elements at
+/// their budget. So about 256 MiB, where it was about 512 MiB, and authored port and boundary IRIs
+/// on top as the document spells them. A graph [`import_cxf`] returned is held to the same
+/// budgets, so the same 24 MiB and 216 MiB bound it, plus the IRIs its document spells, which grow
+/// with that document since `import_cxf` admits one of any size. A hand-built graph is bounded
+/// only by these terms applied to the graph: one IRI shared by `N` parameters is written `2N`
+/// times, so bounding such a graph before exporting it is the host's responsibility
+/// (`docs/host-responsibilities.md`).
 ///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
