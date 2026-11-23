@@ -270,8 +270,11 @@ const FRAMES: usize = 10;
 
 /// The registered family `DVG-000008`: a `Latch` or `Toggle` whose `clr` cone holds a negated
 /// sample, true between instants and false at one (`w` true and `s` false at some frame). The
-/// engine stores no previous `clr`; the orchestrator accepted single-frame differences against
-/// the plain rising edge in this shape (the second review of GitHub #805).
+/// engine stores no previous `clr`, so inside this shape it can differ from Modelica where the
+/// plain rising edge matches it, for `Latch` and `Toggle`, possibly over several consecutive
+/// frames, though never across a whole column where the rising edge is right (the reviews of
+/// GitHub #805; accepted by the orchestrator). The exact fix, storing `clr`'s previous settled
+/// value, is issue #810.
 fn negated_sample_clear(consumer: Consumer, c: &[Vec<[bool; 4]>]) -> bool {
     match consumer {
         Consumer::Latch(_, cl) | Consumer::Toggle(_, cl) => c[cl].iter().any(|x| x[1] && !x[2]),

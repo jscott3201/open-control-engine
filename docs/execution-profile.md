@@ -266,7 +266,7 @@ precision). Building 33's re-enable one frame after a disable resets as OpenMode
 `DVG-000001` and `DVG-000002`, are resolved. Ten remain, registered
 (`crates/oce-conformance/tests/fixtures/known_divergence/register.json`) and documented here as
 the owner ruled (decision 2); in each the engine gives what it gave before this rule or differs
-from OpenModelica at fewer frames, but for the single `DVG-000008` frames below and
+from OpenModelica at fewer frames, but for frames inside `DVG-000008`'s shape below and
 `DVG-000006`'s frame 1:
 
 - `DVG-000003`, `DVG-000006`: a cone with a `Pre` keeps the rising edge. `OnCounter` behind
@@ -279,9 +279,11 @@ from OpenModelica at fewer frames, but for the single `DVG-000008` frames below 
   1.4 s; a `TimerAccumulating` reset by a change at 3 s on frames at 0.25 + k s restarts at 3.25 s).
 - `DVG-000007`: a fallback cone at frame 0 (`Or(Not(Change(x1)), Pre(false))`) never fires there;
   OpenModelica's initialisation pulse does.
-- `DVG-000008`: `Latch` and `Toggle` whose `clr` holds a negated sample (above). For `Toggle`
-  single frames can differ where the engine before this rule matched OpenModelica (never a whole
-  column, never for `Latch`).
+- `DVG-000008`: `Latch` and `Toggle` whose `clr` holds a negated sample (above). Frames can
+  differ where the engine before this rule matched OpenModelica, for `Latch` and `Toggle`,
+  possibly several consecutive frames, never a whole column where the engine before this rule
+  was right: `Latch(u = Not(SampleTrigger(2 s, shift 0.5)), clr = Xor(SampleTrigger(2 s, shift 0.5), a))` at 1 s frames with `a` = F,T,T,F,F,T,F,T gives T,T,F,F,F,F,F,F here, T,T,F,F,T,T,T,T before this rule, and T throughout in the reviewer's Modelica model. The exact fix, storing `clr`'s previous settled value, is
+  issue #810.
 - `DVG-000012`: a `Pre` on one event input of a two-input consumer: the block keeps the rising
   edge on both, and the `Pre` shows its value a frame after OpenModelica's `pre` settles.
 - `DVG-000009`: a data input carrying a converted pulse (`BooleanToReal(Change(a))` into

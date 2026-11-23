@@ -249,8 +249,10 @@ so far, and no tag is cut by the bump.
   now sets `initial` (true on the first frame after the state was seeded). Added: `oce_blocks`'s
   `Block::settled_event_inputs`, `Block::event_signal` and `EventSignal`, `Ctx::with_initial` and
   `Ctx::is_initial`, which the frame driver sets on its first frame; `oce_graph`'s
-  `Schedule::events`, `EventPlan`, `ShadowSource` (whose `Pulse` carries its connector) and
-  `needs_plan`. `set_param`'s schedule-shape guard also compares the
+  `Schedule::events`, `EventPlan`, `ShadowSource` (whose `Pulse` carries its connector),
+  `needs_plan`, and `EventPlan::census` with `ConsumerCensus`, which report the path every event
+  consumer of a model takes (settled, a fallback, the rising edge) for tests and documentation;
+  `oce-api`'s `settled_rule_census.rs` pins it over the crates' documents. `set_param`'s schedule-shape guard also compares the
   settled inputs and the event signal; no parameter edit changes either.
 
 - **A reset applies at the frame where its trigger rises** (GitHub #789, issue #768; owner
@@ -2995,8 +2997,9 @@ so far, and no tag is cut by the bump.
   state when a negated sample falls (`DVG-000010`), a reset between frames on an off-grid run
   (`DVG-000011`) and, from the second review, a `Pre` on one input of a two-input consumer
   (`DVG-000012`, `MixedFallbackPilot`). In each the engine gives what it gave before this change
-  or differs at fewer frames, but single `Toggle` frames in `DVG-000008`'s shape and
-  `DVG-000006`'s frame 1. The differential test now also asserts the acceptance bar against a
+  or differs at fewer frames, but frames inside `DVG-000008`'s shape (`Latch` and `Toggle`,
+  possibly several consecutive frames, never a whole column where the engine before this change
+  was right; storing `clr`'s previous settled value is issue #810) and `DVG-000006`'s frame 1. The differential test now also asserts the acceptance bar against a
   model of Modelica's event iteration, and `settled_rule_census.rs` pins the path every consumer
   of every loadable document in the crates takes. A seeded differential test (`oce-api`'s `settled_rule_differential.rs`, 3,000 random
   graphs of every cone class over pulses, samples, levels and fallback leaves into `OnCounter`,

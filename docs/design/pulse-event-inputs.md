@@ -757,10 +757,12 @@ found two problems and one unmeasured premise. What changed:
   and false at one, a negated sample. With `u = SampleTrigger(2 s)` and `clr =
   Not(SampleTrigger(2 s))` OpenModelica keeps the latch set and the engine clears it at the next
   frame: `DVG-000008`, registered. For that pilot the engine before this change gave the same
-  values; not in general: the second review found `Toggle` graphs (`u = SampleTrigger(1.5 s)`,
-  `clr = Nor` of samples, say) where single frames matched OpenModelica before this change and do
-  not now, though never a whole column and never for `Latch`; the orchestrator accepted those
-  single frames as part of `DVG-000008` and reported it to the owner. G36
+  values; not in general. Inside this shape the engine can differ from Modelica where the engine
+  before this change matched it, for `Latch` and `Toggle`, possibly over several consecutive
+  frames, though never across a whole column where the engine before this change was right (so
+  the acceptance bar holds): for example, `Latch(u = Not(SampleTrigger(2 s, shift 0.5)), clr = Xor(SampleTrigger(2 s, shift 0.5), a))` at 1 s frames with `a` = F,T,T,F,F,T,F,T gives T,T,F,F,F,F,F,F here, T,T,F,F,T,T,T,T before this rule, and T throughout in the reviewer's Modelica model. The orchestrator accepted that as part of
+  `DVG-000008` and reported it to the owner; the exact fix, storing `clr`'s previous settled
+  value, is issue #810. G36
   `TrimAndRespond`'s hold latch (`clr = And(Not(hold), sample)`) is not that sub-case: its `clr`
   is false between instants, so `w(clr)` is always false; the hold-latch pilot agrees and the
   three G36 fixtures' traces are unchanged.
