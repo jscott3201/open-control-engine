@@ -679,6 +679,61 @@ so far, and no tag is cut by the bump.
 
 ### CXF import and export
 
+- **An export peaks at about the bytes it returns** (GitHub #PRNUM, issue #803). The exporter built
+  every node of the document before serializing it: a 1,120-byte node for each array element, more
+  while the node vector grew, beside a copy of each element's `@id` in its plan and another in its
+  duplicate check. A `MatrixGain` whose `K` is 128 × 128 exported 1.67 MB at a peak of 58.7 MB, and
+  the 256 × 256 gain the minted budget admits was projected at about 235 MB. It now writes one
+  node at a time into a buffer of exactly the document's size, measured by a first pass that only
+  counts the bytes; a block node and a parameter node spell each parameter's `@id` (the block's
+  IRI, `.`, the name) straight from the graph, and the duplicate check holds it as those two parts,
+  borrowed, compared as the bytes they spell. No outcome, byte or diagnostic changes: no limit is
+  added.
+  - **What it costs now** (debug, `allocation-counter`): 462,773 / 906,781 / 1,750,289 bytes at
+    the peak for 420,886 / 838,890 / 1,667,236 bytes of 64 × 64, 64 × 128 and 128 × 128 gains
+    (before, 14,693,743 / 29,371,687 / 58,704,353); 16,458,366 for 15,828,568 under a 921-byte
+    root at 90 × 90 (before, 68,096,216); 6,875,281 for 6,709,540 at 256 × 256. A refused plan of
+    1,024 parameters on a block whose IRI is 1, 4 or 16 KiB peaks at 81,041 / 99,473 / 173,201
+    (before, 3,305,436 / 12,767,196 / 50,614,236).
+  - **The bound, stated, with no limit (owner decision of 2026-11-22).** The bytes are about twice
+    the parameter paths plus 36 bytes and the value's text for each element. For a model the
+    facade loads, the reader's budgets hold that to about 188 MiB (2^20 Real elements whose paths
+    take 64 MiB) or 216 MiB (string elements at the string budget), computed from the measured
+    slope, not run. A hand-built graph, or one from `oce_cxf::import_cxf` that never passed the
+    facade's validation, is bounded only by that formula applied to the graph: an IRI shared by
+    `N` parameters is written `2N` times, and bounding such a graph is the host's responsibility
+    (`docs/host-responsibilities.md`, the `export` rustdoc).
+  - **Evidence.** `oce-cxf` `export_write_tests.rs`: the bytes equal the document built in full
+    and serialized with `write_document`, and the counting pass equals them with the buffer's
+    capacity, for every fixture the exporter accepts, identities and values that need escaping,
+    arrays of rank 1 to 3, strings, a partial export beside deferred blocks, and an export whose
+    list ends partway (nothing written); a parameter's `@id` held in parts collides with the same
+    `@id` spelled whole in either order. `export_emitted_ids_tests.rs`: an `@id` in parts compares
+    and dedupes as the `String` it spells. `oce-api` `cxf_export_element_cost.rs`: the peak within
+    an eighth of the bytes plus 64 KiB at 1x/2x/4x for short and long roots, string arrays, a node
+    listed by four leaves and a hand-built block sharing one IRI; the plan flat in the IRI's
+    length. The 540-load corpus (tracked documents, `open-control-library` as written and
+    rewritten) records identical load outcomes, content ids, blob bytes, diagnostics and export
+    bytes against the base.
+
+- **The G36 enumeration check builds a refusal only when the list keeps it** (GitHub #PRNUM, issue
+  #799). A parameter typed by a G36 enumeration is judged once for each instance that lists it,
+  and its refusals quote the value's text or the typing IRI; each was built and then pushed, so a
+  node with a 64 KiB value listed by 1,024 instances built 64 MiB of messages after the read's
+  list had ended at 8 MiB. Each refusal is now raised, built only while the list has room, and the
+  non-canonical typing-IRI refusal is described first and built only when raised. Diagnostics are
+  byte-identical. Measured on that document (a string literal, which grounds once): 42,656,686 /
+  49,200,742 / 62,289,774 bytes requested at 256 / 512 / 1,024 leaves, 25,563 a further leaf
+  (before, 67,844,910 / 124,765,414 / 238,607,342, 222,346 a further leaf). Pinned by `oce-api`
+  `cxf_g36_enumeration_check_cost.rs`.
+
+- **The exporter borrows a connector's diagnostic subject** (GitHub #PRNUM, issue #799). Each
+  connector's subject, a copy of its block's IRI, was built whether or not a finding used it; it
+  is now borrowed from the graph and copied only by a finding that is raised. 1,024 outputs of a
+  block whose IRI is 64 KiB export requesting 898,328 bytes in all, 553 a further output (before,
+  72,837,190, 70,494 a further output). Diagnostics are byte-identical. Pinned by `oce-api`
+  `cxf_export_element_cost.rs`.
+
 - **The array elements a document mints are held to 65,536 and 8 MiB of paths** (GitHub #802,
   issue #756; owner rulings of 2026-11-22). **Breaking, in place:** a document whose broadcasts,
   array expressions (brace literals included) and further listings of an array node together
@@ -725,8 +780,8 @@ so far, and no tag is cut by the bump.
     broadcast under a 116-byte root loads at 49.7 MB, 140.3 MB requested; under a 921-byte root a 90
     × 90 gain loads at 26.5 MB and a 128 × 128 one is refused at 5.2 MB. A leaf listing one array
     node twice is still refused as `duplicate-parameter` by the validator, after a reader peak of
-    about 19.5 MB at the minted budget (25.7 MB for the facade load). Exporting such a model is not
-    bounded yet (issue #803).
+    about 19.5 MB at the minted budget (25.7 MB for the facade load). Exporting such a model was not
+    bounded then (issue #803, the first entry of this section).
   - **Where elements are made, swept.** Only the reader's expansion of a preserved array makes
     table elements. Array connectors, array instances and composite array declarations are
     refused before they are grounded; a class whose port count comes from a parameter is refused

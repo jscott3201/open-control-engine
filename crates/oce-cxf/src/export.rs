@@ -55,8 +55,8 @@
 //! Emission order derives from the `ModelGraph` vectors alone: root, then blocks in `BlockId`
 //! order (each followed by its parameter nodes in `ParamTable` order), then one port node per
 //! connector in `ConnectorId` order, then boundary nodes in `external_inputs` first-occurrence
-//! order. No map iteration feeds any ordering, and `write_document` serializes struct fields in
-//! declaration order, so repeated exports are byte-identical.
+//! order. No map iteration feeds any ordering, and the writer (`export_write.rs`) writes each
+//! node's fields in declaration order, so repeated exports are byte-identical.
 //!
 //! ## Value shape
 //! Parameter bindings are bare JSON literals. `Real`s always serialize with a fractional part
@@ -94,13 +94,15 @@
 //! reserved lowering-only blocks are omitted also rejects: the result would be an unloadable
 //! root-only shell ([`MSG_TOTAL_DEFERRAL`]).
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::borrow::Cow;
+use std::collections::{BTreeSet, HashMap};
+use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic, DiagnosticList, has_errors};
 use oce_model::{Connector, Dir, ModelGraph, Value, ValueType};
 
-use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
-use crate::export_attrs::{PortAttrs, classify_attrs, emit_port_attrs};
+use crate::dto::CxfValue;
+use crate::export_attrs::{PortAttrs, classify_attrs};
 use crate::export_defer::deferral_set;
 use crate::export_pass_through::{
     ReservedShapeFailure, ReservedShapeValidation, is_declared_pass_through_connector,
@@ -108,8 +110,14 @@ use crate::export_pass_through::{
 };
 use crate::{CxfError, bridge};
 
+#[path = "export_emitted_ids.rs"]
+mod emitted_ids;
 #[path = "export_single_assignment.rs"]
 mod single_assignment;
+#[path = "export_write.rs"]
+mod write;
+
+use emitted_ids::EmittedId;
 
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
 /// root IRI, so every export uses this fixed, collision-improbable URN. A (contrived) block whose
@@ -133,7 +141,7 @@ const CLASS_IRI_BASE: &str = "http://example.org#";
 const MSG_EMPTY: &str =
     "CXF export requires at least one block: an empty ModelGraph has no runtime composite to emit";
 /// Whole-operation rejection when no emitted runtime block remains after deferred and reserved
-/// lowering-only blocks are omitted. In that state `build()` would emit the same unloadable
+/// lowering-only blocks are omitted. In that state `write` would emit the same unloadable
 /// root-only document `MSG_EMPTY` names, despite receiving a non-empty input graph.
 const MSG_TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all blocks \
      were deferred or reserved lowering-only, leaving no runtime composite to emit";
@@ -201,21 +209,23 @@ const MSG_CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection end
 const MSG_DUPLICATE_ID: &str =
     "export subset: emitted node @id collides with another emitted node @id";
 
-/// Everything [`build`] needs, fully validated: no `Option` left to unwrap, no index that can
+/// Everything [`write`] needs, fully validated: no `Option` left to unwrap, no index that can
 /// miss. Produced by [`plan`] only when the subset checks all pass.
-struct Plan {
-    blocks: Vec<PlannedBlock>,
+struct Plan<'g> {
+    blocks: Vec<PlannedBlock<'g>>,
     ports: Vec<PlannedPort>,
     boundaries: Vec<PlannedBoundary>,
     boundary_outputs: Vec<PlannedBoundaryOutput>,
 }
 
-/// One block node plus its parameter nodes, with every `@id` already minted.
-struct PlannedBlock {
+/// One block node plus its parameter nodes. Every `@id` but the parameters' is minted; a
+/// parameter node's `@id` is `<iri>.<name>`, spelled where it is written (issue #803).
+struct PlannedBlock<'g> {
     iri: String,
     type_iri: String,
-    /// `(node @id, binding)` in `ParamTable` order.
-    params: Vec<(String, CxfValue)>,
+    /// The block's whole parameter table, in `ParamTable` order: a plan exists only when every
+    /// entry has a bare member name and a value with a binding ([`param_binding`]).
+    params: &'g [(Arc<str>, Value)],
     input_ports: Vec<String>,
     output_ports: Vec<String>,
 }
@@ -246,17 +256,19 @@ struct PlannedBoundaryOutput {
     attrs: PortAttrs,
 }
 
-/// Export `model` as a CXF document plus the deferral warnings (empty for a fully-in-subset
-/// graph). The warnings are `ExportDeferred` (Warning, non-aborting) — they surface via
-/// [`crate::export_with_report`] and are discarded by `crate::export`.
+/// Export `model` as the bytes of a CXF document plus the deferral warnings (empty for a
+/// fully-in-subset graph). The warnings are `ExportDeferred` (Warning, non-aborting) — they
+/// surface via [`crate::export_with_report`] and are discarded by `crate::export`. The bytes are
+/// written one node at a time ([`write`]), and are those [`crate::write_document`] writes for the
+/// whole document.
 ///
 /// # Errors
 /// [`CxfError::Validation`] when any **error**-severity subset check fails (the three-state gate
 /// treats `ExportDeferred` warnings as non-aborting); see the module docs for the surface.
-pub(crate) fn document(model: &ModelGraph) -> Result<(CxfDocument, Vec<Diagnostic>), CxfError> {
-    plan(model)
-        .map(|(plan, warnings)| (build(plan), warnings))
-        .map_err(CxfError::Validation)
+/// [`CxfError::Json`] if a node does not serialize.
+pub(crate) fn document_bytes(model: &ModelGraph) -> Result<(Vec<u8>, Vec<Diagnostic>), CxfError> {
+    let (plan, warnings) = plan(model).map_err(CxfError::Validation)?;
+    Ok((write::write(&plan)?, warnings))
 }
 
 /// An `ExportUnsupported` error diagnostic with a subject.
@@ -267,24 +279,29 @@ fn reject(message: impl Into<String>, subject: &str) -> Diagnostic {
 /// Record an `@id` the document will emit. A repeat is rejected at plan time with the owning
 /// block as subject — the emitted document would otherwise fail re-import with `DuplicateId`
 /// (or worse, silently merge two nodes in a permissive consumer).
-fn claim_emitted_id(
-    seen: &mut BTreeSet<String>,
-    id: &str,
+fn claim_emitted_id<'g>(
+    seen: &mut BTreeSet<EmittedId<'g>>,
+    id: EmittedId<'g>,
     subject: &str,
     diags: &mut DiagnosticList,
 ) {
-    if !seen.insert(id.to_owned()) {
+    if !seen.insert(id) {
         diags.raise(|| reject(MSG_DUPLICATE_ID, subject));
     }
 }
 
 /// The diagnostic subject for a connector: its owning block's `instance_iri`, else a synthetic
 /// position tag (mirrors the resolver's `connector#N` convention for IRI-less connectors).
-fn owner_subject(g: &ModelGraph, c: &Connector, position: usize) -> String {
+/// Borrowed from the graph when the block has an IRI, so asking costs nothing: a finding copies
+/// it when it is raised (issue #799), and nothing is copied for a connector with no finding.
+fn owner_subject<'g>(g: &'g ModelGraph, c: &Connector, position: usize) -> Cow<'g, str> {
     g.blocks
         .get(c.block.0 as usize)
         .and_then(|b| b.instance_iri.as_deref())
-        .map_or_else(|| format!("connector#{position}"), str::to_owned)
+        .map_or_else(
+            || Cow::Owned(format!("connector#{position}")),
+            Cow::Borrowed,
+        )
 }
 
 /// Validate the export subset and mint every `@id`. Returns either the plan plus the deferral
@@ -292,7 +309,7 @@ fn owner_subject(g: &ModelGraph, c: &Connector, position: usize) -> String {
 /// (all offenders, in block-then-connector-then-connection scan order) when any error-severity
 /// check fails. `ExportDeferred` warnings are non-aborting (the three-state gate). All ordering
 /// derives from the `ModelGraph` vectors.
-fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
+fn plan(g: &ModelGraph) -> Result<(Plan<'_>, Vec<Diagnostic>), Vec<Diagnostic>> {
     if g.blocks.is_empty() {
         return Err(vec![Diagnostic::error(
             DiagCode::ExportUnsupported,
@@ -325,17 +342,18 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     let mut diags = DiagnosticList::new();
     let deferred = deferral_set(g, &mut diags);
     let mut port_iri: Vec<Option<String>> = vec![None; g.connectors.len()];
-    let mut blocks: Vec<PlannedBlock> = Vec::with_capacity(g.blocks.len());
+    let mut blocks: Vec<PlannedBlock<'_>> = Vec::with_capacity(g.blocks.len());
     // Every @id the document will carry, for duplicate detection only — membership checks,
-    // never iteration, so emission order still derives from the ModelGraph vectors alone.
-    let mut seen: BTreeSet<String> = BTreeSet::new();
-    seen.insert(EXPORT_ROOT_IRI.to_owned());
+    // never iteration, so emission order still derives from the ModelGraph vectors alone. A
+    // parameter's is held as its block's IRI and its name, borrowed (`EmittedId`).
+    let mut seen: BTreeSet<EmittedId<'_>> = BTreeSet::new();
+    seen.insert(EmittedId::Whole(Cow::Borrowed(EXPORT_ROOT_IRI)));
 
     // Phase 2 — per-block plan loop. The `deferred.contains(bi)` continue is the FIRST statement
     // of the loop body, BEFORE the subject mint, `claim_emitted_id`, the class-bridge check, the
     // param loop, and `blocks.push`. Placing it later leaks the deferred block's `@id` into
     // `seen` (poisoning duplicate detection for survivors) and/or pushes a `PlannedBlock` for a
-    // deferred block (subset-escape). The `param_binding` `Value::Enum` arm is thus unreachable
+    // deferred block (subset-escape). The `bindable` `Value::Enum` arm is thus unreachable
     // for any deferred block (the whole param loop is skipped).
     for (bi, b) in g.blocks.iter().enumerate() {
         if deferred.contains(&bi) {
@@ -344,15 +362,20 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         if is_pass_through_class(&b.class_iri) {
             continue;
         }
-        let subject: String = match b.instance_iri.as_deref() {
-            Some(iri) => iri.to_owned(),
+        let subject: Cow<'_, str> = match b.instance_iri.as_deref() {
+            Some(iri) => Cow::Borrowed(iri),
             None => {
                 let synthetic = format!("block#{bi}");
                 diags.raise(|| reject(MSG_NO_INSTANCE_IRI, &synthetic));
-                synthetic
+                Cow::Owned(synthetic)
             }
         };
-        claim_emitted_id(&mut seen, &subject, &subject, &mut diags);
+        claim_emitted_id(
+            &mut seen,
+            EmittedId::Whole(subject.clone()),
+            &subject,
+            &mut diags,
+        );
         let type_iri = format!("{CLASS_IRI_BASE}{}{}", bridge::OBC_PREFIX, b.class_iri);
         // Self-oracle: run the actual import bridge over the @type we are about to emit — anything
         // that would re-import under a different class identity is rejected here, loudly. An
@@ -365,7 +388,6 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             diags.raise(|| reject(MSG_CLASS_BRIDGE, &subject));
         }
 
-        let mut params = Vec::with_capacity(b.params.values.len());
         for (name, value) in &b.params.values {
             if name.is_empty() || name.contains('.') {
                 diags.raise(|| {
@@ -379,10 +401,10 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 });
                 continue;
             }
-            if let Some(binding) = param_binding(name, value, &subject, &mut diags) {
-                let param_id = format!("{subject}.{name}");
-                claim_emitted_id(&mut seen, &param_id, &subject, &mut diags);
-                params.push((param_id, binding));
+            if bindable(name, value, &subject, &mut diags) {
+                // Held as the block's IRI and the name, both borrowed; the writer spells it.
+                let id = EmittedId::Member(subject.clone(), name);
+                claim_emitted_id(&mut seen, id, &subject, &mut diags);
             }
         }
 
@@ -409,7 +431,8 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 &subject,
                 &mut diags,
             ) {
-                claim_emitted_id(&mut seen, &minted, &subject, &mut diags);
+                let id = EmittedId::Whole(Cow::Owned(minted.clone()));
+                claim_emitted_id(&mut seen, id, &subject, &mut diags);
                 input_ports.push(minted);
             }
         }
@@ -430,15 +453,16 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 &subject,
                 &mut diags,
             ) {
-                claim_emitted_id(&mut seen, &minted, &subject, &mut diags);
+                let id = EmittedId::Whole(Cow::Owned(minted.clone()));
+                claim_emitted_id(&mut seen, id, &subject, &mut diags);
                 output_ports.push(minted);
             }
         }
 
         blocks.push(PlannedBlock {
-            iri: subject,
+            iri: subject.into_owned(),
             type_iri,
-            params,
+            params: &b.params.values,
             input_ports,
             output_ports,
         });
@@ -447,7 +471,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // Phase 2b — TOTAL-DEFERRAL gate. Phase 2 pushed one `PlannedBlock` per survivor, so an empty
     // `blocks` here means the cascade swallowed every block of a non-empty graph (the `is_empty`
     // guard at the top of `plan` sees only the INPUT graph, which is why this second check is
-    // needed). Left alone, `build()` emits a root with no `containsBlock` and the exporter returns
+    // needed). Left alone, `write` emits a root with no `containsBlock` and the exporter returns
     // `Ok` with bytes that fail re-import as `MalformedDocument`. An error-severity diagnostic is
     // the only honest result: total deferral has nothing to emit. PARTIAL deferral is untouched —
     // it still returns `Ok` with `ExportDeferred` warnings. Pushed rather than returned early so
@@ -642,7 +666,8 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             continue;
         };
         let iri = output.iri.as_ref();
-        claim_emitted_id(&mut seen, iri, &owner_subject(g, source, idx), &mut diags);
+        let id = EmittedId::Whole(Cow::Borrowed(iri));
+        claim_emitted_id(&mut seen, id, &owner_subject(g, source, idx), &mut diags);
         targets[idx].push(iri.to_owned());
         // Same R5 tag guard as the Phase 4 connector scan: `BoundaryOutput.attrs` is a plain
         // field, so a host can hand Real attrs to a Boolean output, and emitting that would
@@ -767,7 +792,8 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 diags.raise(|| reject(MSG_EXTERNAL_IRI, &subject));
                 continue;
             };
-            claim_emitted_id(&mut seen, output_iri, &subject, &mut diags);
+            let id = EmittedId::Whole(Cow::Borrowed(output_iri));
+            claim_emitted_id(&mut seen, id, &subject, &mut diags);
             // Reuse the Phase 4 classification: the pass-through output IS a real connector,
             // already classified AND tag-guarded there. A pass-through that reaches this branch
             // survived the deferred-owner skip above, so the slot is not a placeholder. A second
@@ -792,7 +818,8 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             None => {
                 // First occurrence mints the boundary node, so its @id joins the emitted set;
                 // later same-IRI entries reuse the node (fan-out grouping), not a duplicate.
-                claim_emitted_id(&mut seen, boundary_iri, &subject, &mut diags);
+                let id = EmittedId::Whole(Cow::Borrowed(boundary_iri));
+                claim_emitted_id(&mut seen, id, &subject, &mut diags);
                 let attrs = match boundary_input_attrs.get(boundary_iri).copied() {
                     Some(attrs) if attrs.matches(c.value_type) => {
                         classify_attrs(attrs, boundary_iri, &mut diags)
@@ -904,16 +931,12 @@ fn claim_port(
     claimable
 }
 
-/// Convert one ground parameter value to its canonical CXF binding, or reject it (enumeration
-/// values have no literal form here; non-finite Reals would serialize as JSON `null`).
-fn param_binding(
-    name: &str,
-    value: &Value,
-    subject: &str,
-    diags: &mut DiagnosticList,
-) -> Option<CxfValue> {
+/// Whether one ground parameter value has a canonical CXF binding ([`param_binding`]), raising
+/// the refusal when it has none (enumeration values have no literal form here; non-finite Reals
+/// would serialize as JSON `null`). Builds no binding: the writer builds each one as it writes it.
+fn bindable(name: &str, value: &Value, subject: &str, diags: &mut DiagnosticList) -> bool {
     match value {
-        Value::Real(r) if r.is_finite() => Some(CxfValue::Float(*r)),
+        Value::Real(r) if r.is_finite() => true,
         Value::Real(_) => {
             diags.raise(|| {
                 reject(
@@ -924,11 +947,9 @@ fn param_binding(
                     subject,
                 )
             });
-            None
+            false
         }
-        Value::Integer(i) => Some(CxfValue::Int(*i)),
-        Value::Boolean(b) => Some(CxfValue::Bool(*b)),
-        Value::String(s) => Some(CxfValue::Expr(string_literal(s))),
+        Value::Integer(_) | Value::Boolean(_) | Value::String(_) => true,
         Value::Enum { .. } => {
             diags.raise(|| {
                 reject(
@@ -939,8 +960,20 @@ fn param_binding(
                     subject,
                 )
             });
-            None
+            false
         }
+    }
+}
+
+/// The canonical CXF binding of one ground parameter value: `None` exactly where [`bindable`]
+/// refuses it.
+fn param_binding(value: &Value) -> Option<CxfValue> {
+    match value {
+        Value::Real(r) if r.is_finite() => Some(CxfValue::Float(*r)),
+        Value::Integer(i) => Some(CxfValue::Int(*i)),
+        Value::Boolean(b) => Some(CxfValue::Bool(*b)),
+        Value::String(s) => Some(CxfValue::Expr(string_literal(s))),
+        Value::Real(_) | Value::Enum { .. } => None,
     }
 }
 
@@ -958,124 +991,4 @@ fn string_literal(s: &str) -> String {
     }
     out.push('"');
     out
-}
-
-/// Render a validated [`Plan`] as the CXF document. Infallible: every `@id` and binding was
-/// minted by [`plan`], and the emission order is fixed by the plan's vectors.
-fn build(plan: Plan) -> CxfDocument {
-    let mut graph = Vec::new();
-
-    let mut root = blank_node(EXPORT_ROOT_IRI.to_owned());
-    root.r#type = Some(OneOrMany::One("S231:Block".to_owned()));
-    root.has_input = refs(plan.boundaries.iter().map(|b| b.iri.clone()).collect());
-    root.has_output = refs(
-        plan.boundary_outputs
-            .iter()
-            .map(|output| output.iri.clone())
-            .collect(),
-    );
-    root.contains_block = refs(plan.blocks.iter().map(|b| b.iri.clone()).collect());
-    crate::translation_software::stamp(&mut root);
-    graph.push(root);
-
-    for b in plan.blocks {
-        let mut node = blank_node(b.iri);
-        node.r#type = Some(OneOrMany::One(b.type_iri));
-        node.has_input = refs(b.input_ports);
-        node.has_output = refs(b.output_ports);
-        node.has_parameter = refs(b.params.iter().map(|(id, _)| id.clone()).collect());
-        graph.push(node);
-        for (id, binding) in b.params {
-            let mut pnode = blank_node(id);
-            pnode.value = Some(binding);
-            graph.push(pnode);
-        }
-    }
-
-    for port in plan.ports {
-        let mut node = blank_node(port.iri);
-        node.is_of_data_type = Some(iri_ref(port.datatype.to_owned()));
-        node.is_connected_to = refs(port.targets);
-        emit_port_attrs(&mut node, &port.attrs);
-        graph.push(node);
-    }
-
-    for boundary in plan.boundaries {
-        let mut node = blank_node(boundary.iri);
-        node.is_of_data_type = Some(iri_ref(boundary.datatype.to_owned()));
-        node.is_connected_to = refs(boundary.targets);
-        emit_port_attrs(&mut node, &boundary.attrs);
-        graph.push(node);
-    }
-
-    for output in plan.boundary_outputs {
-        let mut node = blank_node(output.iri);
-        node.is_of_data_type = Some(iri_ref(output.datatype.to_owned()));
-        emit_port_attrs(&mut node, &output.attrs);
-        graph.push(node);
-    }
-
-    let mut context = BTreeMap::new();
-    context.insert(
-        "S231".to_owned(),
-        serde_json::Value::String(S231_CONTEXT_IRI.to_owned()),
-    );
-    CxfDocument {
-        context: Context::Map(context),
-        graph,
-        other: BTreeMap::new(),
-    }
-}
-
-/// A [`Node`] with only its `@id` set — every other field absent/empty.
-fn blank_node(id: String) -> Node {
-    Node {
-        id,
-        r#type: None,
-        has_input: OneOrMany::None,
-        has_output: OneOrMany::None,
-        has_parameter: OneOrMany::None,
-        has_constant: OneOrMany::None,
-        contains_block: OneOrMany::None,
-        has_instance: OneOrMany::None,
-        is_connected_to: OneOrMany::None,
-        is_of_data_type: None,
-        label: None,
-        access: None,
-        value: None,
-        min: None,
-        max: None,
-        nominal: None,
-        unit: None,
-        quantity: None,
-        display_unit: None,
-        is_final: None,
-        is_array: None,
-        n_dims: None,
-        size_dims: None,
-        fmu_path: None,
-        is_conditional: None,
-        cond_expr: None,
-        is_replaceable: None,
-        other: BTreeMap::new(),
-    }
-}
-
-/// A bare `{"@id": …}` cross-reference.
-fn iri_ref(id: String) -> IriRef {
-    IriRef {
-        id,
-        other: BTreeMap::new(),
-    }
-}
-
-/// Wrap `@id`s as a [`OneOrMany`] edge: absent for zero, a bare object for one (the producer
-/// byte style [`OneOrMany::One`] serializes to), an array otherwise.
-fn refs(ids: Vec<String>) -> OneOrMany<IriRef> {
-    let mut ids = ids;
-    match ids.len() {
-        0 => OneOrMany::None,
-        1 => OneOrMany::One(iri_ref(ids.remove(0))),
-        _ => OneOrMany::Many(ids.into_iter().map(iri_ref).collect()),
-    }
 }

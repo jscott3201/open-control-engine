@@ -230,6 +230,21 @@ pub fn import_cxf(
 /// graph whose every block is deferred has no runtime composite left to emit and is an error, not
 /// an empty document.
 ///
+/// # Memory
+/// The document is written one node at a time into a buffer of exactly its size, which a first
+/// pass that only counts the bytes measures, so an export's peak is about the bytes it returns
+/// (issue #803: 1.75 MB for the 1.67 MB of a `MatrixGain` whose `K` is 128 by 128, where the whole
+/// document built first had peaked at 58.7 MB). Its plan holds a fixed size for each parameter
+/// whatever its block's IRI. The bytes are about twice the parameter paths (each parameter node's
+/// `@id`, its block's IRI, `.` and its name, is written in the block's `S231:hasParameter` and on
+/// the node) plus 36 bytes and the value's text for each parameter. There is no limit: for a
+/// model the facade loads, the reader's array, path and string budgets hold that to about
+/// 188 MiB, 216 MiB with string elements at their budget (computed, not run). A hand-built
+/// graph, or one from [`import_cxf`] that never passed the facade's validation, is bounded only by
+/// that formula applied to the graph: one IRI shared by `N` parameters is written `2N` times, so
+/// bounding such a graph before exporting it is the host's responsibility
+/// (`docs/host-responsibilities.md`).
+///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
 ///   (subject identifies the offending block, connector owner, or declared boundary node) for
@@ -270,8 +285,8 @@ pub fn import_cxf(
 ///   error makes the export a refusal even when everything left out was a warning.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
-    let (doc, _warnings) = export::document(model)?;
-    write_document(&doc)
+    let (bytes, _warnings) = export::document_bytes(model)?;
+    Ok(bytes)
 }
 
 /// The result of [`export_with_report`]: the emitted CXF bytes plus the deferral warnings
@@ -309,6 +324,8 @@ pub struct ExportReport {
 /// block (an enum-carrying block plus its transitive downstream consumers). Use this when a host
 /// needs to know which blocks were omitted; use [`export()`] when it does not.
 ///
+/// What it holds while it writes, and what bounds it, is as for [`export()`] (its `# Memory`).
+///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
 ///   for any error-severity subset failure (same surface as [`export()`]), with the deferral
@@ -319,7 +336,6 @@ pub struct ExportReport {
 ///   [`export()`]: so this never returns `Ok` with warnings left out.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export_with_report(model: &ModelGraph) -> Result<ExportReport, CxfError> {
-    let (doc, warnings) = export::document(model)?;
-    let bytes = write_document(&doc)?;
+    let (bytes, warnings) = export::document_bytes(model)?;
     Ok(ExportReport { bytes, warnings })
 }
