@@ -730,9 +730,9 @@ its superseded wording kept).
   runs `TrimAndRespond`'s latch on the pinned `Latch`, `And`, `Not` and `SampleTrigger`, with a
   table column standing for `truHol.y`, and the engine agrees at every frame (it latches at the
   two held instants, which the rising edge never did).
-- **Firmware.** The `blob-frames` image grows by 6,784 octets of `.text` on `thumbv7em-none-eabihf`
-  (146,396 to 153,180, budget 161,760) and 8,304 on `riscv32imac-unknown-none-elf` (171,820 to
-  180,124, budget 189,664), with about 2.2 KB of `.rodata`, after the review round; no budget
+- **Firmware.** The `blob-frames` image grows by 6,888 octets of `.text` on `thumbv7em-none-eabihf`
+  (146,396 to 153,284, budget 161,760) and 8,464 on `riscv32imac-unknown-none-elf` (171,820 to
+  180,284, budget 189,664), with about 2.2 KB of `.rodata`, after both review rounds; no budget
   changes.
 
 ### The review of GitHub #805
