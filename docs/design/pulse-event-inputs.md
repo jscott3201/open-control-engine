@@ -601,7 +601,7 @@ Per [TESTING.md](../../TESTING.md):
 
 ## As landed
 
-GitHub #PRNUM implements option (g) with the six rulings of 2026-11-22 in one PR (C8). Where the
+GitHub #805 implements option (g) with the six rulings of 2026-11-22 in one PR (C8). Where the
 implementation found the note wrong, read it more narrowly or had to decide something it left
 open, the record is here; the decided text above is unchanged, except section 4's two corrected
 rows.

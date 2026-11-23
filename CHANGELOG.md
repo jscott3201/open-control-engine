@@ -191,7 +191,7 @@ so far, and no tag is cut by the bump.
 
 ### Execution core
 
-- **An event input fed by a pulse fires on every frame the pulse is true** (GitHub #PRNUM, issue
+- **An event input fed by a pulse fires on every frame the pulse is true** (GitHub #805, issue
   #800; owner rulings of 2026-11-22 on design note
   [Event inputs fed by one-frame pulses](docs/design/pulse-event-inputs.md), option (g), the
   settled-value rule). **Breaking, in place:** the outputs of models that still load change
@@ -215,7 +215,7 @@ so far, and no tag is cut by the bump.
   change still loads: its stored words hold the frame value where `w` is now expected, so at
   most one event merges at the restore boundary, none is counted twice.
 - **At the first frame, a sample instant fires; `SampleTrigger` is `true` there only on an
-  instant** (GitHub #PRNUM, issue #800, decision 3). **Breaking, in place.** `OnCounter`,
+  instant** (GitHub #805, issue #800, decision 3). **Breaking, in place.** `OnCounter`,
   `TriggeredSampler`, `TriggeredMax`, `IntegratorWithReset`, `PIDWithReset` and
   `TimerAccumulating.reset` fire at frame 0 only on a sample instant at the start, as OpenModelica
   fires `when sample(...)` there (a `Change` or `Edge` true at initialisation fires nothing, as
@@ -224,14 +224,14 @@ so far, and no tag is cut by the bump.
   `true` only when the start is an instant (within `1e-9 * period`); before, it was `true` at any
   start at or after its phase, so `Pre(SampleTrigger)` fired at frame 1 after an off-grid start.
 - **`SampleTrigger` warns once when a frame spans more than one of its instants** (GitHub
-  #PRNUM, issue #800, decision 2): the frame fires once for all of them, a host-cadence
+  #805, issue #800, decision 2): the frame fires once for all of them, a host-cadence
   violation. The mark lives in the block's state word (an index, `-1` before the first instant,
   or `-(index + 2)` once warned), so a snapshot carries it; `validate_state` accepts exactly that
   domain. Three blob run digests move with the stored words (`blob_frame_digests.tsv`:
   `multizone_vav_supply_fan`, `multizone_vav_supply_temperature`,
   `trim_and_respond_have_hol_false`); a new outputs-only table recorded before the change
   (`blob_frame_output_digests.tsv`) shows every output unchanged.
-- **API for the rule** (GitHub #PRNUM, issue #800). `oce_blocks`: `Block::settled_event_inputs`,
+- **API for the rule** (GitHub #805, issue #800). `oce_blocks`: `Block::settled_event_inputs`,
   `Block::event_signal` and `EventSignal`; `Ctx::with_initial` and `Ctx::is_initial`, which the
   frame driver sets on its first frame. `oce_graph`: `Schedule::events`, `EventPlan`,
   `ShadowSource`, `needs_plan`, the `RunState` shadow buffers, and `EvalContext::initial`, which
@@ -2960,7 +2960,7 @@ so far, and no tag is cut by the bump.
 ### Verification
 
 - **The settled-value rule against OpenModelica on the pinned Buildings classes** (GitHub
-  #PRNUM, issue #800). Three pilots (`PulseConsumersPilot`, `SampleTriggerPilot`,
+  #805, issue #800). Three pilots (`PulseConsumersPilot`, `SampleTriggerPilot`,
   `SampleTriggerOffGridPilot`; `regenerate.sh ... pulses`) run the Buildings classes, not
   transcriptions, and `open_modelica_pulse_events.rs` compares the engine at every frame: every
   consumer behind `Change` of a signal that changes on consecutive frames, `Not(Change)`,
